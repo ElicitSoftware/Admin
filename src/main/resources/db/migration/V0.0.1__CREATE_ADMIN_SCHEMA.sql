@@ -30,7 +30,7 @@ CREATE TABLE IF NOT EXISTS survey.departments
 CREATE SEQUENCE survey.subjects_seq START WITH 1 INCREMENT BY 1;
 CREATE TABLE survey.subjects(
   id bigint NOT NULL,
-  xid character varying(50) NOT NULL,
+  xid character varying(50),
   firstName character varying(50) NOT NULL,
   lastName character varying(50) NOT NULL,
   middleName character varying(50),

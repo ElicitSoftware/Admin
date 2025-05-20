@@ -17,3 +17,6 @@ GRANT ALL ON SEQUENCE survey.messages_seq TO ${surveyadmin_user};
 GRANT DELETE, INSERT, SELECT, UPDATE ON survey.messages TO ${surveyadmin_user};
 GRANT DELETE, INSERT, SELECT, UPDATE ON survey.post_survey_actions TO ${surveyadmin_user};
 GRANT DELETE, INSERT, SELECT, UPDATE ON survey.reports TO ${surveyadmin_user};
+GRANT ALL ON SEQUENCE survey.respondents_seq TO ${surveyadmin_user};
+GRANT DELETE, INSERT, SELECT, UPDATE ON survey.respondents TO ${surveyadmin_user};
+GRANT INSERT, SELECT, UPDATE ON surveyreport.fact_respondents TO ${surveyadmin_user};
