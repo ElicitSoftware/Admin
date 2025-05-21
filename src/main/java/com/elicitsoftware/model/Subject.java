@@ -14,12 +14,9 @@ import java.util.TimeZone;
 @Table(name = "subjects", schema = "survey")
 @NamedQueries({
         @NamedQuery(name = "AppointmentView.findByDateDeptAndXidList", query = "SELECT S FROM Subject S where S.departmentId = :departmentId and S.createdDt between :startDate and :endDate and S.xid IN : xids"),
+        @NamedQuery(name = "AppointmentView.mainViewSearch", query = "SELECT S FROM Subject S where S.departmentId in(:departmentIds) and S.createdDt between :startDate and :endDate and S.xid IN : xids"),
 })
-
 public class Subject extends PanacheEntityBase {
-
-    @Transient
-    private final static SimpleDateFormat dayFormat = new SimpleDateFormat("MM/dd/yyyy");
 
     @Id
     @SequenceGenerator(name = "SUBJECTS_ID_GENERATOR", schema = "survey", sequenceName = "SUBJECTS_SEQ", allocationSize = 1)
@@ -70,8 +67,8 @@ public class Subject extends PanacheEntityBase {
     private String email;
 
     @Column(name = "phone", nullable = true)
-     @Size(max = 20)
-     @Pattern(regexp = "^\\d{3}-\\d{3}-\\d{4}$", message = "Telephone must match ###-###-#### format")
+    @Size(max = 20)
+    @Pattern(regexp = "^\\d{3}-\\d{3}-\\d{4}$", message = "Telephone must match ###-###-#### format")
     private String phone;
 
     @Temporal(TemporalType.TIMESTAMP)
@@ -186,6 +183,14 @@ public class Subject extends PanacheEntityBase {
 
     public void setPhone(String phone) {
         this.phone = phone;
+    }
+
+    public Date getCreatedDt() {
+        return createdDt;
+    }
+
+    public void setCreatedDt(Date createdDt) {
+        this.createdDt = createdDt;
     }
 
     @Transient
