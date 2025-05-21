@@ -72,7 +72,7 @@ public class MainLayout extends AppLayout implements AfterNavigationListener {
         DrawerToggle toggle = new DrawerToggle();
         Anchor title = new Anchor("/", getTranslation("software.name"));
         title.getStyle().set("font-size", "var(--lumo-font-size-l)")
-                .set("margin", "0");
+                .set("margin", "20");
         addToNavbar(toggle, title);
     }
 
@@ -90,9 +90,18 @@ public class MainLayout extends AppLayout implements AfterNavigationListener {
         buttonLayout.setPadding(false);
         buttonLayout.setSpacing(true);
 
-        if (accessToken != null && accessToken.getName() != null) {
-            addToDrawer(new H5(accessToken.getName()));
-        }
+        //Register Subject Button
+        Button searchButton = new Button(
+                "Search Subjects",
+                VaadinIcon.SEARCH.create()
+        );
+        searchButton.addClickListener(e -> {
+            VaadinSession.getCurrent().close();
+            com.vaadin.flow.component.UI.getCurrent().navigate(MainView.class);
+        });
+        searchButton.setWidthFull();
+        buttonLayout.add(searchButton);
+
         //Register Subject Button
         Button registerButton = new Button(
                 "Register Subject",
