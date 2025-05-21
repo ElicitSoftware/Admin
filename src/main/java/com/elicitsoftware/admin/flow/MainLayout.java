@@ -16,7 +16,6 @@ import com.vaadin.flow.component.applayout.AppLayout;
 import com.vaadin.flow.component.applayout.DrawerToggle;
 import com.vaadin.flow.component.button.Button;
 import com.vaadin.flow.component.html.Anchor;
-import com.vaadin.flow.component.html.H5;
 import com.vaadin.flow.component.icon.VaadinIcon;
 import com.vaadin.flow.component.orderedlayout.VerticalLayout;
 import com.vaadin.flow.router.AfterNavigationEvent;
@@ -97,7 +96,7 @@ public class MainLayout extends AppLayout implements AfterNavigationListener {
         );
         searchButton.addClickListener(e -> {
             VaadinSession.getCurrent().close();
-            com.vaadin.flow.component.UI.getCurrent().navigate(MainView.class);
+            com.vaadin.flow.component.UI.getCurrent().navigate(SearchView.class);
         });
         searchButton.setWidthFull();
         buttonLayout.add(searchButton);
@@ -109,7 +108,7 @@ public class MainLayout extends AppLayout implements AfterNavigationListener {
         );
         registerButton.addClickListener(e -> {
             VaadinSession.getCurrent().close();
-            com.vaadin.flow.component.UI.getCurrent().navigate(SubjectFormView.class);
+            com.vaadin.flow.component.UI.getCurrent().navigate(RegisterView.class);
         });
         registerButton.setWidthFull();
         buttonLayout.add(registerButton);

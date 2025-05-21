@@ -62,7 +62,7 @@ import java.util.stream.Collectors;
  */
 @Route(value = "", layout = MainLayout.class)
 @RolesAllowed("user")
-class MainView extends VerticalLayout implements HasDynamicTitle {
+class SearchView extends VerticalLayout implements HasDynamicTitle {
 
     @Inject
     SecurityIdentity identity;
@@ -244,6 +244,6 @@ class MainView extends VerticalLayout implements HasDynamicTitle {
 
     @Override
     public String getPageTitle() {
-        return "Elicit Administration";
+        return "Elicit Search";
     }
 }
