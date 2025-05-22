@@ -14,11 +14,14 @@ package com.elicitsoftware.admin.flow;
 import com.elicitsoftware.model.Department;
 import com.elicitsoftware.model.Status;
 import com.elicitsoftware.model.User;
+import com.elicitsoftware.service.StatusDataSource;
+import com.vaadin.flow.component.Component;
 import com.vaadin.flow.component.Direction;
 import com.vaadin.flow.component.UI;
 import com.vaadin.flow.component.button.Button;
 import com.vaadin.flow.component.combobox.MultiSelectComboBox;
 import com.vaadin.flow.component.grid.Grid;
+import com.vaadin.flow.component.grid.HeaderRow;
 import com.vaadin.flow.component.html.H5;
 import com.vaadin.flow.component.html.Paragraph;
 import com.vaadin.flow.component.notification.Notification;
@@ -26,18 +29,20 @@ import com.vaadin.flow.component.orderedlayout.FlexComponent;
 import com.vaadin.flow.component.orderedlayout.HorizontalLayout;
 import com.vaadin.flow.component.orderedlayout.VerticalLayout;
 import com.vaadin.flow.component.textfield.TextField;
+import com.vaadin.flow.data.provider.DataProvider;
+import com.vaadin.flow.data.provider.Query;
 import com.vaadin.flow.router.HasDynamicTitle;
 import com.vaadin.flow.router.Route;
 import io.quarkus.security.identity.SecurityIdentity;
 import jakarta.annotation.PostConstruct;
 import jakarta.annotation.security.RolesAllowed;
 import jakarta.inject.Inject;
-import jakarta.persistence.Query;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 /**
  * The `MainView` class represents the main view of the application, providing the user interface
@@ -74,6 +79,17 @@ class SearchView extends VerticalLayout implements HasDynamicTitle {
 
     Grid<Status> subjectGrid;
 
+    private final PaginationControls paginationControls = new PaginationControls();
+    private final StatusDataSource dataSource = new StatusDataSource();
+
+    // Add these as class fields:
+    private MultiSelectComboBox<Department> departmentComboBox;
+    private TextField tokenField;
+    private TextField firstNameField;
+    private TextField lastNameField;
+    private TextField emailField;
+    private TextField phoneField;
+
     @PostConstruct
     public void init() {
 
@@ -102,25 +118,29 @@ class SearchView extends VerticalLayout implements HasDynamicTitle {
         searchBar.setWidth("100%");
         searchBar.setSpacing(true);
 
-        //Add input fields
-        MultiSelectComboBox<Department> departmentComboBox = getDepartmentComboBox();
+        // Use class fields
+        departmentComboBox = getDepartmentComboBox();
         searchBar.add(departmentComboBox);
 
-        TextField firstNameField = new TextField("First name");
+        tokenField = new TextField("Token");
+        searchBar.add(tokenField);
+
+        firstNameField = new TextField("First name");
         searchBar.add(firstNameField);
 
-        TextField lastNameField = new TextField("Last name");
+        lastNameField = new TextField("Last name");
         searchBar.add(lastNameField);
 
-        TextField email = new TextField("Email");
-        searchBar.add(email);
+        emailField = new TextField("Email");
+        searchBar.add(emailField);
 
-        TextField phone = new TextField("Phone");
-        searchBar.add(phone);
+        phoneField = new TextField("Phone");
+        searchBar.add(phoneField);
 
         Button searchButton = new Button("Search");
         searchButton.addClickListener(e -> {
-            populateSubjectGrid(getSelectedDepartmentIds(departmentComboBox), firstNameField.getValue(), lastNameField.getValue(), email.getValue(), phone.getValue());
+            paginationControls.resetToFirstPage();
+            pagingDataProvider.refreshAll(); // This will use the latest getStatusSQL() for filtering
         });
         searchBar.add(searchButton);
         add(searchBar);
@@ -130,7 +150,7 @@ class SearchView extends VerticalLayout implements HasDynamicTitle {
         VerticalLayout respondentsLayout = new VerticalLayout();
         respondentsLayout.setSizeFull();
         add(respondentsLayout);
-        add(getSubjectGrid());
+        getSubjectGrid();
     }
 
     private MultiSelectComboBox<Department> getDepartmentComboBox() {
@@ -164,10 +184,10 @@ class SearchView extends VerticalLayout implements HasDynamicTitle {
                     && newValues.stream().anyMatch(d -> d.id == -1)) {
                 // If "All Departments" is selected, set only it as selected
                 departmentComboBox.setValue(Set.of(allDepartments));
-            //If the newValues only has allDepartments
-            } else if(newValues.size() == 1 && newValues.contains(allDepartments)) {
+                //If the newValues only has allDepartments
+            } else if (newValues.size() == 1 && newValues.contains(allDepartments)) {
                 departmentComboBox.setValue(Set.of(allDepartments));
-            }else {
+            } else {
                 // Optionally, you can de-select "All Departments"
                 Set<Department> filtered = newValues.stream()
                         .filter(d -> d.id != -1)
@@ -179,47 +199,88 @@ class SearchView extends VerticalLayout implements HasDynamicTitle {
         return departmentComboBox;
     }
 
-    private Grid<Status> getSubjectGrid() {
-        subjectGrid = new Grid<>(Status.class, true);
-//        subjectGrid.addColumn(Status::getToken).setHeader("Token");
-//        subjectGrid.addColumn(Status::getDepartmentName).setHeader("Department");
-//        subjectGrid.addColumn(Status::getFirstName).setHeader("First name");
-//        subjectGrid.addColumn(Status::getMiddleName).setHeader("Middle name");
-//        subjectGrid.addColumn(Status::getLastName).setHeader("Last name");
-//        subjectGrid.addColumn(Status::getEmail).setHeader("Email");
-//        subjectGrid.addColumn(Status::getPhone).setHeader("Phone");
-//        subjectGrid.addColumn(Status::getStatus).setHeader("Status");
-        return subjectGrid;
+    private void getSubjectGrid() {
+        subjectGrid = new Grid<>(Status.class, false);
+        subjectGrid.addColumn(Status::getToken).setHeader("Token").setSortable(true).setWidth("150px").setFlexGrow(0);
+        subjectGrid.addColumn(Status::getDepartmentName).setHeader("Department").setSortable(true);
+        subjectGrid.addColumn(Status::getFirstName).setHeader("First name").setSortable(true);
+        subjectGrid.addColumn(Status::getMiddleName).setHeader("Middle name").setSortable(true);
+        subjectGrid.addColumn(Status::getLastName).setHeader("Last name").setSortable(true);
+        subjectGrid.addColumn(Status::getEmail).setHeader("Email").setSortable(true);
+        subjectGrid.addColumn(Status::getPhone).setHeader("Phone").setSortable(true);
+        subjectGrid.addColumn(Status::getStatus).setHeader("Status").setSortable(true);
+        subjectGrid.setMultiSort(true, Grid.MultiSortPriority.APPEND);
+        HeaderRow headerRow = subjectGrid.appendHeaderRow();
+
+        // Set the data provider here
+        subjectGrid.setDataProvider(pagingDataProvider);
+
+        paginationControls.onPageChanged(() -> subjectGrid.getDataProvider().refreshAll());
+
+        add(wrapWithVerticalLayout(subjectGrid, paginationControls));
     }
 
-    private void populateSubjectGrid(String departments, String firstName, String lastName, String email, String phone) {
-        String sql = getStatusSQL(departments, firstName, lastName, email, phone);
-        Query query = Status.getEntityManager().createNativeQuery(sql, Status.class);
-        List<Status> statusList = query.getResultList();
-        subjectGrid.setItems(statusList);
+    private VerticalLayout wrapWithVerticalLayout(Component component1, Component component2) {
+        var gridWithPaginationLayout = new VerticalLayout(component1, component2);
+        gridWithPaginationLayout.setPadding(false);
+        gridWithPaginationLayout.setSpacing(false);
+        gridWithPaginationLayout.getThemeList().add("spacing-xs");
+        return gridWithPaginationLayout;
     }
 
-    private String getStatusSQL(String departments, String firstName, String lastName, String email, String phone) {
-        String sql = """
-                 SELECT
-                    s.id,
-                    s.survey_id,
-                 	s.firstname,
-                	s.lastname,
-                	s.dob,
-                	s.email,
-                	s.middlename,
-                	s.phone,
-                	s.xid,
-                	s.created_dt,
-                	s.department_name,
-                    s.token,
-                    s.status
-                    FROM survey.status s
-                    WHERE s.department_id in (
-                """;
-        sql += departments + ")";
-        return sql;
+    // 1. Update the DataProvider to use the filter parameter:
+    private final DataProvider<Status, String> pagingDataProvider = DataProvider.fromFilteringCallbacks(
+        query -> {
+            query.getLimit();
+            query.getOffset();
+
+            var offset = paginationControls.calculateOffset();
+            var limit = paginationControls.getPageSize();
+            String sql = query.getFilter().orElse(getStatusSQL());
+            return dataSource.fetch(sql, offset, limit);
+        },
+        query -> {
+            String sql = query.getFilter().orElse(getStatusSQL());
+            var itemCount = dataSource.count(sql);
+            paginationControls.recalculatePageCount(itemCount);
+            var offset = paginationControls.calculateOffset();
+            var limit = paginationControls.getPageSize();
+            var remainingItemsCount = itemCount - offset;
+            return Math.min(remainingItemsCount, limit);
+        }
+    );
+
+    private String getStatusSQL() {
+        String departments = getSelectedDepartmentIds(departmentComboBox);
+        String token = tokenField.getValue();
+        String firstName = firstNameField.getValue();
+        String lastName = lastNameField.getValue();
+        String email = emailField.getValue();
+        String phone = phoneField.getValue();
+
+        StringBuilder jpql = new StringBuilder("SELECT s FROM Status s WHERE ");
+
+        // Department IDs (required)
+        jpql.append("s.department_id IN (").append(departments).append(")");
+
+        // Optional filters
+        if (token != null && !token.isBlank()) {
+            jpql.append(" AND LOWER(s.token) LIKE LOWER('%").append(token).append("%')");
+        }
+        if (firstName != null && !firstName.isBlank()) {
+            jpql.append(" AND LOWER(s.firstName) LIKE LOWER('%").append(firstName).append("%')");
+        }
+        if (lastName != null && !lastName.isBlank()) {
+            jpql.append(" AND LOWER(s.lastName) LIKE LOWER('%").append(lastName).append("%')");
+        }
+        if (email != null && !email.isBlank()) {
+            jpql.append(" AND LOWER(s.email) LIKE LOWER('%").append(email).append("%')");
+        }
+        if (phone != null && !phone.isBlank()) {
+            jpql.append(" AND s.phone LIKE '%").append(phone).append("%'");
+        }
+
+        return jpql.toString();
     }
 
     private String getSelectedDepartmentIds(MultiSelectComboBox<Department> departmentComboBox) {

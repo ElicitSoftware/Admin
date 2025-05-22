@@ -1,6 +1,7 @@
 package com.elicitsoftware.model;
 
 import io.quarkus.hibernate.orm.panache.Panache;
+import io.quarkus.hibernate.orm.panache.PanacheEntity;
 import io.quarkus.hibernate.orm.panache.PanacheEntityBase;
 import io.quarkus.panache.common.Parameters;
 import jakarta.persistence.*;
@@ -13,7 +14,7 @@ import java.util.TimeZone;
 
 @Entity
 @Table(name = "status", schema = "survey")
-public class Status extends Panache {
+public class Status extends PanacheEntityBase {
 
     @Transient
     private final static SimpleDateFormat sdf = new SimpleDateFormat("MM/dd/yyyy");
@@ -53,6 +54,9 @@ public class Status extends Panache {
 
     @Column(name = "department_name")
     private String departmentName;
+
+    @Column(name = "department_id")
+    private long department_id;
 
     @Column(name = "token")
     private String token;
