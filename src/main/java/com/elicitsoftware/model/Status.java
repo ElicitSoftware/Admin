@@ -1,16 +1,10 @@
 package com.elicitsoftware.model;
 
-import io.quarkus.hibernate.orm.panache.Panache;
-import io.quarkus.hibernate.orm.panache.PanacheEntity;
 import io.quarkus.hibernate.orm.panache.PanacheEntityBase;
-import io.quarkus.panache.common.Parameters;
 import jakarta.persistence.*;
-import jakarta.validation.constraints.*;
 
 import java.text.SimpleDateFormat;
 import java.util.Date;
-import java.util.List;
-import java.util.TimeZone;
 
 @Entity
 @Table(name = "status", schema = "survey")
@@ -18,40 +12,29 @@ public class Status extends PanacheEntityBase {
 
     @Transient
     private final static SimpleDateFormat sdf = new SimpleDateFormat("MM/dd/yyyy");
-
-    @Id
-    @Column(name = "id", unique = true, nullable = false, precision = 20)
-    private long id;
-
-    @Column(name = "XID")
-    private String xid;
-
-    @Column(name = "survey_id")
-    private long surveyId;
-
-    @Column(name = "firstName")
-    private String firstName;
-
-    @Column(name = "lastName")
-    private String lastName;
-
-    @Column(name = "middleName")
-    private String middleName;
-
-    @Column(name = "dob")
-    @Temporal(TemporalType.DATE)
-    private Date dob;
-
-    @Column(name = "email")
-    private String email;
-
-    @Column(name = "phone", nullable = true)
-    private String phone;
-
     @Column(name = "CREATED_DT")
     @Temporal(TemporalType.TIMESTAMP)
     public Date createdDt = new Date();
-
+    @Id
+    @Column(name = "id", unique = true, nullable = false, precision = 20)
+    private long id;
+    @Column(name = "XID")
+    private String xid;
+    @Column(name = "survey_id")
+    private long surveyId;
+    @Column(name = "firstName")
+    private String firstName;
+    @Column(name = "lastName")
+    private String lastName;
+    @Column(name = "middleName")
+    private String middleName;
+    @Column(name = "dob")
+    @Temporal(TemporalType.DATE)
+    private Date dob;
+    @Column(name = "email")
+    private String email;
+    @Column(name = "phone", nullable = true)
+    private String phone;
     @Column(name = "department_name")
     private String departmentName;
 

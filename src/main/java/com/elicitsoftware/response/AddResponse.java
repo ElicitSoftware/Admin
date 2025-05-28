@@ -8,23 +8,24 @@ public class AddResponse {
     public int getRespondentId() {
         return respondentId;
     }
+
     public void setRespondentId(int respondentId) {
         this.respondentId = respondentId;
     }
+
     public String getToken() {
         return token;
     }
+
     public void setToken(String token) {
         this.token = token;
     }
+
     public String getError() {
         return error;
     }
+
     public void setError(String error) {
         this.error = error;
     }
-//    @Override
-//    public String toString() {
-//        return "AddResponse [respondentId=" + respondentId + ", token=" + token + ", error=" + error + "]";
-//    }
 }

@@ -70,21 +70,16 @@ import java.util.stream.Collectors;
 @RolesAllowed("user")
 class SearchView extends VerticalLayout implements HasDynamicTitle {
 
-    @Inject
-    SecurityIdentity identity;
-
-    @Inject
-    UiSessionLogin uiSessionLogin;
-
-    private UI ui;
-    User user;
-
-    Grid<Status> subjectGrid;
-
     private final PaginationControls paginationControls = new PaginationControls();
     private final StatusDataSource dataSource = new StatusDataSource();
     private final ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(1);
-
+    @Inject
+    SecurityIdentity identity;
+    @Inject
+    UiSessionLogin uiSessionLogin;
+    User user;
+    Grid<Status> subjectGrid;
+    private UI ui;
     // Add these as class fields:
     private MultiSelectComboBox<Department> departmentComboBox;
     private TextField tokenField;
@@ -92,6 +87,27 @@ class SearchView extends VerticalLayout implements HasDynamicTitle {
     private TextField lastNameField;
     private TextField emailField;
     private TextField phoneField;
+    // 1. Update the DataProvider to use the filter parameter:
+    private final DataProvider<Status, String> pagingDataProvider = DataProvider.fromFilteringCallbacks(
+            query -> {
+                query.getLimit();
+                query.getOffset();
+
+                var offset = paginationControls.calculateOffset();
+                var limit = paginationControls.getPageSize();
+                String sql = query.getFilter().orElse(getStatusSQL());
+                return dataSource.fetch(sql, offset, limit);
+            },
+            query -> {
+                String sql = query.getFilter().orElse(getStatusSQL());
+                var itemCount = dataSource.count(sql);
+                paginationControls.recalculatePageCount(itemCount);
+                var offset = paginationControls.calculateOffset();
+                var limit = paginationControls.getPageSize();
+                var remainingItemsCount = itemCount - offset;
+                return Math.min(remainingItemsCount, limit);
+            }
+    );
 
     @PostConstruct
     public void init() {
@@ -243,28 +259,6 @@ class SearchView extends VerticalLayout implements HasDynamicTitle {
         gridWithPaginationLayout.getThemeList().add("spacing-xs");
         return gridWithPaginationLayout;
     }
-
-    // 1. Update the DataProvider to use the filter parameter:
-    private final DataProvider<Status, String> pagingDataProvider = DataProvider.fromFilteringCallbacks(
-            query -> {
-                query.getLimit();
-                query.getOffset();
-
-                var offset = paginationControls.calculateOffset();
-                var limit = paginationControls.getPageSize();
-                String sql = query.getFilter().orElse(getStatusSQL());
-                return dataSource.fetch(sql, offset, limit);
-            },
-            query -> {
-                String sql = query.getFilter().orElse(getStatusSQL());
-                var itemCount = dataSource.count(sql);
-                paginationControls.recalculatePageCount(itemCount);
-                var offset = paginationControls.calculateOffset();
-                var limit = paginationControls.getPageSize();
-                var remainingItemsCount = itemCount - offset;
-                return Math.min(remainingItemsCount, limit);
-            }
-    );
 
     private String getStatusSQL() {
         String departments = getSelectedDepartmentIds(departmentComboBox);

@@ -1,6 +1,5 @@
 package com.elicitsoftware.service;
 
-import com.elicitsoftware.model.Respondent;
 import com.elicitsoftware.model.Subject;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.transaction.Transactional;

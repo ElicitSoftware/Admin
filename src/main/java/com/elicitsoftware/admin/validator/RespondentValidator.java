@@ -11,6 +11,6 @@ public class RespondentValidator implements ConstraintValidator<ValidRespondent,
         //This should remove this entire package.
 
         // They need to provide a contact method. Either mobile, email or both.
-        return (pat.getEmail() != null && !pat.getEmail().isBlank())||(pat.getPhone() != null && !pat.getPhone().isBlank());
+        return (pat.getEmail() != null && !pat.getEmail().isBlank()) || (pat.getPhone() != null && !pat.getPhone().isBlank());
     }
 }

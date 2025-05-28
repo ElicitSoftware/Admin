@@ -25,13 +25,11 @@ import java.util.Date;
 @ApplicationScoped
 public class TokenService {
 
-    @Context
-    private UriInfo uriInfo;
-
-    private RandomString generator = null;
-
     @Inject
     TransactionService transactionService;
+    @Context
+    private UriInfo uriInfo;
+    private RandomString generator = null;
 
     public TokenService() {
         super();

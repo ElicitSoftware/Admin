@@ -18,65 +18,53 @@ import java.util.TimeZone;
 })
 public class Subject extends PanacheEntityBase {
 
+    @Transient
+    private final SimpleDateFormat sdf = new SimpleDateFormat("MM/dd/yyyy");
+    @Temporal(TemporalType.TIMESTAMP)
+    @Column(name = "CREATED_DT")
+    public Date createdDt = new Date();
     @Id
     @SequenceGenerator(name = "SUBJECTS_ID_GENERATOR", schema = "survey", sequenceName = "SUBJECTS_SEQ", allocationSize = 1)
     @GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "SUBJECTS_ID_GENERATOR")
     @Column(unique = true, nullable = false, precision = 20)
     private long id;
-
     @Column(name = "XID")
     private String xid;
-
     @NotNull
     @OneToOne(cascade = CascadeType.PERSIST)
     private Respondent respondent;
-
     @Column(name = "survey_id")
     @NotNull(message = "survey id must not be null")
     private long surveyId;
-
     @Column(name = "department_id")
     @NotNull(message = "Department id must not be null")
     private long departmentId;
-
     @Column(name = "firstName")
     @NotNull(message = "First name cannot be blank")
     @Size(max = 50,
             message = "First name max length 50 characters")
     private String firstName;
-
     @Column(name = "lastName")
     @NotNull(message = "Last name cannot be blank")
     @Size(max = 50,
             message = "Last name max length 50 characters")
     private String lastName;
-
     @Column(name = "middleName")
     @Size(max = 50,
             message = "Middle name max length 50 characters")
     private String middleName;
-
     @Column(name = "dob")
     @Past(message = "Date of birth must be in the past")
     @Temporal(TemporalType.DATE)
     private Date dob;
-
     @Column(name = "email")
     @Size(max = 255, message = "Max Email length 50 characters")
     @Email(message = "The email is invalid")
     private String email;
-
     @Column(name = "phone", nullable = true)
     @Size(max = 20)
     @Pattern(regexp = "^\\d{3}-\\d{3}-\\d{4}$", message = "Telephone must match ###-###-#### format")
     private String phone;
-
-    @Temporal(TemporalType.TIMESTAMP)
-    @Column(name = "CREATED_DT")
-    public Date createdDt = new Date();
-
-    @Transient
-    private final SimpleDateFormat sdf = new SimpleDateFormat("MM/dd/yyyy");
 
     public Subject(String xid, long surveyId, long departmentId, String firstName, String lastName, String middleName, Date dob, String email, String phone) {
         super();
@@ -95,6 +83,11 @@ public class Subject extends PanacheEntityBase {
 
     public Subject() {
         super();
+    }
+
+    @Transient
+    public static List<Subject> findByDepartmentXidDates(long department_id, List<String> xids, Date startDate, Date endDate) {
+        return find("#AppointmentView.findByDateDeptAndXidList", Parameters.with("departmentId", department_id).and("startDate", startDate).and("endDate", endDate).and("xid", "(" + String.join("','", xids) + ")")).list();
     }
 
     public long getId() {
@@ -191,10 +184,5 @@ public class Subject extends PanacheEntityBase {
 
     public void setCreatedDt(Date createdDt) {
         this.createdDt = createdDt;
-    }
-
-    @Transient
-    public static List<Subject> findByDepartmentXidDates(long department_id, List<String> xids, Date startDate, Date endDate) {
-        return find("#AppointmentView.findByDateDeptAndXidList", Parameters.with("departmentId", department_id).and("startDate", startDate).and("endDate", endDate).and("xid", "(" + String.join("','", xids) + ")")).list();
     }
 }

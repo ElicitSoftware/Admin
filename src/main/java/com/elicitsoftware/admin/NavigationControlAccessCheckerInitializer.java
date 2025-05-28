@@ -7,7 +7,7 @@ import jakarta.enterprise.event.Observes;
 
 public class NavigationControlAccessCheckerInitializer implements VaadinServiceInitListener {
 
-    private NavigationAccessControl accessControl;
+    private final NavigationAccessControl accessControl;
 
     public NavigationControlAccessCheckerInitializer() {
         accessControl = new NavigationAccessControl();

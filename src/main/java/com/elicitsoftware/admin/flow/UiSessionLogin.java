@@ -3,7 +3,6 @@ package com.elicitsoftware.admin.flow;
 import com.elicitsoftware.model.User;
 import com.vaadin.flow.server.VaadinSession;
 import com.vaadin.quarkus.annotation.UIScoped;
-
 import io.quarkus.security.identity.SecurityIdentity;
 import jakarta.annotation.PostConstruct;
 import jakarta.inject.Inject;

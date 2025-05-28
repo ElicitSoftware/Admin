@@ -1,14 +1,13 @@
 package com.elicitsoftware.service;
 
 import com.elicitsoftware.model.Status;
-import io.quarkus.agroal.DataSource;
 import io.quarkus.hibernate.orm.panache.PanacheEntityBase;
 
 import java.util.stream.Stream;
 
 public class StatusDataSource {
     public Stream<Status> fetch(String sql, int offset, long limit) {
-         return stream(sql, offset, limit).map(entity -> (Status) entity);
+        return stream(sql, offset, limit).map(entity -> (Status) entity);
     }
 
     private Stream<PanacheEntityBase> stream(String sql, int offset, long limit) {

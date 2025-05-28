@@ -12,16 +12,23 @@ import com.vaadin.flow.component.select.SelectVariant;
 import com.vaadin.flow.theme.lumo.LumoUtility;
 
 public class PaginationControls extends HorizontalLayout {
+    private final Span currentPageLabel = currentPageLabel();
     private int totalItemCount = 0;
     private int pageCount = 1;
     private int pageSize = 10;
     private int currentPage = 1;
-
-    private final Span currentPageLabel = currentPageLabel();
+    private Runnable pageChangedListener;
     private final Button firstPageButton = firstPageButton();
+
+    public PaginationControls() {
+        setDefaultVerticalComponentAlignment(Alignment.CENTER);
+        setSpacing("0.3rem");
+        setWidthFull();
+        addToStart(createPageSizeField());
+        addToEnd(firstPageButton, goToPreviousPageButton, currentPageLabel, goToNextPageButton, lastPageButton);
+    }
+
     private final Button lastPageButton = lastPageButton();
-    private final Button goToPreviousPageButton = goToPreviousPageButton();
-    private final Button goToNextPageButton = goToNextPageButton();
 
     private Component createPageSizeField() {
         Select<Integer> select = new Select<>();
@@ -44,21 +51,14 @@ public class PaginationControls extends HorizontalLayout {
         return layout;
     }
 
-    private Runnable pageChangedListener;
-
-
-    public PaginationControls() {
-        setDefaultVerticalComponentAlignment(Alignment.CENTER);
-        setSpacing("0.3rem");
-        setWidthFull();
-        addToStart(createPageSizeField());
-        addToEnd(firstPageButton, goToPreviousPageButton, currentPageLabel, goToNextPageButton, lastPageButton);
-    }
+    private final Button goToPreviousPageButton = goToPreviousPageButton();
 
     public void recalculatePageCount(int totalItemCount) {
         this.totalItemCount = totalItemCount;
         updatePageCount();
     }
+
+    private final Button goToNextPageButton = goToNextPageButton();
 
     private void updatePageCount() {
         if (totalItemCount == 0) {
@@ -136,4 +136,6 @@ public class PaginationControls extends HorizontalLayout {
     public void resetToFirstPage() {
         this.currentPage = 1;
     }
+
+
 }

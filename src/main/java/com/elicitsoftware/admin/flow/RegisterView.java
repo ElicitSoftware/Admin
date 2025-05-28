@@ -157,11 +157,9 @@ public class RegisterView extends VerticalLayout implements HasDynamicTitle {
             } catch (jakarta.persistence.PersistenceException e) {
                 Notification.show("Duplicate entry: A subject with this External ID " + subject.getXid() + " already exists for this department.", 5000, Notification.Position.MIDDLE);
                 subject = new Subject();
-                return;
             } catch (Exception e) {
                 Notification.show("Database error: " + e.getMessage(), 5000, Notification.Position.MIDDLE);
                 subject = new Subject();
-                return;
             }
         });
         add(formLayout, saveButton);
