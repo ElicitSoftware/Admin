@@ -3,7 +3,6 @@ package com.elicitsoftware.service;
 import com.elicitsoftware.exception.TokenGenerationError;
 import com.elicitsoftware.model.Respondent;
 import com.elicitsoftware.model.Survey;
-import com.elicitsoftware.request.AddRequest;
 import com.elicitsoftware.response.AddResponse;
 import com.elicitsoftware.util.RandomString;
 import io.quarkus.logging.Log;
@@ -11,8 +10,12 @@ import jakarta.annotation.security.RolesAllowed;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import jakarta.transaction.Transactional;
-import jakarta.ws.rs.*;
+import jakarta.ws.rs.GET;
+import jakarta.ws.rs.Path;
+import jakarta.ws.rs.PathParam;
+import jakarta.ws.rs.Produces;
 import jakarta.ws.rs.core.Context;
+import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.UriInfo;
 
 import java.security.SecureRandom;
@@ -36,16 +39,15 @@ public class TokenService {
         generator = new RandomString(9, new SecureRandom(), easy);
     }
 
-    @Path("/add")
-    @POST
-    @RolesAllowed("tokenservice-user")
-    @Produces("application/json")
-    @Consumes("application/json")
+    @Path("/add/{surveyId}")
+    @GET
+    @RolesAllowed("token")
+    @Produces(MediaType.APPLICATION_JSON)
     @Transactional
-    public AddResponse putToken(AddRequest req) {
+    public AddResponse putToken(@PathParam("surveyId") int surveyId) {
         AddResponse response = new AddResponse();
         try {
-            Respondent respondent = getToken(req.getSurveyId());
+            Respondent respondent = getToken(surveyId);
             response.setRespondentId(respondent.id);
             response.setToken(respondent.token);
             return response;
@@ -69,8 +71,7 @@ public class TokenService {
                     respondent.survey = survey;
                     respondent.token = token;
                     respondent.active = true;
-//                    respondent.persist();
-//                    respondent = transactionService.saveRespondent(respondent);
+                    respondent.persist();
                     return respondent;
                 } else {
                     Log.info("Duplicate token " + token);

@@ -23,8 +23,8 @@ public class AddResponse {
     public void setError(String error) {
         this.error = error;
     }
-    @Override
-    public String toString() {
-        return "AddResponse [respondentId=" + respondentId + ", token=" + token + ", error=" + error + "]";
-    }
+//    @Override
+//    public String toString() {
+//        return "AddResponse [respondentId=" + respondentId + ", token=" + token + ", error=" + error + "]";
+//    }
 }

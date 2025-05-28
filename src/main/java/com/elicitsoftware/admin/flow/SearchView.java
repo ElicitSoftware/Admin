@@ -30,7 +30,6 @@ import com.vaadin.flow.component.orderedlayout.HorizontalLayout;
 import com.vaadin.flow.component.orderedlayout.VerticalLayout;
 import com.vaadin.flow.component.textfield.TextField;
 import com.vaadin.flow.data.provider.DataProvider;
-import com.vaadin.flow.data.provider.Query;
 import com.vaadin.flow.router.HasDynamicTitle;
 import com.vaadin.flow.router.Route;
 import io.quarkus.security.identity.SecurityIdentity;
@@ -41,8 +40,10 @@ import jakarta.inject.Inject;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
-import java.util.stream.Stream;
 
 /**
  * The `MainView` class represents the main view of the application, providing the user interface
@@ -75,12 +76,14 @@ class SearchView extends VerticalLayout implements HasDynamicTitle {
     @Inject
     UiSessionLogin uiSessionLogin;
 
+    private UI ui;
     User user;
 
     Grid<Status> subjectGrid;
 
     private final PaginationControls paginationControls = new PaginationControls();
     private final StatusDataSource dataSource = new StatusDataSource();
+    private final ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(1);
 
     // Add these as class fields:
     private MultiSelectComboBox<Department> departmentComboBox;
@@ -92,6 +95,9 @@ class SearchView extends VerticalLayout implements HasDynamicTitle {
 
     @PostConstruct
     public void init() {
+
+        // Safe to call getCurrent here
+        this.ui = UI.getCurrent();
 
         user = uiSessionLogin.getUser();
 
@@ -108,7 +114,7 @@ class SearchView extends VerticalLayout implements HasDynamicTitle {
         }
         add(new H5("Subject search"));
         createSearchBar();
-        createRespondentsTable();
+        createSubjectsTable();
     }
 
     private void createSearchBar() {
@@ -146,7 +152,7 @@ class SearchView extends VerticalLayout implements HasDynamicTitle {
         add(searchBar);
     }
 
-    private void createRespondentsTable() {
+    private void createSubjectsTable() {
         VerticalLayout respondentsLayout = new VerticalLayout();
         respondentsLayout.setSizeFull();
         add(respondentsLayout);
@@ -217,6 +223,16 @@ class SearchView extends VerticalLayout implements HasDynamicTitle {
 
         paginationControls.onPageChanged(() -> subjectGrid.getDataProvider().refreshAll());
 
+        // Schedule data refresh every 10 seconds
+        scheduler.scheduleAtFixedRate(() -> {
+            if (ui != null) {
+                ui.access(() -> {
+                    // Replace existing data
+                    pagingDataProvider.refreshAll();
+                });
+            }
+        }, 0, 10, TimeUnit.SECONDS);
+
         add(wrapWithVerticalLayout(subjectGrid, paginationControls));
     }
 
@@ -230,24 +246,24 @@ class SearchView extends VerticalLayout implements HasDynamicTitle {
 
     // 1. Update the DataProvider to use the filter parameter:
     private final DataProvider<Status, String> pagingDataProvider = DataProvider.fromFilteringCallbacks(
-        query -> {
-            query.getLimit();
-            query.getOffset();
+            query -> {
+                query.getLimit();
+                query.getOffset();
 
-            var offset = paginationControls.calculateOffset();
-            var limit = paginationControls.getPageSize();
-            String sql = query.getFilter().orElse(getStatusSQL());
-            return dataSource.fetch(sql, offset, limit);
-        },
-        query -> {
-            String sql = query.getFilter().orElse(getStatusSQL());
-            var itemCount = dataSource.count(sql);
-            paginationControls.recalculatePageCount(itemCount);
-            var offset = paginationControls.calculateOffset();
-            var limit = paginationControls.getPageSize();
-            var remainingItemsCount = itemCount - offset;
-            return Math.min(remainingItemsCount, limit);
-        }
+                var offset = paginationControls.calculateOffset();
+                var limit = paginationControls.getPageSize();
+                String sql = query.getFilter().orElse(getStatusSQL());
+                return dataSource.fetch(sql, offset, limit);
+            },
+            query -> {
+                String sql = query.getFilter().orElse(getStatusSQL());
+                var itemCount = dataSource.count(sql);
+                paginationControls.recalculatePageCount(itemCount);
+                var offset = paginationControls.calculateOffset();
+                var limit = paginationControls.getPageSize();
+                var remainingItemsCount = itemCount - offset;
+                return Math.min(remainingItemsCount, limit);
+            }
     );
 
     private String getStatusSQL() {

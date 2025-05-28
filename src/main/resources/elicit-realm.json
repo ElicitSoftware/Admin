@@ -246,6 +246,7 @@
         "attributes" : { }
       } ],
       "security-admin-console" : [ ],
+      "token-service" : [ ],
       "elicit-admin" : [ {
         "id" : "7fa0047c-8278-4516-8dee-0c0a0591958c",
         "name" : "user",
@@ -258,6 +259,14 @@
         "id" : "7a0ac7a4-7952-423d-af2c-18013b8bc8cf",
         "name" : "admin",
         "description" : "Elicit Admin Application Administrator",
+        "composite" : false,
+        "clientRole" : true,
+        "containerId" : "70661d4b-1e24-4196-ac34-203efbbdcef3",
+        "attributes" : { }
+      }, {
+        "id" : "775cd6e6-f5e9-4581-8409-a9683f4982c7",
+        "name" : "token",
+        "description" : "Token Service",
         "composite" : false,
         "clientRole" : true,
         "containerId" : "70661d4b-1e24-4196-ac34-203efbbdcef3",
@@ -355,6 +364,23 @@
     "realmRoles" : [ "default-roles-elicit" ],
     "clientRoles" : {
       "elicit-admin" : [ "user", "admin" ]
+    },
+    "notBefore" : 0,
+    "groups" : [ ]
+  }, {
+    "id" : "26978e01-bd87-4f36-8c01-22f129d9a697",
+    "username" : "service-account-token-service",
+    "emailVerified" : false,
+    "createdTimestamp" : 1748443705584,
+    "enabled" : true,
+    "totp" : false,
+    "serviceAccountClientId" : "token-service",
+    "credentials" : [ ],
+    "disableableCredentialTypes" : [ ],
+    "requiredActions" : [ ],
+    "realmRoles" : [ "default-roles-elicit" ],
+    "clientRoles" : {
+      "elicit-admin" : [ "token" ]
     },
     "notBefore" : 0,
     "groups" : [ ]
@@ -660,6 +686,45 @@
       }
     } ],
     "defaultClientScopes" : [ "web-origins", "acr", "roles", "profile", "basic", "email" ],
+    "optionalClientScopes" : [ "address", "phone", "organization", "offline_access", "microprofile-jwt" ]
+  }, {
+    "id" : "3d6e8765-ae1b-4a28-836a-27edf5e1924d",
+    "clientId" : "token-service",
+    "name" : "Token Service",
+    "description" : "Service client for token-based access to elicit-admin APIs",
+    "rootUrl" : "",
+    "adminUrl" : "",
+    "baseUrl" : "",
+    "surrogateAuthRequired" : false,
+    "enabled" : true,
+    "alwaysDisplayInConsole" : false,
+    "clientAuthenticatorType" : "client-secret",
+    "secret" : "token",
+    "redirectUris" : [ "/*" ],
+    "webOrigins" : [ "/*" ],
+    "notBefore" : 0,
+    "bearerOnly" : false,
+    "consentRequired" : false,
+    "standardFlowEnabled" : false,
+    "implicitFlowEnabled" : false,
+    "directAccessGrantsEnabled" : false,
+    "serviceAccountsEnabled" : true,
+    "publicClient" : false,
+    "frontchannelLogout" : true,
+    "protocol" : "openid-connect",
+    "attributes" : {
+      "realm_client" : "false",
+      "oidc.ciba.grant.enabled" : "false",
+      "client.secret.creation.time" : "1748443705",
+      "backchannel.logout.session.required" : "true",
+      "standard.token.exchange.enabled" : "false",
+      "oauth2.device.authorization.grant.enabled" : "false",
+      "backchannel.logout.revoke.offline.tokens" : "false"
+    },
+    "authenticationFlowBindingOverrides" : { },
+    "fullScopeAllowed" : true,
+    "nodeReRegistrationTimeout" : -1,
+    "defaultClientScopes" : [ "web-origins", "service_account", "acr", "roles", "profile", "basic", "email" ],
     "optionalClientScopes" : [ "address", "phone", "organization", "offline_access", "microprofile-jwt" ]
   } ],
   "clientScopes" : [ {
@@ -1360,7 +1425,7 @@
       "subType" : "authenticated",
       "subComponents" : { },
       "config" : {
-        "allowed-protocol-mapper-types" : [ "saml-role-list-mapper", "oidc-usermodel-attribute-mapper", "saml-user-attribute-mapper", "oidc-usermodel-property-mapper", "oidc-sha256-pairwise-sub-mapper", "oidc-full-name-mapper", "saml-user-property-mapper", "oidc-address-mapper" ]
+        "allowed-protocol-mapper-types" : [ "oidc-sha256-pairwise-sub-mapper", "saml-user-attribute-mapper", "oidc-usermodel-property-mapper", "oidc-address-mapper", "saml-user-property-mapper", "oidc-usermodel-attribute-mapper", "saml-role-list-mapper", "oidc-full-name-mapper" ]
       }
     }, {
       "id" : "e8b85dd4-cac7-4caf-a0f0-cfba9ec4063d",
@@ -1369,7 +1434,7 @@
       "subType" : "anonymous",
       "subComponents" : { },
       "config" : {
-        "allowed-protocol-mapper-types" : [ "oidc-usermodel-property-mapper", "oidc-usermodel-attribute-mapper", "oidc-sha256-pairwise-sub-mapper", "saml-role-list-mapper", "oidc-full-name-mapper", "saml-user-attribute-mapper", "saml-user-property-mapper", "oidc-address-mapper" ]
+        "allowed-protocol-mapper-types" : [ "saml-user-attribute-mapper", "oidc-usermodel-attribute-mapper", "saml-user-property-mapper", "saml-role-list-mapper", "oidc-sha256-pairwise-sub-mapper", "oidc-usermodel-property-mapper", "oidc-full-name-mapper", "oidc-address-mapper" ]
       }
     }, {
       "id" : "629bb38c-fd19-4622-8c02-ec73a99d41a9",
