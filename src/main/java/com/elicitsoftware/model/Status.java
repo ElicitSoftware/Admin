@@ -12,9 +12,6 @@ public class Status extends PanacheEntityBase {
 
     @Transient
     private final static SimpleDateFormat sdf = new SimpleDateFormat("MM/dd/yyyy");
-    @Column(name = "CREATED_DT")
-    @Temporal(TemporalType.TIMESTAMP)
-    public Date createdDt = new Date();
     @Id
     @Column(name = "id", unique = true, nullable = false, precision = 20)
     private long id;
@@ -37,15 +34,18 @@ public class Status extends PanacheEntityBase {
     private String phone;
     @Column(name = "department_name")
     private String departmentName;
-
     @Column(name = "department_id")
     private long department_id;
-
     @Column(name = "token")
     private String token;
-
     @Column(name = "status")
     private String status;
+    @Column(name = "CREATED_DT")
+    @Temporal(TemporalType.TIMESTAMP)
+    public Date createdDt = new Date();
+    @Column(name = "finalized_dt")
+    @Temporal(TemporalType.TIMESTAMP)
+    public Date finalizedDt = new Date();
 
     public Status() {
         super();
@@ -145,5 +145,24 @@ public class Status extends PanacheEntityBase {
 
     public void setDepartmentName(String departmentName) {
         this.departmentName = departmentName;
+    }
+
+    public Date getCreatedDt() {
+        return createdDt;
+    }
+
+    public void setCreatedDt(Date createdDt) {
+        this.createdDt = createdDt;
+    }
+    public String getCreated(){
+        return sdf.format(createdDt);
+    }
+
+    public Date getFinalizedDt() {
+        return finalizedDt;
+    }
+
+    public void setFinalizedDt(Date finalizedDt) {
+        this.finalizedDt = finalizedDt;
     }
 }

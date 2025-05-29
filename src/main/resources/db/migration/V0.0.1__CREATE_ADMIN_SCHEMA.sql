@@ -190,6 +190,7 @@ SELECT s.id,
        s.phone,
        s.xid,
        s.created_dt,
+       r.finalized_dt,
        d.name as department_name,
        d.id as department_id,
        r.token,
@@ -202,4 +203,3 @@ FROM survey.respondents r
          JOIN survey.subjects s on s.respondent_id = r.id
          JOIN survey.departments d on s.department_id = d.id
     );
-

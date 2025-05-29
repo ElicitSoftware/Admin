@@ -115,6 +115,7 @@ class SearchView extends VerticalLayout implements HasDynamicTitle {
                                 case "email" -> "s.email";
                                 case "phone" -> "s.phone";
                                 case "status" -> "s.status";
+                                case "createdDt" -> "s.createdDt";
                                 default -> null;
                             };
                             if (column != null) {
@@ -263,6 +264,7 @@ class SearchView extends VerticalLayout implements HasDynamicTitle {
         subjectGrid.addColumn(Status::getLastName).setHeader("Last name").setSortable(true).setSortProperty("lastName");
         subjectGrid.addColumn(Status::getEmail).setHeader("Email").setSortable(true).setSortProperty("email");
         subjectGrid.addColumn(Status::getPhone).setHeader("Phone").setSortable(true).setSortProperty("phone");
+        subjectGrid.addColumn(Status::getCreated).setHeader("Created").setSortable(true).setSortProperty("createdDt");
         subjectGrid.addColumn(Status::getStatus).setHeader("Status").setSortable(true).setSortProperty("status");
         subjectGrid.setMultiSort(true, Grid.MultiSortPriority.APPEND);
         HeaderRow headerRow = subjectGrid.appendHeaderRow();
