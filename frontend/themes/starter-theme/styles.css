@@ -4,10 +4,16 @@
    https://vaadin.com/docs/latest/styling/lumo for more information.
 */
 
-@import 'fonts/style.css';
+/* Uncomment this line for UM fonts */
+/*@import 'fonts/style.css';*/
 
+/*html {*/
+/*    --lumo-font-family: 'Chilanka';*/
+/*}*/
+
+/* Uncomment this section for UM colors */
+/*
 html{
-    /*--lumo-font-family: 'Chilanka';*/
     --lumo-primary-text-color: hsl(209, 100%, 15%);
     --lumo-primary-color-50pct: rgba(0, 40, 77, 0.5);
     --lumo-primary-color-10pct: rgba(0, 40, 77, 0.1);
@@ -34,7 +40,7 @@ html{
     --lumo-success-color-10pct: rgba(117, 153, 142, 0.1);
     --lumo-success-color: 	hsl(161, 15%, 53%);
 }
-
 .editLink{
     color: darkblue;
 }
+*/
