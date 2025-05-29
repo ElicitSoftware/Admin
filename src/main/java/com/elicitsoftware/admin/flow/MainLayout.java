@@ -19,6 +19,8 @@ import com.vaadin.flow.component.button.Button;
 import com.vaadin.flow.component.html.Anchor;
 import com.vaadin.flow.component.icon.VaadinIcon;
 import com.vaadin.flow.component.orderedlayout.VerticalLayout;
+import com.vaadin.flow.component.sidenav.SideNav;
+import com.vaadin.flow.component.sidenav.SideNavItem;
 import com.vaadin.flow.router.AfterNavigationEvent;
 import com.vaadin.flow.router.AfterNavigationListener;
 import com.vaadin.flow.server.VaadinSession;
@@ -90,61 +92,25 @@ public class MainLayout extends AppLayout implements AfterNavigationListener {
      * layout drawer.
      */
     private void createNavBar() {
-        // Create a layout to hold the buttons
-        VerticalLayout buttonLayout = new VerticalLayout();
-        buttonLayout.setPadding(false);
-        buttonLayout.setSpacing(true);
+        SideNav nav = new SideNav();
 
-        // Search Subjects Button
-        Button searchButton = new Button(
-                "Search Subjects",
-                VaadinIcon.SEARCH.create()
-        );
-        searchButton.addClickListener(e -> {
-            VaadinSession.getCurrent().close();
-            com.vaadin.flow.component.UI.getCurrent().navigate(SearchView.class);
-        });
-        searchButton.setWidthFull();
-        buttonLayout.add(searchButton);
-
-        // Register Subject Button
-        Button registerButton = new Button(
-                "Register Subject",
-                VaadinIcon.USERS.create()
-        );
-        registerButton.addClickListener(e -> {
-            VaadinSession.getCurrent().close();
-            com.vaadin.flow.component.UI.getCurrent().navigate(RegisterView.class);
-        });
-        registerButton.setWidthFull();
-        buttonLayout.add(registerButton);
-
+        SideNavItem searchLink = new SideNavItem("Search",
+                SearchView.class, VaadinIcon.SEARCH.create());
+        SideNavItem registerLink = new SideNavItem("Register", RegisterView.class,
+                VaadinIcon.USERS.create());
+        nav.addItem(searchLink, registerLink);
         // Message Templates Button (Admin only)
         if (uiSessionLogin.hasRole("admin")) {
-            Button messageTemplatesButton = new Button(
-                    "Message Templates",
-                    VaadinIcon.ENVELOPE_OPEN.create()
-            );
-            messageTemplatesButton.addClickListener(e -> {
-                com.vaadin.flow.component.UI.getCurrent().navigate(MessageTemplatesView.class);
-            });
-            messageTemplatesButton.setWidthFull();
-            buttonLayout.add(messageTemplatesButton);
+            SideNavItem adminSection = new SideNavItem("Admin");
+            adminSection.setPrefixComponent(VaadinIcon.COG.create());
+            adminSection.addItem(new SideNavItem("Message Templates", MessageTemplatesView.class,
+                    VaadinIcon.ENVELOPE_OPEN.create()));
+            nav.addItem(adminSection);
         }
-
-        // Logout Button
-        Button logoutButton = new Button(
-                getTranslation("sideNav.logout"),
-                VaadinIcon.UNLINK.create()
-        );
-        logoutButton.addClickListener(e -> {
-            VaadinSession.getCurrent().close();
-            com.vaadin.flow.component.UI.getCurrent().getPage().setLocation("/logout");
-        });
-        logoutButton.setWidthFull();
-        buttonLayout.add(logoutButton);
-
-        addToDrawer(buttonLayout);
+        SideNavItem logoutLink = new SideNavItem("Logout", LogoutView.class,
+                VaadinIcon.LOCK.create());
+        nav.addItem(logoutLink);
+        addToDrawer(nav);
     }
 
     //These two functions were added to make sure the top of the page is in view after navigation
