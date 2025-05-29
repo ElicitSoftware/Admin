@@ -35,7 +35,7 @@ public class PaginationControls extends HorizontalLayout {
         select.addThemeVariants(SelectVariant.LUMO_SMALL);
         select.getStyle().set("--vaadin-input-field-value-font-size", "var(--lumo-font-size-s)");
         select.setWidth("4.8rem");
-        select.setItems(1, 10, 15, 25, 50, 100);
+        select.setItems(5, 10, 15, 25, 50, 100);
         select.setValue(pageSize);
         select.addValueChangeListener(e -> {
             pageSize = e.getValue();

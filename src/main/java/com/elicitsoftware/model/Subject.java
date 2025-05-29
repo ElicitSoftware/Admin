@@ -189,4 +189,9 @@ public class Subject extends PanacheEntityBase {
     public void setCreatedDt(Date createdDt) {
         this.createdDt = createdDt;
     }
+
+    public static Subject findSubjectByToken(String token) {
+        // Implement DB lookup here, e.g. using JPA or Panache
+        return Subject.find("respondent.token", token).firstResult();
+    }
 }

@@ -17,6 +17,8 @@ import com.vaadin.flow.component.textfield.TextField;
 import com.vaadin.flow.data.binder.Binder;
 import com.vaadin.flow.data.binder.ValidationException;
 import com.vaadin.flow.data.validator.EmailValidator;
+import com.vaadin.flow.router.BeforeEnterEvent;
+import com.vaadin.flow.router.BeforeEnterObserver;
 import com.vaadin.flow.router.HasDynamicTitle;
 import com.vaadin.flow.router.Route;
 import jakarta.annotation.PostConstruct;
@@ -25,11 +27,11 @@ import jakarta.inject.Inject;
 import jakarta.transaction.Transactional;
 
 import java.time.LocalDate;
-import java.time.ZoneId;
+import java.util.Optional;
 
 @Route(value = "register", layout = MainLayout.class)
 @RolesAllowed("user")
-public class RegisterView extends VerticalLayout implements HasDynamicTitle {
+public class RegisterView extends VerticalLayout implements HasDynamicTitle, BeforeEnterObserver {
 
     @Inject
     UiSessionLogin uiSessionLogin;
@@ -39,6 +41,9 @@ public class RegisterView extends VerticalLayout implements HasDynamicTitle {
 
     private User user;
     private Subject subject = new Subject();
+    private Binder<Subject> binder; // Make binder a class field
+    private Button saveButton;
+    private Button updateButton;
 
     @PostConstruct
     public void init() {
@@ -60,41 +65,14 @@ public class RegisterView extends VerticalLayout implements HasDynamicTitle {
         TextField lastName = new TextField("Last Name");
         TextField middleName = new TextField("Middle Name");
         DatePicker dob = new DatePicker("Date of Birth");
-
-        // Add a value change listener to format dates like 04301965 to 04/30/1965
-        dob.getElement().executeJs(
-                "this.inputElement.addEventListener('change', function(e) {" +
-                        "  let val = this.value.replace(/\\D/g, '');" +
-                        "  if(val.length === 8) {" +
-                        "    let formatted = val.substring(0,2) + '/' + val.substring(2,4) + '/' + val.substring(4,8);" +
-                        "    this.value = formatted;" +
-                        "    this.dispatchEvent(new Event('input', { bubbles: true }));" +
-                        "  }" +
-                        "});"
-        );
         EmailField email = new EmailField("Email");
         TextField phone = new TextField("Phone");
         phone.setPlaceholder("123-456-7890");
-
-        // Add a value change listener to auto-format the phone number
-        phone.addValueChangeListener(event -> {
-            String digits = event.getValue().replaceAll("\\D", "");
-            if (digits.length() == 10) {
-                String formatted = String.format("%s-%s-%s",
-                        digits.substring(0, 3),
-                        digits.substring(3, 6),
-                        digits.substring(6, 10));
-                // Avoid infinite loop by only setting if different
-                if (!formatted.equals(event.getValue())) {
-                    phone.setValue(formatted);
-                }
-            }
-        });
         TextField xid = new TextField("external ID");
 
         formLayout.add(departmentComboBox, firstName, lastName, middleName, dob, email, phone, xid);
 
-        Binder<Subject> binder = new Binder<>(Subject.class);
+        binder = new Binder<>(Subject.class);
 
         // Add this binder for departmentComboBox
         binder.forField(departmentComboBox)
@@ -133,7 +111,7 @@ public class RegisterView extends VerticalLayout implements HasDynamicTitle {
                 .withValidator(date -> date == null || date.isBefore(java.time.LocalDate.now()), "DOB must be in the past")
                 .bind(
                         s -> s.getDob() == null ? null : s.getDob(),
-                        (s, value) -> s.setDob(value == null ? null : LocalDate.from(value.atStartOfDay(ZoneId.systemDefault()).toInstant()))
+                        (s, value) -> s.setDob(value == null ? null : LocalDate.from(value))
                 );
 
         binder.forField(email)
@@ -151,7 +129,7 @@ public class RegisterView extends VerticalLayout implements HasDynamicTitle {
                 )
                 .bind("phone");
 
-        Button saveButton = new Button("Save", event -> {
+        saveButton = new Button("Save", event -> {
             try {
                 saveSubject(binder);
             } catch (jakarta.persistence.PersistenceException e) {
@@ -162,8 +140,57 @@ public class RegisterView extends VerticalLayout implements HasDynamicTitle {
                 subject = new Subject();
             }
         });
-        add(formLayout, saveButton);
+
+        updateButton = new Button("Update Subject", event -> {
+            try {
+                updateSubject(binder);
+                // Navigate back to the search view after update
+                getUI().ifPresent(ui -> ui.navigate(""));
+            } catch (Exception e) {
+                Notification.show("Database error: " + e.getMessage(), 5000, Notification.Position.MIDDLE);
+            }
+        });
+
+        // By default, show only saveButton
+        saveButton.setVisible(true);
+        updateButton.setVisible(false);
+
+        add(formLayout, saveButton, updateButton);
         binder.readBean(subject);
+    }
+
+    @Override
+    public void beforeEnter(BeforeEnterEvent event) {
+        Optional<String> tokenOpt = event.getLocation().getQueryParameters().getParameters().getOrDefault("token", java.util.List.of()).stream().findFirst();
+        if (tokenOpt.isPresent()) {
+            String token = tokenOpt.get();
+            // Fetch the subject by token (implement this in your StatusDataSource or Subject repository)
+            Subject found = Subject.findSubjectByToken(token);
+            if (found != null) {
+                this.subject = found;
+                if (binder != null) {
+                    binder.readBean(subject);
+                }
+                // Editing: show update, hide save
+                if (updateButton != null && saveButton != null) {
+                    updateButton.setVisible(true);
+                    saveButton.setVisible(false);
+                }
+            } else {
+                Notification.show("Subject not found for token: " + token, 3000, Notification.Position.MIDDLE);
+                // New: show save, hide update
+                if (updateButton != null && saveButton != null) {
+                    updateButton.setVisible(false);
+                    saveButton.setVisible(true);
+                }
+            }
+        } else {
+            // New: show save, hide update
+            if (updateButton != null && saveButton != null) {
+                updateButton.setVisible(false);
+                saveButton.setVisible(true);
+            }
+        }
     }
 
     public void saveSubject(Binder<Subject> binder) {
@@ -181,6 +208,19 @@ public class RegisterView extends VerticalLayout implements HasDynamicTitle {
             Notification.show("Please fix validation errors", 3000, Notification.Position.MIDDLE);
         } catch (TokenGenerationError e) {
             Notification.show("Error generating new token. Please try again", 3000, Notification.Position.MIDDLE);
+        }
+    }
+
+    // New method for updating an existing subject
+    @Transactional
+    public void updateSubject(Binder<Subject> binder) {
+        try {
+            binder.writeBean(subject);
+            subject = Subject.getEntityManager().merge(subject);
+            Subject.getEntityManager().flush();
+            Notification.show("Subject updated", 3000, Notification.Position.MIDDLE);
+        } catch (ValidationException e) {
+            Notification.show("Please fix validation errors", 3000, Notification.Position.MIDDLE);
         }
     }
 

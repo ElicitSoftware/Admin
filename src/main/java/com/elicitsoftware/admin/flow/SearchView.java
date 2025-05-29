@@ -19,18 +19,23 @@ import com.vaadin.flow.component.Component;
 import com.vaadin.flow.component.Direction;
 import com.vaadin.flow.component.UI;
 import com.vaadin.flow.component.button.Button;
+import com.vaadin.flow.component.button.ButtonVariant;
 import com.vaadin.flow.component.combobox.MultiSelectComboBox;
 import com.vaadin.flow.component.grid.Grid;
 import com.vaadin.flow.component.grid.HeaderRow;
 import com.vaadin.flow.component.html.H5;
 import com.vaadin.flow.component.html.Paragraph;
+import com.vaadin.flow.component.icon.Icon;
+import com.vaadin.flow.component.icon.VaadinIcon;
 import com.vaadin.flow.component.notification.Notification;
 import com.vaadin.flow.component.orderedlayout.FlexComponent;
 import com.vaadin.flow.component.orderedlayout.HorizontalLayout;
 import com.vaadin.flow.component.orderedlayout.VerticalLayout;
 import com.vaadin.flow.component.textfield.TextField;
 import com.vaadin.flow.data.provider.DataProvider;
+import com.vaadin.flow.data.provider.QuerySortOrder;
 import com.vaadin.flow.router.HasDynamicTitle;
+import com.vaadin.flow.router.QueryParameters;
 import com.vaadin.flow.router.Route;
 import io.quarkus.security.identity.SecurityIdentity;
 import jakarta.annotation.PostConstruct;
@@ -39,6 +44,7 @@ import jakarta.inject.Inject;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
@@ -96,6 +102,32 @@ class SearchView extends VerticalLayout implements HasDynamicTitle {
                 var offset = paginationControls.calculateOffset();
                 var limit = paginationControls.getPageSize();
                 String sql = query.getFilter().orElse(getStatusSQL());
+                // Build ORDER BY from query.getSortOrders()
+                List<QuerySortOrder> sortOrders = query.getSortOrders();
+                String orderBy = sortOrders.stream()
+                        .map(order -> {
+                            String column = switch (order.getSorted()) {
+                                case "token" -> "s.token";
+                                case "departmentName" -> "s.departmentName";
+                                case "firstName" -> "s.firstName";
+                                case "middleName" -> "s.middleName";
+                                case "lastName" -> "s.lastName";
+                                case "email" -> "s.email";
+                                case "phone" -> "s.phone";
+                                case "status" -> "s.status";
+                                default -> null;
+                            };
+                            if (column != null) {
+                                return column + (order.getDirection().name().equals("DESCENDING") ? " DESC" : " ASC");
+                            }
+                            return null;
+                        })
+                        .filter(x -> x != null)
+                        .reduce((a, b) -> a + ", " + b)
+                        .map(s -> " ORDER BY " + s)
+                        .orElse("");
+
+                sql = sql + orderBy;
                 return dataSource.fetch(sql, offset, limit);
             },
             query -> {
@@ -224,16 +256,29 @@ class SearchView extends VerticalLayout implements HasDynamicTitle {
 
     private void getSubjectGrid() {
         subjectGrid = new Grid<>(Status.class, false);
-        subjectGrid.addColumn(Status::getToken).setHeader("Token").setSortable(true).setWidth("150px").setFlexGrow(0);
-        subjectGrid.addColumn(Status::getDepartmentName).setHeader("Department").setSortable(true);
-        subjectGrid.addColumn(Status::getFirstName).setHeader("First name").setSortable(true);
-        subjectGrid.addColumn(Status::getMiddleName).setHeader("Middle name").setSortable(true);
-        subjectGrid.addColumn(Status::getLastName).setHeader("Last name").setSortable(true);
-        subjectGrid.addColumn(Status::getEmail).setHeader("Email").setSortable(true);
-        subjectGrid.addColumn(Status::getPhone).setHeader("Phone").setSortable(true);
-        subjectGrid.addColumn(Status::getStatus).setHeader("Status").setSortable(true);
+        subjectGrid.addColumn(Status::getToken).setHeader("Token").setSortable(true).setSortProperty("token").setWidth("150px").setFlexGrow(0);
+        subjectGrid.addColumn(Status::getDepartmentName).setHeader("Department").setSortable(true).setSortProperty("departmentName");
+        subjectGrid.addColumn(Status::getFirstName).setHeader("First name").setSortable(true).setSortProperty("firstName");
+        subjectGrid.addColumn(Status::getMiddleName).setHeader("Middle name").setSortable(true).setSortProperty("middleName");
+        subjectGrid.addColumn(Status::getLastName).setHeader("Last name").setSortable(true).setSortProperty("lastName");
+        subjectGrid.addColumn(Status::getEmail).setHeader("Email").setSortable(true).setSortProperty("email");
+        subjectGrid.addColumn(Status::getPhone).setHeader("Phone").setSortable(true).setSortProperty("phone");
+        subjectGrid.addColumn(Status::getStatus).setHeader("Status").setSortable(true).setSortProperty("status");
         subjectGrid.setMultiSort(true, Grid.MultiSortPriority.APPEND);
         HeaderRow headerRow = subjectGrid.appendHeaderRow();
+
+        // --- Add edit icon column ---
+        subjectGrid.addComponentColumn(status -> {
+            Button editButton = new Button(new Icon(VaadinIcon.EDIT));
+            editButton.addThemeVariants(ButtonVariant.LUMO_ICON, ButtonVariant.LUMO_TERTIARY);
+            editButton.getElement().setProperty("title", "Edit");
+            editButton.addClickListener(e -> {
+                // Pass the token as a query parameter (or use another unique identifier)
+                ui.navigate("register", QueryParameters.simple(Map.of("token", status.getToken())));
+            });
+            return editButton;
+        }).setHeader("Edit").setWidth("80px").setFlexGrow(0);
+        // --- End edit icon column ---
 
         // Set the data provider here
         subjectGrid.setDataProvider(pagingDataProvider);
