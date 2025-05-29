@@ -165,6 +165,7 @@ class SearchView extends VerticalLayout implements HasDynamicTitle {
             pagingDataProvider.refreshAll(); // This will use the latest getStatusSQL() for filtering
         });
         searchBar.add(searchButton);
+        searchBar.setAlignItems(Alignment.BASELINE);
         add(searchBar);
     }
 

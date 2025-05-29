@@ -6,6 +6,7 @@ import jakarta.persistence.*;
 import jakarta.validation.constraints.*;
 
 import java.text.SimpleDateFormat;
+import java.time.LocalDate;
 import java.util.Date;
 import java.util.List;
 import java.util.TimeZone;
@@ -41,11 +42,13 @@ public class Subject extends PanacheEntityBase {
     private long departmentId;
     @Column(name = "firstName")
     @NotNull(message = "First name cannot be blank")
+    @NotBlank
     @Size(max = 50,
             message = "First name max length 50 characters")
     private String firstName;
     @Column(name = "lastName")
     @NotNull(message = "Last name cannot be blank")
+    @NotBlank
     @Size(max = 50,
             message = "Last name max length 50 characters")
     private String lastName;
@@ -56,17 +59,18 @@ public class Subject extends PanacheEntityBase {
     @Column(name = "dob")
     @Past(message = "Date of birth must be in the past")
     @Temporal(TemporalType.DATE)
-    private Date dob;
+    private LocalDate dob;
     @Column(name = "email")
     @Size(max = 255, message = "Max Email length 50 characters")
     @Email(message = "The email is invalid")
+    @NotBlank
     private String email;
     @Column(name = "phone", nullable = true)
     @Size(max = 20)
     @Pattern(regexp = "^\\d{3}-\\d{3}-\\d{4}$", message = "Telephone must match ###-###-#### format")
     private String phone;
 
-    public Subject(String xid, long surveyId, long departmentId, String firstName, String lastName, String middleName, Date dob, String email, String phone) {
+    public Subject(String xid, long surveyId, long departmentId, String firstName, String lastName, String middleName, LocalDate dob, String email, String phone) {
         super();
         //todo add created date
         sdf.setTimeZone(TimeZone.getTimeZone("EST"));
@@ -154,11 +158,11 @@ public class Subject extends PanacheEntityBase {
         this.middleName = middleName;
     }
 
-    public Date getDob() {
+    public LocalDate getDob() {
         return dob;
     }
 
-    public void setDob(Date dob) {
+    public void setDob(LocalDate dob) {
         this.dob = dob;
     }
 

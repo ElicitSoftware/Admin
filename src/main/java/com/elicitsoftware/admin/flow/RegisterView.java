@@ -24,8 +24,8 @@ import jakarta.annotation.security.RolesAllowed;
 import jakarta.inject.Inject;
 import jakarta.transaction.Transactional;
 
+import java.time.LocalDate;
 import java.time.ZoneId;
-import java.util.Date;
 
 @Route(value = "register", layout = MainLayout.class)
 @RolesAllowed("user")
@@ -132,8 +132,8 @@ public class RegisterView extends VerticalLayout implements HasDynamicTitle {
         binder.forField(dob)
                 .withValidator(date -> date == null || date.isBefore(java.time.LocalDate.now()), "DOB must be in the past")
                 .bind(
-                        s -> s.getDob() == null ? null : s.getDob().toInstant().atZone(ZoneId.systemDefault()).toLocalDate(),
-                        (s, value) -> s.setDob(value == null ? null : Date.from(value.atStartOfDay(ZoneId.systemDefault()).toInstant()))
+                        s -> s.getDob() == null ? null : s.getDob(),
+                        (s, value) -> s.setDob(value == null ? null : LocalDate.from(value.atStartOfDay(ZoneId.systemDefault()).toInstant()))
                 );
 
         binder.forField(email)
@@ -166,16 +166,14 @@ public class RegisterView extends VerticalLayout implements HasDynamicTitle {
         binder.readBean(subject);
     }
 
-    @Transactional
     public void saveSubject(Binder<Subject> binder) {
         try {
             binder.writeBean(subject);
             Respondent respondent = tokenService.getToken(1);
             subject.setRespondent(respondent);
             subject.setSurveyId(respondent.survey.id);
-            subject.persist();
             // Optionally, flush to force exception now:
-            Subject.getEntityManager().flush();
+            subject.persistAndFlush();
             Notification.show("Subject saved", 3000, Notification.Position.MIDDLE);
             subject = new Subject();
             binder.readBean(subject); // reset form

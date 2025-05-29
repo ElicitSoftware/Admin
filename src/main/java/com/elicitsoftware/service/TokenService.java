@@ -2,7 +2,9 @@ package com.elicitsoftware.service;
 
 import com.elicitsoftware.exception.TokenGenerationError;
 import com.elicitsoftware.model.Respondent;
+import com.elicitsoftware.model.Subject;
 import com.elicitsoftware.model.Survey;
+import com.elicitsoftware.request.AddRequest;
 import com.elicitsoftware.response.AddResponse;
 import com.elicitsoftware.util.RandomString;
 import io.quarkus.logging.Log;
@@ -10,10 +12,7 @@ import jakarta.annotation.security.RolesAllowed;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import jakarta.transaction.Transactional;
-import jakarta.ws.rs.GET;
-import jakarta.ws.rs.Path;
-import jakarta.ws.rs.PathParam;
-import jakarta.ws.rs.Produces;
+import jakarta.ws.rs.*;
 import jakarta.ws.rs.core.Context;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.UriInfo;
@@ -25,8 +24,6 @@ import java.util.Date;
 @ApplicationScoped
 public class TokenService {
 
-    @Inject
-    TransactionService transactionService;
     @Context
     private UriInfo uriInfo;
     private RandomString generator = null;
@@ -55,6 +52,28 @@ public class TokenService {
         return response;
     }
 
+    @Path("/add/subject")
+    @POST
+    @RolesAllowed("token")
+    @Consumes(MediaType.APPLICATION_JSON)
+    @Produces(MediaType.APPLICATION_JSON)
+    @Transactional
+    public AddResponse putSubject(AddRequest request) {
+        AddResponse response = new AddResponse();
+        try {
+            Respondent respondent = getToken(request.surveyId);
+            Subject subject = new Subject(request.xid, request.surveyId, request.departmentId, request.firstName, request.lastName, request.middleName, request.dob, request.email, request.phone);
+            subject.setRespondent(respondent);
+            subject.persistAndFlush();
+            response.setRespondentId(respondent.id);
+            response.setToken(respondent.token);
+            return response;
+        } catch (TokenGenerationError e) {
+            response.setError(e.getMessage());
+        }
+        return response;
+    }
+
     public Respondent getToken(int surveyId) {
         String token = null;
         Respondent respondent = null;
@@ -69,7 +88,6 @@ public class TokenService {
                     respondent.survey = survey;
                     respondent.token = token;
                     respondent.active = true;
-                    respondent.persist();
                     return respondent;
                 } else {
                     Log.info("Duplicate token " + token);
