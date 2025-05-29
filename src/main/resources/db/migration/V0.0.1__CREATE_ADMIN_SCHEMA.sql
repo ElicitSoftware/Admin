@@ -103,28 +103,28 @@ CREATE TABLE survey.user_surveys
     CONSTRAINT user_surveys_users_fk FOREIGN KEY (user_id) REFERENCES survey.users (id),
     CONSTRAINT user_surveys_surveys_fk FOREIGN KEY (survey_id) REFERENCES survey.surveys (id)
 );
---------------------------------
--- Roles
---------------------------------
-CREATE SEQUENCE survey.roles_seq START WITH 1 INCREMENT BY 1;
-CREATE TABLE survey.roles
-(
-    id   bigint                 NOT NULL,
-    name character varying(255) NOT NULL,
-    CONSTRAINT roles_pk PRIMARY KEY (id),
-    CONSTRAINT role_name_un UNIQUE (name)
-);
---------------------------------
--- User Roles
---------------------------------
-CREATE TABLE survey.user_roles
-(
-    user_id bigint NOT NULL,
-    role_id bigint NOT NULL,
-    CONSTRAINT user_roles_pk PRIMARY KEY (user_id, role_id),
-    CONSTRAINT user_roles_roles_fk FOREIGN KEY (role_id) REFERENCES survey.roles (id),
-    CONSTRAINT user_roles_users_fk FOREIGN KEY (user_id) REFERENCES survey.users (id)
-);
+-- --------------------------------
+-- -- Roles
+-- --------------------------------
+-- CREATE SEQUENCE survey.roles_seq START WITH 1 INCREMENT BY 1;
+-- CREATE TABLE survey.roles
+-- (
+--     id   bigint                 NOT NULL,
+--     name character varying(255) NOT NULL,
+--     CONSTRAINT roles_pk PRIMARY KEY (id),
+--     CONSTRAINT role_name_un UNIQUE (name)
+-- );
+-- --------------------------------
+-- -- User Roles
+-- --------------------------------
+-- CREATE TABLE survey.user_roles
+-- (
+--     user_id bigint NOT NULL,
+--     role_id bigint NOT NULL,
+--     CONSTRAINT user_roles_pk PRIMARY KEY (user_id, role_id),
+--     CONSTRAINT user_roles_roles_fk FOREIGN KEY (role_id) REFERENCES survey.roles (id),
+--     CONSTRAINT user_roles_users_fk FOREIGN KEY (user_id) REFERENCES survey.users (id)
+-- );
 --------------------------------
 -- User Departments
 --------------------------------
@@ -146,9 +146,9 @@ CREATE TABLE survey.message_templates
     department_id   bigint        NOT NULL,
     message_type_id bigint        NOT NULL,
     message         varchar(6000) NOT NULL,
-    subject         character varying(255),
+    subject         character varying(255) NOT NULL,
     cron_schedule   character varying(255),
-    mime_type       character varying(100) DEFAULT 'text/plain',
+    mime_type       character varying(100) NOT NULL DEFAULT 'text/plain',
     CONSTRAINT message_templates_type_pk PRIMARY KEY (id),
     CONSTRAINT message_templates_dep_fk FOREIGN KEY (department_id) REFERENCES survey.departments (id),
     CONSTRAINT message_templates_type_fk FOREIGN KEY (message_type_id) REFERENCES survey.message_types (id),

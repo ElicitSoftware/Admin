@@ -3,6 +3,8 @@ package com.elicitsoftware.model;
 import io.quarkus.hibernate.orm.panache.PanacheEntityBase;
 import jakarta.persistence.*;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Set;
 
 @Entity
@@ -26,14 +28,6 @@ public class User extends PanacheEntityBase {
 
     @Column(name = "ACTIVE")
     public boolean active;
-
-    @ManyToMany(fetch = FetchType.EAGER)
-    @JoinTable(name = "USER_ROLES", schema = "survey", joinColumns = {
-            @JoinColumn(name = "user_id")
-    }, inverseJoinColumns = {
-            @JoinColumn(name = "role_id")
-    })
-    public Set<Role> roles;
 
     @ManyToMany(fetch = FetchType.EAGER)
     @JoinTable(name = "USER_SURVEYS", schema = "survey", joinColumns = {

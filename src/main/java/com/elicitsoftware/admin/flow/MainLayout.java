@@ -11,6 +11,7 @@ package com.elicitsoftware.admin.flow;
  * ***LICENSE_END***
  */
 
+import com.elicitsoftware.model.User;
 import com.vaadin.flow.component.AttachEvent;
 import com.vaadin.flow.component.applayout.AppLayout;
 import com.vaadin.flow.component.applayout.DrawerToggle;
@@ -44,6 +45,10 @@ public class MainLayout extends AppLayout implements AfterNavigationListener {
 
     VaadinSession session = VaadinSession.getCurrent();
 
+    @Inject
+    UiSessionLogin uiSessionLogin;
+    User user;
+
     /**
      * Initializes the main layout components after the construction of the class.
      * <p>
@@ -55,6 +60,7 @@ public class MainLayout extends AppLayout implements AfterNavigationListener {
      */
     @PostConstruct
     public void init() {
+        user = uiSessionLogin.getUser();
         createHeader();
         createNavBar();
     }
@@ -89,7 +95,7 @@ public class MainLayout extends AppLayout implements AfterNavigationListener {
         buttonLayout.setPadding(false);
         buttonLayout.setSpacing(true);
 
-        //Register Subject Button
+        // Search Subjects Button
         Button searchButton = new Button(
                 "Search Subjects",
                 VaadinIcon.SEARCH.create()
@@ -101,7 +107,7 @@ public class MainLayout extends AppLayout implements AfterNavigationListener {
         searchButton.setWidthFull();
         buttonLayout.add(searchButton);
 
-        //Register Subject Button
+        // Register Subject Button
         Button registerButton = new Button(
                 "Register Subject",
                 VaadinIcon.USERS.create()
@@ -112,6 +118,19 @@ public class MainLayout extends AppLayout implements AfterNavigationListener {
         });
         registerButton.setWidthFull();
         buttonLayout.add(registerButton);
+
+        // Message Templates Button (Admin only)
+        if (uiSessionLogin.hasRole("admin")) {
+            Button messageTemplatesButton = new Button(
+                    "Message Templates",
+                    VaadinIcon.ENVELOPE_OPEN.create()
+            );
+            messageTemplatesButton.addClickListener(e -> {
+                com.vaadin.flow.component.UI.getCurrent().navigate(MessageTemplatesView.class);
+            });
+            messageTemplatesButton.setWidthFull();
+            buttonLayout.add(messageTemplatesButton);
+        }
 
         // Logout Button
         Button logoutButton = new Button(

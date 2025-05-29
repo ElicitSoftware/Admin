@@ -1,8 +1,5 @@
 -- message_types
 INSERT INTO survey.message_types(id, name) VALUES(NEXTVAL('survey.message_types_seq'),'email');
--- roles
-INSERT INTO survey.roles(id, NAME) VALUES(NEXTVAL('survey.roles_seq'), 'user');
-INSERT INTO survey.roles(id, NAME) VALUES(NEXTVAL('survey.roles_seq'), 'admin');
 -- Departments
 INSERT INTO survey.departments(id, name, code, default_message_type_id, notification_emails, from_email) VALUES(NEXTVAL('survey.departments_seq'), 'Testing Department','Test', '1', null, 'test@testdepartment.org');
 INSERT INTO survey.departments(id, name, code, default_message_type_id, notification_emails, from_email) VALUES(NEXTVAL('survey.departments_seq'), 'Dev Department','Dev', '1', null, 'test@testdepartment.org');
@@ -34,11 +31,7 @@ INSERT INTO survey.users(id, username, first_name, last_name) VALUES (NEXTVAL('s
 INSERT INTO survey.user_surveys(user_id, survey_id) VALUES(CURRVAL('survey.users_seq'),1);
 INSERT INTO survey.user_departments(department_id, user_id) VALUES(1,CURRVAL('survey.users_seq'));
 INSERT INTO survey.user_departments(department_id, user_id) VALUES(2,CURRVAL('survey.users_seq'));
-INSERT INTO survey.user_roles(user_id, role_id) VALUES(CURRVAL('survey.users_seq'),1);
-INSERT INTO survey.user_roles(user_id, role_id) VALUES(CURRVAL('survey.users_seq'),2);
 -- Umar User
 INSERT INTO survey.users(id, username, first_name, last_name) VALUES (NEXTVAL('survey.users_seq'), 'user','Umar', 'User');
 INSERT INTO survey.user_surveys(user_id, survey_id) VALUES(CURRVAL('survey.users_seq'),1);
 INSERT INTO survey.user_departments(department_id, user_id) VALUES(1,CURRVAL('survey.users_seq'));
-INSERT INTO survey.user_roles(user_id, role_id) VALUES(CURRVAL('survey.users_seq'),1);
-INSERT INTO survey.user_roles(user_id, role_id) VALUES(CURRVAL('survey.users_seq'),2);
