@@ -54,7 +54,7 @@ public class TokenService {
 
     @Path("/add/subject")
     @POST
-    @RolesAllowed("token")
+    @RolesAllowed({"token", "user"})
     @Consumes(MediaType.APPLICATION_JSON)
     @Produces(MediaType.APPLICATION_JSON)
     @Transactional

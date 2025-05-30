@@ -5,15 +5,23 @@ import com.elicitsoftware.model.Department;
 import com.elicitsoftware.model.Respondent;
 import com.elicitsoftware.model.Subject;
 import com.elicitsoftware.model.User;
+import com.elicitsoftware.service.CsvImportService;
 import com.elicitsoftware.service.TokenService;
 import com.vaadin.flow.component.button.Button;
 import com.vaadin.flow.component.combobox.ComboBox;
 import com.vaadin.flow.component.datepicker.DatePicker;
+import com.vaadin.flow.component.details.Details;
+import com.vaadin.flow.component.dialog.Dialog;
 import com.vaadin.flow.component.formlayout.FormLayout;
+import com.vaadin.flow.component.html.*;
 import com.vaadin.flow.component.notification.Notification;
+import com.vaadin.flow.component.orderedlayout.FlexComponent;
+import com.vaadin.flow.component.orderedlayout.HorizontalLayout;
 import com.vaadin.flow.component.orderedlayout.VerticalLayout;
 import com.vaadin.flow.component.textfield.EmailField;
 import com.vaadin.flow.component.textfield.TextField;
+import com.vaadin.flow.component.upload.Upload;
+import com.vaadin.flow.component.upload.receivers.MemoryBuffer;
 import com.vaadin.flow.data.binder.Binder;
 import com.vaadin.flow.data.binder.ValidationException;
 import com.vaadin.flow.data.validator.EmailValidator;
@@ -31,7 +39,7 @@ import java.util.Optional;
 
 @Route(value = "register", layout = MainLayout.class)
 @RolesAllowed("user")
-public class RegisterView extends VerticalLayout implements HasDynamicTitle, BeforeEnterObserver {
+public class RegisterView extends HorizontalLayout implements HasDynamicTitle, BeforeEnterObserver {
 
     @Inject
     UiSessionLogin uiSessionLogin;
@@ -44,6 +52,8 @@ public class RegisterView extends VerticalLayout implements HasDynamicTitle, Bef
     private Binder<Subject> binder; // Make binder a class field
     private Button saveButton;
     private Button updateButton;
+    private VerticalLayout leftLayout = new VerticalLayout();
+    private VerticalLayout rightLayout = new VerticalLayout();
 
     @PostConstruct
     public void init() {
@@ -54,11 +64,11 @@ public class RegisterView extends VerticalLayout implements HasDynamicTitle, Bef
         formLayout.setResponsiveSteps(
                 new FormLayout.ResponsiveStep("0", 1)
         );
-        formLayout.setWidth("600px");
+        formLayout.setWidth("100%");
         ComboBox<Department> departmentComboBox = getDepartmentComboBox();
-        if (user.departments.size() == 1) {
-            departmentComboBox.setValue(user.departments.iterator().next());
-            subject.setDepartmentId(user.departments.iterator().next().id);
+        if (user.getDepartments().size() == 1) {
+            departmentComboBox.setValue(user.getDepartments().iterator().next());
+            subject.setDepartmentId(user.getDepartments().iterator().next().id);
         }
 
         TextField firstName = new TextField("First Name");
@@ -81,7 +91,7 @@ public class RegisterView extends VerticalLayout implements HasDynamicTitle, Bef
                         s -> {
                             // Find the Department object by id
                             if (s.getDepartmentId() == 0) return null;
-                            return user.departments.stream()
+                            return user.getDepartments().stream()
                                     .filter(d -> d.id == s.getDepartmentId())
                                     .findFirst()
                                     .orElse(null);
@@ -155,7 +165,64 @@ public class RegisterView extends VerticalLayout implements HasDynamicTitle, Bef
         saveButton.setVisible(true);
         updateButton.setVisible(false);
 
-        add(formLayout, saveButton, updateButton);
+        leftLayout.add(formLayout, saveButton, updateButton);
+
+        // Set the layouts to take 50% width
+        leftLayout.setWidth("50%");
+        rightLayout.setWidth("50%");
+
+        // Create CSV upload button
+        MemoryBuffer buffer = new MemoryBuffer();
+        Upload csvUpload = new Upload(buffer);
+        csvUpload.setAcceptedFileTypes(".csv");
+        csvUpload.setMaxFiles(1);
+        csvUpload.setMaxFileSize(5 * 1024 * 1024); // 5MB limit
+        csvUpload.setUploadButton(new Button("Upload CSV"));
+
+        csvUpload.addSucceededListener(event -> {
+            try {
+                CsvImportService importService = new CsvImportService(tokenService);
+                int imported = importService.importSubjects(buffer.getInputStream(), user);
+                Notification.show("Successfully imported " + imported + " subjects", 5000, Notification.Position.MIDDLE);
+            } catch (Exception e) {
+                Dialog errorDialog = new Dialog();
+                errorDialog.setHeaderTitle("CSV Import Error");
+
+                Span errorMessage = new Span(e.getMessage());
+                errorMessage.getStyle().set("white-space", "pre-wrap");
+
+                Button closeButton = new Button("Close", evt -> errorDialog.close());
+                closeButton.getStyle().set("margin-top", "20px");
+
+                VerticalLayout dialogLayout = new VerticalLayout(errorMessage, closeButton);
+                dialogLayout.setAlignItems(FlexComponent.Alignment.CENTER);
+                dialogLayout.setSpacing(true);
+
+                errorDialog.add(dialogLayout);
+                errorDialog.setModal(true);
+                errorDialog.setDraggable(false);
+                errorDialog.setResizable(true);
+                errorDialog.setWidth("600px");
+                errorDialog.setMaxWidth("90vw");
+
+                errorDialog.open();
+            }
+        });
+
+        // Create REST API instructions accordion
+        Details restApiDetails = new Details("REST API Instructions", createRestApiContent());
+        restApiDetails.setOpened(false);
+
+        rightLayout.add(getRestfulInstructionsDiv(), csvUpload, restApiDetails);
+
+        // Set the main layout (this) to use full width and ensure proper spacing
+        setWidth("100%");
+        setSpacing(true);
+
+        // Add both layouts to the main view
+        add(leftLayout, rightLayout);
+
+        // Read the bean to populate the form
         binder.readBean(subject);
     }
 
@@ -226,11 +293,97 @@ public class RegisterView extends VerticalLayout implements HasDynamicTitle, Bef
 
     private ComboBox<Department> getDepartmentComboBox() {
         ComboBox<Department> departmentComboBox = new ComboBox<>("Deparments");
-        departmentComboBox.setItems(user.departments);
+        departmentComboBox.setItems(user.getDepartments());
         departmentComboBox.setItemLabelGenerator(Department::getName);
         return departmentComboBox;
     }
 
+    private Div getRestfulInstructionsDiv() {
+        Div div = new Div();
+
+        // Create CSV Structure Accordion
+        Details csvDetails = new Details("CSV File Structure", createCsvStructureContent());
+        csvDetails.setOpened(false); // Collapsed by default
+
+        div.add(
+            new Paragraph("You can register subjects individually using the form, or upload a CSV file with multiple subjects."),
+            csvDetails
+        );
+
+        return div;
+    }
+
+    private Div createCsvStructureContent() {
+        Div content = new Div();
+
+        content.add(
+            new Paragraph("The CSV file should contain the following columns in order:"),
+            new Paragraph("#departmentId, firstName, lastName, middleName, dob, email, phone, xid"),
+            new Paragraph("All rows starting with a '#' character are considered comments and will be ignored."),
+
+            new H4("Column Descriptions:"),
+            new Div() {{
+                getElement().setProperty("innerHTML",
+                    "<ul>" +
+                    "<li><strong>departmentId:</strong> Integer (required) - Must be a valid department ID for the user</li>" +
+                    "<li><strong>firstName:</strong> String (required) - Subject's first name</li>" +
+                    "<li><strong>lastName:</strong> String (required) - Subject's last name</li>" +
+                    "<li><strong>middleName:</strong> String (optional) - Subject's middle name</li>" +
+                    "<li><strong>dob:</strong> Date (optional) - Date of birth in yyyy-MM-dd or MM/dd/yyyy format</li>" +
+                    "<li><strong>email:</strong> String (required) - Valid email address</li>" +
+                    "<li><strong>phone:</strong> String (optional) - Phone number in ###-###-#### format</li>" +
+                    "<li><strong>xid:</strong> String (optional) - External ID for the subject</li>" +
+                    "</ul>"
+                );
+            }},
+
+            new H4("Example CSV data:"),
+            new Pre("#departmentId,firstName,lastName,middleName,dob,email,phone,xid\n" +
+                   "1,John,Doe,Michael,1990-01-15,john.doe@email.com,123-456-7890,EXT001\n" +
+                   "2,Jane,Smith,,1985-03-22,jane.smith@email.com,555-123-4567,EXT002\n" +
+                   "1,Bob,Johnson,Robert,12/10/1992,bob.johnson@email.com,999-888-7777,EXT003")
+        );
+
+        return content;
+    }
+    private Div createRestApiContent() {
+        Div content = new Div();
+
+        content.add(
+            new Paragraph("You can also add subjects programmatically using the REST API endpoint:"),
+
+            new H4("Endpoint:"),
+            new Pre("POST /secured/add/subject"),
+
+            new H4("Authentication:"),
+            new Paragraph("Requires 'user' or 'token' role authorization"),
+
+            new H4("Content-Type:"),
+            new Pre("application/json"),
+
+            new H4("Request Body Example:"),
+            new Pre("{\n" +
+                   "  \"surveyId\": 1,\n" +
+                   "  \"departmentId\": 1,\n" +
+                   "  \"firstName\": \"John\",\n" +
+                   "  \"lastName\": \"Doe\",\n" +
+                   "  \"middleName\": \"Michael\",\n" +
+                   "  \"dob\": \"1990-01-15\",\n" +
+                   "  \"email\": \"john.doe@email.com\",\n" +
+                   "  \"phone\": \"123-456-7890\",\n" +
+                   "  \"xid\": \"EXT001\"\n" +
+                   "}"),
+
+            new H4("Response Example:"),
+            new Pre("{\n" +
+                   "  \"respondentId\": 12345,\n" +
+                   "  \"token\": \"ABC123XYZ\",\n" +
+                   "  \"error\": null\n" +
+                   "}")
+        );
+
+        return content;
+    }
     @Override
     public String getPageTitle() {
         return "Elicit Register";

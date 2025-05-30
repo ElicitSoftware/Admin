@@ -3,8 +3,6 @@ package com.elicitsoftware.model;
 import io.quarkus.hibernate.orm.panache.PanacheEntityBase;
 import jakarta.persistence.*;
 
-import java.util.ArrayList;
-import java.util.List;
 import java.util.Set;
 
 @Entity
@@ -15,19 +13,19 @@ public class User extends PanacheEntityBase {
     @SequenceGenerator(name = "USERS_ID_GENERATOR", schema = "survey", sequenceName = "USERS_SEQ", allocationSize = 1)
     @GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "USERS_ID_GENERATOR")
     @Column(unique = true, nullable = false, precision = 20)
-    public long id;
+    private long id;
 
     @Column(name = "USERNAME")
-    public String username;
+    private String username;
 
     @Column(name = "FIRST_NAME")
-    public String firstName;
+    private String firstName;
 
     @Column(name = "LAST_NAME")
-    public String lastName;
+    private String lastName;
 
     @Column(name = "ACTIVE")
-    public boolean active;
+    private boolean active;
 
     @ManyToMany(fetch = FetchType.EAGER)
     @JoinTable(name = "USER_SURVEYS", schema = "survey", joinColumns = {
@@ -35,7 +33,7 @@ public class User extends PanacheEntityBase {
     }, inverseJoinColumns = {
             @JoinColumn(name = "SURVEY_ID")
     })
-    public Set<Survey> surveys;
+    private Set<Survey> surveys;
 
     @ManyToMany(fetch = FetchType.EAGER)
     @JoinTable(name = "user_departments", schema = "survey", joinColumns = {
@@ -44,7 +42,63 @@ public class User extends PanacheEntityBase {
             @JoinColumn(name = "department_id")
     })
     @OrderBy(value = "name")
-    public Set<Department> departments;
+    private Set<Department> departments;
+
+    public long getId() {
+        return id;
+    }
+
+    public void setId(long id) {
+        this.id = id;
+    }
+
+    public String getUsername() {
+        return username;
+    }
+
+    public void setUsername(String username) {
+        this.username = username;
+    }
+
+    public String getFirstName() {
+        return firstName;
+    }
+
+    public void setFirstName(String firstName) {
+        this.firstName = firstName;
+    }
+
+    public String getLastName() {
+        return lastName;
+    }
+
+    public void setLastName(String lastName) {
+        this.lastName = lastName;
+    }
+
+    public boolean isActive() {
+        return active;
+    }
+
+    public void setActive(boolean active) {
+        this.active = active;
+    }
+
+    public Set<Survey> getSurveys() {
+        return surveys;
+    }
+
+    public void setSurveys(Set<Survey> surveys) {
+        this.surveys = surveys;
+    }
+
+    public Set<Department> getDepartments() {
+        return departments;
+    }
+
+    public void setDepartments(Set<Department> departments) {
+        this.departments = departments;
+    }
 
     @Transient
     public long getDepartmentId(int position) {

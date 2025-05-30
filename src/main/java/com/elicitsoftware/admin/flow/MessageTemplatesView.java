@@ -36,8 +36,6 @@ public class MessageTemplatesView extends VerticalLayout {
         grid.addColumn(template -> template.id).setHeader("ID");
         grid.addColumn(template -> template.department.name).setHeader("Department").setSortable(true).setAutoWidth(true);
         grid.addColumn(template -> template.subject).setHeader("Subject").setSortable(true).setAutoWidth(true);
-        grid.addColumn(template -> template.message).setHeader("Message").setSortable(true);
-        grid.addColumn(template -> template.cronSchedule).setHeader("Cron Schedule").setSortable(true).setAutoWidth(true);
         grid.addColumn(template -> template.mimeType).setHeader("MIME Type").setSortable(true).setAutoWidth(true);
 
         add(grid);

@@ -19,8 +19,8 @@ public class Department extends PanacheEntityBase {
     @Column(name = "code")
     public String code;
 
-    @Column(name = "default_message_type_id")
-    public String defaultMessageTypeId;
+    @Column(name = "default_message_id")
+    public String defaultMessageId;
 
     public String getName() {
         return name;

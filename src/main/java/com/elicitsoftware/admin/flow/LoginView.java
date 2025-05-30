@@ -17,7 +17,7 @@ import jakarta.annotation.security.PermitAll;
  */
 @Route("login")
 @PermitAll
-public class LoginView extends VerticalLayout implements BeforeEnterObserver {
+public class LoginView extends VerticalLayout implements BeforeEnterObserver  {
 
     public LoginView() {
         add("FHHS Admin :-)");

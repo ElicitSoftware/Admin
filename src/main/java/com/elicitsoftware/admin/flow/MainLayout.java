@@ -15,10 +15,8 @@ import com.elicitsoftware.model.User;
 import com.vaadin.flow.component.AttachEvent;
 import com.vaadin.flow.component.applayout.AppLayout;
 import com.vaadin.flow.component.applayout.DrawerToggle;
-import com.vaadin.flow.component.button.Button;
 import com.vaadin.flow.component.html.Anchor;
 import com.vaadin.flow.component.icon.VaadinIcon;
-import com.vaadin.flow.component.orderedlayout.VerticalLayout;
 import com.vaadin.flow.component.sidenav.SideNav;
 import com.vaadin.flow.component.sidenav.SideNavItem;
 import com.vaadin.flow.router.AfterNavigationEvent;
@@ -40,14 +38,6 @@ import org.eclipse.microprofile.jwt.JsonWebToken;
 public class MainLayout extends AppLayout implements AfterNavigationListener {
 
     @Inject
-    JsonWebToken accessToken;
-
-    // Add configurable name for the main header.
-    // Add configurable icon for the tab.
-
-    VaadinSession session = VaadinSession.getCurrent();
-
-    @Inject
     UiSessionLogin uiSessionLogin;
     User user;
 
@@ -64,7 +54,15 @@ public class MainLayout extends AppLayout implements AfterNavigationListener {
     public void init() {
         user = uiSessionLogin.getUser();
         createHeader();
-        createNavBar();
+        if (user != null) {
+            createNavBar();
+        } else {
+            SideNav nav = new SideNav();
+            SideNavItem logoutLink = new SideNavItem("Logout", LogoutView.class,
+                    VaadinIcon.LOCK.create());
+            nav.addItem(logoutLink);
+            addToDrawer(nav);
+        }
     }
 
     /**
@@ -94,17 +92,21 @@ public class MainLayout extends AppLayout implements AfterNavigationListener {
     private void createNavBar() {
         SideNav nav = new SideNav();
 
-        SideNavItem searchLink = new SideNavItem("Search",
+        SideNavItem searchLink = new SideNavItem("Search Subjects",
                 SearchView.class, VaadinIcon.SEARCH.create());
-        SideNavItem registerLink = new SideNavItem("Register", RegisterView.class,
+        SideNavItem registerLink = new SideNavItem("Register Subjects", RegisterView.class,
                 VaadinIcon.USERS.create());
         nav.addItem(searchLink, registerLink);
         // Message Templates Button (Admin only)
         if (uiSessionLogin.hasRole("admin")) {
             SideNavItem adminSection = new SideNavItem("Admin");
             adminSection.setPrefixComponent(VaadinIcon.COG.create());
+            adminSection.addItem(new SideNavItem("Departments", DepartmentsView.class,
+                    VaadinIcon.GRID_BEVEL.create()));
             adminSection.addItem(new SideNavItem("Message Templates", MessageTemplatesView.class,
-                    VaadinIcon.ENVELOPE_OPEN.create()));
+                    VaadinIcon.ENVELOPE.create()));
+            adminSection.addItem(new SideNavItem("Users", UsersView.class,
+                    VaadinIcon.GROUP.create()));
             nav.addItem(adminSection);
         }
         SideNavItem logoutLink = new SideNavItem("Logout", LogoutView.class,

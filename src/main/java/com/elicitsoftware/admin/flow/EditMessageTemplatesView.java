@@ -14,6 +14,9 @@ import com.vaadin.flow.component.orderedlayout.HorizontalLayout;
 import com.vaadin.flow.component.orderedlayout.VerticalLayout;
 import com.vaadin.flow.component.textfield.TextArea;
 import com.vaadin.flow.component.textfield.TextField;
+import com.vaadin.flow.data.binder.Binder;
+import com.vaadin.flow.data.binder.ValidationException;
+import com.vaadin.flow.data.validator.StringLengthValidator;
 import com.vaadin.flow.router.BeforeEnterEvent;
 import com.vaadin.flow.router.BeforeEnterObserver;
 import com.vaadin.flow.router.Route;
@@ -21,13 +24,10 @@ import jakarta.annotation.PostConstruct;
 import jakarta.annotation.security.RolesAllowed;
 import jakarta.inject.Inject;
 import jakarta.transaction.Transactional;
-import org.eclipse.microprofile.jwt.JsonWebToken;
-
-import java.util.Set;
 
 @Route(value = "edit-message-template/:id?", layout = MainLayout.class)
 @RolesAllowed("admin")
-public class EditMessageTemplateView extends VerticalLayout implements BeforeEnterObserver {
+public class EditMessageTemplatesView extends VerticalLayout implements BeforeEnterObserver {
 
     @Inject
     UiSessionLogin uiSessionLogin;
@@ -38,23 +38,24 @@ public class EditMessageTemplateView extends VerticalLayout implements BeforeEnt
 
     private final TextField subjectField = new TextField("Subject");
     private final TextArea messageField = new TextArea("Body");
-    private final TextField cronScheduleField = new TextField("Cron Schedule");
     private final ComboBox<String> mimeTypeField = new ComboBox<>("MIME Type");
     private final ComboBox<Department> departmentField = new ComboBox<>("Department");
     private final Button saveBtn = new Button("Save");
     private final Button updateBtn = new Button("Update");
     private Div content = new Div();
 
+    private final Binder<MessageTemplate> binder = new Binder<>(MessageTemplate.class);
+
     @PostConstruct
     public void init() {
         user = uiSessionLogin.getUser();
 
         // Set options for MIME type
-        mimeTypeField.setItems("text/plain", "text/html");
+        mimeTypeField.setItems("text/html","text/plain");
         mimeTypeField.setAllowCustomValue(false);
 
         // Set options for Department
-        departmentField.setItems(user.departments);
+        departmentField.setItems(user.getDepartments());
 
         departmentField.setItemLabelGenerator(Department::getName);
         departmentField.setRequiredIndicatorVisible(true);
@@ -66,7 +67,7 @@ public class EditMessageTemplateView extends VerticalLayout implements BeforeEnt
 
         // Form column (50%)
         FormLayout form = new FormLayout();
-        form.add(mimeTypeField, departmentField, subjectField, messageField, cronScheduleField, saveBtn, updateBtn);
+        form.add(mimeTypeField, departmentField, subjectField, messageField, saveBtn, updateBtn);
         form.setWidthFull();
         form.getStyle().set("flex", "1 1 50%");
         form.setResponsiveSteps(
@@ -102,6 +103,34 @@ public class EditMessageTemplateView extends VerticalLayout implements BeforeEnt
 
         add(mainLayout);
 
+        // --- Binder and Validation ---
+        binder.forField(subjectField)
+                .asRequired("Subject is required")
+                .withValidator(new StringLengthValidator(
+                        "Subject must be 3-100 characters", 1, 255))
+                .bind("subject");
+
+        binder.forField(messageField)
+                .asRequired("Body is required")
+                .withValidator(new StringLengthValidator(
+                        "Body must be at least 5 characters", 1, 6000))
+                .bind("message");
+
+
+        binder.forField(mimeTypeField)
+                .asRequired("MIME Type is required")
+                .bind("mimeType");
+
+        binder.forField(departmentField)
+                .asRequired("Department is required")
+                .bind("department");
+
+        // Enable/disable buttons based on validation
+        binder.addStatusChangeListener(event -> {
+            saveBtn.setEnabled(binder.isValid());
+            updateBtn.setEnabled(binder.isValid());
+        });
+
         saveBtn.addClickListener(e -> saveTemplate());
         updateBtn.addClickListener(e -> updateTemplate());
 
@@ -119,8 +148,7 @@ public class EditMessageTemplateView extends VerticalLayout implements BeforeEnt
             if (template != null) {
                 subjectField.setValue(template.subject != null ? template.subject : "");
                 messageField.setValue(template.message != null ? template.message : "");
-                cronScheduleField.setValue(template.cronSchedule != null ? template.cronSchedule : "");
-                mimeTypeField.setValue(template.mimeType != null ? template.mimeType : "text/plain");
+                mimeTypeField.setValue(template.mimeType != null ? template.mimeType : "text/html");
                 departmentField.setValue(template.department);
                 saveBtn.setVisible(false);
                 updateBtn.setVisible(true);
@@ -129,15 +157,15 @@ public class EditMessageTemplateView extends VerticalLayout implements BeforeEnt
             template = new MessageTemplate();
             //Default to email. Later we may add more types like Reminder email
             template.messageType = MessageType.findById(1);
-            mimeTypeField.setValue("text/plain");
+            mimeTypeField.setValue("text/html");
             saveBtn.setVisible(true);
             updateBtn.setVisible(false);
         }
     }
 
-    private void updatePreview(String body){
+    private void updatePreview(String body) {
         if (mimeTypeField.getValue() != null && mimeTypeField.getValue().equals("text/plain")) {
-            content.getElement().setProperty("innerHTML","");
+            content.getElement().setProperty("innerHTML", "");
             content.getElement().setText(body);
         } else {
             content.getElement().setText("");
@@ -147,30 +175,30 @@ public class EditMessageTemplateView extends VerticalLayout implements BeforeEnt
 
     @Transactional
     public void saveTemplate() {
-        template.subject = subjectField.getValue();
-        template.message = messageField.getValue();
-        template.cronSchedule = cronScheduleField.getValue();
-        template.mimeType = mimeTypeField.getValue();
-        template.department = departmentField.getValue();
-        template.persist();
-        Notification.show("Message Template saved", 1000, Notification.Position.MIDDLE);
-        getUI().ifPresent(ui ->
-                ui.navigate("/message-templates")
-        );
+        try {
+            binder.writeBean(template);
+            template.persistAndFlush();
+            Notification.show("Message Template saved", 1000, Notification.Position.MIDDLE);
+            getUI().ifPresent(ui ->
+                    ui.navigate("/message-templates")
+            );
+        } catch (ValidationException e) {
+            Notification.show("Please fix validation errors", 2000, Notification.Position.MIDDLE);
+        }
     }
 
     @Transactional
     public void updateTemplate() {
-        template.subject = subjectField.getValue();
-        template.message = messageField.getValue();
-        template.cronSchedule = cronScheduleField.getValue();
-        template.mimeType = mimeTypeField.getValue();
-        template.department = departmentField.getValue();
-        MessageTemplate.getEntityManager().merge(template);
-        MessageTemplate.getEntityManager().flush();
-        Notification.show("Message Template updated", 1000, Notification.Position.MIDDLE);
-        getUI().ifPresent(ui ->
-                ui.navigate("/message-templates")
-        );
+        try {
+            binder.writeBean(template);
+            MessageTemplate.getEntityManager().merge(template);
+            MessageTemplate.getEntityManager().flush();
+            Notification.show("Message Template updated", 1000, Notification.Position.MIDDLE);
+            getUI().ifPresent(ui ->
+                    ui.navigate("/message-templates")
+            );
+        } catch (ValidationException e) {
+            Notification.show("Please fix validation errors", 2000, Notification.Position.MIDDLE);
+        }
     }
 }

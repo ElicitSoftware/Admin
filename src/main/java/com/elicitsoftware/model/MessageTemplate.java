@@ -33,10 +33,6 @@ public class MessageTemplate extends PanacheEntityBase {
     @Length(min = 1, max = 255)
     public String subject;
 
-    @Column(name = "cron_schedule")
-    @Length( max = 255)
-    public String cronSchedule;
-
     @Column(name = "mime_type")
     @NotBlank
     @Length(min = 1, max = 100)

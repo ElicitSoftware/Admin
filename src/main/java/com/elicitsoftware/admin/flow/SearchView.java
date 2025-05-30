@@ -23,6 +23,7 @@ import com.vaadin.flow.component.button.ButtonVariant;
 import com.vaadin.flow.component.combobox.MultiSelectComboBox;
 import com.vaadin.flow.component.grid.Grid;
 import com.vaadin.flow.component.grid.HeaderRow;
+import com.vaadin.flow.component.html.Div;
 import com.vaadin.flow.component.html.H5;
 import com.vaadin.flow.component.html.Paragraph;
 import com.vaadin.flow.component.icon.Icon;
@@ -151,7 +152,9 @@ class SearchView extends VerticalLayout implements HasDynamicTitle {
         user = uiSessionLogin.getUser();
 
         if (user == null) {
-            add(new Paragraph(identity.getPrincipal().getName() + " user not found in the survey database. Please ask an adminstrator create a new user. "));
+            Div errorDiv = new Div();
+            errorDiv.getElement().setProperty("innerHTML", " You have successfully logged in to the Open ID connect system.<br/> Unfortunately, there is no user named <b>" + identity.getPrincipal().getName() + "</b> in the application or it is set to inactive.<br/>Please ask an Elicit Admin for help.");
+            add(errorDiv);
         } else {
             //Set up the I18n
             final UI ui = UI.getCurrent();
@@ -160,10 +163,10 @@ class SearchView extends VerticalLayout implements HasDynamicTitle {
             } else {
                 ui.setDirection(Direction.LEFT_TO_RIGHT);
             }
+            add(new H5("Subject search"));
+            createSearchBar();
+            createSubjectsTable();
         }
-        add(new H5("Subject search"));
-        createSearchBar();
-        createSubjectsTable();
     }
 
     private void createSearchBar() {
@@ -221,7 +224,7 @@ class SearchView extends VerticalLayout implements HasDynamicTitle {
         // Combine "All Departments" with user's departments
         List<Department> departmentsWithAll = new ArrayList<>();
         departmentsWithAll.add(allDepartments);
-        departmentsWithAll.addAll(user.departments);
+        departmentsWithAll.addAll(user.getDepartments());
         departmentComboBox.setItems(departmentsWithAll);
 
         departmentComboBox.setItemLabelGenerator(Department::getName);
@@ -349,7 +352,7 @@ class SearchView extends VerticalLayout implements HasDynamicTitle {
         } else {
             for (Department department : selecteDepartments) {
                 if (department.id == -1) {
-                    for (Department d : user.departments) {
+                    for (Department d : user.getDepartments()) {
                         ids += d.id + ",";
                     }
                     break;
