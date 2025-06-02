@@ -260,6 +260,7 @@ public class RegisterView extends HorizontalLayout implements HasDynamicTitle, B
         }
     }
 
+    @Transactional
     public void saveSubject(Binder<Subject> binder) {
         try {
             binder.writeBean(subject);
@@ -306,7 +307,7 @@ public class RegisterView extends HorizontalLayout implements HasDynamicTitle, B
         csvDetails.setOpened(false); // Collapsed by default
 
         div.add(
-            new Paragraph("You can register subjects individually using the form, or upload a CSV file with multiple subjects."),
+            new Paragraph("You can register subjects individually using the form, a rest API, or upload a CSV file with multiple subjects."),
             csvDetails
         );
 
