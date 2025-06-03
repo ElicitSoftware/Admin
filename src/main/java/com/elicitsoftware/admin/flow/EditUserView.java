@@ -20,7 +20,7 @@ import java.util.List;
 import java.util.Set;
 
 @Route(value = "edit-user/:id?", layout = MainLayout.class)
-@RolesAllowed("admin")
+@RolesAllowed("elicit_admin")
 public class EditUserView extends VerticalLayout implements BeforeEnterObserver {
 
     private User user;

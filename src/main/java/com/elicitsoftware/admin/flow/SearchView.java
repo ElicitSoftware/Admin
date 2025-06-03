@@ -77,7 +77,7 @@ import java.util.stream.Collectors;
  * - Accessibility and enhanced user experience with theme variants, tooltips, and keyboard shortcuts.
  */
 @Route(value = "", layout = MainLayout.class)
-@RolesAllowed("user")
+@RolesAllowed("elicit_user")
 class SearchView extends VerticalLayout implements HasDynamicTitle {
 
     private final PaginationControls paginationControls = new PaginationControls();

@@ -36,7 +36,7 @@ public class TokenService {
 
     @Path("/add/{surveyId}")
     @GET
-    @RolesAllowed("token")
+    @RolesAllowed("elicit_token")
     @Produces(MediaType.APPLICATION_JSON)
     @Transactional
     public AddResponse putToken(@PathParam("surveyId") int surveyId) {

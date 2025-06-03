@@ -98,7 +98,7 @@ public class MainLayout extends AppLayout implements AfterNavigationListener {
                 VaadinIcon.USERS.create());
         nav.addItem(searchLink, registerLink);
         // Message Templates Button (Admin only)
-        if (uiSessionLogin.hasRole("admin")) {
+        if (uiSessionLogin.hasRole("elicit_admin")) {
             SideNavItem adminSection = new SideNavItem("Admin");
             adminSection.setPrefixComponent(VaadinIcon.COG.create());
             adminSection.addItem(new SideNavItem("Departments", DepartmentsView.class,

@@ -249,7 +249,7 @@
       "token-service" : [ ],
       "elicit-admin" : [ {
         "id" : "7fa0047c-8278-4516-8dee-0c0a0591958c",
-        "name" : "user",
+        "name" : "elicit_user",
         "description" : "Elicit Admin Application User",
         "composite" : false,
         "clientRole" : true,
@@ -257,7 +257,7 @@
         "attributes" : { }
       }, {
         "id" : "7a0ac7a4-7952-423d-af2c-18013b8bc8cf",
-        "name" : "admin",
+        "name" : "elicit_admin",
         "description" : "Elicit Admin Application Administrator",
         "composite" : false,
         "clientRole" : true,
@@ -265,7 +265,7 @@
         "attributes" : { }
       }, {
         "id" : "775cd6e6-f5e9-4581-8409-a9683f4982c7",
-        "name" : "token",
+        "name" : "elicit_token",
         "description" : "Token Service",
         "composite" : false,
         "clientRole" : true,
@@ -363,7 +363,7 @@
     "requiredActions" : [ ],
     "realmRoles" : [ "default-roles-elicit" ],
     "clientRoles" : {
-      "elicit-admin" : [ "user", "admin" ]
+      "elicit-admin" : [ "elicit_user", "elicit_admin" ]
     },
     "notBefore" : 0,
     "groups" : [ ]
@@ -380,7 +380,7 @@
     "requiredActions" : [ ],
     "realmRoles" : [ "default-roles-elicit" ],
     "clientRoles" : {
-      "elicit-admin" : [ "token" ]
+      "elicit-admin" : [ "elicit_token" ]
     },
     "notBefore" : 0,
     "groups" : [ ]
@@ -406,7 +406,7 @@
     "requiredActions" : [ ],
     "realmRoles" : [ "default-roles-elicit" ],
     "clientRoles" : {
-      "elicit-admin" : [ "user" ]
+      "elicit-admin" : [ "elicit_user" ]
     },
     "notBefore" : 0,
     "groups" : [ ]
