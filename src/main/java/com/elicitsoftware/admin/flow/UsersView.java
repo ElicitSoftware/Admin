@@ -16,7 +16,7 @@ import jakarta.transaction.Transactional;
 import java.util.List;
 
 @Route(value = "users", layout = MainLayout.class)
-@RolesAllowed("admin")
+@RolesAllowed("elicit_admin")
 public class UsersView extends VerticalLayout {
 
     private Grid<User> userGrid = new Grid<>(User.class, false);

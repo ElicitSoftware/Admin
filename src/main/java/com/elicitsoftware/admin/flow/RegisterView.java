@@ -38,7 +38,7 @@ import java.time.LocalDate;
 import java.util.Optional;
 
 @Route(value = "register", layout = MainLayout.class)
-@RolesAllowed("user")
+@RolesAllowed("elicit_user")
 public class RegisterView extends HorizontalLayout implements HasDynamicTitle, BeforeEnterObserver {
 
     @Inject

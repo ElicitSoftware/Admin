@@ -12,7 +12,7 @@ import jakarta.annotation.security.RolesAllowed;
 import java.util.List;
 
 @Route(value = "message-templates", layout = MainLayout.class)
-@RolesAllowed("admin")
+@RolesAllowed("elicit_admin")
 public class MessageTemplatesView extends VerticalLayout {
 
     private final Grid<MessageTemplate> grid = new Grid<>(MessageTemplate.class);

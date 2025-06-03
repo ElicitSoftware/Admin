@@ -14,12 +14,15 @@ package com.elicitsoftware.admin.flow;
 import com.elicitsoftware.model.Department;
 import com.elicitsoftware.model.Status;
 import com.elicitsoftware.model.User;
+import com.elicitsoftware.service.EmailService;
+import com.elicitsoftware.service.ReportingService;
 import com.elicitsoftware.service.StatusDataSource;
 import com.vaadin.flow.component.Component;
 import com.vaadin.flow.component.Direction;
 import com.vaadin.flow.component.UI;
 import com.vaadin.flow.component.button.Button;
 import com.vaadin.flow.component.button.ButtonVariant;
+import com.vaadin.flow.component.combobox.ComboBox;
 import com.vaadin.flow.component.combobox.MultiSelectComboBox;
 import com.vaadin.flow.component.grid.Grid;
 import com.vaadin.flow.component.grid.HeaderRow;
@@ -74,7 +77,7 @@ import java.util.stream.Collectors;
  * - Accessibility and enhanced user experience with theme variants, tooltips, and keyboard shortcuts.
  */
 @Route(value = "", layout = MainLayout.class)
-@RolesAllowed("user")
+@RolesAllowed("elicit_user")
 class SearchView extends VerticalLayout implements HasDynamicTitle {
 
     private final PaginationControls paginationControls = new PaginationControls();
@@ -84,6 +87,10 @@ class SearchView extends VerticalLayout implements HasDynamicTitle {
     SecurityIdentity identity;
     @Inject
     UiSessionLogin uiSessionLogin;
+    @Inject
+    EmailService emailService;
+    @Inject
+    ReportingService reportingService;
     User user;
     Grid<Status> subjectGrid;
     private UI ui;
@@ -283,7 +290,60 @@ class SearchView extends VerticalLayout implements HasDynamicTitle {
             });
             return editButton;
         }).setHeader("Edit").setWidth("80px").setFlexGrow(0);
-        // --- End edit icon column ---
+
+        // --- Add action column ---
+        subjectGrid.addComponentColumn(status -> {
+            HorizontalLayout actionLayout = new HorizontalLayout();
+            actionLayout.setSpacing(true);
+            actionLayout.setAlignItems(Alignment.CENTER);
+
+            ComboBox<String> actionComboBox = new ComboBox<>();
+            actionComboBox.setItems("Send Email", "Print Reports");
+            actionComboBox.setPlaceholder("Select action");
+            actionComboBox.setWidth("120px");
+
+            // Enable/disable "Print Reports" based on status
+            if (!"Finished".equals(status.getStatus())) {
+                actionComboBox.setItems("Send Email");
+            }
+
+            Button submitButton = new Button("Submit");
+            submitButton.addThemeVariants(ButtonVariant.LUMO_PRIMARY, ButtonVariant.LUMO_SMALL);
+            submitButton.setEnabled(false);
+
+            // Enable submit button when action is selected
+            actionComboBox.addValueChangeListener(event -> {
+                submitButton.setEnabled(event.getValue() != null);
+            });
+
+            submitButton.addClickListener(e -> {
+                String selectedAction = actionComboBox.getValue();
+                if (selectedAction != null) {
+                    if ("Send Email".equals(selectedAction)) {
+                        try {
+                            emailService.sendEmail(status);
+                            Notification.show("Email sent successfully", 3000, Notification.Position.TOP_CENTER);
+                        } catch (Exception ex) {
+                            Notification.show("Failed to send email: " + ex.getMessage(), 5000, Notification.Position.TOP_CENTER);
+                        }
+                    } else if ("Print Reports".equals(selectedAction)) {
+                        try {
+                            reportingService.printReports(status);
+                            Notification.show("Reports generated successfully", 3000, Notification.Position.TOP_CENTER);
+                        } catch (Exception ex) {
+                            Notification.show("Failed to generate reports: " + ex.getMessage(), 5000, Notification.Position.TOP_CENTER);
+                        }
+                    }
+                    // Reset the combo box after action
+                    actionComboBox.clear();
+                    submitButton.setEnabled(false);
+                }
+            });
+
+            actionLayout.add(actionComboBox, submitButton);
+            return actionLayout;
+        }).setHeader("Action").setWidth("250px").setFlexGrow(0);
+        // --- End action column ---
 
         // Set the data provider here
         subjectGrid.setDataProvider(pagingDataProvider);
@@ -364,8 +424,7 @@ class SearchView extends VerticalLayout implements HasDynamicTitle {
         return ids;
     }
 
-    @Override
-    public String getPageTitle() {
+    @Override    public String getPageTitle() {
         return "Elicit Search";
     }
 }

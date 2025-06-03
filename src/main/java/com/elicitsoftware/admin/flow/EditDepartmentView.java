@@ -7,7 +7,7 @@ import com.vaadin.flow.router.Route;
 import jakarta.annotation.security.RolesAllowed;
 
 @Route(value = "edit-department/:id?", layout = MainLayout.class)
-@RolesAllowed("admin")
+@RolesAllowed("elicit_admin")
 public class EditDepartmentView extends VerticalLayout implements BeforeEnterObserver {
 
     @Override

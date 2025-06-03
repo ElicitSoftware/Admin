@@ -13,7 +13,7 @@ import com.vaadin.flow.router.Route;
 import jakarta.annotation.security.RolesAllowed;
 
 @Route(value = "departments", layout = MainLayout.class)
-@RolesAllowed("admin")
+@RolesAllowed("elicit_admin")
 public class DepartmentsView extends VerticalLayout {
     public DepartmentsView() {
 

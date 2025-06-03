@@ -26,7 +26,7 @@ import jakarta.inject.Inject;
 import jakarta.transaction.Transactional;
 
 @Route(value = "edit-message-template/:id?", layout = MainLayout.class)
-@RolesAllowed("admin")
+@RolesAllowed("elicit_admin")
 public class EditMessageTemplatesView extends VerticalLayout implements BeforeEnterObserver {
 
     @Inject
