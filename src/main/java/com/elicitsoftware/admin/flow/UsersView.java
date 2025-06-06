@@ -28,7 +28,7 @@ public class UsersView extends VerticalLayout {
     }
 
     private Paragraph createInfoText() {
-        Paragraph info = new Paragraph("Users must be configured in the OIDC authentication system with the roles \"Admin\" or \"User\". Departments are assigned through this interface.");
+        Paragraph info = new Paragraph("Users must be configured in the OpenID Connect (OIDC) authentication system with the roles \"Admin\" or \"User\". Departments are assigned through this interface.");
         info.getStyle().set("margin-bottom", "1em");
         info.getStyle().set("color", "var(--lumo-secondary-text-color)");
         return info;
