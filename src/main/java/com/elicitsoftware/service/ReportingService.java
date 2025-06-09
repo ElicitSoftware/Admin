@@ -24,9 +24,6 @@ public class ReportingService {
     @Inject
     PDFService pdfService;
 
-    @ConfigProperty(name = "fhhs.url")
-    String FHHSURL;
-
     ArrayList<ReportResponse> reportResponses = new ArrayList<>();
 
     public void printReports(Status status) {
@@ -59,7 +56,7 @@ public class ReportingService {
         try {
             ReportRequest request = new ReportRequest(respondent_id);
             ReportService reportService = RestClientBuilder.newBuilder()
-                    .baseUri(new URI(FHHSURL + rpt.url))
+                    .baseUri(new URI(rpt.url))
                     .build(ReportService.class);
             ReportResponse reportResponse = reportService.callReport(request);
             return reportResponse;

@@ -54,7 +54,7 @@ public class TokenService {
 
     @Path("/add/subject")
     @POST
-    @RolesAllowed({"token", "user"})
+    @RolesAllowed({"elicit_token", "elicit_admin", "elicit_user"})
     @Consumes(MediaType.APPLICATION_JSON)
     @Produces(MediaType.APPLICATION_JSON)
     @Transactional
@@ -72,6 +72,7 @@ public class TokenService {
             response.setError(e.getMessage());
         }
         return response;
+
     }
 
     public Respondent getToken(int surveyId) {
