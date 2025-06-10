@@ -1,10 +1,7 @@
 package com.elicitsoftware.admin.flow;
 
 import com.elicitsoftware.exception.TokenGenerationError;
-import com.elicitsoftware.model.Department;
-import com.elicitsoftware.model.Respondent;
-import com.elicitsoftware.model.Subject;
-import com.elicitsoftware.model.User;
+import com.elicitsoftware.model.*;
 import com.elicitsoftware.service.CsvImportService;
 import com.elicitsoftware.service.TokenService;
 import com.vaadin.flow.component.button.Button;
@@ -35,6 +32,7 @@ import jakarta.inject.Inject;
 import jakarta.transaction.Transactional;
 
 import java.time.LocalDate;
+import java.util.ArrayList;
 import java.util.Optional;
 
 @Route(value = "register", layout = MainLayout.class)
@@ -269,6 +267,10 @@ public class RegisterView extends HorizontalLayout implements HasDynamicTitle, B
             subject.setSurveyId(respondent.survey.id);
             // Optionally, flush to force exception now:
             subject.persistAndFlush();
+            ArrayList<Message> messages = Message.createMessagesForSubject(subject);
+            for(Message message : messages) {
+                message.persistAndFlush();
+            }
             Notification.show("Subject saved", 3000, Notification.Position.MIDDLE);
             subject = new Subject();
             binder.readBean(subject); // reset form
