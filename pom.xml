@@ -122,6 +122,11 @@
             <groupId>io.quarkus</groupId>
             <artifactId>quarkus-mailer</artifactId>
         </dependency>
+        <dependency>
+            <groupId>io.quarkus</groupId>
+            <artifactId>quarkus-scheduler</artifactId>
+            <version>3.22.2</version>
+        </dependency>
         <!-- dev mail server -->
         <dependency>
             <groupId>io.quarkiverse.mailpit</groupId>
