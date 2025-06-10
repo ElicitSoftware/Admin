@@ -1,15 +1,4 @@
 --------------------------------
--- Message Types
---------------------------------
-CREATE SEQUENCE survey.message_types_seq START WITH 1 INCREMENT BY 1;
-CREATE TABLE survey.message_types
-(
-    id bigint NOT NULL,
-    name character varying(25) NOT NULL,
-    CONSTRAINT message_type_pk PRIMARY KEY (id),
-    CONSTRAINT message_type_un UNIQUE (name)
-);
---------------------------------
 -- Departments
 --------------------------------
 CREATE SEQUENCE survey.departments_seq START WITH 1 INCREMENT BY 1;
@@ -48,6 +37,35 @@ CREATE TABLE survey.subjects
     CONSTRAINT subjects_surveys_fk FOREIGN KEY (survey_id) REFERENCES survey.surveys (id),
     CONSTRAINT subjects_respondent_fk FOREIGN KEY (respondent_id) REFERENCES survey.respondents (id),
     CONSTRAINT subjects_departments_fk FOREIGN KEY (department_id) REFERENCES survey.departments (id)
+);
+--------------------------------
+-- Message Types
+--------------------------------
+CREATE SEQUENCE survey.message_types_seq START WITH 1 INCREMENT BY 1;
+CREATE TABLE survey.message_types
+(
+    id bigint NOT NULL,
+    name character varying(25) NOT NULL,
+    CONSTRAINT message_type_pk PRIMARY KEY (id),
+    CONSTRAINT message_type_un UNIQUE (name)
+);
+--------------------------------
+-- Messages
+--------------------------------
+CREATE SEQUENCE survey.messages_seq START WITH 1 INCREMENT BY 1;
+CREATE TABLE survey.messages
+(
+    id bigint NOT NULL,
+    subject_id bigint NOT NULL,
+    message_type bigint NOT NULL,
+    mime_type varchar(100) NOT NULL DEFAULT 'text/html',
+    subjectline varchar(255) NOT NULL,
+    body varchar(6000) NOT NULL,
+    created_dt TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    sent_dt TIMESTAMP,
+    CONSTRAINT messages_pk PRIMARY KEY (id),
+    CONSTRAINT messages_subject_fk FOREIGN KEY (subject_id) REFERENCES survey.subjects (id),
+    CONSTRAINT messages_type_fk FOREIGN KEY (message_type) REFERENCES survey.message_types (id)
 );
 --------------------------------
 -- Users
@@ -100,27 +118,6 @@ CREATE TABLE survey.message_templates
     CONSTRAINT message_templates_type_pk PRIMARY KEY (id),
     CONSTRAINT message_templates_dep_fk FOREIGN KEY (department_id) REFERENCES survey.departments (id),
     CONSTRAINT message_templates_type_fk FOREIGN KEY (message_type_id) REFERENCES survey.message_types (id)
-);
---------------------------------
--- Messages
---------------------------------
-CREATE SEQUENCE survey.messages_seq START WITH 1 INCREMENT BY 1;
-CREATE TABLE survey.messages
-(
-    id bigint NOT NULL,
-    respondent_id bigint NOT NULL,
-    department_id bigint NOT NULL,
-    sms_sid character varying(255),
-    smtp_sid character varying(255),
-    message_type_id bigint NOT NULL,
-    message_body varchar(6000),
-    created_dt TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL,
-    CONSTRAINT messages_pk PRIMARY KEY (id),
-    CONSTRAINT message_sms_sid_un UNIQUE (sms_sid),
-    CONSTRAINT message_smtp_sid_un UNIQUE (smtp_sid),
-    CONSTRAINT messages_token_fk FOREIGN KEY (respondent_id) REFERENCES survey.subjects (id),
-    CONSTRAINT messages_department_fk FOREIGN KEY (department_id) REFERENCES survey.departments (id),
-    CONSTRAINT messages_message_type_fk FOREIGN KEY (message_type_id) REFERENCES survey.message_types (id)
 );
 --------------------------------
 -- Status
