@@ -1,9 +1,7 @@
 package com.elicitsoftware.service;
 
 import com.elicitsoftware.exception.TokenGenerationError;
-import com.elicitsoftware.model.Respondent;
-import com.elicitsoftware.model.Subject;
-import com.elicitsoftware.model.Survey;
+import com.elicitsoftware.model.*;
 import com.elicitsoftware.request.AddRequest;
 import com.elicitsoftware.response.AddResponse;
 import com.elicitsoftware.util.RandomString;
@@ -18,6 +16,7 @@ import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.UriInfo;
 
 import java.security.SecureRandom;
+import java.util.ArrayList;
 import java.util.Date;
 
 @Path("/secured")
@@ -34,24 +33,6 @@ public class TokenService {
         generator = new RandomString(9, new SecureRandom(), easy);
     }
 
-    @Path("/add/{surveyId}")
-    @GET
-    @RolesAllowed("elicit_token")
-    @Produces(MediaType.APPLICATION_JSON)
-    @Transactional
-    public AddResponse putToken(@PathParam("surveyId") int surveyId) {
-        AddResponse response = new AddResponse();
-        try {
-            Respondent respondent = getToken(surveyId);
-            response.setRespondentId(respondent.id);
-            response.setToken(respondent.token);
-            return response;
-        } catch (TokenGenerationError e) {
-            response.setError(e.getMessage());
-        }
-        return response;
-    }
-
     @Path("/add/subject")
     @POST
     @RolesAllowed({"elicit_token", "elicit_admin", "elicit_user"})
@@ -65,6 +46,10 @@ public class TokenService {
             Subject subject = new Subject(request.xid, request.surveyId, request.departmentId, request.firstName, request.lastName, request.middleName, request.dob, request.email, request.phone);
             subject.setRespondent(respondent);
             subject.persistAndFlush();
+            ArrayList<Message> messages = Message.createMessagesForSubject(subject);
+            for(Message message : messages) {
+                message.persistAndFlush();
+            }
             response.setRespondentId(respondent.id);
             response.setToken(respondent.token);
             return response;
@@ -72,7 +57,6 @@ public class TokenService {
             response.setError(e.getMessage());
         }
         return response;
-
     }
 
     public Respondent getToken(int surveyId) {
@@ -101,18 +85,6 @@ public class TokenService {
         }
         //The tries worked but we couldn't find a unique token. This should never happen.
         throw new TokenGenerationError("Unable to generate a unique token");
-    }
-
-    public Respondent deactivate(long respondentId) {
-        Respondent user = Respondent.findById(respondentId);
-        if (user.active) {
-            user.active = false;
-            if (user.finalizedDt == null) {
-                user.finalizedDt = new Date();
-            }
-            user.persistAndFlush();
-        }
-        return user;
     }
 
     @Path("/test")
