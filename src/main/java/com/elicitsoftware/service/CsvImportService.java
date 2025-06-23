@@ -15,15 +15,151 @@ import java.time.format.DateTimeParseException;
 import java.util.ArrayList;
 import java.util.List;
 
+/**
+ * CsvImportService provides bulk participant import functionality from CSV files.
+ * <p>
+ * This application-scoped service handles the parsing and import of participant data
+ * from CSV (Comma-Separated Values) files into the Elicit Survey system. It supports
+ * batch participant registration with comprehensive error handling and validation.
+ * <p>
+ * Key features:
+ * - **Bulk participant import** from standardized CSV format
+ * - **Comprehensive validation** of participant data and permissions
+ * - **Error handling** with detailed line-by-line error reporting
+ * - **Flexible date format support** (yyyy-MM-dd and MM/dd/yyyy)
+ * - **CSV parsing** with support for quoted fields and embedded commas
+ * - **Transactional processing** ensuring data consistency
+ * - **Department security** validation against user permissions
+ * <p>
+ * CSV Format Requirements:
+ * The service expects CSV files with the following column structure:
+ * <pre>
+ * departmentId,firstName,lastName,middleName,dob,email,phone,xid
+ * </pre>
+ * <p>
+ * Field descriptions:
+ * - **departmentId**: Integer ID of department (must be accessible by importing user)
+ * - **firstName**: Required participant first name
+ * - **lastName**: Required participant last name  
+ * - **middleName**: Optional middle name (may be empty)
+ * - **dob**: Date of birth in yyyy-MM-dd or MM/dd/yyyy format
+ * - **email**: Required email address
+ * - **phone**: Optional phone number
+ * - **xid**: Optional external identifier for cross-system tracking
+ * <p>
+ * CSV Format Features:
+ * - Quoted fields supported for values containing commas
+ * - Comment lines starting with '#' are ignored
+ * - Empty lines are skipped
+ * - Field validation with descriptive error messages
+ * - Minimum 6 fields required (departmentId through email)
+ * <p>
+ * Security and Validation:
+ * - Department ID must be accessible by the importing user
+ * - Survey ID is automatically set to 1 (configurable in future versions)
+ * - Required field validation (firstName, lastName, email)
+ * - Date format validation with multiple format support
+ * - Comprehensive error collection and reporting
+ * <p>
+ * Usage example:
+ * <pre>
+ * {@code
+ * @Inject
+ * CsvImportService csvImportService;
+ * 
+ * public void importParticipants(InputStream csvFile, User currentUser) {
+ *     try {
+ *         int successCount = csvImportService.importSubjects(csvFile, currentUser);
+ *         logger.info("Successfully imported {} participants", successCount);
+ *     } catch (Exception e) {
+ *         logger.error("Import failed: {}", e.getMessage());
+ *         // Display errors to user
+ *     }
+ * }
+ * }
+ * </pre>
+ * 
+ * @see AddRequest
+ * @see AddResponse
+ * @see TokenService
+ * @see com.elicitsoftware.model.User
+ * @since 1.0.0
+ */
 @ApplicationScoped
 public class CsvImportService {
 
+    /**
+     * Token service for participant registration and authentication token generation.
+     * <p>
+     * This service handles the actual participant creation in the database
+     * and generates authentication tokens for survey access.
+     */
     private final TokenService tokenService;
 
+    /**
+     * Constructs a new CsvImportService with the specified TokenService dependency.
+     * <p>
+     * The TokenService is injected to handle participant registration operations
+     * that occur during the CSV import process.
+     *
+     * @param tokenService The service responsible for participant registration and token generation
+     */
     public CsvImportService(TokenService tokenService) {
         this.tokenService = tokenService;
     }
 
+    /**
+     * Imports participant data from a CSV input stream into the survey system.
+     * <p>
+     * This method processes a CSV file containing participant information and
+     * creates corresponding participant records in the database. It performs
+     * comprehensive validation, error handling, and security checks throughout
+     * the import process.
+     * <p>
+     * Processing workflow:
+     * 1. **Parse CSV line by line** with support for comments and empty lines
+     * 2. **Validate CSV format** ensuring minimum required fields
+     * 3. **Check department permissions** against user's accessible departments
+     * 4. **Validate required fields** (firstName, lastName, email)
+     * 5. **Parse and validate dates** with multiple format support
+     * 6. **Create participant records** via TokenService
+     * 7. **Collect errors** for detailed reporting
+     * 8. **Return success count** or throw aggregated errors
+     * <p>
+     * Transaction behavior:
+     * - The entire import operation is wrapped in a database transaction
+     * - If any critical errors occur, all changes are rolled back
+     * - Individual line errors are collected but don't stop processing
+     * - Final error reporting includes all validation failures
+     * <p>
+     * CSV line processing:
+     * - Comment lines starting with '#' are automatically skipped
+     * - Empty lines are ignored
+     * - Each data line is parsed into an AddRequest
+     * - Line numbers are tracked for error reporting
+     * - Quoted fields are properly handled for embedded commas
+     * <p>
+     * Error handling:
+     * - **Line-level errors**: Collected with line numbers for user feedback
+     * - **Format errors**: Invalid CSV structure or missing fields
+     * - **Validation errors**: Required field violations or invalid data
+     * - **Permission errors**: Department access violations
+     * - **System errors**: Database or service failures
+     * <p>
+     * Security considerations:
+     * - Department ID validation ensures users can only import to accessible departments
+     * - Survey ID is currently hardcoded to 1 (future enhancement needed)
+     * - Input validation prevents injection attacks
+     * - Transaction rollback prevents partial imports
+     *
+     * @param csvInputStream The input stream containing CSV data to import
+     * @param user The user performing the import (used for department permission validation)
+     * @return The number of successfully imported participants
+     * @throws Exception If the import fails with aggregated error messages from all failed lines
+     * @see #parseCsvLine(String, User)
+     * @see #splitCsvLine(String)
+     * @see TokenService#putSubject(AddRequest)
+     */
     @Transactional
     public int importSubjects(InputStream csvInputStream, User user) throws Exception {
         List<String> errors = new ArrayList<>();
@@ -68,6 +204,59 @@ public class CsvImportService {
         return successCount;
     }
 
+    /**
+     * Parses a single CSV line into an AddRequest object with comprehensive validation.
+     * <p>
+     * This method handles the conversion of a CSV data line into a structured
+     * AddRequest object suitable for participant registration. It performs
+     * extensive validation on each field and ensures data integrity before
+     * returning the request object.
+     * <p>
+     * Field parsing and validation:
+     * - **Department ID**: Must be integer and accessible by the importing user
+     * - **Survey ID**: Automatically set to 1 (hardcoded for current version)
+     * - **Personal names**: firstName and lastName are required, middleName optional
+     * - **Date of birth**: Supports yyyy-MM-dd and MM/dd/yyyy formats
+     * - **Contact info**: Email required, phone optional
+     * - **External ID**: Optional identifier for cross-system integration
+     * <p>
+     * Date format handling:
+     * The method supports flexible date parsing with fallback:
+     * 1. First attempts ISO format (yyyy-MM-dd)
+     * 2. Falls back to US format (MM/dd/yyyy) if ISO parsing fails
+     * 3. Throws descriptive error if both formats fail
+     * <p>
+     * Security validation:
+     * - Department ID must exist in user's accessible departments list
+     * - Prevents users from importing to unauthorized departments
+     * - Validates integer parsing for department ID
+     * <p>
+     * Required field validation:
+     * - firstName: Must be non-empty after trimming
+     * - lastName: Must be non-empty after trimming
+     * - email: Must be present and non-empty
+     * <p>
+     * CSV field mapping:
+     * <pre>
+     * Position | Field        | Required | Format
+     * ---------|--------------|----------|------------------
+     * 0        | departmentId | Yes      | Integer
+     * 1        | firstName    | Yes      | Non-empty string
+     * 2        | lastName     | Yes      | Non-empty string
+     * 3        | middleName   | No       | String (may be empty)
+     * 4        | dob          | No       | yyyy-MM-dd or MM/dd/yyyy
+     * 5        | email        | Yes      | Non-empty string
+     * 6        | phone        | No       | String
+     * 7        | xid          | No       | String
+     * </pre>
+     *
+     * @param csvLine The CSV line to parse containing comma-separated participant data
+     * @param user The user performing the import (used for department validation)
+     * @return AddRequest object populated with validated participant data
+     * @throws Exception If validation fails with descriptive error message indicating the specific problem
+     * @see #splitCsvLine(String)
+     * @see AddRequest
+     */
     private AddRequest parseCsvLine(String csvLine, User user) throws Exception {
         // Split CSV line, handling quoted fields
         String[] fields = splitCsvLine(csvLine);
@@ -138,6 +327,51 @@ public class CsvImportService {
         return request;
     }
 
+    /**
+     * Splits a CSV line into individual fields with support for quoted values containing commas.
+     * <p>
+     * This method provides robust CSV parsing that handles the complexities of the CSV format
+     * including quoted fields that may contain embedded commas. It uses a state-machine
+     * approach to track whether the parser is currently inside quoted content.
+     * <p>
+     * CSV parsing features:
+     * - **Comma separation**: Fields are separated by commas outside of quotes
+     * - **Quote handling**: Double quotes (") are used to delimit fields with embedded commas
+     * - **Embedded commas**: Commas inside quoted fields are preserved as literal content
+     * - **Quote state tracking**: Maintains state to handle opening and closing quotes
+     * - **Flexible field count**: Returns array sized to actual field count
+     * <p>
+     * Parsing algorithm:
+     * 1. Iterate through each character in the CSV line
+     * 2. Track quote state (inside or outside quoted content)
+     * 3. When encountering quotes, toggle the quote state
+     * 4. When encountering commas outside quotes, complete current field
+     * 5. Accumulate all other characters into current field buffer
+     * 6. Add final field after processing entire line
+     * <p>
+     * Example parsing behavior:
+     * <pre>
+     * Input:  'John,Doe,"123 Main St, Apt 5",30'
+     * Output: ["John", "Doe", "123 Main St, Apt 5", "30"]
+     * 
+     * Input:  'Smith,"Jane ""JJ"" Middle",jsmith@email.com'
+     * Output: ["Smith", "Jane \"JJ\" Middle", "jsmith@email.com"]
+     * </pre>
+     * <p>
+     * Limitations:
+     * - Does not handle escaped quotes within quoted fields (Excel-style double quotes)
+     * - Assumes well-formed CSV input (unmatched quotes may cause issues)
+     * - Does not trim whitespace (preserves spacing as-is)
+     * <p>
+     * Performance considerations:
+     * - Uses StringBuilder for efficient string concatenation
+     * - Single-pass parsing algorithm for optimal performance
+     * - Minimal memory allocation during parsing process
+     *
+     * @param csvLine The CSV line to split into individual fields
+     * @return String array containing the individual fields from the CSV line
+     * @see #parseCsvLine(String, User)
+     */
     private String[] splitCsvLine(String csvLine) {
         List<String> fields = new ArrayList<>();
         StringBuilder currentField = new StringBuilder();

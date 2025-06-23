@@ -13,15 +13,127 @@ import org.eclipse.microprofile.config.inject.ConfigProperty;
 import java.util.Date;
 import java.util.List;
 
+/**
+ * EmailService provides comprehensive email sending and message queue processing functionality.
+ * <p>
+ * This application-scoped service handles both immediate email sending and batch processing
+ * of queued messages in the Elicit Survey system. It integrates with Quarkus Mailer for
+ * email delivery and provides automatic retry mechanisms for failed messages.
+ * <p>
+ * Key features:
+ * - **Immediate email sending** for status notifications and alerts
+ * - **Batch message processing** via scheduled background jobs
+ * - **Multiple content types** supporting both plain text and HTML emails
+ * - **Automatic retry mechanism** for failed email deliveries
+ * - **Database integration** for persistent message queuing
+ * - **Configuration-driven** sender address management
+ * - **Error handling** with comprehensive logging and failure tracking
+ * <p>
+ * Email processing workflow:
+ * 1. **Immediate sending**: Direct email dispatch for urgent notifications
+ * 2. **Queue processing**: Scheduled batch processing of unsent messages
+ * 3. **Content formatting**: Dynamic content type selection (text/HTML)
+ * 4. **Delivery tracking**: Database updates for sent message timestamps
+ * 5. **Error handling**: Logging and failure management for debugging
+ * <p>
+ * Scheduled processing:
+ * - Runs every 5 minutes to process unsent messages
+ * - Processes up to 100 messages per batch for performance
+ * - Updates database records upon successful delivery
+ * - Provides comprehensive error logging for failed attempts
+ * <p>
+ * Configuration requirements:
+ * The service requires the following application properties:
+ * <pre>
+ * # Sender email address for outgoing messages
+ * quarkus.mailer.from=noreply@yourorganization.org
+ * 
+ * # SMTP server configuration (if not using default)
+ * quarkus.mailer.host=smtp.yourorganization.org
+ * quarkus.mailer.port=587
+ * quarkus.mailer.start-tls=REQUIRED
+ * quarkus.mailer.username=smtp-username
+ * quarkus.mailer.password=smtp-password
+ * </pre>
+ * <p>
+ * Usage examples:
+ * <pre>
+ * {@code
+ * @Inject
+ * EmailService emailService;
+ * 
+ * // Send immediate status notification
+ * Status participantStatus = getParticipantStatus();
+ * boolean sent = emailService.sendEmail(participantStatus);
+ * if (!sent) {
+ *     logger.warn("Failed to send status email for participant: {}", 
+ *                 participantStatus.getToken());
+ * }
+ * 
+ * // Messages are automatically processed by the scheduler
+ * // Manual processing can be triggered if needed:
+ * emailService.processUnsentMessages();
+ * }
+ * </pre>
+ * 
+ * @see Message
+ * @see Status
+ * @see ReactiveMailer
+ * @since 1.0.0
+ */
 @ApplicationScoped
 public class EmailService {
 
+    /**
+     * Reactive mailer instance for asynchronous email sending.
+     * <p>
+     * This mailer provides non-blocking email delivery capabilities
+     * and integrates with Quarkus's reactive programming model.
+     */
     @Inject
     ReactiveMailer mailer;
 
+    /**
+     * Configured sender email address for outgoing messages.
+     * <p>
+     * This address is used as the "From" field in all outgoing emails.
+     * It should be configured via the quarkus.mailer.from property.
+     */
     @ConfigProperty(name = "quarkus.mailer.from")
     String fromEmail;
 
+    /**
+     * Sends an immediate email notification for a participant status update.
+     * <p>
+     * This method provides immediate email delivery for status notifications,
+     * typically used for urgent participant communications or system alerts.
+     * The method uses a simple text format with hardcoded content suitable
+     * for basic status notifications.
+     * <p>
+     * Email content:
+     * - Subject: "Ahoy from Quarkus"
+     * - Body: Simple notification message
+     * - Format: Plain text
+     * - Recipient: Extracted from status email field
+     * <p>
+     * Delivery process:
+     * 1. Extract recipient email from status object
+     * 2. Create plain text email with standard content
+     * 3. Set configured sender address
+     * 4. Send via reactive mailer with indefinite await
+     * 5. Return success/failure status
+     * <p>
+     * Error handling:
+     * - Catches all exceptions during email sending
+     * - Logs success and failure messages to console
+     * - Returns boolean indicating delivery success
+     * - Does not throw exceptions (fail-safe behavior)
+     *
+     * @param status The participant status containing recipient email and notification context
+     * @return true if email was sent successfully, false if sending failed
+     * @see Status#getEmail()
+     * @see Status#getToken()
+     */
     public boolean sendEmail(Status status) {
         System.out.println("Sending email for status: " + status.getToken());
         try {
@@ -39,6 +151,55 @@ public class EmailService {
         }
     }
 
+    /**
+     * Processes queued unsent messages via scheduled batch processing.
+     * <p>
+     * This method runs automatically every 5 minutes to process messages that
+     * have been queued for delivery but not yet sent. It provides reliable
+     * message delivery with automatic retry capabilities for the email system.
+     * <p>
+     * Processing workflow:
+     * 1. **Query unsent messages**: Retrieve up to 100 messages where sentDt is null
+     * 2. **Iterate through messages**: Process each message individually
+     * 3. **Attempt delivery**: Use sendMessage() for actual email sending
+     * 4. **Update database**: Mark successfully sent messages with timestamp
+     * 5. **Error handling**: Log failures but continue processing remaining messages
+     * <p>
+     * Batch processing features:
+     * - **Limited batch size**: Processes maximum 100 messages per execution
+     * - **Performance optimization**: Prevents system overload during high volume
+     * - **Transactional safety**: Database updates wrapped in transaction
+     * - **Failure isolation**: Individual message failures don't stop batch processing
+     * - **Comprehensive logging**: Detailed console output for monitoring
+     * <p>
+     * Database operations:
+     * - Queries Message.find("sentDt is null") for unsent messages
+     * - Updates message.sentDt with current timestamp upon successful delivery
+     * - Persists changes immediately after each successful send
+     * - Maintains data consistency through transactional processing
+     * <p>
+     * Scheduling configuration:
+     * - Runs every 5 minutes via @Scheduled annotation
+     * - Can be manually triggered for immediate processing
+     * - Execution time depends on message volume and email server performance
+     * - Failed executions are logged but don't affect subsequent runs
+     * <p>
+     * Error scenarios:
+     * - **Database query failures**: Logged and method exits gracefully
+     * - **Individual message failures**: Logged but processing continues
+     * - **Email server issues**: Handled by sendMessage() method
+     * - **Transaction failures**: Rolled back automatically by container
+     * <p>
+     * Monitoring and logging:
+     * - Logs total number of messages found for processing
+     * - Reports success/failure for each individual message
+     * - Provides error details for troubleshooting
+     * - Console output suitable for log aggregation systems
+     *
+     * @see #sendMessage(Message)
+     * @see Message#find(String)
+     * @see Scheduled
+     */
     @Scheduled(every = "5m")
     @Transactional
     public void processUnsentMessages() {
@@ -67,6 +228,60 @@ public class EmailService {
         }
     }
 
+    /**
+     * Sends an individual message with dynamic content type support and comprehensive validation.
+     * <p>
+     * This private method handles the actual email delivery for queued messages,
+     * supporting both plain text and HTML content types. It performs thorough
+     * validation before attempting delivery and provides detailed error handling
+     * for troubleshooting failed sends.
+     * <p>
+     * Content type handling:
+     * - **HTML emails**: When mimeType is "text/html", uses Mail.withHtml()
+     * - **Plain text emails**: Default format for all other mime types
+     * - **Dynamic selection**: Content type determined at runtime per message
+     * - **Consistent formatting**: Same sender and recipient handling for both types
+     * <p>
+     * Validation process:
+     * 1. **Message validation**: Ensures message object is not null
+     * 2. **Subject validation**: Verifies message.subject is populated
+     * 3. **Recipient validation**: Confirms subject.getEmail() returns valid email
+     * 4. **Content validation**: Implicit validation of subject line and body
+     * <p>
+     * Email construction:
+     * - **Recipient**: Extracted from message.subject.getEmail()
+     * - **Subject line**: Uses message.subjectLine for email subject
+     * - **Body content**: Uses message.body for email content
+     * - **Sender**: Uses configured fromEmail address
+     * - **Content type**: Determined by message.mimeType field
+     * <p>
+     * Delivery process:
+     * 1. Validate message and recipient information
+     * 2. Create appropriate Mail object based on content type
+     * 3. Set sender address from configuration
+     * 4. Send via reactive mailer with indefinite await
+     * 5. Return success status for database update
+     * <p>
+     * Error handling:
+     * - **Validation failures**: Log specific validation errors and return false
+     * - **Delivery failures**: Catch exceptions, log details, return false
+     * - **Null pointer protection**: Defensive coding for missing data
+     * - **Exception isolation**: Failures don't propagate to calling methods
+     * <p>
+     * Performance considerations:
+     * - **Blocking operation**: Uses await().indefinitely() for delivery confirmation
+     * - **Individual processing**: Each message processed separately for isolation
+     * - **Error recovery**: Failed messages can be retried in subsequent runs
+     * - **Resource management**: Relies on mailer's connection pooling
+     *
+     * @param message The message object containing recipient, content, and formatting information
+     * @return true if message was sent successfully, false if validation or sending failed
+     * @see Message#subject
+     * @see Message#subjectLine
+     * @see Message#body
+     * @see Message#mimeType
+     * @see ReactiveMailer#send(Mail)
+     */
     private boolean sendMessage(Message message) {
         try {
             // Validate required fields

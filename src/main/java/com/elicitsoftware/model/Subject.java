@@ -11,6 +11,82 @@ import java.util.Date;
 import java.util.List;
 import java.util.TimeZone;
 
+/**
+ * JPA entity representing survey subjects (participants/respondents) in the Elicit survey system.
+ * 
+ * <p>This entity models individuals who participate in surveys, capturing their personal information,
+ * contact details, and survey participation context. A Subject represents the administrative
+ * record of a survey participant, linking their demographic information with their survey
+ * responses through the associated {@link Respondent} entity.</p>
+ * 
+ * <p><strong>Key Relationships:</strong></p>
+ * <ul>
+ *   <li><strong>Respondent:</strong> One-to-one relationship with response tracking entity</li>
+ *   <li><strong>Survey:</strong> Many-to-one relationship with the survey being taken</li>
+ *   <li><strong>Department:</strong> Many-to-one relationship with the organizing department</li>
+ * </ul>
+ * 
+ * <p><strong>Data Management Features:</strong></p>
+ * <ul>
+ *   <li><strong>Personal Information:</strong> Name, contact details, demographics</li>
+ *   <li><strong>Survey Context:</strong> Survey and department assignments</li>
+ *   <li><strong>Contact Validation:</strong> Ensures valid email or phone contact methods</li>
+ *   <li><strong>Audit Trail:</strong> Creation timestamp for tracking</li>
+ *   <li><strong>External Integration:</strong> XID field for external system linking</li>
+ * </ul>
+ * 
+ * <p><strong>Validation Requirements:</strong></p>
+ * <ul>
+ *   <li><strong>Required Fields:</strong> firstName, lastName, surveyId, departmentId</li>
+ *   <li><strong>Contact Information:</strong> At least email or phone must be provided</li>
+ *   <li><strong>Length Constraints:</strong> Various field length validations</li>
+ *   <li><strong>Data Integrity:</strong> Cross-field validation for contact methods</li>
+ * </ul>
+ * 
+ * <p><strong>Named Queries:</strong></p>
+ * <ul>
+ *   <li><strong>AppointmentView.findByDateDeptAndXidList:</strong> Find subjects by date range, department, and XID list</li>
+ *   <li><strong>AppointmentView.mainViewSearch:</strong> Main search query for appointment views</li>
+ * </ul>
+ * 
+ * <p><strong>Usage Examples:</strong></p>
+ * <pre>{@code
+ * // Create a new survey subject
+ * Subject subject = new Subject();
+ * subject.setFirstName("John");
+ * subject.setLastName("Doe");
+ * subject.setEmail("john.doe@example.com");
+ * subject.setSurveyId(123L);
+ * subject.setDepartmentId(456L);
+ * subject.persist();
+ * 
+ * // Find subjects by department and date range
+ * List<Subject> subjects = Subject.find(
+ *     "AppointmentView.findByDateDeptAndXidList",
+ *     Parameters.with("departmentId", 456L)
+ *               .and("startDate", startDate)
+ *               .and("endDate", endDate)
+ *               .and("xids", xidList)
+ * ).list();
+ * }</pre>
+ * 
+ * <p><strong>Contact Information Management:</strong></p>
+ * <ul>
+ *   <li><strong>Email:</strong> Primary contact method for survey invitations</li>
+ *   <li><strong>Phone:</strong> Alternative contact method (legacy SMS support)</li>
+ *   <li><strong>Address:</strong> Physical address information for context</li>
+ *   <li><strong>Validation:</strong> Custom validation ensures at least one contact method</li>
+ * </ul>
+ * 
+ * @author Elicit Software
+ * @version 1.0
+ * @since 1.0
+ * @see Respondent
+ * @see Survey
+ * @see Department
+ * @see com.elicitsoftware.admin.validator.ValidRespondent
+ * @see PanacheEntityBase
+ */
 @Entity
 @Table(name = "subjects", schema = "survey")
 @NamedQueries({

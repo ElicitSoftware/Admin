@@ -48,32 +48,155 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
+/**
+ * PDFService is a request-scoped service responsible for generating PDF documents from report data.
+ * <p>
+ * This service provides comprehensive PDF generation capabilities including:
+ * - Text content rendering with automatic line wrapping
+ * - SVG graphics embedding with proper scaling and transformation
+ * - Table generation with automatic pagination
+ * - Headers and footers management
+ * - Multi-page document support with automatic page breaks
+ * <p>
+ * The service uses Apache PDFBox library for PDF manipulation and supports various content types
+ * including plain text, SVG graphics, and tabular data. It automatically handles page layout,
+ * font management, and content positioning.
+ * <p>
+ * Key features:
+ * - Automatic page breaks when content exceeds page boundaries
+ * - Consistent formatting with predefined margins and fonts
+ * - SVG rendering with landscape orientation support
+ * - Table pagination with proper column alignment
+ * - Stream resource generation for download functionality
+ * <p>
+ * Usage example:
+ * <pre>
+ * {@code
+ * @Inject
+ * PDFService pdfService;
+ * 
+ * ArrayList<ReportResponse> responses = getReportData();
+ * StreamResource pdfResource = pdfService.generatePDF(responses);
+ * }
+ * </pre>
+ * 
+ * @see ReportResponse
+ * @see Content
+ * @see StreamResource
+ * @since 1.0.0
+ */
 @RequestScoped
 public class PDFService {
 
+    /**
+     * Standard page size used for all generated PDF documents.
+     */
     private static final PDRectangle PAGE_SIZE = PDRectangle.LETTER;
+    
+    /**
+     * Top margin used for headers, in points.
+     */
     static final float HEADER_MARGIN = 20f;
+    
+    /**
+     * Standard text margin from page edges, in points.
+     */
     static final float TEXT_MARGIN = 40f;
+    
+    /**
+     * Padding used for content positioning, in points.
+     */
     static final float PADDING = 40f;
-    // Font configuration
+    
+    /**
+     * Default font used for all text content in the PDF.
+     */
     static final PDFont TEXT_FONT = new PDType1Font(Standard14Fonts.FontName.HELVETICA);
+    
+    /**
+     * Standard font size for text content, in points.
+     */
     static final float FONT_SIZE = 10f;
+    
+    /**
+     * Line spacing (leading) between text lines, in points.
+     */
     static final float LEADING = FONT_SIZE;
 
-    // Table configuration
+    /**
+     * Height of each table row, in points.
+     */
     private static final float ROW_HEIGHT = 15;
+    
+    /**
+     * Margin within table cells, in points.
+     */
     private static final float CELL_MARGIN = 2;
 
+    /**
+     * The current PDF document being generated.
+     */
     PDDocument document;
+    
+    /**
+     * The current page being written to.
+     */
     PDPage page;
+    
+    /**
+     * The current content stream for writing to the page.
+     */
     PDPageContentStream contentStream;
+    
+    /**
+     * Current Y position on the page for content placement.
+     */
     float yPosition;
+    
+    /**
+     * Height of the current page, in points.
+     */
     float pageHeight;
+    
+    /**
+     * Width of the current page, in points.
+     */
     float pageWidth;
 
+    /**
+     * Injected HTTP servlet request for context information.
+     */
     @Inject
     HttpServletRequest request;
 
+    /**
+     * Generates a PDF document from a list of report responses and returns it as a StreamResource.
+     * <p>
+     * This method processes each report response sequentially, handling page breaks, titles,
+     * and various content types (text, SVG, tables). It automatically manages page layout,
+     * font settings, and content positioning throughout the document generation process.
+     * <p>
+     * The generated PDF includes:
+     * - Proper page margins and formatting
+     * - Automatic page breaks when content overflows
+     * - Headers and footers on all pages
+     * - Consistent font and styling throughout
+     * <p>
+     * Process flow:
+     * 1. Initialize new PDF document with standard page size
+     * 2. Process each report response in sequence
+     * 3. Handle page breaks as specified in report data
+     * 4. Add title blocks, text content, SVG graphics, and tables
+     * 5. Add headers and footers to all pages
+     * 6. Save document to stream and return as downloadable resource
+     *
+     * @param reportResponses List of report responses containing the content to be rendered
+     * @return StreamResource containing the generated PDF, named "family_history_report.pdf"
+     * @throws RuntimeException if an IOException occurs during PDF generation
+     * @see ReportResponse
+     * @see Content
+     * @see StreamResource
+     */
     public StreamResource generatePDF(ArrayList<ReportResponse> reportResponses) {
         try {
             // Create a new document
@@ -141,6 +264,24 @@ public class PDFService {
         }
     }
 
+    /**
+     * Adds a title block to the current page with proper spacing and formatting.
+     * <p>
+     * This method renders a title with appropriate margins and handles page breaks
+     * if necessary. The title is positioned with extra spacing above it to separate
+     * it from previous content sections.
+     * <p>
+     * Behavior:
+     * - Adds header margin spacing above the title
+     * - Creates a new page if insufficient space remains
+     * - Positions title at standard padding distance from left margin
+     * - Updates the current Y position for subsequent content
+     * <p>
+     * If the title is null or empty, this method performs no action.
+     *
+     * @param title The title text to be added; ignored if null or empty
+     * @throws IOException if an error occurs while writing to the PDF content stream
+     */
     public void addTitleBlock(String title) throws IOException {
         if (title != null && !title.isEmpty()) {
             //Add some space between the last item and the new title.
@@ -166,6 +307,29 @@ public class PDFService {
         }
     }
 
+    /**
+     * Adds a text block to the current page with automatic line wrapping and page break handling.
+     * <p>
+     * This method processes text content by:
+     * - Checking for sufficient space on the current page
+     * - Creating a new page if needed
+     * - Wrapping text to fit within page margins
+     * - Rendering each line with consistent spacing
+     * - Updating the Y position for subsequent content
+     * <p>
+     * The text is automatically wrapped to fit within the available page width,
+     * accounting for left and right padding. Each line is rendered with additional
+     * line spacing for improved readability.
+     * <p>
+     * Page break logic:
+     * - Creates a new page if remaining space is insufficient
+     * - Resets font settings on new pages
+     * - Maintains consistent margin settings
+     *
+     * @param text The text content to be added to the PDF
+     * @throws IOException if an error occurs while writing to the PDF content stream
+     * @see #wrapText(String, PDFont, float, float)
+     */
     public void addTextBlock(String text) throws IOException {
         // Check if we need a new page
         if (yPosition < PADDING + FONT_SIZE) {
@@ -193,6 +357,37 @@ public class PDFService {
         yPosition -= LEADING;
     }
 
+    /**
+     * Adds an SVG graphic to the PDF document in landscape orientation.
+     * <p>
+     * This method handles SVG content by:
+     * - Creating a new landscape-oriented page
+     * - Parsing the SVG content using Apache Batik
+     * - Rendering the SVG using PdfBoxGraphics2D
+     * - Applying proper scaling and positioning
+     * - Closing the content stream after rendering
+     * <p>
+     * The SVG is rendered on a dedicated landscape page to accommodate
+     * wider graphics that might not fit in portrait orientation. The method
+     * uses Apache Batik for SVG parsing and PdfBoxGraphics2D for rendering
+     * the vector graphics directly into the PDF.
+     * <p>
+     * Process flow:
+     * 1. Close current content stream
+     * 2. Switch current page to landscape orientation
+     * 3. Create new content stream for the landscape page
+     * 4. Parse SVG content using Batik SAXSVGDocumentFactory
+     * 5. Build graphics tree and render to PDF
+     * 6. Apply coordinate transformation for proper positioning
+     * 7. Close content stream
+     * <p>
+     * Note: This method assumes the content object contains valid SVG data
+     * in its svg field.
+     *
+     * @param content The content object containing SVG data to be rendered
+     * @throws IOException if an error occurs during SVG processing or PDF writing
+     * @see Content
+     */
     void addSVG(Content content) throws IOException {
         PDRectangle landscape = new PDRectangle(PDRectangle.LETTER.getHeight(), PDRectangle.LETTER.getWidth());
 
@@ -266,6 +461,30 @@ public class PDFService {
         }
     }
 
+    /**
+     * Creates a Table object from the provided Content, configuring columns and data for PDF rendering.
+     * <p>
+     * This method processes table content by:
+     * - Creating column definitions with appropriate widths
+     * - Setting the first column to auto-width based on content
+     * - Distributing remaining width evenly among other columns
+     * - Configuring table properties for PDF rendering
+     * <p>
+     * Column width calculation:
+     * - First column (typically "person"): Auto-sized based on longest content
+     * - Remaining columns: Equal distribution of remaining available width
+     * - All calculations account for cell margins and font metrics
+     * <p>
+     * The table is configured with standard settings including row height,
+     * cell margins, font properties, and page layout parameters suitable
+     * for PDF generation.
+     *
+     * @param content The Content object containing table headers, widths, and body data
+     * @return A configured Table object ready for PDF rendering
+     * @see Table
+     * @see Column
+     * @see Content
+     */
     private static Table createContent(Content content) {
 
         // Total size of columns must not be greater than table width.
@@ -323,6 +542,27 @@ public class PDFService {
         return table;
     }
 
+    /**
+     * Adds headers and footers to all pages in the current PDF document.
+     * <p>
+     * This method iterates through all pages in the document and adds:
+     * - Current date in the top left corner
+     * - Base URL (constructed from HTTP request) centered at the bottom
+     * - Page numbers in the bottom right corner
+     * <p>
+     * The header and footer content is consistently positioned using standard
+     * margins and font settings. The base URL is dynamically constructed from
+     * the current HTTP request context including scheme, server name, port,
+     * and context path.
+     * <p>
+     * Layout:
+     * - Header: Current date (top left)
+     * - Footer: Base URL (center) and "Page X of Y" (right)
+     * <p>
+     * All text uses the standard font and 10-point size for consistency.
+     *
+     * @throws RuntimeException if an IOException occurs during content stream operations
+     */
     void addHeadersAndFooters() {
         // Step 2: Add header and footer to each page
         int totalPages = document.getNumberOfPages();
@@ -390,7 +630,31 @@ public class PDFService {
         }
     }
 
-    // Configures basic setup for the table and draws it page by page
+    /**
+     * Draws a table across multiple pages with proper pagination and formatting.
+     * <p>
+     * This method handles table rendering by:
+     * - Calculating rows per page based on available height
+     * - Determining total number of pages needed
+     * - Creating content streams for each page
+     * - Drawing table content with proper grid and formatting
+     * <p>
+     * The table is automatically paginated when content exceeds the available
+     * page height. Each page maintains consistent column widths and formatting.
+     * <p>
+     * Process for each page:
+     * 1. Calculate content for current page
+     * 2. Generate appropriate content stream
+     * 3. Draw table grid and content
+     * 4. Handle page-specific formatting
+     *
+     * @param table The Table object containing data, columns, and formatting information
+     * @throws IOException if an error occurs during PDF content generation
+     * @see Table
+     * @see #generateContentStream(Table)
+     * @see #getContentForCurrentPage(Table, Integer, int)
+     * @see #drawCurrentPage(Table, String[][])
+     */
     public void drawTable(Table table) throws IOException {
         // Calculate pagination
         Integer rowsPerPage = (int) Math.floor(table.getHeight() / table.getRowHeight()) - 1;
@@ -507,6 +771,39 @@ public class PDFService {
 
     }
 
+    /**
+     * Wraps text to fit within specified width constraints, breaking on word boundaries.
+     * <p>
+     * This utility method processes text content by:
+     * - Splitting text into individual words
+     * - Building lines that fit within the maximum width
+     * - Breaking at word boundaries to preserve readability
+     * - Calculating text width using font metrics
+     * <p>
+     * The method ensures that no line exceeds the specified maximum width when
+     * rendered with the given font and font size. Words are never broken in the
+     * middle; instead, they are moved to the next line if they don't fit.
+     * <p>
+     * Width calculation uses PDFBox font metrics to accurately measure the
+     * rendered width of text in the PDF coordinate system.
+     * <p>
+     * Usage example:
+     * <pre>
+     * {@code
+     * List<String> lines = wrapText("Long text content...", font, 12f, 400f);
+     * for (String line : lines) {
+     *     // Render each line in the PDF
+     * }
+     * }
+     * </pre>
+     *
+     * @param text The text content to be wrapped; null or empty strings return empty list
+     * @param font The PDFont to use for width calculations
+     * @param fontSize The font size in points for width calculations
+     * @param maxWidth The maximum width in points that each line should not exceed
+     * @return List of text lines that fit within the specified width constraints
+     * @throws IOException if an error occurs during font metric calculations
+     */
     public static List<String> wrapText(String text, PDFont font, float fontSize, float maxWidth) throws IOException {
         List<String> lines = new ArrayList<>();
         String[] words = new String[0];
