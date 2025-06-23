@@ -6,6 +6,45 @@ import jakarta.persistence.*;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 
+/**
+ * JPA entity representing status tracking for survey participants in the Elicit system.
+ * 
+ * <p>This entity provides a comprehensive status tracking mechanism for survey participants,
+ * capturing personal information, contact details, and survey participation status.
+ * It serves as a consolidated view for tracking and reporting on survey progress
+ * and participant engagement.</p>
+ * 
+ * <p><strong>Key Features:</strong></p>
+ * <ul>
+ *   <li><strong>Participant Identification:</strong> XID linking and personal information</li>
+ *   <li><strong>Survey Association:</strong> Links to specific survey instances</li>
+ *   <li><strong>Contact Management:</strong> Email and phone contact information</li>
+ *   <li><strong>Status Tracking:</strong> Comprehensive participation status monitoring</li>
+ * </ul>
+ * 
+ * <p><strong>Database Mapping:</strong></p>
+ * <ul>
+ *   <li><strong>Table:</strong> {@code survey.status}</li>
+ *   <li><strong>Primary Key:</strong> Manual ID assignment (not auto-generated)</li>
+ *   <li><strong>External Integration:</strong> XID field for external system correlation</li>
+ * </ul>
+ * 
+ * <p><strong>Use Cases:</strong></p>
+ * <ul>
+ *   <li><strong>Progress Tracking:</strong> Monitor survey completion status</li>
+ *   <li><strong>Reporting:</strong> Generate participation and completion reports</li>
+ *   <li><strong>Contact Management:</strong> Manage participant communication</li>
+ *   <li><strong>Data Integration:</strong> Interface with external systems via XID</li>
+ * </ul>
+ * 
+ * @author Elicit Software
+ * @version 1.0
+ * @since 1.0
+ * @see Survey
+ * @see Subject
+ * @see Respondent
+ * @see PanacheEntityBase
+ */
 @Entity
 @Table(name = "status", schema = "survey")
 public class Status extends PanacheEntityBase {

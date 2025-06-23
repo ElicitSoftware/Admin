@@ -19,17 +19,66 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
+/**
+ * A Vaadin Flow view for editing and creating user accounts.
+ * This view provides a comprehensive interface for managing user information
+ * including personal details, active status, and department assignments.
+ * 
+ * <p>The view includes the following features:</p>
+ * <ul>
+ *   <li>User identification fields (username, first name, last name)</li>
+ *   <li>Active status checkbox to enable/disable user accounts</li>
+ *   <li>Multi-select department assignment</li>
+ *   <li>Save and cancel functionality with proper navigation</li>
+ * </ul>
+ * 
+ * <p>Route patterns:</p>
+ * <ul>
+ *   <li>/edit-user - Create a new user</li>
+ *   <li>/edit-user/0 - Create a new user (explicit)</li>
+ *   <li>/edit-user/123 - Edit user with ID 123</li>
+ * </ul>
+ * 
+ * @author Elicit Software
+ * @version 1.0
+ * @since 1.0
+ */
 @Route(value = "edit-user/:id?", layout = MainLayout.class)
 @RolesAllowed("elicit_admin")
 public class EditUserView extends VerticalLayout implements BeforeEnterObserver {
 
+    /** The user entity being edited or created. */
     private User user;
+    
+    /** Text field for the user's username. */
     private TextField username = new TextField("Username");
+    
+    /** Text field for the user's first name. */
     private TextField firstName = new TextField("First Name");
+    
+    /** Text field for the user's last name. */
     private TextField lastName = new TextField("Last Name");
+    
+    /** Checkbox to control whether the user account is active. */
     private Checkbox activeCheckbox = new Checkbox("Active");
+    
+    /** Multi-select combo box for assigning the user to departments. */
     private MultiSelectComboBox<Department> departmentsBox = new MultiSelectComboBox<>("Departments");
 
+    /**
+     * Constructs a new EditUserView.
+     * 
+     * <p>Initializes the form layout with the following components:</p>
+     * <ul>
+     *   <li>Username, first name, and last name text fields</li>
+     *   <li>Active status checkbox</li>
+     *   <li>Department multi-select combo box populated with all available departments</li>
+     *   <li>Save and Cancel buttons with appropriate event handlers</li>
+     * </ul>
+     * 
+     * <p>The departments combo box is configured to display department names
+     * and is populated with all departments from the database.</p>
+     */
     public EditUserView() {
         departmentsBox.setItemLabelGenerator(Department::getName);
         List<Department> allDepartments = Department.findAll().list();
@@ -43,6 +92,26 @@ public class EditUserView extends VerticalLayout implements BeforeEnterObserver 
         add(new HorizontalLayout(saveBtn, cancelBtn));
     }
 
+    /**
+     * Called before the user enters this view to handle route parameters.
+     * 
+     * <p>This method determines whether the view is in create or edit mode
+     * based on the presence and value of the ID parameter:</p>
+     * <ul>
+     *   <li>If ID is null or "0": Create mode - initializes a new User with default values</li>
+     *   <li>If ID is a valid number: Edit mode - loads the existing user and populates form fields</li>
+     * </ul>
+     * 
+     * <p>In create mode, the user is set to active by default. In edit mode,
+     * all form fields are populated with the existing user's data including
+     * username, names, active status, and department assignments.</p>
+     * 
+     * <p>If an invalid user ID is provided, an error notification is shown
+     * and the user is redirected to the users list view.</p>
+     * 
+     * @param event the BeforeEnterEvent containing navigation information and route parameters
+     * @see BeforeEnterObserver#beforeEnter(BeforeEnterEvent)
+     */
     @Override
     public void beforeEnter(BeforeEnterEvent event) {
         String idStr = event.getRouteParameters().get("id").orElse(null);
@@ -73,6 +142,22 @@ public class EditUserView extends VerticalLayout implements BeforeEnterObserver 
         }
     }
 
+    /**
+     * Saves the user data from the form to the database.
+     * 
+     * <p>This method performs the following operations:</p>
+     * <ol>
+     *   <li>Extracts data from all form fields</li>
+     *   <li>Updates the user entity with the form values</li>
+     *   <li>Handles department assignments (empty set if none selected)</li>
+     *   <li>Persists new users or merges existing users</li>
+     *   <li>Shows a success notification</li>
+     *   <li>Navigates back to the users list view</li>
+     * </ol>
+     * 
+     * <p>For new users (ID = 0), the persist() method is used. For existing users,
+     * the merge() operation is performed to update the database with changes.</p>
+     */
     @Transactional
     public void saveUser() {
         user.setUsername(username.getValue());
@@ -85,13 +170,19 @@ public class EditUserView extends VerticalLayout implements BeforeEnterObserver 
         if (user.getId() == 0) {
             user.persist();
         } else {
-            user = (User) user.getEntityManager().merge(user);
+            user = (User) User.getEntityManager().merge(user);
         }
 
         Notification.show("User saved");
         getUI().ifPresent(ui -> ui.navigate(UsersView.class));
     }
 
+    /**
+     * Cancels the edit operation and navigates back to the users list view.
+     * 
+     * <p>This method discards any changes made to the form and returns the user
+     * to the main users list without saving. No database operations are performed.</p>
+     */
     private void cancelEdit() {
         getUI().ifPresent(ui -> ui.navigate(UsersView.class));
     }

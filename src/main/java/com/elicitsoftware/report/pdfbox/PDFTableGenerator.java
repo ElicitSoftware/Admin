@@ -20,15 +20,90 @@ import org.apache.pdfbox.util.Matrix;
 import java.io.IOException;
 import java.util.Arrays;
 
+/**
+ * PDFTableGenerator is a request-scoped service responsible for generating PDF table content.
+ * <p>
+ * This service provides comprehensive table generation capabilities for PDF documents including:
+ * - Multi-page table rendering with automatic pagination
+ * - Consistent column width and row height management
+ * - Grid border drawing with proper line spacing
+ * - Content positioning within table cells
+ * - Page-by-page content distribution
+ * <p>
+ * The generator uses Apache PDFBox for low-level PDF operations and works with the
+ * {@link Table} model to define table structure, content, and formatting properties.
+ * It automatically handles pagination when table content exceeds available page space.
+ * <p>
+ * Key features:
+ * - Automatic calculation of rows per page based on available height
+ * - Consistent table grid rendering across multiple pages
+ * - Proper content stream management for each page
+ * - Precise positioning of table elements
+ * <p>
+ * Usage example:
+ * <pre>
+ * {@code
+ * @Inject
+ * PDFTableGenerator generator;
+ * 
+ * Table table = new TableBuilder()
+ *     .setColumns(columns)
+ *     .setContent(data)
+ *     .build();
+ * generator.generatePDF(document, table);
+ * }
+ * </pre>
+ * 
+ * @see Table
+ * @see TableBuilder
+ * @see PDDocument
+ * @since 1.0.0
+ */
 @RequestScoped
 public class PDFTableGenerator {
 
-    // Generates document from Table object
+    /**
+     * Generates a PDF table from the provided Table object and adds it to the document.
+     * <p>
+     * This method serves as the main entry point for table generation and delegates
+     * the actual rendering to the drawTable method. It provides a clean interface
+     * for integrating table generation into larger PDF creation workflows.
+     *
+     * @param document The PDDocument to add the table pages to
+     * @param table The Table object containing structure, content, and formatting information
+     * @throws IOException if an error occurs during PDF generation
+     * @see #drawTable(PDDocument, Table)
+     */
     public void generatePDF(PDDocument document, Table table) throws IOException {
         drawTable(document, table);
     }
 
-    // Configures basic setup for the table and draws it page by page
+    /**
+     * Configures table pagination and draws the table content across multiple pages as needed.
+     * <p>
+     * This method handles the core table rendering logic by:
+     * - Calculating the number of rows that fit on each page
+     * - Determining the total number of pages required
+     * - Creating content streams for each page
+     * - Distributing table content across pages
+     * - Drawing each page with proper formatting
+     * <p>
+     * The pagination calculation accounts for table height, row height, and available
+     * page space. Each page maintains consistent table structure and formatting.
+     * <p>
+     * Process flow:
+     * 1. Calculate rows per page based on available height
+     * 2. Determine total pages needed for all content
+     * 3. For each page: generate content stream, get page content, draw content
+     * 4. Ensure proper grid rendering and content positioning
+     *
+     * @param document The PDDocument to add table pages to
+     * @param table The Table object containing all table data and formatting
+     * @throws IOException if an error occurs during content stream operations
+     * @see #generateContentStream(PDDocument, Table)
+     * @see #getContentForCurrentPage(Table, Integer, int)
+     * @see #drawCurrentPage(PDDocument, Table, String[][], PDPageContentStream)
+     */
     public void drawTable(PDDocument document, Table table) throws IOException {
         // Calculate pagination
         Integer rowsPerPage = (int) Math.floor(table.getHeight() / table.getRowHeight()) - 1; // subtract

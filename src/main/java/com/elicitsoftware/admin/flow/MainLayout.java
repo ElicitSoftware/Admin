@@ -21,34 +21,69 @@ import com.vaadin.flow.component.sidenav.SideNav;
 import com.vaadin.flow.component.sidenav.SideNavItem;
 import com.vaadin.flow.router.AfterNavigationEvent;
 import com.vaadin.flow.router.AfterNavigationListener;
-import com.vaadin.flow.server.VaadinSession;
 import jakarta.annotation.PostConstruct;
 import jakarta.inject.Inject;
-import org.eclipse.microprofile.jwt.JsonWebToken;
 
 /**
- * The MainLayout class serves as the primary layout structure for the application,
- * managing the organization of headers, navigation bars, and main content.
- * <p>
- * This class extends {@code AppLayout} and implements {@code AfterNavigationListener}
- * to provide a container framework for the application's UI and handle navigation events
- * for improved user experience.
+ * The main layout component that provides the structural foundation for the entire application.
+ * This layout serves as the container for all views and manages the application's navigation system.
+ * 
+ * <p>This class extends {@link AppLayout} to provide a responsive application shell with:</p>
+ * <ul>
+ *   <li>A collapsible navigation drawer with role-based menu items</li>
+ *   <li>A header section with application branding and drawer toggle</li>
+ *   <li>Main content area where individual views are displayed</li>
+ *   <li>Automatic scroll-to-top functionality after navigation</li>
+ * </ul>
+ * 
+ * <p>The layout implements {@link AfterNavigationListener} to enhance user experience
+ * by automatically scrolling to the top of the page after each navigation event.</p>
+ * 
+ * <p>Key features:</p>
+ * <ul>
+ *   <li><strong>Role-based navigation:</strong> Admin users see additional menu items</li>
+ *   <li><strong>Responsive design:</strong> Adapts to different screen sizes</li>
+ *   <li><strong>User context awareness:</strong> Navigation adapts based on user authentication</li>
+ *   <li><strong>Automatic logout handling:</strong> Provides logout functionality for all users</li>
+ * </ul>
+ * 
+ * @author Elicit Software
+ * @version 1.0
+ * @since 1.0
+ * @see AppLayout
+ * @see AfterNavigationListener
+ * @see UiSessionLogin
  */
 
 public class MainLayout extends AppLayout implements AfterNavigationListener {
 
+    /** Injected service for handling user session and authentication. */
     @Inject
     UiSessionLogin uiSessionLogin;
+    
+    /** The current authenticated user. */
     User user;
 
     /**
-     * Initializes the main layout components after the construction of the class.
-     * <p>
-     * This method is annotated with {@code @PostConstruct}, ensuring it is called
-     * automatically after the dependency injection is completed. It performs the following actions:
-     * - Creates and configures the header section of the layout by calling {@code createHeader()}.
-     * - Creates and adds a navigation bar to the drawer section of the layout using {@code createNavBar()}.
-     * - Configures and sets the main content area using the {@code mainView} field.
+     * Initializes the main layout components after dependency injection is complete.
+     * 
+     * <p>This method is automatically called after construction and dependency injection.
+     * It sets up the complete layout structure based on the user's authentication status
+     * and role permissions:</p>
+     * 
+     * <ol>
+     *   <li>Retrieves the current user from the session</li>
+     *   <li>Creates the header section with branding and navigation toggle</li>
+     *   <li>Creates appropriate navigation menu based on user authentication:
+     *       <ul>
+     *         <li>If user is authenticated: Creates full navigation with role-based items</li>
+     *         <li>If user is not authenticated: Creates minimal navigation with logout only</li>
+     *       </ul>
+     *   </li>
+     * </ol>
+     * 
+     * <p>The navigation structure adapts dynamically to the user's permissions,
+     * ensuring that only appropriate menu items are displayed.</p>
      */
     @PostConstruct
     public void init() {
@@ -66,12 +101,17 @@ public class MainLayout extends AppLayout implements AfterNavigationListener {
     }
 
     /**
-     * Creates and adds a header section in the layout.
-     * <p>
-     * This method initializes a drawer toggle and a title anchor that links
-     * to the application's root path ("/") and displays the software name.
-     * The title is styled with a larger font size and zero-margin spacing.
-     * Both the toggle and title are added to the navigation bar.
+     * Creates and configures the application header section.
+     * 
+     * <p>The header contains:</p>
+     * <ul>
+     *   <li><strong>Drawer toggle:</strong> Button to open/close the navigation drawer</li>
+     *   <li><strong>Application title:</strong> Clickable link that navigates to the home page</li>
+     * </ul>
+     * 
+     * <p>The title is styled with enhanced font size and spacing for visual prominence.
+     * The title text is retrieved from the internationalization system using the
+     * "software.name" key, ensuring proper localization support.</p>
      */
     private void createHeader() {
         DrawerToggle toggle = new DrawerToggle();
@@ -82,12 +122,34 @@ public class MainLayout extends AppLayout implements AfterNavigationListener {
     }
 
     /**
-     * Creates and adds a navigation bar to the drawer section of the layout.
-     * <p>
-     * This method initializes a {@code SideNav} component using the {@code getsideNav} method,
-     * wraps it with a {@code Scroller} for scrollable functionality, and applies a small padding
-     * style using {@code LumoUtility.Padding.SMALL}. The resulting scroller is then added to the
-     * layout drawer.
+     * Creates and configures the navigation sidebar for authenticated users.
+     * 
+     * <p>This method builds a comprehensive navigation menu with the following structure:</p>
+     * 
+     * <h4>Standard Navigation Items (all authenticated users):</h4>
+     * <ul>
+     *   <li><strong>Search Subjects:</strong> Navigate to subject search functionality</li>
+     *   <li><strong>Register Subjects:</strong> Navigate to subject registration</li>
+     * </ul>
+     * 
+     * <h4>Admin Section (admin users only):</h4>
+     * <ul>
+     *   <li><strong>Departments:</strong> Manage department information</li>
+     *   <li><strong>Message Templates:</strong> Manage communication templates</li>
+     *   <li><strong>Users:</strong> Manage user accounts and permissions</li>
+     * </ul>
+     * 
+     * <h4>System Actions (all users):</h4>
+     * <ul>
+     *   <li><strong>Logout:</strong> Terminate the current session</li>
+     * </ul>
+     * 
+     * <p>The admin section is conditionally displayed based on the user's role permissions.
+     * Each navigation item is configured with appropriate icons from the Vaadin icon set
+     * for improved visual recognition and user experience.</p>
+     * 
+     * <p>The navigation is implemented using {@link SideNav} and {@link SideNavItem}
+     * components, providing a hierarchical menu structure with proper routing integration.</p>
      */
     private void createNavBar() {
         SideNav nav = new SideNav();
@@ -115,12 +177,37 @@ public class MainLayout extends AppLayout implements AfterNavigationListener {
         addToDrawer(nav);
     }
 
-    //These two functions were added to make sure the top of the page is in view after navigation
+    /**
+     * Registers this layout as a navigation listener when attached to the UI.
+     * 
+     * <p>This method is part of the component lifecycle and ensures that the layout
+     * can respond to navigation events. It adds this instance as an after-navigation
+     * listener to the current UI, enabling the scroll-to-top functionality.</p>
+     * 
+     * @param attachEvent the event fired when this component is attached to the UI
+     * @see AfterNavigationListener
+     */
     @Override
     protected void onAttach(AttachEvent attachEvent) {
         getUI().ifPresent(ui -> ui.addAfterNavigationListener(this));
     }
 
+    /**
+     * Handles post-navigation actions to improve user experience.
+     * 
+     * <p>This method is automatically called after each navigation event and ensures
+     * that the main content area is scrolled to the top. This provides a consistent
+     * user experience by preventing users from being left at an arbitrary scroll
+     * position when navigating between views.</p>
+     * 
+     * <p>This is particularly important in applications with long content pages where
+     * users might scroll down before navigating to a new view. Without this functionality,
+     * the new view would appear at the same scroll position, potentially showing
+     * the middle or bottom of the new content rather than the top.</p>
+     * 
+     * @param event the navigation event containing information about the completed navigation
+     * @see AfterNavigationListener#afterNavigation(AfterNavigationEvent)
+     */
     @Override
     public void afterNavigation(AfterNavigationEvent event) {
         getContent().scrollIntoView();
