@@ -45,7 +45,7 @@ import java.util.Arrays;
  * {@code
  * @Inject
  * PDFTableGenerator generator;
- * 
+ *
  * Table table = new TableBuilder()
  *     .setColumns(columns)
  *     .setContent(data)
@@ -53,7 +53,7 @@ import java.util.Arrays;
  * generator.generatePDF(document, table);
  * }
  * </pre>
- * 
+ *
  * @see Table
  * @see TableBuilder
  * @see PDDocument
@@ -61,6 +61,17 @@ import java.util.Arrays;
  */
 @RequestScoped
 public class PDFTableGenerator {
+
+    /**
+     * Default constructor for CDI bean instantiation.
+     * <p>
+     * Creates a new PDFTableGenerator instance for dependency injection.
+     * This constructor is used by CDI frameworks for automatic
+     * instantiation and injection.
+     */
+    public PDFTableGenerator() {
+        // Default constructor for CDI
+    }
 
     /**
      * Generates a PDF table from the provided Table object and adds it to the document.

@@ -41,10 +41,10 @@ import org.eclipse.microprofile.rest.client.inject.RegisterRestClient;
  * <pre>
  * # Base URL for the report service
  * com.elicitsoftware.report.ReportService/mp-rest/url=http://report-service:8080
- * 
+ *
  * # Connection timeout
  * com.elicitsoftware.report.ReportService/mp-rest/connectTimeout=5000
- * 
+ *
  * # Read timeout
  * com.elicitsoftware.report.ReportService/mp-rest/readTimeout=30000
  * </pre>
@@ -55,7 +55,7 @@ import org.eclipse.microprofile.rest.client.inject.RegisterRestClient;
  * @Inject
  * @RestClient
  * ReportService reportService;
- * 
+ *
  * public ReportResponse generateReport(int reportId) {
  *     ReportRequest request = new ReportRequest(reportId);
  *     try {
@@ -67,7 +67,7 @@ import org.eclipse.microprofile.rest.client.inject.RegisterRestClient;
  * }
  * }
  * </pre>
- * 
+ *
  * @see ReportRequest
  * @see ReportResponse
  * @see RegisterRestClient
@@ -123,7 +123,7 @@ public interface ReportService {
      * @throws java.lang.IllegalArgumentException if the request is null or invalid
      * @see ReportRequest
      * @see ReportResponse
-     * @see org.eclipse.microprofile.rest.client.annotation.RegisterRestClient
+     * @see org.eclipse.microprofile.rest.client.inject.RegisterRestClient
      */
     @POST
     @Consumes(MediaType.APPLICATION_JSON)

@@ -1,5 +1,16 @@
 package com.elicitsoftware.model;
 
+/*-
+ * ***LICENSE_START***
+ * Elicit Survey
+ * %%
+ * Copyright (C) 2025 The Regents of the University of Michigan - Rogel Cancer Center
+ * %%
+ * PolyForm Noncommercial License 1.0.0
+ * <https://polyformproject.org/licenses/noncommercial/1.0.0>
+ * ***LICENSE_END***
+ */
+
 import com.elicitsoftware.exception.TokenGenerationError;
 import io.quarkus.hibernate.orm.panache.PanacheEntityBase;
 import jakarta.persistence.*;
@@ -12,16 +23,14 @@ import java.util.Date;
 
 /**
  * JPA entity representing a message to be sent to a survey respondent.
- * <p>
- * The Message entity models outbound communications in the Elicit survey system.
+ *
+ * <p>The Message entity models outbound communications in the Elicit survey system.
  * Each message is associated with a subject (survey instance), a message type, and
  * contains content generated from a message template. Messages are queued for delivery
  * and processed by the email service. The {@code sentDt} field tracks when the message
- * was actually sent.
- * </p>
+ * was actually sent.</p>
  *
- * <p>
- * <strong>Key Fields:</strong>
+ * <p><strong>Key Fields:</strong></p>
  * <ul>
  *   <li><strong>subject:</strong> The survey subject (and respondent) this message is for</li>
  *   <li><strong>messageType:</strong> The type/category of message (e.g., invitation, reminder)</li>
@@ -31,16 +40,13 @@ import java.util.Date;
  *   <li><strong>createdDt:</strong> When the message was created</li>
  *   <li><strong>sentDt:</strong> When the message was sent (null if unsent)</li>
  * </ul>
- * </p>
  *
- * <p>
- * <strong>Usage:</strong>
+ * <p><strong>Usage:</strong></p>
  * <ul>
  *   <li>Created when a new respondent is added or when a survey event triggers a message</li>
  *   <li>Processed and sent by the EmailService</li>
- *   <li>Supports token replacement (e.g., &lt;TOKEN&gt; for personalized links)</li>
+ *   <li>Supports token replacement (e.g., &amp;lt;TOKEN&amp;gt; for personalized links)</li>
  * </ul>
- * </p>
  *
  * @author Elicit Software
  * @version 1.0

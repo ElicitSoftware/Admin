@@ -1,5 +1,16 @@
 package com.elicitsoftware.util;
 
+/*-
+ * ***LICENSE_START***
+ * Elicit Survey
+ * %%
+ * Copyright (C) 2025 The Regents of the University of Michigan - Rogel Cancer Center
+ * %%
+ * PolyForm Noncommercial License 1.0.0
+ * <https://polyformproject.org/licenses/noncommercial/1.0.0>
+ * ***LICENSE_END***
+ */
+
 import java.security.SecureRandom;
 import java.util.Locale;
 import java.util.Objects;
@@ -44,21 +55,21 @@ import java.util.Random;
  * // Default session identifier (21 characters, secure random)
  * RandomString sessionGen = new RandomString();
  * String sessionId = sessionGen.nextString();
- * 
+ *
  * // Custom length with secure random
  * RandomString tokenGen = new RandomString(32);
  * String authToken = tokenGen.nextString();
- * 
+ *
  * // Custom character set and length
  * RandomString customGen = new RandomString(16, new SecureRandom(), "ABCDEF0123456789");
  * String hexString = customGen.nextString();
- * 
+ *
  * // Deterministic random for testing
  * RandomString testGen = new RandomString(10, new Random(12345));
  * String predictableString = testGen.nextString();
  * }
  * </pre>
- * 
+ *
  * @see SecureRandom
  * @see Random
  * @since 1.0.0
@@ -72,7 +83,7 @@ public class RandomString {
      * and unlikely to form recognizable words. Excluded characters: A, E, I, O, U, Y.
      */
     public static final String upper = "BCDFGHJKLMNPQRSTVWXZ";
-    
+
     /**
      * Lowercase version of the uppercase character set.
      * <p>
@@ -80,7 +91,7 @@ public class RandomString {
      * maintaining the same visual distinctness and word-avoidance properties.
      */
     public static final String lower = upper.toLowerCase(Locale.ROOT);
-    
+
     /**
      * Digits excluding visually confusing numbers.
      * <p>
@@ -90,7 +101,7 @@ public class RandomString {
      * - 3 (three) - can be confused with 8 (eight) in some fonts
      */
     public static final String digits = "2456789";
-    
+
     /**
      * Combined alphanumeric character set for general-purpose random string generation.
      * <p>
@@ -99,7 +110,7 @@ public class RandomString {
      * character combinations.
      */
     public static final String alphanum = upper + lower + digits;
-    
+
     /**
      * Random number generator instance for this string generator.
      * <p>
@@ -107,7 +118,7 @@ public class RandomString {
      * standard Random for performance-focused applications.
      */
     private final Random random;
-    
+
     /**
      * Character array containing the symbol set for random selection.
      * <p>
@@ -115,7 +126,7 @@ public class RandomString {
      * character selection during string generation.
      */
     private final char[] symbols;
-    
+
     /**
      * Pre-allocated character buffer for string construction.
      * <p>
@@ -143,7 +154,7 @@ public class RandomString {
      * @param length The length of strings to generate; must be at least 1
      * @param random The random number generator to use; must not be null
      * @param symbols The character set to use for generation; must contain at least 2 characters
-     * @throws IllegalArgumentException if length < 1 or symbols length < 2
+     * @throws IllegalArgumentException if length &lt; 1 or symbols length &lt; 2
      * @throws NullPointerException if random is null
      */
     public RandomString(int length, Random random, String symbols) {
@@ -163,7 +174,7 @@ public class RandomString {
      * <p>
      * Character set used:
      * - Uppercase consonants: BCDFGHJKLMNPQRSTVWXZ
-     * - Lowercase consonants: bcdfghjklmnpqrstvwxz  
+     * - Lowercase consonants: bcdfghjklmnpqrstvwxz
      * - Clear digits: 2456789
      * <p>
      * Use cases:
@@ -174,7 +185,7 @@ public class RandomString {
      *
      * @param length The length of strings to generate; must be at least 1
      * @param random The random number generator to use; must not be null
-     * @throws IllegalArgumentException if length < 1
+     * @throws IllegalArgumentException if length &lt; 1
      * @throws NullPointerException if random is null
      * @see #alphanum
      */
@@ -209,7 +220,7 @@ public class RandomString {
      * - One-time use codes and nonces
      *
      * @param length The length of strings to generate; must be at least 1
-     * @throws IllegalArgumentException if length < 1
+     * @throws IllegalArgumentException if length &lt; 1
      * @see SecureRandom
      */
     public RandomString(int length) {
@@ -252,6 +263,32 @@ public class RandomString {
     }
 
     /**
+     * Generate a random string.
+     *
+     * @param length the length of the random string
+     * @param symbols the symbols to use for generation
+     * @throws IllegalArgumentException if length &lt; 1 or symbols length &lt; 2
+     */
+    public RandomString(int length, char[] symbols) {
+        if (length < 1) throw new IllegalArgumentException();
+        if (symbols.length < 2) throw new IllegalArgumentException();
+        this.random = new SecureRandom();
+        this.symbols = symbols.clone();
+        this.buf = new char[length];
+    }
+
+    /**
+     * Generate a random string from the configured symbols.
+     *
+     * @param length the desired length of the random string
+     * @return a random string of the specified length
+     * @throws IllegalArgumentException if length &lt; 1
+     */
+    public static String generate(int length) {
+        return new RandomString(length, alphanum.toCharArray()).nextString();
+    }
+
+    /**
      * Generates a new random string using the configured parameters.
      * <p>
      * This method creates a random string by filling the pre-allocated character buffer
@@ -288,12 +325,12 @@ public class RandomString {
      * // Single use
      * RandomString generator = new RandomString(16);
      * String token = generator.nextString();
-     * 
+     *
      * // Multiple generation
      * RandomString sessionGen = new RandomString();
      * String sessionId1 = sessionGen.nextString();
      * String sessionId2 = sessionGen.nextString(); // Different from sessionId1
-     * 
+     *
      * // High-frequency generation
      * RandomString fastGen = new RandomString(8, new Random());
      * for (int i = 0; i < 1000; i++) {

@@ -1,3 +1,14 @@
+---
+-- ***LICENSE_START***
+-- Elicit Survey
+-- %%
+-- Copyright (C) 2025 The Regents of the University of Michigan - Rogel Cancer Center
+-- %%
+-- PolyForm Noncommercial License 1.0.0
+-- <https://polyformproject.org/licenses/noncommercial/1.0.0>
+-- ***LICENSE_END***
+---
+
 GRANT ALL ON SEQUENCE survey.message_types_seq TO ${surveyadmin_user};
 GRANT DELETE, INSERT, SELECT, UPDATE ON survey.message_types TO ${surveyadmin_user};
 GRANT ALL ON SEQUENCE survey.departments_seq TO ${surveyadmin_user};

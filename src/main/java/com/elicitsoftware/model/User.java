@@ -1,5 +1,16 @@
 package com.elicitsoftware.model;
 
+/*-
+ * ***LICENSE_START***
+ * Elicit Survey
+ * %%
+ * Copyright (C) 2025 The Regents of the University of Michigan - Rogel Cancer Center
+ * %%
+ * PolyForm Noncommercial License 1.0.0
+ * <https://polyformproject.org/licenses/noncommercial/1.0.0>
+ * ***LICENSE_END***
+ */
+
 import io.quarkus.hibernate.orm.panache.PanacheEntityBase;
 import jakarta.persistence.*;
 
@@ -178,6 +189,17 @@ public class User extends PanacheEntityBase {
      * 
      * @return the user ID
      */
+
+    /**
+     * Default constructor for User.
+     * <p>
+     * Creates a new User instance with default values.
+     * This constructor is used by frameworks and for general instantiation.
+     */
+    public User() {
+        // Default constructor
+    }
+
     public long getId() {
         return id;
     }

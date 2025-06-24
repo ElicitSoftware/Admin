@@ -1,5 +1,16 @@
 package com.elicitsoftware.service;
 
+/*-
+ * ***LICENSE_START***
+ * Elicit Survey
+ * %%
+ * Copyright (C) 2025 The Regents of the University of Michigan - Rogel Cancer Center
+ * %%
+ * PolyForm Noncommercial License 1.0.0
+ * <https://polyformproject.org/licenses/noncommercial/1.0.0>
+ * ***LICENSE_END***
+ */
+
 import com.elicitsoftware.exception.TokenGenerationError;
 import com.elicitsoftware.model.*;
 import com.elicitsoftware.request.AddRequest;
@@ -19,6 +30,16 @@ import java.security.SecureRandom;
 import java.util.ArrayList;
 import java.util.Date;
 
+/**
+ * TokenService provides token-based authentication and subject management for surveys.
+ * <p>
+ * This REST service handles secure token generation, subject registration,
+ * and authentication operations for the survey system. It provides endpoints
+ * for adding subjects and retrieving authentication tokens.
+ *
+ * @author Elicit Software
+ * @since 1.0.0
+ */
 @Path("/secured")
 @ApplicationScoped
 public class TokenService {
@@ -27,12 +48,29 @@ public class TokenService {
     private UriInfo uriInfo;
     private RandomString generator = null;
 
+    /**
+     * Initializes the TokenService with a secure random token generator.
+     * <p>
+     * Sets up the service with a random string generator that uses
+     * easily distinguishable characters (avoiding similar-looking characters
+     * like 0/O and 1/l) to create 9-character authentication tokens.
+     */
     public TokenService() {
         super();
         String easy = RandomString.digits + "BCDFGHJKLMNPQRSTVWXZbcdfghjkmnpqrstvwxz2456789";
         generator = new RandomString(9, new SecureRandom(), easy);
     }
 
+    /**
+     * Adds a new subject to the survey system and generates an authentication token.
+     * <p>
+     * Creates a new subject record based on the provided request data,
+     * generates a secure authentication token, and returns the response
+     * containing the subject ID and token for survey access.
+     *
+     * @param request the subject registration request containing demographic data
+     * @return AddResponse containing the new subject ID, authentication token, or error message
+     */
     @Path("/add/subject")
     @POST
     @RolesAllowed({"elicit_token", "elicit_admin", "elicit_user"})
@@ -59,6 +97,17 @@ public class TokenService {
         return response;
     }
 
+    /**
+     * Generates and retrieves a unique authentication token for a survey.
+     * <p>
+     * Creates a new respondent record with a unique token for the specified
+     * survey. If token generation fails after multiple attempts, throws an
+     * exception to prevent infinite loops.
+     *
+     * @param surveyId the ID of the survey to generate a token for
+     * @return Respondent object containing the generated token
+     * @throws TokenGenerationError if unable to generate a unique token after multiple attempts
+     */
     public Respondent getToken(int surveyId) {
         String token = null;
         Respondent respondent = null;
@@ -87,6 +136,14 @@ public class TokenService {
         throw new TokenGenerationError("Unable to generate a unique token");
     }
 
+    /**
+     * Simple test endpoint to verify service availability.
+     * <p>
+     * Returns a test message to confirm that the TokenService is
+     * accessible and functioning properly.
+     *
+     * @return a test message string
+     */
     @Path("/test")
     @GET
     public String test() {

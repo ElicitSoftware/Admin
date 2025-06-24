@@ -41,13 +41,13 @@ package com.elicitsoftware.report.pdf;
  * };
  * }
  * </pre>
- * 
+ *
  * @see Content
  * @see com.elicitsoftware.report.pdfbox.Table
  * @since 1.0.0
  */
 public class Table {
-    
+
     /**
      * Array of column header names.
      * <p>
@@ -55,7 +55,7 @@ public class Table {
      * The length of this array determines the number of columns in the table.
      */
     public String[] headers;
-    
+
     /**
      * Array of column widths in PDF coordinate points.
      * <p>
@@ -63,7 +63,7 @@ public class Table {
      * Should have the same length as the headers array.
      */
     public float[] widths;
-    
+
     /**
      * 2D array containing the table body content.
      * <p>
@@ -72,4 +72,15 @@ public class Table {
      * same number of columns as defined by the headers array.
      */
     public String[][] body;
+
+    /**
+     * Default constructor for object instantiation.
+     * <p>
+     * Creates a new Table instance with uninitialized fields.
+     * Fields should be populated after construction to define
+     * the table structure and content.
+     */
+    public Table() {
+        // Default constructor
+    }
 }

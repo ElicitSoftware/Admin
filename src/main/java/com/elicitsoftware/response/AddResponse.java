@@ -1,5 +1,16 @@
 package com.elicitsoftware.response;
 
+/*-
+ * ***LICENSE_START***
+ * Elicit Survey
+ * %%
+ * Copyright (C) 2025 The Regents of the University of Michigan - Rogel Cancer Center
+ * %%
+ * PolyForm Noncommercial License 1.0.0
+ * <https://polyformproject.org/licenses/noncommercial/1.0.0>
+ * ***LICENSE_END***
+ */
+
 /**
  * AddResponse represents the response payload returned after successfully adding a new participant to a survey.
  * <p>
@@ -36,7 +47,7 @@ package com.elicitsoftware.response;
  * } else {
  *     response.setError("Failed to create participant: Invalid email format");
  * }
- * 
+ *
  * // Client-side response handling
  * if (response.getError() == null) {
  *     // Success - redirect to survey with token
@@ -48,7 +59,7 @@ package com.elicitsoftware.response;
  * }
  * }
  * </pre>
- * 
+ *
  * @see com.elicitsoftware.request.AddRequest
  * @see com.elicitsoftware.model.Respondent
  * @since 1.0.0
@@ -62,7 +73,7 @@ public class AddResponse {
      * related to this participant.
      */
     private int respondentId;
-    
+
     /**
      * Authentication token for secure participant access to surveys.
      * <p>
@@ -71,7 +82,7 @@ public class AddResponse {
      * username/password authentication.
      */
     private String token;
-    
+
     /**
      * Error message describing any failures that occurred during participant creation.
      * <p>
@@ -80,6 +91,23 @@ public class AddResponse {
      * operations.
      */
     private String error;
+
+    /**
+     * Default constructor for creating an empty AddResponse instance.
+     * <p>
+     * Creates a new AddResponse with default values:
+     * - respondentId: 0 (indicating no ID assigned)
+     * - token: null (no authentication token)
+     * - error: null (no error message)
+     * <p>
+     * This constructor is typically used by:
+     * - JSON/XML serialization frameworks
+     * - Service layer methods that populate fields programmatically
+     * - Test scenarios requiring empty response objects
+     */
+    public AddResponse() {
+        // Default constructor - fields initialized to default values
+    }
 
     /**
      * Returns the unique identifier assigned to the newly created respondent.
@@ -136,7 +164,6 @@ public class AddResponse {
      * - Should not be logged or stored in plain text
      *
      * @return The authentication token as a secure string, or null if creation failed
-     * @see com.elicitsoftware.security.TokenService
      */
     public String getToken() {
         return token;
@@ -151,7 +178,6 @@ public class AddResponse {
      * expiration and permission settings.
      *
      * @param token The secure authentication token; may be null if token generation fails
-     * @see com.elicitsoftware.security.TokenService#generateToken
      */
     public void setToken(String token) {
         this.token = token;

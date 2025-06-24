@@ -1,5 +1,16 @@
 package com.elicitsoftware.service;
 
+/*-
+ * ***LICENSE_START***
+ * Elicit Survey
+ * %%
+ * Copyright (C) 2025 The Regents of the University of Michigan - Rogel Cancer Center
+ * %%
+ * PolyForm Noncommercial License 1.0.0
+ * <https://polyformproject.org/licenses/noncommercial/1.0.0>
+ * ***LICENSE_END***
+ */
+
 import com.elicitsoftware.model.Status;
 import io.quarkus.hibernate.orm.panache.PanacheEntityBase;
 
@@ -7,69 +18,40 @@ import java.util.stream.Stream;
 
 /**
  * StatusDataSource provides data access and streaming functionality for Status entities.
- * <p>
- * This service class acts as a data access layer specifically designed for handling
+ *
+ * <p>This service class acts as a data access layer specifically designed for handling
  * Status entity queries with pagination and streaming capabilities. It serves as an
  * abstraction layer between the UI components and the underlying Panache ORM,
- * providing optimized data access patterns for large datasets.
- * <p>
- * Key features:
- * - **Streaming data access**: Efficient handling of large Status datasets
- * - **Pagination support**: Built-in offset and limit functionality
- * - **SQL query integration**: Direct SQL query execution with Panache
- * - **Type-safe operations**: Strong typing for Status entity operations
- * - **Performance optimization**: Stream-based processing for memory efficiency
- * - **Count operations**: Efficient counting without full data retrieval
- * <p>
- * Design patterns:
- * - **Data Source Pattern**: Encapsulates data access logic
- * - **Streaming Pattern**: Provides lazy evaluation for large datasets
- * - **Pagination Pattern**: Supports efficient data chunking
- * - **Type Conversion**: Safe casting from base entities to Status
- * <p>
- * Use cases:
- * - **Grid components**: Providing data for Vaadin Grid with lazy loading
- * - **Report generation**: Streaming large datasets for report processing
- * - **Data export**: Efficient batch processing of Status records
- * - **Search functionality**: Paginated search results with SQL filtering
- * <p>
- * Performance considerations:
- * - Uses Java Streams for lazy evaluation and memory efficiency
- * - Supports database-level pagination to minimize memory usage
- * - Leverages Panache streaming capabilities for optimal performance
- * - Provides count operations without loading full datasets
- * <p>
- * Integration example:
- * <pre>
- * {@code
- * // Using with Vaadin Grid for lazy loading
- * StatusDataSource dataSource = new StatusDataSource();
- * 
- * // Configure lazy data provider
- * CallbackDataProvider<Status, String> dataProvider = 
- *     DataProvider.fromFilteringCallbacks(
- *         query -> {
- *             String filter = query.getFilter().orElse("");
- *             String sql = buildSqlQuery(filter);
- *             return dataSource.fetch(sql, query.getOffset(), query.getLimit());
- *         },
- *         query -> {
- *             String filter = query.getFilter().orElse("");
- *             String sql = buildSqlQuery(filter);
- *             return dataSource.count(sql);
- *         }
- *     );
- * 
- * grid.setDataProvider(dataProvider);
- * }
- * </pre>
- * 
+ * providing optimized data access patterns for large datasets.</p>
+ *
+ * @author Elicit Software
+ * @version 1.0
  * @see Status
  * @see PanacheEntityBase
- * @since 1.0.0
  */
 public class StatusDataSource {
-    
+
+    /**
+     * Default constructor.
+     *
+     * <p>Creates a new StatusDataSource instance ready for data access operations.
+     * This constructor initializes the data source for streaming and paginated
+     * access to Status entities through the underlying Panache ORM layer.</p>
+     *
+     * <p><strong>Usage:</strong></p>
+     * <pre>{@code
+     * StatusDataSource dataSource = new StatusDataSource();
+     * Stream<Status> results = dataSource.fetch("SELECT s FROM Status s", 0, 50);
+     * }</pre>
+     *
+     * <p>The data source is stateless and thread-safe, making it suitable for
+     * singleton usage in dependency injection frameworks or as instance variables
+     * in UI components that need to access Status data.</p>
+     */
+    public StatusDataSource() {
+        // Default constructor for data source initialization
+    }
+
     /**
      * Fetches a paginated stream of Status entities based on the provided SQL query.
      * <p>
@@ -109,7 +91,7 @@ public class StatusDataSource {
      *     "SELECT s FROM Status s WHERE s.completed = true ORDER BY s.updatedDate DESC",
      *     0, 50
      * );
-     * 
+     *
      * // Filtering with user input
      * String filterSql = "SELECT s FROM Status s WHERE s.email LIKE ?1";
      * Stream<Status> filtered = dataSource.fetch(filterSql, 20, 25);
@@ -122,11 +104,10 @@ public class StatusDataSource {
      * @return Stream of Status entities matching the query criteria, paginated as specified
      * @throws IllegalArgumentException if the SQL query is malformed or invalid
      * @throws ClassCastException if the query returns entities that cannot be cast to Status
-     * @see #stream(String, int, long)
+     * @see #fetch(String, int, int)
      * @see #count(String)
-     * @see Status#stream(String)
      */
-    public Stream<Status> fetch(String sql, int offset, long limit) {
+    public Stream<Status> fetch(String sql, int offset, int limit) {
         return stream(sql, offset, limit).map(entity -> (Status) entity);
     }
 
@@ -173,7 +154,7 @@ public class StatusDataSource {
      * @return Stream of PanacheEntityBase entities that can be cast to specific entity types
      * @see Status#stream(String)
      */
-    private Stream<PanacheEntityBase> stream(String sql, int offset, long limit) {
+    private Stream<PanacheEntityBase> stream(String sql, int offset, int limit) {
         // emulate accessing the backend datasource - in a real application this would
         // call, for example, an SQL query, passing an offset and a limit to the query
         return Status.stream(sql).skip(offset).limit(limit);
@@ -211,10 +192,10 @@ public class StatusDataSource {
      * {@code
      * // Get total count for pagination
      * int totalCount = dataSource.count(baseQuery);
-     * 
+     *
      * // Calculate total pages
      * int totalPages = (totalCount + pageSize - 1) / pageSize;
-     * 
+     *
      * // Fetch current page data
      * Stream<Status> pageData = dataSource.fetch(baseQuery, offset, pageSize);
      * }
@@ -235,8 +216,7 @@ public class StatusDataSource {
      * @return The number of Status entities matching the query criteria as an integer
      * @throws ArithmeticException if the count exceeds Integer.MAX_VALUE
      * @throws IllegalArgumentException if the SQL query is malformed
-     * @see #fetch(String, int, long)
-     * @see Status#stream(String)
+     * @see #fetch(String, int, int)
      */
     public int count(String sql) {
         return (int) Status.stream(sql).count();

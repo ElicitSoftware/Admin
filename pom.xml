@@ -272,6 +272,8 @@
                 <version>3.11.2</version>
                 <configuration>
                     <outputDirectory>${project.build.directory}/javadoc</outputDirectory>
+                    <failOnWarnings>false</failOnWarnings>
+                    <quiet>true</quiet>
 <!--                    <javadocDirectory>./docs/javadoc</javadocDirectory>-->
                 </configuration>
                 <executions>
@@ -332,6 +334,24 @@
             </plugin>
         </plugins>
     </build>
+
+    <reporting>
+        <plugins>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-javadoc-plugin</artifactId>
+                <version>3.11.2</version>
+                <reportSets>
+                    <reportSet>
+                        <reports>
+                            <report>javadoc</report>
+                            <report>aggregate</report>
+                        </reports>
+                    </reportSet>
+                </reportSets>
+            </plugin>
+        </plugins>
+    </reporting>
 
     <profiles>
         <profile>
