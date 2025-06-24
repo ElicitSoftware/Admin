@@ -1,5 +1,16 @@
 package com.elicitsoftware.service;
 
+/*-
+ * ***LICENSE_START***
+ * Elicit Survey
+ * %%
+ * Copyright (C) 2025 The Regents of the University of Michigan - Rogel Cancer Center
+ * %%
+ * PolyForm Noncommercial License 1.0.0
+ * <https://polyformproject.org/licenses/noncommercial/1.0.0>
+ * ***LICENSE_END***
+ */
+
 import com.elicitsoftware.model.Message;
 import com.elicitsoftware.model.Status;
 import io.quarkus.mailer.Mail;
@@ -14,72 +25,15 @@ import java.util.Date;
 import java.util.List;
 
 /**
- * EmailService provides comprehensive email sending and message queue processing functionality.
- * <p>
- * This application-scoped service handles both immediate email sending and batch processing
- * of queued messages in the Elicit Survey system. It integrates with Quarkus Mailer for
- * email delivery and provides automatic retry mechanisms for failed messages.
- * <p>
- * Key features:
- * - **Immediate email sending** for status notifications and alerts
- * - **Batch message processing** via scheduled background jobs
- * - **Multiple content types** supporting both plain text and HTML emails
- * - **Automatic retry mechanism** for failed email deliveries
- * - **Database integration** for persistent message queuing
- * - **Configuration-driven** sender address management
- * - **Error handling** with comprehensive logging and failure tracking
- * <p>
- * Email processing workflow:
- * 1. **Immediate sending**: Direct email dispatch for urgent notifications
- * 2. **Queue processing**: Scheduled batch processing of unsent messages
- * 3. **Content formatting**: Dynamic content type selection (text/HTML)
- * 4. **Delivery tracking**: Database updates for sent message timestamps
- * 5. **Error handling**: Logging and failure management for debugging
- * <p>
- * Scheduled processing:
- * - Runs every 5 minutes to process unsent messages
- * - Processes up to 100 messages per batch for performance
- * - Updates database records upon successful delivery
- * - Provides comprehensive error logging for failed attempts
- * <p>
- * Configuration requirements:
- * The service requires the following application properties:
- * <pre>
- * # Sender email address for outgoing messages
- * quarkus.mailer.from=noreply@yourorganization.org
- * 
- * # SMTP server configuration (if not using default)
- * quarkus.mailer.host=smtp.yourorganization.org
- * quarkus.mailer.port=587
- * quarkus.mailer.start-tls=REQUIRED
- * quarkus.mailer.username=smtp-username
- * quarkus.mailer.password=smtp-password
- * </pre>
- * <p>
- * Usage examples:
- * <pre>
- * {@code
- * @Inject
- * EmailService emailService;
- * 
- * // Send immediate status notification
- * Status participantStatus = getParticipantStatus();
- * boolean sent = emailService.sendEmail(participantStatus);
- * if (!sent) {
- *     logger.warn("Failed to send status email for participant: {}", 
- *                 participantStatus.getToken());
- * }
- * 
- * // Messages are automatically processed by the scheduler
- * // Manual processing can be triggered if needed:
- * emailService.processUnsentMessages();
- * }
- * </pre>
- * 
+ * Service for sending email messages to survey respondents.
+ *
+ * <p>This service handles the processing and delivery of email messages
+ * to survey participants. It manages message queuing, template processing,
+ * and actual email delivery through the configured email provider.</p>
+ *
+ * @author Elicit Software
+ * @version 1.0
  * @see Message
- * @see Status
- * @see ReactiveMailer
- * @since 1.0.0
  */
 @ApplicationScoped
 public class EmailService {
@@ -134,6 +88,17 @@ public class EmailService {
      * @see Status#getEmail()
      * @see Status#getToken()
      */
+
+    /**
+     * Default constructor for EmailService.
+     * <p>
+     * Creates a new EmailService instance with default values.
+     * This constructor is used by frameworks and for general instantiation.
+     */
+    public EmailService() {
+        // Default constructor
+    }
+
     public boolean sendEmail(Status status) {
         System.out.println("Sending email for status: " + status.getToken());
         try {
@@ -197,7 +162,7 @@ public class EmailService {
      * - Console output suitable for log aggregation systems
      *
      * @see #sendMessage(Message)
-     * @see Message#find(String)
+     * @see Message
      * @see Scheduled
      */
     @Scheduled(every = "5m")

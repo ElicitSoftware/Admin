@@ -73,6 +73,17 @@ public class TableBuilder {
      * @param height The table height in PDF coordinate points
      * @return This TableBuilder instance for method chaining
      */
+
+    /**
+     * Default constructor for TableBuilder.
+     * <p>
+     * Creates a new TableBuilder instance with default values.
+     * This constructor is used by frameworks and for general instantiation.
+     */
+    public TableBuilder() {
+        // Default constructor
+    }
+
     public TableBuilder setHeight(float height) {
         table.setHeight(height);
         return this;

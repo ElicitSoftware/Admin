@@ -1,5 +1,16 @@
 package com.elicitsoftware.service;
 
+/*-
+ * ***LICENSE_START***
+ * Elicit Survey
+ * %%
+ * Copyright (C) 2025 The Regents of the University of Michigan - Rogel Cancer Center
+ * %%
+ * PolyForm Noncommercial License 1.0.0
+ * <https://polyformproject.org/licenses/noncommercial/1.0.0>
+ * ***LICENSE_END***
+ */
+
 import com.elicitsoftware.model.ReportDefinition;
 import com.elicitsoftware.model.Status;
 import com.elicitsoftware.model.Survey;
@@ -144,6 +155,17 @@ public class ReportingService {
      * @see PDFService#generatePDF(ArrayList)
      * @see Survey#reports
      */
+
+    /**
+     * Default constructor for ReportingService.
+     * <p>
+     * Creates a new ReportingService instance with default values.
+     * This constructor is used by frameworks and for general instantiation.
+     */
+    public ReportingService() {
+        // Default constructor
+    }
+
     public void printReports(Status status) {
         // Implement report generation logic here
         // For example: generate PDF reports for finished surveys

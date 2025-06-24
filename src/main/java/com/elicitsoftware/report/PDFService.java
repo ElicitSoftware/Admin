@@ -197,6 +197,17 @@ public class PDFService {
      * @see Content
      * @see StreamResource
      */
+
+    /**
+     * Default constructor for PDFService.
+     * <p>
+     * Creates a new PDFService instance with default values.
+     * This constructor is used by frameworks and for general instantiation.
+     */
+    public PDFService() {
+        // Default constructor
+    }
+
     public StreamResource generatePDF(ArrayList<ReportResponse> reportResponses) {
         try {
             // Create a new document

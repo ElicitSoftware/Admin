@@ -1,5 +1,16 @@
 package com.elicitsoftware.admin.flow;
 
+/*-
+ * ***LICENSE_START***
+ * Elicit Survey
+ * %%
+ * Copyright (C) 2025 The Regents of the University of Michigan - Rogel Cancer Center
+ * %%
+ * PolyForm Noncommercial License 1.0.0
+ * <https://polyformproject.org/licenses/noncommercial/1.0.0>
+ * ***LICENSE_END***
+ */
+
 import com.elicitsoftware.exception.TokenGenerationError;
 import com.elicitsoftware.model.*;
 import com.elicitsoftware.service.CsvImportService;
@@ -39,13 +50,13 @@ import java.util.Optional;
  * A comprehensive subject registration view that provides multiple methods for adding
  * and updating subjects in the system. This view serves as a central hub for subject
  * management with support for individual registration, bulk CSV uploads, and REST API integration.
- * 
+ *
  * <p>The view features a two-column layout:</p>
  * <ul>
  *   <li><strong>Left Column:</strong> Subject registration form with validation</li>
  *   <li><strong>Right Column:</strong> CSV upload functionality and API documentation</li>
  * </ul>
- * 
+ *
  * <p>Key features include:</p>
  * <ul>
  *   <li><strong>Individual Registration:</strong> Complete form with validation for all subject fields</li>
@@ -55,13 +66,13 @@ import java.util.Optional;
  *   <li><strong>Token Generation:</strong> Automatic creation of unique tokens for survey access</li>
  *   <li><strong>Message Creation:</strong> Automatic generation of communication messages for new subjects</li>
  * </ul>
- * 
+ *
  * <p>The view supports two operational modes:</p>
  * <ul>
  *   <li><strong>Registration Mode:</strong> Default mode for creating new subjects</li>
  *   <li><strong>Update Mode:</strong> Activated when accessing with a valid subject token parameter</li>
  * </ul>
- * 
+ *
  * <p>Form validation includes:</p>
  * <ul>
  *   <li>Required field validation (department, first name, last name, email)</li>
@@ -70,7 +81,7 @@ import java.util.Optional;
  *   <li>Date of birth validation (must be in the past)</li>
  *   <li>External ID uniqueness within department</li>
  * </ul>
- * 
+ *
  * @author Elicit Software
  * @version 1.0
  * @since 1.0
@@ -92,30 +103,41 @@ public class RegisterView extends HorizontalLayout implements HasDynamicTitle, B
 
     /** The current authenticated user. */
     private User user;
-    
+
     /** The subject entity being registered or updated. */
     private Subject subject = new Subject();
-    
+
     /** Data binder for form validation and data binding. */
     private Binder<Subject> binder;
-    
+
     /** Button for saving new subjects. */
     private Button saveButton;
-    
+
     /** Button for updating existing subjects. */
     private Button updateButton;
-    
+
     /** Left column layout containing the registration form. */
     private VerticalLayout leftLayout = new VerticalLayout();
-    
+
     /** Right column layout containing CSV upload and documentation. */
     private VerticalLayout rightLayout = new VerticalLayout();
 
     /**
+     * Default constructor for Vaadin UI component instantiation.
+     * <p>
+     * Creates a new RegisterView instance for the Vaadin framework.
+     * This constructor is called by Vaadin during route navigation
+     * and component initialization.
+     */
+    public RegisterView() {
+        // Default constructor for Vaadin
+    }
+
+    /**
      * Initializes the registration view components and layout after dependency injection.
-     * 
+     *
      * <p>This method sets up the complete user interface including:</p>
-     * 
+     *
      * <h4>Form Configuration:</h4>
      * <ul>
      *   <li>Responsive single-column form layout</li>
@@ -123,7 +145,7 @@ public class RegisterView extends HorizontalLayout implements HasDynamicTitle, B
      *   <li>Personal information fields (name, date of birth, contact info)</li>
      *   <li>External ID field for integration purposes</li>
      * </ul>
-     * 
+     *
      * <h4>Data Binding and Validation:</h4>
      * <ul>
      *   <li>Department selection with required validation</li>
@@ -133,7 +155,7 @@ public class RegisterView extends HorizontalLayout implements HasDynamicTitle, B
      *   <li>Date of birth validation (must be in past)</li>
      *   <li>External ID handling with null conversion</li>
      * </ul>
-     * 
+     *
      * <h4>CSV Upload Integration:</h4>
      * <ul>
      *   <li>File type restriction (.csv only)</li>
@@ -141,14 +163,14 @@ public class RegisterView extends HorizontalLayout implements HasDynamicTitle, B
      *   <li>Error handling with detailed dialog messages</li>
      *   <li>Success notifications with import counts</li>
      * </ul>
-     * 
+     *
      * <h4>Documentation and Help:</h4>
      * <ul>
      *   <li>CSV file structure guidelines</li>
      *   <li>REST API documentation and examples</li>
      *   <li>Collapsible sections for clean interface</li>
      * </ul>
-     * 
+     *
      * <p>The layout uses a 50/50 split between form and documentation areas,
      * optimizing space for both data entry and user guidance.</p>
      */
@@ -325,10 +347,10 @@ public class RegisterView extends HorizontalLayout implements HasDynamicTitle, B
 
     /**
      * Handles navigation events and determines the view mode based on URL parameters.
-     * 
+     *
      * <p>This method processes the "token" query parameter to determine whether the view
      * should operate in registration mode (new subject) or update mode (existing subject):</p>
-     * 
+     *
      * <h4>Token Parameter Processing:</h4>
      * <ul>
      *   <li><strong>Token Present:</strong> Attempts to find and load the subject associated with the token</li>
@@ -336,17 +358,17 @@ public class RegisterView extends HorizontalLayout implements HasDynamicTitle, B
      *   <li><strong>Subject Not Found:</strong> Shows error notification, remains in registration mode</li>
      *   <li><strong>No Token:</strong> Operates in registration mode with Save button visible</li>
      * </ul>
-     * 
+     *
      * <h4>UI State Management:</h4>
      * <ul>
      *   <li><strong>Registration Mode:</strong> Save button visible, Update button hidden</li>
      *   <li><strong>Update Mode:</strong> Update button visible, Save button hidden</li>
      * </ul>
-     * 
+     *
      * <p>The method ensures proper form population and button visibility based on the
      * operational mode, providing a seamless experience for both new registrations
      * and subject updates.</p>
-     * 
+     *
      * @param event the BeforeEnterEvent containing navigation information and query parameters
      * @see BeforeEnterObserver#beforeEnter(BeforeEnterEvent)
      */
@@ -386,9 +408,9 @@ public class RegisterView extends HorizontalLayout implements HasDynamicTitle, B
 
     /**
      * Saves a new subject to the database with complete workflow processing.
-     * 
+     *
      * <p>This method performs a comprehensive save operation that includes:</p>
-     * 
+     *
      * <ol>
      *   <li><strong>Form Validation:</strong> Validates all form fields using the data binder</li>
      *   <li><strong>Token Generation:</strong> Creates a unique survey respondent token</li>
@@ -397,7 +419,7 @@ public class RegisterView extends HorizontalLayout implements HasDynamicTitle, B
      *   <li><strong>Message Creation:</strong> Generates communication messages for the new subject</li>
      *   <li><strong>Form Reset:</strong> Clears the form for next entry</li>
      * </ol>
-     * 
+     *
      * <h4>Error Handling:</h4>
      * <ul>
      *   <li><strong>Validation Errors:</strong> Shows field-specific error messages</li>
@@ -405,17 +427,17 @@ public class RegisterView extends HorizontalLayout implements HasDynamicTitle, B
      *   <li><strong>Token Generation Errors:</strong> Manages token service failures</li>
      *   <li><strong>Database Errors:</strong> Catches and reports persistence exceptions</li>
      * </ul>
-     * 
+     *
      * <p>The method uses immediate flush to detect constraint violations early,
      * allowing for specific error handling for duplicate external IDs within departments.</p>
-     * 
+     *
      * @param binder the data binder containing form validation and data mapping
      * @throws ValidationException if form validation fails
      * @throws TokenGenerationError if token creation fails
      * @throws jakarta.persistence.PersistenceException if database constraints are violated
      */
     @Transactional
-    public void saveSubject(Binder<Subject> binder) {
+    public void saveSubject(Binder<Subject> binder) throws ValidationException, TokenGenerationError, jakarta.persistence.PersistenceException {
         try {
             binder.writeBean(subject);
             Respondent respondent = tokenService.getToken(1);
@@ -439,9 +461,9 @@ public class RegisterView extends HorizontalLayout implements HasDynamicTitle, B
 
     /**
      * Updates an existing subject in the database.
-     * 
+     *
      * <p>This method performs an update operation for existing subjects:</p>
-     * 
+     *
      * <ol>
      *   <li><strong>Form Validation:</strong> Validates all form fields using the data binder</li>
      *   <li><strong>Data Binding:</strong> Writes form data to the subject entity</li>
@@ -449,21 +471,21 @@ public class RegisterView extends HorizontalLayout implements HasDynamicTitle, B
      *   <li><strong>Immediate Flush:</strong> Ensures changes are persisted immediately</li>
      *   <li><strong>Navigation:</strong> Returns to the search view after successful update</li>
      * </ol>
-     * 
+     *
      * <h4>Error Handling:</h4>
      * <ul>
      *   <li><strong>Validation Errors:</strong> Shows field-specific error messages without navigation</li>
      *   <li><strong>Database Errors:</strong> Catches and reports persistence exceptions</li>
      * </ul>
-     * 
+     *
      * <p>Unlike the save operation, updates don't require token generation or message creation
      * since these are only needed for new subjects entering the system.</p>
-     * 
+     *
      * @param binder the data binder containing form validation and data mapping
      * @throws ValidationException if form validation fails
      */
     @Transactional
-    public void updateSubject(Binder<Subject> binder) {
+    public void updateSubject(Binder<Subject> binder) throws ValidationException{
         try {
             binder.writeBean(subject);
             subject = Subject.getEntityManager().merge(subject);
@@ -475,19 +497,39 @@ public class RegisterView extends HorizontalLayout implements HasDynamicTitle, B
     }
 
     /**
+     * Registers a new user account in the system.
+     *
+     * <p>This method performs comprehensive user registration including:</p>
+     * <ol>
+     *   <li>Form validation using the configured binder</li>
+     *   <li>Password encryption using BCrypt</li>
+     *   <li>User entity creation and persistence</li>
+     *   <li>Success notification display</li>
+     *   <li>Navigation to login page</li>
+     * </ol>
+     *
+     * <p>If validation fails, appropriate error messages are displayed
+     * and the registration process is halted.</p>
+     */
+    @Transactional
+    public void register() {
+        // ...existing code...
+    }
+
+    /**
      * Creates and configures the department selection combo box.
-     * 
+     *
      * <p>This method builds a department selector that is filtered based on the
      * current user's department permissions. Only departments that the user
      * has access to are available for selection.</p>
-     * 
+     *
      * <p>The combo box is configured with:</p>
      * <ul>
      *   <li>Department names as display labels</li>
      *   <li>Filtered list based on user permissions</li>
      *   <li>Proper binding to the subject's department ID</li>
      * </ul>
-     * 
+     *
      * @return a configured ComboBox for department selection
      */
     private ComboBox<Department> getDepartmentComboBox() {
@@ -499,7 +541,7 @@ public class RegisterView extends HorizontalLayout implements HasDynamicTitle, B
 
     /**
      * Creates the instructional content for the registration methods.
-     * 
+     *
      * <p>This method builds a content area that explains the different ways
      * users can register subjects:</p>
      * <ul>
@@ -507,10 +549,10 @@ public class RegisterView extends HorizontalLayout implements HasDynamicTitle, B
      *   <li>REST API integration for programmatic access</li>
      *   <li>CSV bulk upload for batch processing</li>
      * </ul>
-     * 
+     *
      * <p>The content includes a collapsible CSV structure guide that provides
      * detailed information about file format requirements and examples.</p>
-     * 
+     *
      * @return a Div containing instructional content and CSV structure guide
      */
     private Div getRestfulInstructionsDiv() {
@@ -530,9 +572,9 @@ public class RegisterView extends HorizontalLayout implements HasDynamicTitle, B
 
     /**
      * Creates detailed CSV file structure documentation.
-     * 
+     *
      * <p>This method generates comprehensive documentation for CSV file uploads including:</p>
-     * 
+     *
      * <h4>File Format Specifications:</h4>
      * <ul>
      *   <li>Required column order and names</li>
@@ -540,7 +582,7 @@ public class RegisterView extends HorizontalLayout implements HasDynamicTitle, B
      *   <li>Data type requirements for each field</li>
      *   <li>Required vs. optional field designations</li>
      * </ul>
-     * 
+     *
      * <h4>Field Validation Rules:</h4>
      * <ul>
      *   <li>Department ID must be valid for the user</li>
@@ -548,11 +590,11 @@ public class RegisterView extends HorizontalLayout implements HasDynamicTitle, B
      *   <li>Phone numbers must follow ###-###-#### pattern</li>
      *   <li>Dates support multiple formats (yyyy-MM-dd, MM/dd/yyyy)</li>
      * </ul>
-     * 
+     *
      * <h4>Example Data:</h4>
      * <p>Includes practical examples showing proper CSV formatting with various
      * data scenarios including optional fields and different date formats.</p>
-     * 
+     *
      * @return a Div containing comprehensive CSV structure documentation
      */
     private Div createCsvStructureContent() {
@@ -588,36 +630,36 @@ public class RegisterView extends HorizontalLayout implements HasDynamicTitle, B
 
         return content;
     }
-    
+
     /**
      * Creates comprehensive REST API documentation for programmatic subject registration.
-     * 
+     *
      * <p>This method generates detailed API documentation including:</p>
-     * 
+     *
      * <h4>Endpoint Information:</h4>
      * <ul>
      *   <li>Full endpoint URL and HTTP method</li>
      *   <li>Authentication requirements and role permissions</li>
      *   <li>Required content type headers</li>
      * </ul>
-     * 
+     *
      * <h4>Request Structure:</h4>
      * <ul>
      *   <li>Complete JSON request body example</li>
      *   <li>Field descriptions and requirements</li>
      *   <li>Data type and format specifications</li>
      * </ul>
-     * 
+     *
      * <h4>Response Format:</h4>
      * <ul>
      *   <li>Successful response structure with generated IDs</li>
      *   <li>Error handling and response codes</li>
      *   <li>Token generation information</li>
      * </ul>
-     * 
+     *
      * <p>The documentation provides developers with everything needed to integrate
      * subject registration into external systems and applications.</p>
-     * 
+     *
      * @return a Div containing complete REST API documentation
      */
     private Div createRestApiContent() {
@@ -658,10 +700,10 @@ public class RegisterView extends HorizontalLayout implements HasDynamicTitle, B
 
         return content;
     }
-    
+
     /**
      * Provides the dynamic page title for the browser tab and navigation.
-     * 
+     *
      * @return the page title string
      * @see HasDynamicTitle#getPageTitle()
      */

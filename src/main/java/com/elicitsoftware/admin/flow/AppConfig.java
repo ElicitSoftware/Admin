@@ -16,20 +16,48 @@ import com.vaadin.flow.server.AppShellSettings;
 import com.vaadin.flow.theme.Theme;
 
 /**
- * The AppConfig class configures application-wide settings for the Vaadin Flow application.
- * It sets the theme of the application to "starter-theme" and implements the AppShellConfigurator
- * interface, which allows customization of the app shell configuration.
- * <p>
- * This class is primarily used to define global UI-related settings and is automatically
- * picked up by Vaadin during the application runtime.
- * <p>
- * Key Features:
- * - Theme Configuration: Sets the application-wide theme.
- * - Shell Customization: Provides a mechanism for customizing the app shell through the
- * AppShellConfigurator interface.
+ * Application configuration class for Vaadin application shell settings.
+ *
+ * <p>This class implements {@link AppShellConfigurator} to provide configuration
+ * for the Vaadin application shell, including PWA settings, viewport configuration,
+ * and other application-wide shell properties.</p>
+ *
+ * <p><strong>Key Features:</strong></p>
+ * <ul>
+ *   <li><strong>PWA Configuration:</strong> Progressive Web App settings</li>
+ *   <li><strong>Viewport Settings:</strong> Mobile-responsive viewport configuration</li>
+ *   <li><strong>Meta Tags:</strong> Application metadata and SEO settings</li>
+ *   <li><strong>Theme Configuration:</strong> Application-wide theme settings</li>
+ * </ul>
+ *
+ * @author Elicit Software
+ * @version 1.0
+ * @since 1.0
+ * @see AppShellConfigurator
  */
 @Theme("starter-theme")
 public class AppConfig implements AppShellConfigurator {
+
+    /**
+     * Default constructor for AppConfig.
+     *
+     * <p>Creates a new AppConfig instance that provides Vaadin application shell
+     * configuration. This constructor is automatically called by the Vaadin
+     * framework during application startup to configure the application shell
+     * settings.</p>
+     *
+     * <p>The configuration includes:</p>
+     * <ul>
+     *   <li>Progressive Web App (PWA) settings</li>
+     *   <li>Viewport meta tag configuration for mobile responsiveness</li>
+     *   <li>Application theme and styling configuration</li>
+     *   <li>Security and performance optimizations</li>
+     * </ul>
+     */
+    public AppConfig() {
+        // Default constructor for Vaadin AppShellConfigurator
+    }
+
     @Override
     public void configurePage(AppShellSettings settings) {
         settings.addLink("shortcut icon", "icons/favicon.ico");
