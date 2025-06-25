@@ -8,7 +8,10 @@
 -- <https://polyformproject.org/licenses/noncommercial/1.0.0>
 -- ***LICENSE_END***
 ---
-
+ALTER SEQUENCE survey.message_types_seq RESTART WITH 1;
+ALTER SEQUENCE survey.departments_seq RESTART WITH 1;
+ALTER SEQUENCE survey.message_templates_seq RESTART WITH 1;
+ALTER SEQUENCE survey.users_seq RESTART WITH 1;
 -- message_types
 INSERT INTO survey.message_types(id, name) VALUES(NEXTVAL('survey.message_types_seq'),'email');
 -- Departments
