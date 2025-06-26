@@ -18,7 +18,7 @@
 <!-- Powered by Michigan -->
 <br />
 <div align="center">
-  <a href="https://innovationpartnerships.umich.edu/">
+  <a href="https://innovationpartnerships.umich.edu/" target="_blank">
     <img src="images/stacked.png" alt="Logo" width="15%" >
   </a>
 <h3 align="center">Elicit Admin</h3>
@@ -40,6 +40,7 @@
     </li>
     <li><a href="#usage">Usage</a></li>
     <!-- <li><a href="#roadmap">Roadmap</a></li> -->
+    <li><a href="#configuration">Configuration</a></li>
     <li><a href="#contributing">Contributing</a></li>
     <li><a href="#license">License</a></li>
     <li><a href="#contact">Contact</a></li>
@@ -50,9 +51,79 @@
 <!-- ABOUT THE PROJECT -->
 ## About The Project
   <p align="left">
-    The Admin tool was designed and developed by <a href="https://www.michiganmedicine.org/">Michigan Medicine</a> for the administration of the <a href="https://github.com/elicitsoftware/Elicit">Elicit Software System</a>. It will alow you to upload Subjects, monitor there progress, send reminder emails and view the results. 
+    The Admin tool was designed and developed by <a href="https://www.michiganmedicine.org/" target="_blank">Michigan Medicine</a> for the administration of the <a href="https://github.com/elicitsoftware/Elicit" target="_blank">Elicit Software System</a>. It will allow you to upload subjects, monitor their progress, send reminder emails, and view the results. 
     </p>
 
+  <p>
+    The authentication and authorization for Admin is controlled by an Open ID Connect (OIDC) server. For testing, we use Keycloak. However, any OIDC compliant software can be used. There are three pre-defined roles:
+    <ul>
+    <li>elicit_user</li>
+    <li>elicit_admin</li>
+    <li>elicit_token *</li>
+     * Designed to be used by automation systems for adding subjects.
+    </ul>
+    <table>
+      <thead>
+        <tr>
+          <th>Permission</th>
+          <th>elicit_user</th>
+          <th>elicit_admin</th>
+          <th>elicit_token</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>Search for Subjects</td>
+          <td>✅</td>
+          <td>✅</td>
+          <td>❌</td>
+        </tr>
+        <tr>
+          <td>Register Subjects</td>
+          <td>✅</td>
+          <td>✅</td>
+          <td>❌</td>
+        </tr>
+        <tr>
+          <td>Upload Subjects CSV file</td>
+          <td>✅</td>
+          <td>✅</td>
+          <td>❌</td>
+        </tr>        
+        <tr>
+          <td>Print Subject's report</td>
+          <td>✅</td>
+          <td>✅</td>
+          <td>❌</td>
+        </tr>
+        <tr>
+          <td>Add and edit departments</td>
+          <td>❌</td>
+          <td>✅</td>
+          <td>❌</td>
+        </tr>
+        <tr>
+          <td>Add and edit message templates</td>
+          <td>❌</td>
+          <td>✅</td>
+          <td>❌</td>
+        </tr>        
+        <tr>
+          <td>Add users and manage department associations *</td>
+          <td>❌</td>
+          <td>✅</td>
+          <td>❌</td>
+        </tr>                
+        <tr>
+          <td>Add subjects through the restful web service</td>
+          <td>❌</td>
+          <td>❌</td>
+          <td>✅</td>
+        </tr>
+      </tbody>
+    </table>
+    * Authentication and role authorization is managed by the OIDC server. Active/deactivate status and association with departments are managed in the Admin tool. 
+  </p>
 <!-- [![Product Name Screen Shot][product-screenshot]](https://example.com)
 
 Here's a blank template to get started. To avoid retyping too much info, do a search and replace with your text editor for the following: `github_username`, `repo_name`, `twitter_handle`, `linkedin_username`, `email_client`, `email`, `project_title`, `project_description`, `project_license`
@@ -73,16 +144,21 @@ Here's a blank template to get started. To avoid retyping too much info, do a se
 
 <!-- GETTING STARTED -->
 ## Getting Started
-Admin runs in <a href="https://github.com/ElicitSoftware/">Elicit Software</a>, a modular survey system for building and running complex surveys.
-This project was built with <a href="http://docker.com">Docker</a> and can be run locally using <a href="https://docs.docker.com/compose/">Docker Compose</a>. After installing Docker, download the `docker-compose.yml` file and follow the instructions provided in that file.
+Admin runs in <a href="https://github.com/ElicitSoftware/" target="_blank">Elicit Software</a>, a modular survey system for building and running complex surveys.
+This project was built with <a href="http://docker.com" target="_blank">Docker</a> and can be run locally using <a href="https://docs.docker.com/compose/" target="_blank">Docker Compose</a>. After installing Docker, download the `docker-compose.yml` file and follow the instructions provided in that file.
 
 <!-- USAGE EXAMPLES -->
 ## Usage
-The Admin tool doesn't define a survey. The Author tool will be used for that. If you would like to see the Admin tool in practice you can use the <a href="https://github.com/ElicitSoftware/FHHS">FHHS</a> survey.</br> 
+The Admin tool doesn't define a survey. The Author tool will be used for that. If you would like to see the Admin tool in practice, you can use the <a href="https://github.com/ElicitSoftware/FHHS" target="_blank">FHHS</a> survey.<br/> 
 After running the `docker-compose` command, open [http://localhost:8080](http://localhost:8080) in your browser. Enter any token (the demo accepts any value), complete the questionnaire, and review your data. Once you finalize the survey, a report similar to the one below will be generated.
 <div align="center"><image src="images/samplePedigree.png" height=600></div>
+<p align="right">(<a href="#readme-top">back to top</a>)</p>
 
+## Configuration
+The OIDC server can be congifured with enviromental properties. 
+Please visit <a href="https://quarkus.io/guides/security-oidc-configuration-properties-reference" target="_blank">Quarkus.io</a> for a list of configuration properties. 
 
+For email configuration including examples for GMail, AWS SES, Mailjet & SendMail visit <a href="https://quarkus.io/guides/mailer-reference" target="_blank">Quarkus.io</a>
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 
 <!-- ROADMAP
@@ -94,7 +170,7 @@ After running the `docker-compose` command, open [http://localhost:8080](http://
     - [ ] Nested Feature
  -->
 
-See the [open issues](https://github.com/ElicitSoftware/amin/issues) for a full list of proposed features (and known issues).
+See the [open issues](https://github.com/ElicitSoftware/admin/issues) for a full list of proposed features (and known issues).
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 
@@ -133,7 +209,7 @@ Elicit Software supported the MiGHT Study. You can read more about the study [he
 <!-- CONTACT -->
 ## Contact
 
-Matthew Demerath - m.demerath@elicitsoftware.com
+Matthew Demerath - m.demerath@elicitsoftware.com<br/>
 Project link: [https://github.com/ElicitSoftware/admin](https://github.com/ElicitSoftware/admin)
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
@@ -144,7 +220,7 @@ Project link: [https://github.com/ElicitSoftware/admin](https://github.com/Elici
 
 <!-- <a href="https://www.michiganmedicine.org"><img src="images/Rogel-Cancer_Logo-Horizontal-CMYK.png" height="30"></a><br/> -->
 <br/>
-<a href="https://info.mightstudy.org"><img src="images/MiGHT-shortlogo.png" height="50"></a><br/>
+<a href="https://info.mightstudy.org" target="_blank"><img src="images/MiGHT-shortlogo.png" height="50"></a><br/>
 <br/>
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
