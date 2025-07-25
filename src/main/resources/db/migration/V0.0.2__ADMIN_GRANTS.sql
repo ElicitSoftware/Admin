@@ -29,3 +29,4 @@ GRANT ALL ON SEQUENCE survey.respondents_seq TO ${surveyadmin_user};
 GRANT DELETE, INSERT, SELECT, UPDATE ON survey.respondents TO ${surveyadmin_user};
 GRANT INSERT, SELECT, UPDATE ON surveyreport.fact_respondents TO ${surveyadmin_user};
 GRANT SELECT ON survey.status TO ${surveyadmin_user};
+GRANT SELECT ON survey.status TO ${survey_user};

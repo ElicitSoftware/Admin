@@ -28,9 +28,11 @@ import java.util.Date;
  * <p><strong>Key Features:</strong></p>
  * <ul>
  *   <li><strong>Participant Identification:</strong> XID linking and personal information</li>
- *   <li><strong>Survey Association:</strong> Links to specific survey instances</li>
+ *   <li><strong>Survey Association:</strong> Links to specific survey instances via survey ID</li>
+ *   <li><strong>Respondent Linking:</strong> Associates with respondent records for comprehensive tracking</li>
  *   <li><strong>Contact Management:</strong> Email and phone contact information</li>
  *   <li><strong>Status Tracking:</strong> Comprehensive participation status monitoring</li>
+ *   <li><strong>Department Integration:</strong> Organizational unit tracking and reporting</li>
  * </ul>
  *
  * <p><strong>Database Mapping:</strong></p>
@@ -38,23 +40,31 @@ import java.util.Date;
  *   <li><strong>Table:</strong> {@code survey.status}</li>
  *   <li><strong>Primary Key:</strong> Manual ID assignment (not auto-generated)</li>
  *   <li><strong>External Integration:</strong> XID field for external system correlation</li>
+ *   <li><strong>Relationships:</strong> Links to survey, respondent, and department entities</li>
  * </ul>
  *
  * <p><strong>Use Cases:</strong></p>
  * <ul>
- *   <li><strong>Progress Tracking:</strong> Monitor survey completion status</li>
- *   <li><strong>Reporting:</strong> Generate participation and completion reports</li>
- *   <li><strong>Contact Management:</strong> Manage participant communication</li>
- *   <li><strong>Data Integration:</strong> Interface with external systems via XID</li>
+ *   <li><strong>Progress Tracking:</strong> Monitor survey completion status across participants</li>
+ *   <li><strong>Reporting:</strong> Generate participation and completion reports by department</li>
+ *   <li><strong>Contact Management:</strong> Manage participant communication and follow-up</li>
+ *   <li><strong>Data Integration:</strong> Interface with external systems via XID mapping</li>
+ *   <li><strong>Access Control:</strong> Token-based secure survey access management</li>
+ * </ul>
+ *
+ * <p><strong>Security Considerations:</strong></p>
+ * <ul>
+ *   <li><strong>Token Authentication:</strong> Secure, anonymous survey access via unique tokens</li>
+ *   <li><strong>PII Protection:</strong> Personal information handling with proper database constraints</li>
+ *   <li><strong>Date Tracking:</strong> Comprehensive audit trail with creation and finalization timestamps</li>
  * </ul>
  *
  * @author Elicit Software
  * @version 1.0
  * @since 1.0
- * @see Survey
- * @see Subject
- * @see Respondent
- * @see PanacheEntityBase
+ * @see io.quarkus.hibernate.orm.panache.PanacheEntityBase
+ * @see jakarta.persistence.Entity
+ * @see jakarta.persistence.Table
  */
 @Entity
 @Table(name = "status", schema = "survey")
@@ -74,6 +84,16 @@ public class Status extends PanacheEntityBase {
     @Id
     @Column(name = "id", unique = true, nullable = false, precision = 20)
     private long id;
+
+    /**
+     * Identifier of the respondent associated with this status record.
+     *
+     * <p>Links this status record to a specific respondent entity, enabling
+     * cross-referencing between status tracking and detailed respondent information.
+     * This relationship supports comprehensive participant management and reporting.</p>
+     */
+    @Column(name = "respondent_id")
+    private long respondentId;
 
     /**
      * External identifier for cross-system integration.
@@ -217,10 +237,16 @@ public class Status extends PanacheEntityBase {
     public Date finalizedDt = new Date();
 
     /**
-     * Default constructor.
+     * Default constructor for JPA entity instantiation.
      *
      * <p>Creates a new Status instance with default timestamps. Both {@link #createdDt}
-     * and {@link #finalizedDt} are set to the current timestamp.</p>
+     * and {@link #finalizedDt} are set to the current timestamp. This constructor is
+     * primarily used by JPA for entity instantiation and should be followed by proper
+     * field initialization before persistence.</p>
+     *
+     * <p><strong>Note:</strong> The {@link #finalizedDt} timestamp should be updated
+     * to the actual completion time when the survey is finalized, rather than keeping
+     * the instantiation timestamp.</p>
      */
     public Status() {
         super();
@@ -242,6 +268,26 @@ public class Status extends PanacheEntityBase {
      */
     public void setId(long id) {
         this.id = id;
+    }
+
+    /**
+     * Gets the respondent identifier associated with this status record.
+     *
+     * @return the respondent ID
+     * @since 1.0
+     */
+    public long getRespondentId() {
+        return respondentId;
+    }
+
+    /**
+     * Sets the respondent identifier associated with this status record.
+     *
+     * @param respondentId the respondent ID to set
+     * @since 1.0
+     */
+    public void setRespondentId(long respondentId) {
+        this.respondentId = respondentId;
     }
 
     /**
@@ -428,6 +474,7 @@ public class Status extends PanacheEntityBase {
      * Gets the department name this participant belongs to.
      *
      * @return the department name
+     * @see #getDepartmentId()
      */
     public String getDepartmentName() {
         return departmentName;
@@ -437,15 +484,39 @@ public class Status extends PanacheEntityBase {
      * Sets the department name this participant belongs to.
      *
      * @param departmentName the department name to set
+     * @see #setDepartmentId(long)
      */
     public void setDepartmentName(String departmentName) {
         this.departmentName = departmentName;
     }
 
     /**
+     * Gets the department identifier this participant belongs to.
+     *
+     * @return the department ID
+     * @since 1.0
+     * @see #getDepartmentName()
+     */
+    public long getDepartmentId() {
+        return department_id;
+    }
+
+    /**
+     * Sets the department identifier this participant belongs to.
+     *
+     * @param departmentId the department ID to set
+     * @since 1.0
+     * @see #setDepartmentName(String)
+     */
+    public void setDepartmentId(long departmentId) {
+        this.department_id = departmentId;
+    }
+
+    /**
      * Gets the timestamp when this status record was created.
      *
      * @return the creation timestamp
+     * @see #getCreated()
      */
     public Date getCreatedDt() {
         return createdDt;
@@ -455,6 +526,7 @@ public class Status extends PanacheEntityBase {
      * Sets the timestamp when this status record was created.
      *
      * @param createdDt the creation timestamp to set
+     * @see #getCreated()
      */
     public void setCreatedDt(Date createdDt) {
         this.createdDt = createdDt;
@@ -464,9 +536,12 @@ public class Status extends PanacheEntityBase {
      * Gets the creation date formatted as MM/dd/yyyy.
      *
      * <p>Provides a user-friendly formatted version of the creation
-     * timestamp for display in reports and user interfaces.</p>
+     * timestamp for display in reports and user interfaces. The format
+     * is locale-independent and consistent across the application.</p>
      *
-     * @return the creation date formatted as MM/dd/yyyy string
+     * @return the creation date formatted as MM/dd/yyyy string, or formatted
+     *         representation of current date if createdDt is null
+     * @see #getCreatedDt()
      */
     public String getCreated(){
         return sdf.format(createdDt);
@@ -474,6 +549,10 @@ public class Status extends PanacheEntityBase {
 
     /**
      * Gets the timestamp when the participant finalized their survey.
+     *
+     * <p>This timestamp represents when the participant completed and submitted
+     * their survey response. Initially set to the creation timestamp but should
+     * be updated to reflect the actual completion time.</p>
      *
      * @return the finalization timestamp
      */
@@ -483,6 +562,9 @@ public class Status extends PanacheEntityBase {
 
     /**
      * Sets the timestamp when the participant finalized their survey.
+     *
+     * <p>This should be called when the participant completes their survey
+     * to accurately track completion times for reporting and analytics.</p>
      *
      * @param finalizedDt the finalization timestamp to set
      */

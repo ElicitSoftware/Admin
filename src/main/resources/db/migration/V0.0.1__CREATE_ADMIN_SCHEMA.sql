@@ -136,6 +136,7 @@ CREATE TABLE survey.message_templates
 CREATE VIEW survey.status AS
 (
 SELECT s.id,
+       s.respondent_id as respondent_id,
        s.survey_id,
        s.firstname,
        s.lastname,
