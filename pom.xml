@@ -13,7 +13,7 @@
         <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
         <quarkus.platform.artifact-id>quarkus-bom</quarkus.platform.artifact-id>
         <quarkus.platform.group-id>io.quarkus.platform</quarkus.platform.group-id>
-        <quarkus.platform.version>3.25.0</quarkus.platform.version>
+        <quarkus.platform.version>3.22.3</quarkus.platform.version>
         <skipITs>true</skipITs>
         <surefire-plugin.version>3.5.2</surefire-plugin.version>
         <vaadin.version>24.7.3</vaadin.version>
@@ -73,7 +73,7 @@
         <dependency>
             <groupId>io.quarkiverse.pdfbox</groupId>
             <artifactId>quarkus-pdfbox</artifactId>
-            <version>1.1.1</version>
+            <version>1.1.0</version>
         </dependency>
         <dependency>
             <groupId>de.rototor.pdfbox</groupId>
@@ -132,12 +132,13 @@
         <dependency>
             <groupId>io.quarkus</groupId>
             <artifactId>quarkus-scheduler</artifactId>
+            <version>3.22.2</version>
         </dependency>
         <!-- dev mail server -->
         <dependency>
             <groupId>io.quarkiverse.mailpit</groupId>
             <artifactId>quarkus-mailpit</artifactId>
-            <version>1.6.4</version>
+            <version>1.6.2</version>
         </dependency>
         <!-- QR Codes -->
         <dependency>
