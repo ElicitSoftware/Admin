@@ -90,7 +90,7 @@ import java.util.Optional;
  * @see TokenService
  */
 @Route(value = "register", layout = MainLayout.class)
-@RolesAllowed("elicit_user")
+@RolesAllowed({"elicit_user","elicit_admin"})
 public class RegisterView extends HorizontalLayout implements HasDynamicTitle, BeforeEnterObserver {
 
     /** Injected service for handling user session and authentication. */
