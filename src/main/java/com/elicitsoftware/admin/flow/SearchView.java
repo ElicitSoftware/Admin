@@ -104,7 +104,7 @@ import java.util.stream.Collectors;
  * @see com.elicitsoftware.service.ReportingService
  */
 @Route(value = "", layout = MainLayout.class)
-@RolesAllowed("elicit_user")
+@RolesAllowed({"elicit_user","elicit_admin"})
 class SearchView extends VerticalLayout implements HasDynamicTitle {
 
     /** Pagination controls for managing page navigation and data loading. */
