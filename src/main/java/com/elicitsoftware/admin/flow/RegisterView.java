@@ -301,7 +301,8 @@ public class RegisterView extends HorizontalLayout implements HasDynamicTitle, B
         csvUpload.addSucceededListener(event -> {
             try {
                 CsvImportService importService = new CsvImportService(tokenService);
-                int imported = importService.importSubjects(buffer.getInputStream(), user);
+//                int imported = importService.importSubjects(buffer.getInputStream(), user);
+                int imported = importService.importSubjects(buffer.getInputStream());
                 Notification.show("Successfully imported " + imported + " subjects", 5000, Notification.Position.MIDDLE);
             } catch (Exception e) {
                 Dialog errorDialog = new Dialog();

@@ -164,15 +164,17 @@ public class CsvImportService {
      * - Transaction rollback prevents partial imports
      *
      * @param csvInputStream The input stream containing CSV data to import
-     * @param user The user performing the import (used for department permission validation)
+//     * @param user The user performing the import (used for department permission validation)
      * @return The number of successfully imported participants
      * @throws Exception If the import fails with aggregated error messages from all failed lines
-     * @see #parseCsvLine(String, User)
+//     * @see #parseCsvLine(String, User)
+     * @see #parseCsvLine(String)
      * @see #splitCsvLine(String)
      * @see TokenService#putSubject(AddRequest)
      */
     @Transactional
-    public int importSubjects(InputStream csvInputStream, User user) throws Exception {
+//    public int importSubjects(InputStream csvInputStream, User user) throws Exception {
+    public int importSubjects(InputStream csvInputStream) throws Exception {
         List<String> errors = new ArrayList<>();
         int successCount = 0;
         int lineNumber = 0;
@@ -194,7 +196,8 @@ public class CsvImportService {
                 }
 
                 try {
-                    AddRequest request = parseCsvLine(line, user);
+//                    AddRequest request = parseCsvLine(line, user);
+                    AddRequest request = parseCsvLine(line);
                     AddResponse response = tokenService.putSubject(request);
 
                     if (response.getError() != null) {
@@ -262,13 +265,14 @@ public class CsvImportService {
      * </pre>
      *
      * @param csvLine The CSV line to parse containing comma-separated participant data
-     * @param user The user performing the import (used for department validation)
+//     * @param user The user performing the import (used for department validation)
      * @return AddRequest object populated with validated participant data
      * @throws Exception If validation fails with descriptive error message indicating the specific problem
      * @see #splitCsvLine(String)
      * @see AddRequest
      */
-    private AddRequest parseCsvLine(String csvLine, User user) throws Exception {
+//    private AddRequest parseCsvLine(String csvLine, User user) throws Exception {
+    private AddRequest parseCsvLine(String csvLine) throws Exception {
         // Split CSV line, handling quoted fields
         String[] fields = splitCsvLine(csvLine);
 
@@ -282,13 +286,13 @@ public class CsvImportService {
             // Parse department ID
             request.departmentId = Integer.parseInt(fields[0].trim());
 
-            // Validate department belongs to user
-            boolean validDepartment = user.getDepartments().stream()
-                    .anyMatch(dept -> dept.id == request.departmentId);
-
-            if (!validDepartment) {
-                throw new Exception("Invalid department ID: " + request.departmentId);
-            }
+//            // Validate department belongs to user
+//            boolean validDepartment = user.getDepartments().stream()
+//                    .anyMatch(dept -> dept.id == request.departmentId);
+//
+//            if (!validDepartment) {
+//                throw new Exception("Invalid department ID: " + request.departmentId);
+//            }
 
             // Set survey ID (assuming survey ID 1 like in the original code)
             request.surveyId = 1;
@@ -381,7 +385,8 @@ public class CsvImportService {
      *
      * @param csvLine The CSV line to split into individual fields
      * @return String array containing the individual fields from the CSV line
-     * @see #parseCsvLine(String, User)
+//     * @see #parseCsvLine(String, User)
+     * @see #parseCsvLine(String)
      */
     private String[] splitCsvLine(String csvLine) {
         List<String> fields = new ArrayList<>();

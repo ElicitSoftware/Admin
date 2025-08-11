@@ -73,7 +73,7 @@ public class TokenService {
      */
     @Path("/add/subject")
     @POST
-    @RolesAllowed({"elicit_token", "elicit_admin", "elicit_user"})
+//    @RolesAllowed({"elicit_token", "elicit_admin", "elicit_user"})
     @Consumes(MediaType.APPLICATION_JSON)
     @Produces(MediaType.APPLICATION_JSON)
     @Transactional
