@@ -37,7 +37,7 @@ public class RoleAuthorizationHelper {
         // Check if user is authenticated and has required roles
         if (identity != null && !identity.isAnonymous()) {
             // User is authenticated, check if they have required roles
-            String[] requiredRoles = {"elicit_user", "elicit_admin"};
+            String[] requiredRoles = {"elicit_user", "elicit_admin", "SPI-Elicit-Users", "SPI-Elicit-Admins"};
             boolean hasRequiredRole = false;
             
             for (String role : requiredRoles) {
