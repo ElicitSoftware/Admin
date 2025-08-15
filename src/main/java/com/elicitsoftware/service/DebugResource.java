@@ -199,9 +199,10 @@ public class DebugResource {
     @GET
     public String showIdentity() {
         StringBuffer sb = new StringBuffer("User: " + identity.getPrincipal().getName() +
+                "\n isAnonymous: " + identity.isAnonymous() +
                 "\n Roles: " + identity.getRoles() +
-                "\n elicit_admin: " + identity.hasRole("elicit_admin")
-                +"\n elicit_user: " + identity.hasRole("elicit_user")); ;
+                "\n elicit_admin: " + identity.hasRole("elicit_admin") +
+                "\n elicit_user: " + identity.hasRole("elicit_user"));
         sb.append("\n");
         return sb.toString();
     }
