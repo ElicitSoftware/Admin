@@ -18,7 +18,7 @@ import jakarta.ws.rs.GET;
 import jakarta.ws.rs.Path;
 import jakarta.ws.rs.Produces;
 import jakarta.ws.rs.core.MediaType;
-import org.eclipse.microprofile.jwt.JsonWebToken;
+import org.keycloak.representations.JsonWebToken;
 
 /**
  * Debug REST resource for testing and troubleshooting OIDC authentication and authorization.
