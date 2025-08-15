@@ -18,7 +18,6 @@ import jakarta.ws.rs.GET;
 import jakarta.ws.rs.Path;
 import jakarta.ws.rs.Produces;
 import jakarta.ws.rs.core.MediaType;
-import org.eclipse.microprofile.jwt.JsonWebToken;
 
 /**
  * Debug REST resource for testing and troubleshooting OIDC authentication and authorization.
@@ -106,10 +105,6 @@ public class DebugResource {
      */
     @Inject
     SecurityIdentity identity;
-
-    @Inject
-    @IdToken
-    JsonWebToken idToken;
 
     /**
      * Default constructor for DebugResource.
@@ -205,21 +200,9 @@ public class DebugResource {
     public String showIdentity() {
         StringBuffer sb = new StringBuffer("User: " + identity.getPrincipal().getName() +
                 "\nRoles: " + identity.getRoles().toString() );
-
-        try {
-            sb.append("\n");
-            sb.append("ID_TOKEN: " + idToken.getRawToken());
-            sb.append("\n");
-        } catch (Exception e) {
-            sb.append(e.getMessage());
-        }
-//        try {
-//            sb.append("\n");
-//            sb.append("ACCESS_TOKEN: " + accessToken.getRawToken());
-//        } catch (Exception e) {
-//            sb.append(e.getMessage());
-//        }
-
+                identity.getAttributes().forEach((key, value) -> {
+                     sb.append("\n").append(key).append(": ").append(value);
+                });
         return sb.toString();
     }
 }
