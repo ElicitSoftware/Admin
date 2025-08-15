@@ -11,7 +11,7 @@ package com.elicitsoftware.service;
  * ***LICENSE_END***
  */
 
-import io.quarkus.oidc.IdToken;
+import com.elicitsoftware.admin.flow.UiSessionLogin;
 import io.quarkus.security.identity.SecurityIdentity;
 import jakarta.inject.Inject;
 import jakarta.ws.rs.GET;
@@ -199,10 +199,10 @@ public class DebugResource {
     @GET
     public String showIdentity() {
         StringBuffer sb = new StringBuffer("User: " + identity.getPrincipal().getName() +
-                "\nRoles: " + identity.getRoles().toString() );
-                identity.getAttributes().forEach((key, value) -> {
-                     sb.append("\n").append(key).append(": ").append(value);
-                });
+                "\n Roles: " + identity.getRoles() +
+                "\n elicit_admin: " + identity.hasRole("elicit_admin")
+                +"\n elicit_user: " + identity.hasRole("elicit_user")); ;
+        sb.append("\n");
         return sb.toString();
     }
 }
