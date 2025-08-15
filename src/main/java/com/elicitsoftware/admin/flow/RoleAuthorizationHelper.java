@@ -34,13 +34,14 @@ public class RoleAuthorizationHelper {
      * @return true if authorization check passes, false if redirected
      */
     public static boolean checkAuthorization(BeforeEnterEvent event, SecurityIdentity identity) {
+
+        //TODO This is a hack! Remove this line after the OIDC is fixed
+        if (true) {
+            return true;
+        }
+
         // Check if user is authenticated and has required roles
         if (identity != null && !identity.isAnonymous()) {
-
-            //TODO This is a hack! Remove this line after the OIDC is fixed
-            if (true) {
-                return true;
-            }
             // User is authenticated, check if they have required roles
             String[] requiredRoles = {"elicit_user", "elicit_admin"};
             boolean hasRequiredRole = false;
