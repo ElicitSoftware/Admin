@@ -18,7 +18,7 @@ import jakarta.ws.rs.GET;
 import jakarta.ws.rs.Path;
 import jakarta.ws.rs.Produces;
 import jakarta.ws.rs.core.MediaType;
-import org.keycloak.representations.JsonWebToken;
+import org.eclipse.microprofile.jwt.JsonWebToken;
 
 /**
  * Debug REST resource for testing and troubleshooting OIDC authentication and authorization.
@@ -110,9 +110,6 @@ public class DebugResource {
     @Inject
     @IdToken
     JsonWebToken idToken;
-
-    @Inject
-    JsonWebToken accessToken;
 
     /**
      * Default constructor for DebugResource.
@@ -216,11 +213,11 @@ public class DebugResource {
         } catch (Exception e) {
             sb.append(e.getMessage());
         }
-        try {
-            sb.append("\n");
-            sb.append("ACCESS_TOKEN: " + accessToken.getRawToken());
-        } catch (Exception e) {
-            sb.append(e.getMessage());
+//        try {
+//            sb.append("\n");
+//            sb.append("ACCESS_TOKEN: " + accessToken.getRawToken());
+//        } catch (Exception e) {
+//            sb.append(e.getMessage());
         }
 
         return sb.toString();
