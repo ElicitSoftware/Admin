@@ -218,7 +218,7 @@ public class DebugResource {
 //            sb.append("ACCESS_TOKEN: " + accessToken.getRawToken());
 //        } catch (Exception e) {
 //            sb.append(e.getMessage());
-        }
+//        }
 
         return sb.toString();
     }
