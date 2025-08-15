@@ -37,8 +37,8 @@ import com.vaadin.flow.router.BeforeEnterEvent;
 import com.vaadin.flow.router.BeforeEnterObserver;
 import com.vaadin.flow.router.HasDynamicTitle;
 import com.vaadin.flow.router.Route;
+import io.quarkus.security.identity.SecurityIdentity;
 import jakarta.annotation.PostConstruct;
-import jakarta.annotation.security.RolesAllowed;
 import jakarta.inject.Inject;
 import jakarta.transaction.Transactional;
 
@@ -90,7 +90,6 @@ import java.util.Optional;
  * @see TokenService
  */
 @Route(value = "register", layout = MainLayout.class)
-@RolesAllowed({"elicit_user","elicit_admin"})
 public class RegisterView extends HorizontalLayout implements HasDynamicTitle, BeforeEnterObserver {
 
     /** Injected service for handling user session and authentication. */
@@ -100,6 +99,10 @@ public class RegisterView extends HorizontalLayout implements HasDynamicTitle, B
     /** Injected service for generating and managing survey tokens. */
     @Inject
     TokenService tokenService;
+
+    /** Security identity for user authentication and role checking. */
+    @Inject
+    SecurityIdentity identity;
 
     /** The current authenticated user. */
     private User user;
@@ -375,6 +378,11 @@ public class RegisterView extends HorizontalLayout implements HasDynamicTitle, B
      */
     @Override
     public void beforeEnter(BeforeEnterEvent event) {
+        // Check authorization first
+        if (!RoleAuthorizationHelper.checkAuthorization(event, identity)) {
+            return; // Authorization failed, user was redirected
+        }
+        
         Optional<String> tokenOpt = event.getLocation().getQueryParameters().getParameters().getOrDefault("token", java.util.List.of()).stream().findFirst();
         if (tokenOpt.isPresent()) {
             String token = tokenOpt.get();

@@ -11,12 +11,14 @@ package com.elicitsoftware.service;
  * ***LICENSE_END***
  */
 
+import io.quarkus.oidc.IdToken;
 import io.quarkus.security.identity.SecurityIdentity;
 import jakarta.inject.Inject;
 import jakarta.ws.rs.GET;
 import jakarta.ws.rs.Path;
 import jakarta.ws.rs.Produces;
 import jakarta.ws.rs.core.MediaType;
+import org.eclipse.microprofile.jwt.JsonWebToken;
 
 /**
  * Debug REST resource for testing and troubleshooting OIDC authentication and authorization.
@@ -104,6 +106,13 @@ public class DebugResource {
      */
     @Inject
     SecurityIdentity identity;
+
+    @Inject
+    @IdToken
+    JsonWebToken idToken;
+
+    @Inject
+    JsonWebToken accessToken;
 
     /**
      * Default constructor for DebugResource.
@@ -197,8 +206,28 @@ public class DebugResource {
      */
     @GET
     public String showIdentity() {
+
         StringBuffer sb = new StringBuffer("User: " + identity.getPrincipal().getName() +
                 "\nRoles: " + identity.getRoles().toString() );
+
+        try {
+            sb.append("\n");
+            sb.append("ID_TOKEN: " + idToken.getRawToken());
+            sb.append("\n");
+        } catch (Exception e) {
+            sb.append("\n");
+            sb.append(e.getMessage());
+            sb.append("\n");
+        }
+        try {
+            sb.append("\n");
+            sb.append("ACCESS_TOKEN: " + accessToken.getRawToken());
+        } catch (Exception e) {
+            sb.append("\n");
+            sb.append(e.getMessage());
+            sb.append("\n");
+        }
+
         return sb.toString();
 
     }

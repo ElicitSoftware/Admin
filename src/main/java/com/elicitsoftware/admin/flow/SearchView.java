@@ -40,9 +40,10 @@ import com.vaadin.flow.data.provider.QuerySortOrder;
 import com.vaadin.flow.router.HasDynamicTitle;
 import com.vaadin.flow.router.QueryParameters;
 import com.vaadin.flow.router.Route;
+import com.vaadin.flow.router.BeforeEnterObserver;
+import com.vaadin.flow.router.BeforeEnterEvent;
 import io.quarkus.security.identity.SecurityIdentity;
 import jakarta.annotation.PostConstruct;
-import jakarta.annotation.security.RolesAllowed;
 import jakarta.inject.Inject;
 
 import java.util.ArrayList;
@@ -104,8 +105,7 @@ import java.util.stream.Collectors;
  * @see com.elicitsoftware.service.ReportingService
  */
 @Route(value = "", layout = MainLayout.class)
-@RolesAllowed({"elicit_user","elicit_admin"})
-class SearchView extends VerticalLayout implements HasDynamicTitle {
+class SearchView extends VerticalLayout implements HasDynamicTitle, BeforeEnterObserver {
 
     /** Pagination controls for managing page navigation and data loading. */
     private final PaginationControls paginationControls = new PaginationControls();
@@ -227,6 +227,17 @@ class SearchView extends VerticalLayout implements HasDynamicTitle {
      * the search bar with multiple filter options and the sortable data grid with
      * pagination controls.</p>
      */
+    
+    /**
+     * Checks user authentication and authorization before entering the view.
+     * Redirects authenticated users without proper roles to the unauthorized page.
+     */
+    @Override
+    public void beforeEnter(BeforeEnterEvent event) {
+        // Check authorization using helper
+        RoleAuthorizationHelper.checkAuthorization(event, identity);
+    }
+    
     @PostConstruct
     public void init() {
 
