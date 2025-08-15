@@ -151,44 +151,4 @@ public class UiSessionLogin implements Serializable {
         return (User) VaadinSession.getCurrent().getAttribute("user");
     }
 
-    /**
-     * Checks if the current user has the specified role.
-     *
-     * <p>This method performs case-insensitive role checking against the roles
-     * that were extracted from the security identity during session initialization.
-     * It provides a convenient way to implement role-based access control in UI components.</p>
-     *
-     * <p>The role comparison is case-insensitive to provide flexibility in role naming
-     * and prevent access issues due to case variations in role definitions.</p>
-     *
-     * <p><strong>Common Role Names:</strong></p>
-     * <ul>
-     *   <li>{@code "elicit_admin"} - Administrative users with full system access</li>
-     *   <li>{@code "elicit_user"} - Standard users with basic application access</li>
-     * </ul>
-     *
-     * <p><strong>Usage Examples:</strong></p>
-     * <pre>{@code
-     * if (sessionLogin.hasRole("elicit_admin")) {
-     *     adminMenu.setVisible(true);
-     * }
-     *
-     * if (sessionLogin.hasRole("elicit_user")) {
-     *     userFeatures.setEnabled(true);
-     * }
-     * }</pre>
-     *
-     * <p>The method is marked as {@code @Transient} to indicate that this property
-     * should not be included in JPA persistence operations.</p>
-     *
-     * @param roleName the name of the role to check (case-insensitive)
-     * @return true if the current user has the specified role, false otherwise
-     */
-    @Transient
-    public boolean hasRole(String roleName) {
-            if(roleName.equals("TEMP_ADMIN")){
-                return true;
-            }
-            return identity.hasRole(roleName);
-    }
 }

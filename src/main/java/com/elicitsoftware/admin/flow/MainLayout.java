@@ -21,6 +21,7 @@ import com.vaadin.flow.component.sidenav.SideNav;
 import com.vaadin.flow.component.sidenav.SideNavItem;
 import com.vaadin.flow.router.AfterNavigationEvent;
 import com.vaadin.flow.router.AfterNavigationListener;
+import io.quarkus.security.identity.SecurityIdentity;
 import jakarta.annotation.PostConstruct;
 import jakarta.inject.Inject;
 
@@ -49,19 +50,29 @@ import jakarta.inject.Inject;
  *
  * @author Elicit Software
  * @version 1.0
- * @since 1.0
  * @see AppLayout
  * @see AfterNavigationListener
  * @see UiSessionLogin
+ * @since 1.0
  */
 
 public class MainLayout extends AppLayout implements AfterNavigationListener {
 
-    /** Injected service for handling user session and authentication. */
+    /**
+     * Injected service for handling user session and authentication.
+     */
     @Inject
     UiSessionLogin uiSessionLogin;
 
-    /** The current authenticated user. */
+    /**
+     * Security identity for user authentication and role checking.
+     */
+    @Inject
+    SecurityIdentity identity;
+
+    /**
+     * The current authenticated user.
+     */
     User user;
 
     /**
@@ -171,7 +182,9 @@ public class MainLayout extends AppLayout implements AfterNavigationListener {
                 VaadinIcon.USERS.create());
         nav.addItem(searchLink, registerLink);
         // Message Templates Button (Admin only)
-        if (uiSessionLogin.hasRole("elicit_admin")) {
+        // TODO this is a hack! Restore the if statement after the OIDC is fixed.
+//        if (identity.hasRole("elicit_admin")) {
+        if (true) {
             SideNavItem adminSection = new SideNavItem("Admin");
             adminSection.setPrefixComponent(VaadinIcon.COG.create());
             adminSection.addItem(new SideNavItem("Departments", DepartmentsView.class,

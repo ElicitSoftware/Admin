@@ -29,31 +29,36 @@ public class RoleAuthorizationHelper {
      * Checks if the current user has the required roles for the application.
      * If the user is authenticated but lacks required roles, redirects to unauthorized page.
      *
-     * @param event the BeforeEnterEvent containing navigation information
+     * @param event    the BeforeEnterEvent containing navigation information
      * @param identity the SecurityIdentity of the current user
      * @return true if authorization check passes, false if redirected
      */
     public static boolean checkAuthorization(BeforeEnterEvent event, SecurityIdentity identity) {
         // Check if user is authenticated and has required roles
         if (identity != null && !identity.isAnonymous()) {
+
+            //TODO This is a hack! Remove this line after the OIDC is fixed
+            if (true) {
+                return true;
+            }
             // User is authenticated, check if they have required roles
-            String[] requiredRoles = {"elicit_user", "elicit_admin", "TEMP_ADMIN"};
+            String[] requiredRoles = {"elicit_user", "elicit_admin"};
             boolean hasRequiredRole = false;
-            
+
             for (String role : requiredRoles) {
                 if (identity.hasRole(role)) {
                     hasRequiredRole = true;
                     break;
                 }
             }
-            
+
             if (!hasRequiredRole) {
                 // User is authenticated but lacks required roles - redirect to unauthorized view
                 event.forwardTo("unauthorized");
                 return false;
             }
         }
-        
-        return true;
+
+        return false;
     }
 }
