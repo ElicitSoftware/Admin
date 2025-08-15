@@ -206,15 +206,27 @@ public class DebugResource {
      */
     @GET
     public String showIdentity() {
+
         StringBuffer sb = new StringBuffer("User: " + identity.getPrincipal().getName() +
                 "\nRoles: " + identity.getRoles().toString() );
 
-        sb.append("\n");
-        sb.append("ID_TOKEN: " + idToken.getRawToken());
-        sb.append("\n");
-
-        sb.append("\n");
-        sb.append("ACCESS_TOKEN: " + accessToken.getRawToken());
+        try {
+            sb.append("\n");
+            sb.append("ID_TOKEN: " + idToken.getRawToken());
+            sb.append("\n");
+        } catch (Exception e) {
+            sb.append("\n");
+            sb.append(e.getMessage());
+            sb.append("\n");
+        }
+        try {
+            sb.append("\n");
+            sb.append("ACCESS_TOKEN: " + accessToken.getRawToken());
+        } catch (Exception e) {
+            sb.append("\n");
+            sb.append(e.getMessage());
+            sb.append("\n");
+        }
 
         return sb.toString();
 
