@@ -11,13 +11,16 @@ package com.elicitsoftware.service;
  * ***LICENSE_END***
  */
 
-import com.elicitsoftware.admin.flow.UiSessionLogin;
+import io.quarkus.oidc.IdToken;
+import io.quarkus.oidc.AccessTokenCredential;
 import io.quarkus.security.identity.SecurityIdentity;
+import jakarta.enterprise.inject.Instance;
 import jakarta.inject.Inject;
 import jakarta.ws.rs.GET;
 import jakarta.ws.rs.Path;
 import jakarta.ws.rs.Produces;
 import jakarta.ws.rs.core.MediaType;
+import org.eclipse.microprofile.jwt.JsonWebToken;
 
 /**
  * Debug REST resource for testing and troubleshooting OIDC authentication and authorization.
@@ -105,6 +108,13 @@ public class DebugResource {
      */
     @Inject
     SecurityIdentity identity;
+
+    @Inject
+    @IdToken
+    Instance<JsonWebToken> idTokenInstance;
+
+    @Inject
+    Instance<AccessTokenCredential> accessTokenInstance;
 
     /**
      * Default constructor for DebugResource.
@@ -204,6 +214,29 @@ public class DebugResource {
                 "\n elicit_admin: " + identity.hasRole("elicit_admin") +
                 "\n elicit_user: " + identity.hasRole("elicit_user"));
         sb.append("\n");
+
+        try {
+            if (idTokenInstance.isResolvable()) {
+                JsonWebToken idToken = idTokenInstance.get();
+                sb.append("\nID Token: " + idToken.getRawToken() + "\n");
+            } else {
+                sb.append("\nID Token Error: IdToken not available or resolvable\n");
+            }
+        } catch (Exception e) {
+            sb.append("\nID Token Error: " + e.getMessage() + "\n");
+        }
+
+        try {
+            if (accessTokenInstance.isResolvable()) {
+                AccessTokenCredential accessToken = accessTokenInstance.get();
+                sb.append("\nAccess Token: " + accessToken.getToken() + "\n");
+            } else {
+                sb.append("\nAccess Token Error: AccessToken not available or resolvable\n");
+            }
+        } catch (Exception e) {
+            sb.append("\nAccess Token Error: " + e.getMessage() + "\n");
+        }
+        
         return sb.toString();
     }
 }
