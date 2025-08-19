@@ -23,6 +23,7 @@ import com.vaadin.flow.router.AfterNavigationEvent;
 import com.vaadin.flow.router.AfterNavigationListener;
 import io.quarkus.security.identity.SecurityIdentity;
 import jakarta.annotation.PostConstruct;
+import jakarta.annotation.security.PermitAll;
 import jakarta.inject.Inject;
 
 /**
@@ -55,7 +56,7 @@ import jakarta.inject.Inject;
  * @see UiSessionLogin
  * @since 1.0
  */
-
+@PermitAll
 public class MainLayout extends AppLayout implements AfterNavigationListener {
 
     /**
