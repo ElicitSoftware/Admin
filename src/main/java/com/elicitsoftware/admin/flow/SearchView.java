@@ -44,6 +44,7 @@ import com.vaadin.flow.router.BeforeEnterObserver;
 import com.vaadin.flow.router.BeforeEnterEvent;
 import io.quarkus.security.identity.SecurityIdentity;
 import jakarta.annotation.PostConstruct;
+import jakarta.annotation.security.RolesAllowed;
 import jakarta.inject.Inject;
 
 import java.util.ArrayList;
@@ -105,6 +106,7 @@ import java.util.stream.Collectors;
  * @see com.elicitsoftware.service.ReportingService
  */
 @Route(value = "", layout = MainLayout.class)
+@RolesAllowed({"elicit_user", "elicit_admin"})
 class SearchView extends VerticalLayout implements HasDynamicTitle, BeforeEnterObserver {
 
     /** Pagination controls for managing page navigation and data loading. */
@@ -230,12 +232,11 @@ class SearchView extends VerticalLayout implements HasDynamicTitle, BeforeEnterO
     
     /**
      * Checks user authentication and authorization before entering the view.
-     * Redirects authenticated users without proper roles to the unauthorized page.
+     * Authorization is now handled by @RolesAllowed annotation.
      */
     @Override
     public void beforeEnter(BeforeEnterEvent event) {
-        // Check authorization using helper
-        RoleAuthorizationHelper.checkAuthorization(event, identity);
+        // Authorization is now handled by @RolesAllowed annotation
     }
     
     @PostConstruct
