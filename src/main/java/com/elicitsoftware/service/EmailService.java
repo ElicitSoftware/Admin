@@ -11,7 +11,9 @@ package com.elicitsoftware.service;
  * ***LICENSE_END***
  */
 
+import com.elicitsoftware.model.Department;
 import com.elicitsoftware.model.Message;
+import com.elicitsoftware.model.MessageTemplate;
 import com.elicitsoftware.model.Status;
 import io.quarkus.mailer.Mail;
 import io.quarkus.mailer.reactive.ReactiveMailer;
@@ -101,14 +103,25 @@ public class EmailService {
 
     public boolean sendEmail(Status status) {
         System.out.println("Sending email for status: " + status.getToken());
+
         try {
-            mailer.send(
-                    Mail.withText(status.getEmail(),
-                            "Ahoy from Quarkus",
-                            "A simple email sent from a Quarkus application."
-                    ).setFrom(fromEmail)
-            ).await().indefinitely();
-            System.out.println("Email sent successfully");
+            Department department = Department.findById(status.getDepartmentId());
+            String[] defaultMessagesIds = department.defaultMessageId.split(",");
+            for (String defaultMessageID : defaultMessagesIds) {
+                try {
+                    MessageTemplate messageTemplate = MessageTemplate.findById(Long.parseLong(defaultMessageID));
+                    String subject = messageTemplate.subject;
+                    String body = messageTemplate.message.replace("<TOKEN>", status.getToken());
+                    if (messageTemplate.mimeType.equals("text/html")) {
+                        mailer.send(Mail.withHtml(status.getEmail(), subject, body).setFrom(fromEmail)).await().indefinitely();
+                    } else {
+                        mailer.send(Mail.withText(status.getEmail(), subject, body).setFrom(fromEmail)).await().indefinitely();
+                    }
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
+                System.out.println("Email sent successfully");
+            }
             return true;
         } catch (Exception ex) {
             System.out.println("Failed to send email: " + ex.getMessage());
@@ -245,7 +258,6 @@ public class EmailService {
      * @see Message#subjectLine
      * @see Message#body
      * @see Message#mimeType
-     * @see ReactiveMailer#send(Mail)
      */
     private boolean sendMessage(Message message) {
         try {
