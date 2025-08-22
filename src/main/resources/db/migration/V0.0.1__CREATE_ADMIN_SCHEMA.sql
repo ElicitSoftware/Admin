@@ -18,9 +18,9 @@ CREATE TABLE IF NOT EXISTS survey.departments
     id bigint NOT NULL,
     name character varying(255) NOT NULL,
     code character varying(100),
-    default_message_id character varying(100) NOT NULL DEFAULT '1',
-    notification_emails character varying(2000),
-    from_email character varying(50) NOT NULL,
+    default_message_id character varying(100) NOT NULL DEFAULT '1', -- comma separated list of messages_templates to send when respondent created.
+    notification_emails character varying(2000), -- Email addresses of people to notify when a respondent finishes.
+    from_email character varying(50) NOT NULL, -- The email address all emails for this department apear to be from.
     CONSTRAINT department_pk PRIMARY KEY(id),
     CONSTRAINT department_code_un UNIQUE(code),
     CONSTRAINT department_name_un UNIQUE(name)
