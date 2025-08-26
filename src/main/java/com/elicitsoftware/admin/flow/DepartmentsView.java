@@ -59,17 +59,28 @@ public class DepartmentsView extends VerticalLayout {
         grid.addComponentColumn(department -> {
             Button editBtn = new Button(new Icon(VaadinIcon.EDIT));
             editBtn.addClickListener(e ->
-                editDepartment(-1l)
+                editDepartment(department.id)
             );
             return editBtn;
-        }).setHeader("Edit").setWidth("40px");
+        }).setHeader("Edit").setWidth("80px").setFlexGrow(0);
 
         grid.addColumn(Department::getName).setHeader("Department Name").setSortable(true).setAutoWidth(true);
+        grid.addColumn(Department::getCode).setHeader("Code").setSortable(true).setAutoWidth(true);
+        grid.addColumn(Department::getDefaultMessageId).setHeader("Default Message ID").setSortable(true).setAutoWidth(true);
+        grid.addColumn(Department::getFromEmail).setHeader("From Email").setSortable(true).setAutoWidth(true);
+        grid.addColumn(department -> {
+            String emails = department.getNotificationEmails();
+            if (emails == null || emails.trim().isEmpty()) {
+                return "(none)";
+            }
+            // Truncate long email lists for display
+            return emails.length() > 50 ? emails.substring(0, 47) + "..." : emails;
+        }).setHeader("Notification Emails").setSortable(true).setAutoWidth(true);
 
         List<Department> departments = Department.findAll().list();
         grid.setItems(departments);
         Button newDepartmentButton = new Button("New Department", event ->
-            getUI().ifPresent(ui -> ui.navigate(EditDepartmentView.class))
+            getUI().ifPresent(ui -> ui.navigate("edit-department/0"))
         );
 
         add(grid);
@@ -79,18 +90,14 @@ public class DepartmentsView extends VerticalLayout {
     /**
      * Navigates to the edit department view for the specified department.
      * 
-     * <p>This method constructs the appropriate navigation URL based on the
-     * provided department ID. If the department ID is greater than 0, it uses
-     * the actual ID; otherwise, it uses "0" which typically indicates creating
-     * a new department.</p>
+     * <p>This method constructs the appropriate navigation URL using the
+     * provided department ID to edit an existing department.</p>
      * 
-     * @param departmentId the ID of the department to edit, or a value <= 0 
-     *                     to indicate creation of a new department
+     * @param departmentId the ID of the department to edit
      */
     private void editDepartment(Long departmentId) {
-        String idParam = (departmentId > 0) ? String.valueOf(departmentId) : "0";
         getUI().ifPresent(ui ->
-                ui.navigate("edit-department/" + idParam)
+                ui.navigate("edit-department/" + departmentId)
         );
     }
 }
