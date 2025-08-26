@@ -15,7 +15,7 @@ import com.elicitsoftware.admin.upload.MultipartBody;
 import com.elicitsoftware.model.User;
 import com.elicitsoftware.request.AddRequest;
 import com.elicitsoftware.response.AddResponse;
-import io.quarkus.logging.Log;
+import com.elicitsoftware.response.AddResponseStatus;
 import io.quarkus.security.identity.SecurityIdentity;
 import jakarta.annotation.security.RolesAllowed;
 import jakarta.enterprise.context.ApplicationScoped;
@@ -24,9 +24,6 @@ import jakarta.transaction.Transactional;
 import jakarta.ws.rs.*;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
-import netscape.javascript.JSObject;
-
-import java.util.Set;
 
 /**
  * REST resource for CSV participant import functionality in the Elicit Admin application.
@@ -178,30 +175,23 @@ public class CsvImportResource {
     @Consumes(MediaType.MULTIPART_FORM_DATA)
     @RolesAllowed("elicit_importer")
     @Transactional
-    public Response importCsv(MultipartBody multipartBody) {
+    public AddResponse importCsv(MultipartBody multipartBody) {
         try {
             // Validate that a file was provided
             if (multipartBody.file == null) {
-                return Response.status(Response.Status.BAD_REQUEST)
-                    .entity(new ImportResponse(false,
-                        "No CSV file provided in the 'file' field", 0))
-                    .build();
+                AddResponse errorResponse = new AddResponse();
+                errorResponse.setError("No CSV file provided in the 'file' field");
+                return errorResponse;
             }
-
             // Process the CSV import
-            int importedCount = csvImportService.importSubjects(multipartBody.file);
-
-            return Response.ok()
-                .entity(new ImportResponse(true,
-                    "Successfully imported " + importedCount + " participants",
-                    importedCount))
-                .build();
+            AddResponse response = csvImportService.importSubjects(multipartBody.file);
+            return response;
 
         } catch (Exception e) {
             // Handle validation errors and other exceptions
-            return Response.status(Response.Status.BAD_REQUEST)
-                .entity(new ImportResponse(false, e.getMessage(), 0))
-                .build();
+            AddResponse errorResponse = new AddResponse();
+            errorResponse.setError(e.getMessage());
+            return errorResponse;
         }
     }
 

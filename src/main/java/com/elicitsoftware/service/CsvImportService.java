@@ -172,10 +172,10 @@ public class CsvImportService {
      * @see TokenService#putSubject(AddRequest)
      */
     @Transactional
-    public int importSubjects(InputStream csvInputStream) throws Exception {
+    public AddResponse importSubjects(InputStream csvInputStream) throws Exception {
         List<String> errors = new ArrayList<>();
-        int successCount = 0;
         int lineNumber = 0;
+        AddResponse response = new AddResponse();
 
         try (BufferedReader reader = new BufferedReader(new InputStreamReader(csvInputStream))) {
             String line;
@@ -195,12 +195,12 @@ public class CsvImportService {
 
                 try {
                     AddRequest request = parseCsvLine(line);
-                    AddResponse response = tokenService.putSubject(request);
+                    AddResponse subjectResponse = tokenService.putSubject(request);
 
-                    if (response.getError() != null) {
-                        errors.add("Line " + lineNumber + ": " + response.getError());
+                    if (subjectResponse.getErrors().size() > 0 ) {
+                        response.setError(subjectResponse.getErrors().get(0));
                     } else {
-                        successCount++;
+                        response.addStatus(subjectResponse.getSubjects().getFirst());
                     }
                 } catch (Exception e) {
                     errors.add("Line " + lineNumber + ": " + e.getMessage());
@@ -212,7 +212,7 @@ public class CsvImportService {
             throw new Exception("Import completed with errors:\n" + String.join("\n", errors));
         }
 
-        return successCount;
+        return response;
     }
 
     /**

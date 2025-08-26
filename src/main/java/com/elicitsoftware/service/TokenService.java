@@ -12,12 +12,10 @@ package com.elicitsoftware.service;
  */
 
 import com.elicitsoftware.exception.TokenGenerationError;
-import com.elicitsoftware.model.Message;
-import com.elicitsoftware.model.Respondent;
-import com.elicitsoftware.model.Subject;
-import com.elicitsoftware.model.Survey;
+import com.elicitsoftware.model.*;
 import com.elicitsoftware.request.AddRequest;
 import com.elicitsoftware.response.AddResponse;
+import com.elicitsoftware.response.AddResponseStatus;
 import com.elicitsoftware.util.RandomString;
 import io.quarkus.logging.Log;
 import jakarta.annotation.security.RolesAllowed;
@@ -80,18 +78,25 @@ public class TokenService {
     @Transactional
     public AddResponse putSubject(AddRequest request) {
         AddResponse response = new AddResponse();
+        AddResponseStatus addStatus;
         try {
-            Respondent respondent = getToken(request.surveyId);
-            Subject subject = new Subject(request.xid, request.surveyId, request.departmentId, request.firstName, request.lastName, request.middleName, request.dob, request.email, request.phone);
-            subject.setRespondent(respondent);
-            subject.persistAndFlush();
-            ArrayList<Message> messages = Message.createMessagesForSubject(subject);
-            for (Message message : messages) {
-                message.persistAndFlush();
+            Status status = Status.findByXidAndDepartmentId(request.xid, request.departmentId);
+            if (status == null) {
+                Respondent respondent = getToken(request.surveyId);
+                Subject subject = new Subject(request.xid, request.surveyId, request.departmentId, request.firstName, request.lastName, request.middleName, request.dob, request.email, request.phone);
+                subject.setRespondent(respondent);
+                subject.persistAndFlush();
+                ArrayList<Message> messages = Message.createMessagesForSubject(subject);
+                for (Message message : messages) {
+                    message.persistAndFlush();
+                }
+                status = Status.findByXidAndDepartmentId(request.xid, request.departmentId);
+                addStatus = new AddResponseStatus(status, "New Subject");
+            } else{
+                addStatus = new AddResponseStatus(status, "Existing Subject");
             }
-            response.setRespondentId(respondent.id);
-            response.setToken(respondent.token);
-            return response;
+            response.addStatus(addStatus);
+
         } catch (TokenGenerationError e) {
             response.setError(e.getMessage());
         }

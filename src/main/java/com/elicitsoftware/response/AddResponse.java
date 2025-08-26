@@ -11,6 +11,10 @@ package com.elicitsoftware.response;
  * ***LICENSE_END***
  */
 
+import com.fasterxml.jackson.annotation.JsonProperty;
+
+import java.util.ArrayList;
+
 /**
  * AddResponse represents the response payload returned after successfully adding a new participant to a survey.
  * <p>
@@ -65,23 +69,8 @@ package com.elicitsoftware.response;
  * @since 1.0.0
  */
 public class AddResponse {
-    /**
-     * The unique system identifier assigned to the newly created respondent.
-     * <p>
-     * This field contains the database-generated unique ID for the participant
-     * record. It serves as the primary key for all subsequent operations
-     * related to this participant.
-     */
-    private int respondentId;
-
-    /**
-     * Authentication token for secure participant access to surveys.
-     * <p>
-     * This field contains a secure, time-limited token that allows the
-     * participant to access their assigned surveys without traditional
-     * username/password authentication.
-     */
-    private String token;
+    @JsonProperty("subjects")
+    private ArrayList<AddResponseStatus> subjects = new ArrayList<>();
 
     /**
      * Error message describing any failures that occurred during participant creation.
@@ -90,7 +79,8 @@ public class AddResponse {
      * participant registration fails. It should be null for successful
      * operations.
      */
-    private String error;
+    @JsonProperty("error")
+    private ArrayList<String> errors = new ArrayList<>();
 
     /**
      * Default constructor for creating an empty AddResponse instance.
@@ -109,79 +99,6 @@ public class AddResponse {
         // Default constructor - fields initialized to default values
     }
 
-    /**
-     * Returns the unique identifier assigned to the newly created respondent.
-     * <p>
-     * This ID can be used for:
-     * - Tracking participant progress and responses
-     * - Linking survey data to participant records
-     * - Administrative operations and reporting
-     * - Cross-referencing with external systems
-     * <p>
-     * The ID is only populated when participant creation is successful.
-     * Returns 0 or negative values may indicate creation failure.
-     *
-     * @return The respondent ID as a positive integer, or 0 if creation failed
-     */
-    public int getRespondentId() {
-        return respondentId;
-    }
-
-    /**
-     * Sets the unique identifier for the newly created respondent.
-     * <p>
-     * This method is typically called by service layer components after
-     * successfully creating a new participant record in the database.
-     * The ID should be a positive integer representing the primary key
-     * of the participant record.
-     *
-     * @param respondentId The unique respondent identifier; should be positive
-     */
-    public void setRespondentId(int respondentId) {
-        this.respondentId = respondentId;
-    }
-
-    /**
-     * Returns the authentication token for secure participant access.
-     * <p>
-     * This token enables the participant to access their assigned surveys
-     * without traditional login credentials. The token includes:
-     * - Participant identification information
-     * - Survey access permissions
-     * - Expiration time for security
-     * - Digital signature for integrity
-     * <p>
-     * Token usage:
-     * - Include in survey URLs for direct access
-     * - Store securely on client side if needed
-     * - Use for API authentication in survey operations
-     * - Validate before allowing survey participation
-     * <p>
-     * Security considerations:
-     * - Tokens have limited lifetime to prevent abuse
-     * - Should be transmitted over secure connections (HTTPS)
-     * - May be invalidated if suspicious activity is detected
-     * - Should not be logged or stored in plain text
-     *
-     * @return The authentication token as a secure string, or null if creation failed
-     */
-    public String getToken() {
-        return token;
-    }
-
-    /**
-     * Sets the authentication token for the newly created participant.
-     * <p>
-     * This method is called by security services after successful participant
-     * creation to provide secure access credentials. The token should be
-     * generated using cryptographically secure methods and include appropriate
-     * expiration and permission settings.
-     *
-     * @param token The secure authentication token; may be null if token generation fails
-     */
-    public void setToken(String token) {
-        this.token = token;
-    }
 
     /**
      * Returns any error message that occurred during participant creation.
@@ -203,8 +120,8 @@ public class AddResponse {
      *
      * @return Error message describing the failure, or null if operation was successful
      */
-    public String getError() {
-        return error;
+    public ArrayList<String> getErrors() {
+        return errors;
     }
 
     /**
@@ -223,6 +140,74 @@ public class AddResponse {
      * @param error The error message describing the failure; should be non-null for failed operations
      */
     public void setError(String error) {
-        this.error = error;
+        this.errors.add(error);
+    }
+
+    /**
+     * Gets the list of subjects/statuses associated with this response.
+     *
+     * @return the list of AddResponseStatus objects
+     */
+    public ArrayList<AddResponseStatus> getSubjects() {
+        return subjects;
+    }
+
+    /**
+     * Sets the list of subjects/statuses for this response.
+     *
+     * @param subjects the list of AddResponseStatus objects to set
+     */
+    public void setSubjects(ArrayList<AddResponseStatus> subjects) {
+        this.subjects = subjects;
+    }
+
+    public void addStatus(AddResponseStatus status) {
+        this.subjects.add(status);
+    }
+
+    /**
+     * Returns a string representation of this AddResponse object.
+     * <p>
+     * The string representation includes:
+     * - Number of subjects/statuses
+     * - Number of errors
+     * - Summary of success/failure status
+     * <p>
+     * This method is useful for logging, debugging, and general object inspection.
+     *
+     * @return A string representation of this AddResponse
+     */
+    @Override
+    public String toString() {
+        StringBuilder sb = new StringBuilder();
+        sb.append("AddResponse {\n");
+        
+        // Subjects information
+        sb.append("  subjects: ");
+        if (subjects == null || subjects.isEmpty()) {
+            sb.append("none\n");
+        } else {
+            sb.append(subjects.size()).append(" item(s)\n");
+            for (int i = 0; i < subjects.size(); i++) {
+                sb.append("    [").append(i).append("] ").append(subjects.get(i)).append("\n");
+            }
+        }
+        
+        // Errors information
+        sb.append("  errors: ");
+        if (errors == null || errors.isEmpty()) {
+            sb.append("none\n");
+        } else {
+            sb.append(errors.size()).append(" item(s)\n");
+            for (int i = 0; i < errors.size(); i++) {
+                sb.append("    [").append(i).append("] \"").append(errors.get(i)).append("\"\n");
+            }
+        }
+        
+        // Status summary
+        sb.append("  hasErrors: ").append(errors != null && !errors.isEmpty()).append("\n");
+        sb.append("}");
+        
+        return sb.toString();
     }
 }
