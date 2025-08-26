@@ -252,6 +252,10 @@ public class Status extends PanacheEntityBase {
         super();
     }
 
+    public static Status findByXidAndDepartmentId(String xid, int departmentId) {
+        return find("xid = ?1 and department_id = ?2", xid, departmentId).firstResult();
+    }
+
     /**
      * Gets the unique identifier for this status record.
      *
@@ -570,5 +574,14 @@ public class Status extends PanacheEntityBase {
      */
     public void setFinalizedDt(Date finalizedDt) {
         this.finalizedDt = finalizedDt;
+    }
+
+    @Override
+    public String toString(){
+        StringBuilder sb = new StringBuilder();
+        sb.append(this.status != null ? this.status : "null").append(", ");
+        sb.append(this.token != null ? this.token : "null").append(", ");
+        sb.append(this.createdDt != null ? sdf.format(this.createdDt) : "null").append(", ");
+        return sb.toString();
     }
 }

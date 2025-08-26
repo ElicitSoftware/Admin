@@ -13,6 +13,7 @@ package com.elicitsoftware.admin.flow;
 
 import com.elicitsoftware.exception.TokenGenerationError;
 import com.elicitsoftware.model.*;
+import com.elicitsoftware.response.AddResponse;
 import com.elicitsoftware.service.CsvImportService;
 import com.elicitsoftware.service.TokenService;
 import com.vaadin.flow.component.button.Button;
@@ -270,7 +271,7 @@ public class RegisterView extends HorizontalLayout implements HasDynamicTitle, B
                 Notification.show("Duplicate entry: A subject with this External ID " + subject.getXid() + " already exists for this department.", 5000, Notification.Position.MIDDLE);
                 subject = new Subject();
             } catch (Exception e) {
-                Notification.show("Database error: " + e.getMessage(), 5000, Notification.Position.MIDDLE);
+                showErrorDialog("Database Error", "Database error: " + e.getMessage());
                 subject = new Subject();
             }
         });
@@ -281,7 +282,7 @@ public class RegisterView extends HorizontalLayout implements HasDynamicTitle, B
                 // Navigate back to the search view after update
                 getUI().ifPresent(ui -> ui.navigate(""));
             } catch (Exception e) {
-                Notification.show("Database error: " + e.getMessage(), 5000, Notification.Position.MIDDLE);
+                showErrorDialog("Database Error", "Database error: " + e.getMessage());
             }
         });
 
@@ -306,31 +307,10 @@ public class RegisterView extends HorizontalLayout implements HasDynamicTitle, B
         csvUpload.addSucceededListener(event -> {
             try {
                 CsvImportService importService = new CsvImportService(tokenService);
-//                int imported = importService.importSubjects(buffer.getInputStream(), user);
-                int imported = importService.importSubjects(buffer.getInputStream());
-                Notification.show("Successfully imported " + imported + " subjects", 5000, Notification.Position.MIDDLE);
+                AddResponse response =  importService.importSubjects(buffer.getInputStream());
+                showSuccessDialog("CSV Import Success", "Successfully imported subjects:\n\n" + response.toString());
             } catch (Exception e) {
-                Dialog errorDialog = new Dialog();
-                errorDialog.setHeaderTitle("CSV Import Error");
-
-                Span errorMessage = new Span(e.getMessage());
-                errorMessage.getStyle().set("white-space", "pre-wrap");
-
-                Button closeButton = new Button("Close", evt -> errorDialog.close());
-                closeButton.getStyle().set("margin-top", "20px");
-
-                VerticalLayout dialogLayout = new VerticalLayout(errorMessage, closeButton);
-                dialogLayout.setAlignItems(FlexComponent.Alignment.CENTER);
-                dialogLayout.setSpacing(true);
-
-                errorDialog.add(dialogLayout);
-                errorDialog.setModal(true);
-                errorDialog.setDraggable(false);
-                errorDialog.setResizable(true);
-                errorDialog.setWidth("600px");
-                errorDialog.setMaxWidth("90vw");
-
-                errorDialog.open();
+                showErrorDialog("CSV Import Error", e.getMessage());
             }
         });
 
@@ -707,6 +687,75 @@ public class RegisterView extends HorizontalLayout implements HasDynamicTitle, B
         );
 
         return content;
+    }
+
+    /**
+     * Displays an error dialog with proper formatting for line breaks and detailed error messages.
+     * 
+     * <p>This method creates a modal dialog that can properly display multi-line error messages,
+     * including formatted toString() output from response objects. The dialog uses pre-wrap
+     * white-space styling to preserve line breaks and formatting.</p>
+     * 
+     * @param title the title to display in the dialog header
+     * @param message the error message to display, which may contain line breaks
+     */
+    private void showErrorDialog(String title, String message) {
+        Dialog errorDialog = new Dialog();
+        errorDialog.setHeaderTitle(title);
+
+        Span errorMessage = new Span(message);
+        errorMessage.getStyle().set("white-space", "pre-wrap");
+
+        Button closeButton = new Button("Close", evt -> errorDialog.close());
+        closeButton.getStyle().set("margin-top", "20px");
+
+        VerticalLayout dialogLayout = new VerticalLayout(errorMessage, closeButton);
+        dialogLayout.setAlignItems(FlexComponent.Alignment.CENTER);
+        dialogLayout.setSpacing(true);
+
+        errorDialog.add(dialogLayout);
+        errorDialog.setModal(true);
+        errorDialog.setDraggable(false);
+        errorDialog.setResizable(true);
+        errorDialog.setWidth("600px");
+        errorDialog.setMaxWidth("90vw");
+
+        errorDialog.open();
+    }
+
+    /**
+     * Displays a success dialog with proper formatting for line breaks and detailed success messages.
+     * 
+     * <p>This method creates a modal dialog that can properly display multi-line success messages,
+     * including formatted toString() output from response objects. The dialog uses pre-wrap
+     * white-space styling to preserve line breaks and formatting.</p>
+     * 
+     * @param title the title to display in the dialog header
+     * @param message the success message to display, which may contain line breaks
+     */
+    private void showSuccessDialog(String title, String message) {
+        Dialog successDialog = new Dialog();
+        successDialog.setHeaderTitle(title);
+
+        Span successMessage = new Span(message);
+        successMessage.getStyle().set("white-space", "pre-wrap");
+        successMessage.getStyle().set("color", "green");
+
+        Button closeButton = new Button("Close", evt -> successDialog.close());
+        closeButton.getStyle().set("margin-top", "20px");
+
+        VerticalLayout dialogLayout = new VerticalLayout(successMessage, closeButton);
+        dialogLayout.setAlignItems(FlexComponent.Alignment.CENTER);
+        dialogLayout.setSpacing(true);
+
+        successDialog.add(dialogLayout);
+        successDialog.setModal(true);
+        successDialog.setDraggable(false);
+        successDialog.setResizable(true);
+        successDialog.setWidth("600px");
+        successDialog.setMaxWidth("90vw");
+
+        successDialog.open();
     }
 
     /**

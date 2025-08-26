@@ -15,11 +15,11 @@ import com.elicitsoftware.exception.TokenGenerationError;
 import com.elicitsoftware.model.*;
 import com.elicitsoftware.request.AddRequest;
 import com.elicitsoftware.response.AddResponse;
+import com.elicitsoftware.response.AddResponseStatus;
 import com.elicitsoftware.util.RandomString;
 import io.quarkus.logging.Log;
 import jakarta.annotation.security.RolesAllowed;
 import jakarta.enterprise.context.ApplicationScoped;
-import jakarta.inject.Inject;
 import jakarta.transaction.Transactional;
 import jakarta.ws.rs.*;
 import jakarta.ws.rs.core.Context;
@@ -28,7 +28,6 @@ import jakarta.ws.rs.core.UriInfo;
 
 import java.security.SecureRandom;
 import java.util.ArrayList;
-import java.util.Date;
 
 /**
  * TokenService provides token-based authentication and subject management for surveys.
@@ -73,24 +72,31 @@ public class TokenService {
      */
     @Path("/add/subject")
     @POST
-//    @RolesAllowed({"elicit_token", "elicit_admin", "elicit_user"})
+    @RolesAllowed({"elicit_importer", "elicit_admin", "elicit_user"})
     @Consumes(MediaType.APPLICATION_JSON)
     @Produces(MediaType.APPLICATION_JSON)
     @Transactional
     public AddResponse putSubject(AddRequest request) {
         AddResponse response = new AddResponse();
+        AddResponseStatus addStatus;
         try {
-            Respondent respondent = getToken(request.surveyId);
-            Subject subject = new Subject(request.xid, request.surveyId, request.departmentId, request.firstName, request.lastName, request.middleName, request.dob, request.email, request.phone);
-            subject.setRespondent(respondent);
-            subject.persistAndFlush();
-            ArrayList<Message> messages = Message.createMessagesForSubject(subject);
-            for(Message message : messages) {
-                message.persistAndFlush();
+            Status status = Status.findByXidAndDepartmentId(request.xid, request.departmentId);
+            if (status == null) {
+                Respondent respondent = getToken(request.surveyId);
+                Subject subject = new Subject(request.xid, request.surveyId, request.departmentId, request.firstName, request.lastName, request.middleName, request.dob, request.email, request.phone);
+                subject.setRespondent(respondent);
+                subject.persistAndFlush();
+                ArrayList<Message> messages = Message.createMessagesForSubject(subject);
+                for (Message message : messages) {
+                    message.persistAndFlush();
+                }
+                status = Status.findByXidAndDepartmentId(request.xid, request.departmentId);
+                addStatus = new AddResponseStatus(status, "New Subject");
+            } else{
+                addStatus = new AddResponseStatus(status, "Existing Subject");
             }
-            response.setRespondentId(respondent.id);
-            response.setToken(respondent.token);
-            return response;
+            response.addStatus(addStatus);
+
         } catch (TokenGenerationError e) {
             response.setError(e.getMessage());
         }

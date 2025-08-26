@@ -13,6 +13,9 @@ package com.elicitsoftware.service;
 
 import com.elicitsoftware.admin.upload.MultipartBody;
 import com.elicitsoftware.model.User;
+import com.elicitsoftware.request.AddRequest;
+import com.elicitsoftware.response.AddResponse;
+import com.elicitsoftware.response.AddResponseStatus;
 import io.quarkus.security.identity.SecurityIdentity;
 import jakarta.annotation.security.RolesAllowed;
 import jakarta.enterprise.context.ApplicationScoped;
@@ -74,7 +77,7 @@ import jakarta.ws.rs.core.Response;
  * @see MultipartBody
  * @see User
  */
-@Path("/api/csv")
+@Path("/import")
 @ApplicationScoped
 @Produces(MediaType.APPLICATION_JSON)
 public class CsvImportResource {
@@ -88,6 +91,7 @@ public class CsvImportResource {
     @Inject
     CsvImportService csvImportService;
 
+    private final TokenService tokenService;
     /**
      * Security identity for accessing current user authentication information.
      * <p>
@@ -96,6 +100,10 @@ public class CsvImportResource {
      */
     @Inject
     SecurityIdentity identity;
+
+    public CsvImportResource(TokenService tokenService) {
+        this.tokenService = tokenService;
+    }
 
     /**
      * Imports participant data from an uploaded CSV file.
@@ -162,46 +170,28 @@ public class CsvImportResource {
      * @see CsvImportService#importSubjects(java.io.InputStream)
      * @see MultipartBody
      */
+    @Path("/subjects")
     @POST
-    @Path("/import")
     @Consumes(MediaType.MULTIPART_FORM_DATA)
-//    @RolesAllowed({"elicit_user", "elicit_admin"})
+    @RolesAllowed("elicit_importer")
     @Transactional
-    public Response importCsv(MultipartBody multipartBody) {
+    public AddResponse importCsv(MultipartBody multipartBody) {
         try {
-            // Get the current user from the security context
-            String principalName = identity.getPrincipal().getName();
-//            User user = User.find("username = ?1 and active = true", principalName).firstResult();
-            
-//            if (user == null) {
-//                return Response.status(Response.Status.FORBIDDEN)
-//                    .entity(new ImportResponse(false,
-//                        "User not found or inactive: " + principalName, 0))
-//                    .build();
-//            }
-
             // Validate that a file was provided
             if (multipartBody.file == null) {
-                return Response.status(Response.Status.BAD_REQUEST)
-                    .entity(new ImportResponse(false, 
-                        "No CSV file provided in the 'file' field", 0))
-                    .build();
+                AddResponse errorResponse = new AddResponse();
+                errorResponse.setError("No CSV file provided in the 'file' field");
+                return errorResponse;
             }
-
             // Process the CSV import
-            int importedCount = csvImportService.importSubjects(multipartBody.file);
-            
-            return Response.ok()
-                .entity(new ImportResponse(true, 
-                    "Successfully imported " + importedCount + " participants", 
-                    importedCount))
-                .build();
+            AddResponse response = csvImportService.importSubjects(multipartBody.file);
+            return response;
 
         } catch (Exception e) {
             // Handle validation errors and other exceptions
-            return Response.status(Response.Status.BAD_REQUEST)
-                .entity(new ImportResponse(false, e.getMessage(), 0))
-                .build();
+            AddResponse errorResponse = new AddResponse();
+            errorResponse.setError(e.getMessage());
+            return errorResponse;
         }
     }
 
@@ -214,10 +204,10 @@ public class CsvImportResource {
     public static class ImportResponse {
         /** Indicates whether the import operation was successful */
         public boolean success;
-        
+
         /** Human-readable message describing the result or errors */
         public String message;
-        
+
         /** Number of participants successfully imported */
         public int importedCount;
 
@@ -239,5 +229,29 @@ public class CsvImportResource {
             this.message = message;
             this.importedCount = importedCount;
         }
+    }
+
+    @Path("/subject")
+    @POST
+    @Consumes(MediaType.APPLICATION_JSON)
+    @RolesAllowed("elicit_importer")
+    @Transactional
+    public AddResponse importSubject(AddRequest request) {
+        AddResponse addResponse = null;
+        try {
+            addResponse = tokenService.putSubject(request);
+        } catch (Exception e) {
+            addResponse = new AddResponse();
+            addResponse.setError(e.getMessage());
+        }
+        return addResponse;
+    }
+
+    @Path("/test")
+    @GET
+    @RolesAllowed("elicit_importer")
+    @Produces(MediaType.TEXT_PLAIN)
+    public String test() {
+        return "Role elicit_importer test worked";
     }
 }
