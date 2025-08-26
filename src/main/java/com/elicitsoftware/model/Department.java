@@ -169,6 +169,42 @@ public class Department extends PanacheEntityBase {
     public String defaultMessageId;
 
     /**
+     * The email address that all emails for this department appear to be from.
+     *
+     * <p>This field specifies the "from" email address used in all outgoing
+     * communications related to this department, including survey invitations,
+     * reminders, and notifications.</p>
+     *
+     * <p><strong>Usage Guidelines:</strong></p>
+     * <ul>
+     *   <li>Should be a valid, monitored email address</li>
+     *   <li>Used for all departmental survey communications</li>
+     *   <li>Should reflect the department's identity</li>
+     *   <li>Required field - cannot be null</li>
+     * </ul>
+     */
+    @Column(name = "from_email", nullable = false, length = 50)
+    public String fromEmail;
+
+    /**
+     * Email addresses of people to notify when a respondent finishes.
+     *
+     * <p>A comma-separated list of email addresses that should receive
+     * notifications when survey respondents complete their surveys for
+     * this department.</p>
+     *
+     * <p><strong>Usage Guidelines:</strong></p>
+     * <ul>
+     *   <li>Multiple emails should be comma-separated</li>
+     *   <li>Used for completion notifications</li>
+     *   <li>Can be null if no notifications are needed</li>
+     *   <li>Should contain valid email addresses</li>
+     * </ul>
+     */
+    @Column(name = "notification_emails", length = 2000)
+    public String notificationEmails;
+
+    /**
      * Default constructor for JPA entity instantiation.
      * <p>
      * Creates a new Department instance with default values. This constructor
@@ -197,5 +233,86 @@ public class Department extends PanacheEntityBase {
      */
     public String getName() {
         return name;
+    }
+
+    /**
+     * Sets the display name of the department.
+     *
+     * @param name the department name to set
+     */
+    public void setName(String name) {
+        this.name = name;
+    }
+
+    /**
+     * Returns the department code.
+     *
+     * @return the department code, may be null if not set
+     */
+    public String getCode() {
+        return code;
+    }
+
+    /**
+     * Sets the department code.
+     *
+     * @param code the department code to set
+     */
+    public void setCode(String code) {
+        this.code = code;
+    }
+
+    /**
+     * Returns the default message ID.
+     *
+     * @return the default message ID, may be null if not set
+     */
+    public String getDefaultMessageId() {
+        return defaultMessageId;
+    }
+
+    /**
+     * Sets the default message ID.
+     *
+     * @param defaultMessageId the default message ID to set
+     */
+    public void setDefaultMessageId(String defaultMessageId) {
+        this.defaultMessageId = defaultMessageId;
+    }
+
+    /**
+     * Returns the from email address.
+     *
+     * @return the from email address, may be null if not set
+     */
+    public String getFromEmail() {
+        return fromEmail;
+    }
+
+    /**
+     * Sets the from email address.
+     *
+     * @param fromEmail the from email address to set
+     */
+    public void setFromEmail(String fromEmail) {
+        this.fromEmail = fromEmail;
+    }
+
+    /**
+     * Returns the notification emails.
+     *
+     * @return the notification emails as a comma-separated string, may be null if not set
+     */
+    public String getNotificationEmails() {
+        return notificationEmails;
+    }
+
+    /**
+     * Sets the notification emails.
+     *
+     * @param notificationEmails the notification emails as a comma-separated string to set
+     */
+    public void setNotificationEmails(String notificationEmails) {
+        this.notificationEmails = notificationEmails;
     }
 }
