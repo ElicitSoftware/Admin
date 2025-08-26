@@ -12,14 +12,16 @@ package com.elicitsoftware.service;
  */
 
 import com.elicitsoftware.exception.TokenGenerationError;
-import com.elicitsoftware.model.*;
+import com.elicitsoftware.model.Message;
+import com.elicitsoftware.model.Respondent;
+import com.elicitsoftware.model.Subject;
+import com.elicitsoftware.model.Survey;
 import com.elicitsoftware.request.AddRequest;
 import com.elicitsoftware.response.AddResponse;
 import com.elicitsoftware.util.RandomString;
 import io.quarkus.logging.Log;
 import jakarta.annotation.security.RolesAllowed;
 import jakarta.enterprise.context.ApplicationScoped;
-import jakarta.inject.Inject;
 import jakarta.transaction.Transactional;
 import jakarta.ws.rs.*;
 import jakarta.ws.rs.core.Context;
@@ -28,7 +30,6 @@ import jakarta.ws.rs.core.UriInfo;
 
 import java.security.SecureRandom;
 import java.util.ArrayList;
-import java.util.Date;
 
 /**
  * TokenService provides token-based authentication and subject management for surveys.
@@ -73,7 +74,7 @@ public class TokenService {
      */
     @Path("/add/subject")
     @POST
-//    @RolesAllowed({"elicit_token", "elicit_admin", "elicit_user"})
+    @RolesAllowed({"elicit_importer", "elicit_admin", "elicit_user"})
     @Consumes(MediaType.APPLICATION_JSON)
     @Produces(MediaType.APPLICATION_JSON)
     @Transactional
@@ -85,7 +86,7 @@ public class TokenService {
             subject.setRespondent(respondent);
             subject.persistAndFlush();
             ArrayList<Message> messages = Message.createMessagesForSubject(subject);
-            for(Message message : messages) {
+            for (Message message : messages) {
                 message.persistAndFlush();
             }
             response.setRespondentId(respondent.id);

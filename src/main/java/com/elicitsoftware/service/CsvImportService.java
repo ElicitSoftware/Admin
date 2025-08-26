@@ -11,7 +11,6 @@ package com.elicitsoftware.service;
  * ***LICENSE_END***
  */
 
-import com.elicitsoftware.model.User;
 import com.elicitsoftware.request.AddRequest;
 import com.elicitsoftware.response.AddResponse;
 import jakarta.enterprise.context.ApplicationScoped;
@@ -51,7 +50,7 @@ import java.util.List;
  * Field descriptions:
  * - **departmentId**: Integer ID of department (must be accessible by importing user)
  * - **firstName**: Required participant first name
- * - **lastName**: Required participant last name  
+ * - **lastName**: Required participant last name
  * - **middleName**: Optional middle name (may be empty)
  * - **dob**: Date of birth in yyyy-MM-dd or MM/dd/yyyy format
  * - **email**: Required email address
@@ -77,7 +76,7 @@ import java.util.List;
  * {@code
  * @Inject
  * CsvImportService csvImportService;
- * 
+ *
  * public void importParticipants(InputStream csvFile, User currentUser) {
  *     try {
  *         int successCount = csvImportService.importSubjects(csvFile, currentUser);
@@ -89,7 +88,7 @@ import java.util.List;
  * }
  * }
  * </pre>
- * 
+ *
  * @see AddRequest
  * @see AddResponse
  * @see TokenService
@@ -164,16 +163,15 @@ public class CsvImportService {
      * - Transaction rollback prevents partial imports
      *
      * @param csvInputStream The input stream containing CSV data to import
-//     * @param user The user performing the import (used for department permission validation)
+     *                       //     * @param user The user performing the import (used for department permission validation)
      * @return The number of successfully imported participants
      * @throws Exception If the import fails with aggregated error messages from all failed lines
-//     * @see #parseCsvLine(String, User)
+     *                   //     * @see #parseCsvLine(String, User)
      * @see #parseCsvLine(String)
      * @see #splitCsvLine(String)
      * @see TokenService#putSubject(AddRequest)
      */
     @Transactional
-//    public int importSubjects(InputStream csvInputStream, User user) throws Exception {
     public int importSubjects(InputStream csvInputStream) throws Exception {
         List<String> errors = new ArrayList<>();
         int successCount = 0;
@@ -196,7 +194,6 @@ public class CsvImportService {
                 }
 
                 try {
-//                    AddRequest request = parseCsvLine(line, user);
                     AddRequest request = parseCsvLine(line);
                     AddResponse response = tokenService.putSubject(request);
 
@@ -265,7 +262,7 @@ public class CsvImportService {
      * </pre>
      *
      * @param csvLine The CSV line to parse containing comma-separated participant data
-//     * @param user The user performing the import (used for department validation)
+     *                //     * @param user The user performing the import (used for department validation)
      * @return AddRequest object populated with validated participant data
      * @throws Exception If validation fails with descriptive error message indicating the specific problem
      * @see #splitCsvLine(String)
@@ -285,14 +282,6 @@ public class CsvImportService {
         try {
             // Parse department ID
             request.departmentId = Integer.parseInt(fields[0].trim());
-
-//            // Validate department belongs to user
-//            boolean validDepartment = user.getDepartments().stream()
-//                    .anyMatch(dept -> dept.id == request.departmentId);
-//
-//            if (!validDepartment) {
-//                throw new Exception("Invalid department ID: " + request.departmentId);
-//            }
 
             // Set survey ID (assuming survey ID 1 like in the original code)
             request.surveyId = 1;
@@ -368,7 +357,7 @@ public class CsvImportService {
      * <pre>
      * Input:  'John,Doe,"123 Main St, Apt 5",30'
      * Output: ["John", "Doe", "123 Main St, Apt 5", "30"]
-     * 
+     *
      * Input:  'Smith,"Jane ""JJ"" Middle",jsmith@email.com'
      * Output: ["Smith", "Jane \"JJ\" Middle", "jsmith@email.com"]
      * </pre>
@@ -385,7 +374,7 @@ public class CsvImportService {
      *
      * @param csvLine The CSV line to split into individual fields
      * @return String array containing the individual fields from the CSV line
-//     * @see #parseCsvLine(String, User)
+     * //     * @see #parseCsvLine(String, User)
      * @see #parseCsvLine(String)
      */
     private String[] splitCsvLine(String csvLine) {
