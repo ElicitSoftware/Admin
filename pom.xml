@@ -133,12 +133,6 @@
             <groupId>io.quarkus</groupId>
             <artifactId>quarkus-scheduler</artifactId>
         </dependency>
-        <!-- dev mail server -->
-<!--        <dependency>-->
-<!--            <groupId>io.quarkiverse.mailpit</groupId>-->
-<!--            <artifactId>quarkus-mailpit</artifactId>-->
-<!--            <version>1.6.4</version>-->
-<!--        </dependency>-->
         <!-- QR Codes -->
         <dependency>
             <groupId>com.google.zxing</groupId>
