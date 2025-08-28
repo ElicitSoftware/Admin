@@ -67,7 +67,7 @@ public class EditDepartmentView extends VerticalLayout implements BeforeEnterObs
     private EmailField fromEmailField = new EmailField("From Email");
     
     /** Text area for notification emails. */
-    private TextArea notificationEmailsField = new TextArea("Notification Emails");
+//    private TextArea notificationEmailsField = new TextArea("Notification Emails");
     
     /** Data binder for form validation and data binding. */
     private final Binder<Department> binder = new Binder<>(Department.class);
@@ -114,13 +114,14 @@ public class EditDepartmentView extends VerticalLayout implements BeforeEnterObs
         fromEmailField.setHelperText("Email address that appears as sender for department communications");
         fromEmailField.setWidth("300px");
         
-        notificationEmailsField.setHelperText("Comma-separated list of emails to notify when respondents finish surveys");
-        notificationEmailsField.setHeight("100px");
-        notificationEmailsField.setWidth("300px");
+//        notificationEmailsField.setHelperText("Comma-separated list of emails to notify when respondents finish surveys");
+//        notificationEmailsField.setHeight("100px");
+//        notificationEmailsField.setWidth("300px");
         
         // Add form fields to layout
-        add(nameField, codeField, defaultMessageIdField, fromEmailField, notificationEmailsField);
-        
+//        add(nameField, codeField, defaultMessageIdField, fromEmailField, notificationEmailsField);
+        add(nameField, codeField, defaultMessageIdField, fromEmailField);
+
         // Configure buttons
         saveBtn.addClickListener(e -> saveDepartment());
         cancelBtn.addClickListener(e -> cancelEdit());
@@ -176,10 +177,10 @@ public class EditDepartmentView extends VerticalLayout implements BeforeEnterObs
                 .bind("fromEmail");
         
         // Notification Emails validation (optional, max 2000 chars)
-        binder.forField(notificationEmailsField)
-                .withValidator(new StringLengthValidator(
-                        "Notification emails must be 2000 characters or less", 0, 2000))
-                .bind("notificationEmails");
+//        binder.forField(notificationEmailsField)
+//                .withValidator(new StringLengthValidator(
+//                        "Notification emails must be 2000 characters or less", 0, 2000))
+//                .bind("notificationEmails");
         
         // Enable/disable save button based on validation
         binder.addStatusChangeListener(event -> 

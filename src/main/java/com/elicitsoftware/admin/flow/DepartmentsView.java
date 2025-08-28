@@ -68,14 +68,15 @@ public class DepartmentsView extends VerticalLayout {
         grid.addColumn(Department::getCode).setHeader("Code").setSortable(true).setAutoWidth(true);
         grid.addColumn(Department::getDefaultMessageId).setHeader("Default Message ID").setSortable(true).setAutoWidth(true);
         grid.addColumn(Department::getFromEmail).setHeader("From Email").setSortable(true).setAutoWidth(true);
-        grid.addColumn(department -> {
-            String emails = department.getNotificationEmails();
-            if (emails == null || emails.trim().isEmpty()) {
-                return "(none)";
-            }
-            // Truncate long email lists for display
-            return emails.length() > 50 ? emails.substring(0, 47) + "..." : emails;
-        }).setHeader("Notification Emails").setSortable(true).setAutoWidth(true);
+        //To be uncommented after notification email system is in place.
+//        grid.addColumn(department -> {
+//            String emails = department.getNotificationEmails();
+//            if (emails == null || emails.trim().isEmpty()) {
+//                return "(none)";
+//            }
+//            // Truncate long email lists for display
+//            return emails.length() > 50 ? emails.substring(0, 47) + "..." : emails;
+//        }).setHeader("Notification Emails").setSortable(true).setAutoWidth(true);
 
         List<Department> departments = Department.findAll().list();
         grid.setItems(departments);
