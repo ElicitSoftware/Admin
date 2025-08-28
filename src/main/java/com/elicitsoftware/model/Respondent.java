@@ -136,7 +136,6 @@ public class Respondent extends PanacheEntityBase {
      *   <li><strong>Cleanup:</strong> Identify old, inactive respondent records</li>
      * </ul>
      */
-    @Temporal(TemporalType.TIMESTAMP)
     @Column(name = "created_dt")
     public Date createdDt = new Date();
 
@@ -153,7 +152,6 @@ public class Respondent extends PanacheEntityBase {
      *   <li><strong>timestamp:</strong> Respondent first accessed survey at this time</li>
      * </ul>
      */
-    @Temporal(TemporalType.TIMESTAMP)
     @Column(name = "first_access_dt")
     public Date firstAccessDt;
 
@@ -170,7 +168,6 @@ public class Respondent extends PanacheEntityBase {
      *   <li><strong>timestamp:</strong> Survey was completed at this time</li>
      * </ul>
      */
-    @Temporal(TemporalType.TIMESTAMP)
     @Column(name = "finalized_dt")
     public Date finalizedDt;
 

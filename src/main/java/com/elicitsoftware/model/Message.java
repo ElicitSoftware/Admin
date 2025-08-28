@@ -177,7 +177,6 @@ public class Message extends PanacheEntityBase {
      * <p><strong>Default Value:</strong> Current timestamp at object creation</p>
      */
     @Column(name = "created_dt", nullable = false)
-    @Temporal(TemporalType.TIMESTAMP)
     public Date createdDt = new Date();
 
     /**
@@ -197,7 +196,6 @@ public class Message extends PanacheEntityBase {
      * @see com.elicitsoftware.service.EmailService
      */
     @Column(name = "sent_dt")
-    @Temporal(TemporalType.TIMESTAMP)
     public Date sentDt;
 
     /**

@@ -151,7 +151,6 @@ public class Status extends PanacheEntityBase {
      * and demographic reporting purposes.</p>
      */
     @Column(name = "dob")
-    @Temporal(TemporalType.DATE)
     private Date dob;
 
     /**
@@ -222,7 +221,6 @@ public class Status extends PanacheEntityBase {
      * first registered or invited to participate in the survey.</p>
      */
     @Column(name = "CREATED_DT")
-    @Temporal(TemporalType.TIMESTAMP)
     public Date createdDt = new Date();
 
     /**
@@ -233,7 +231,6 @@ public class Status extends PanacheEntityBase {
      * the actual completion time when the survey is finalized.</p>
      */
     @Column(name = "finalized_dt")
-    @Temporal(TemporalType.TIMESTAMP)
     public Date finalizedDt = new Date();
 
     /**

@@ -115,31 +115,37 @@ public class Subject extends PanacheEntityBase {
      * Subject instance is created. Used for auditing and tracking when
      * participants were registered in the system.
      */
-    @Temporal(TemporalType.TIMESTAMP)
     @Column(name = "CREATED_DT")
     public Date createdDt = new Date();
+
     @Id
     @SequenceGenerator(name = "SUBJECTS_ID_GENERATOR", schema = "survey", sequenceName = "SUBJECTS_SEQ", allocationSize = 1)
     @GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "SUBJECTS_ID_GENERATOR")
     @Column(unique = true, nullable = false, precision = 20)
     private long id;
+
     @Column(name = "XID")
     private String xid;
+
     @NotNull
     @OneToOne(cascade = CascadeType.PERSIST)
     private Respondent respondent;
+
     @Column(name = "survey_id")
     @NotNull(message = "survey id must not be null")
     private long surveyId;
+
     @Column(name = "department_id")
     @NotNull(message = "Department id must not be null")
     private long departmentId;
+
     @Column(name = "firstName")
     @NotNull(message = "First name cannot be blank")
     @NotBlank
     @Size(max = 50,
             message = "First name max length 50 characters")
     private String firstName;
+
     @Column(name = "lastName")
     @NotNull(message = "Last name cannot be blank")
     @NotBlank
@@ -150,10 +156,11 @@ public class Subject extends PanacheEntityBase {
     @Size(max = 50,
             message = "Middle name max length 50 characters")
     private String middleName;
+
     @Column(name = "dob")
     @Past(message = "Date of birth must be in the past")
-    @Temporal(TemporalType.DATE)
     private LocalDate dob;
+
     @Column(name = "email")
     @Size(max = 255, message = "Max Email length 50 characters")
     @Email(message = "The email is invalid")
