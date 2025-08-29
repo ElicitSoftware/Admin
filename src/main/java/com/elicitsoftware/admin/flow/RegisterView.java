@@ -654,13 +654,25 @@ public class RegisterView extends HorizontalLayout implements HasDynamicTitle, B
         Div content = new Div();
 
         content.add(
-            new Paragraph("You can also add subjects programmatically using the REST API endpoint:"),
-
+            new Paragraph("You can also add subjects programmatically using the REST API endpoints"),
+            new Paragraph("You can post the csv file to:"),
             new H4("Endpoint:"),
-            new Pre("POST /secured/add/subject"),
+            new Pre("POST /import/subjects"),
 
             new H4("Authentication:"),
-            new Paragraph("Requires 'user' or 'token' role authorization"),
+            new Paragraph("Requires a Bearer token with the elicit_import role"),
+
+            new H4("Content-Type:"),
+            new Pre("multipart/form-data"),
+            new Pre("body: file = csv file"),
+
+
+            new Paragraph("Or post a single subject to:"),
+            new H4("Endpoint:"),
+            new Pre("POST /import/subject"),
+
+            new H4("Authentication:"),
+            new Paragraph("Requires a Bearer token with the elicit_import role"),
 
             new H4("Content-Type:"),
             new Pre("application/json"),
@@ -679,11 +691,35 @@ public class RegisterView extends HorizontalLayout implements HasDynamicTitle, B
                    "}"),
 
             new H4("Response Example:"),
-            new Pre("{\n" +
-                   "  \"respondentId\": 12345,\n" +
-                   "  \"token\": \"ABC123XYZ\",\n" +
-                   "  \"error\": null\n" +
-                   "}")
+            new Pre("""
+                    {
+                        "errors": [
+                        ],
+                        "subjects": [
+                            {
+                                "importStatus": "New Subject",
+                                "status": {
+                                    "created": "08/27/2025",
+                                    "createdDt": "2025-08-27T13:35:34.113Z[UTC]",
+                                    "departmentId": 1,
+                                    "departmentName": "Testing Department",
+                                    "dob": "1990-01-15Z",
+                                    "email": john.doe@email.com,
+                                    "firstName": "John",
+                                    "id": 4,
+                                    "lastName": "Doe",
+                                    "middleName": "Michael",
+                                    "phone": "123-456-7890",
+                                    "respondentId": 4,
+                                    "status": "Not Started",
+                                    "surveyId": 1,
+                                    "token": "8HDXV8k96",
+                                    "xid": "EXT124"
+                                }
+                            }
+                        ]
+                    }
+                    """)
         );
 
         return content;
