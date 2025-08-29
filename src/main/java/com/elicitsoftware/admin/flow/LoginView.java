@@ -105,16 +105,16 @@ public class LoginView extends VerticalLayout implements BeforeEnterObserver  {
         var session = VaadinRequest.getCurrent().getWrappedSession();
         // ViewAccessChecker saves the original route to session
         // restore that when we are returned form OIDC server
-//        String origView = (String) session.getAttribute(NavigationAccessControl.SESSION_STORED_REDIRECT);
-//        if (origView != null && !origView.isBlank()) {
-//            Log.debug("Redirecting to " + origView);
-//            event.forwardTo(origView.toString());
-//        } else {
+        String origView = (String) session.getAttribute(NavigationAccessControl.SESSION_STORED_REDIRECT);
+        if (origView != null && !origView.isBlank()) {
+            Log.debug("Redirecting to " + origView);
+            event.forwardTo(origView.toString());
+        } else {
             // This should never happen :-)
             // But happens if you manually enter login while already
             // logged in.
             Log.debug("Redirecting to /");
             event.forwardTo("/");
-//        }
+        }
     }
 }
