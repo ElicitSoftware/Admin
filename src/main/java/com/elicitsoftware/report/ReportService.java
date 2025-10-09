@@ -119,7 +119,7 @@ public interface ReportService {
      * @return ReportResponse containing the generated report in multiple formats
      *         (HTML for web display, PDF for download); never null but fields may be null
      * @throws jakarta.ws.rs.ProcessingException if network communication fails
-     * @throws jakarta.ws.rs.WebApplicationException if the service returns an error status
+     * @throws jakarta.ws.rs.WebApplicationException if the service returns an error status (including license validation errors)
      * @throws java.lang.IllegalArgumentException if the request is null or invalid
      * @see ReportRequest
      * @see ReportResponse
