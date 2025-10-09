@@ -18,6 +18,8 @@ import com.elicitsoftware.report.PDFService;
 import com.elicitsoftware.report.ReportRequest;
 import com.elicitsoftware.report.ReportResponse;
 import com.elicitsoftware.report.ReportService;
+import com.elicitsoftware.report.pdf.Content;
+import com.elicitsoftware.report.pdf.PDFDocument;
 import com.vaadin.flow.component.UI;
 import com.vaadin.flow.component.notification.Notification;
 import com.vaadin.flow.server.StreamResource;
@@ -253,9 +255,86 @@ public class ReportingService {
                     .build(ReportService.class);
             ReportResponse reportResponse = reportService.callReport(request);
             return reportResponse;
-        } catch (Exception e) {
+        } catch (jakarta.ws.rs.WebApplicationException e) {
+            // Handle license validation errors and other HTTP errors specifically
+            String errorMessage = "Service error: " + e.getMessage();
+            
+            // Try to extract more detailed error information
+            if (e.getResponse() != null) {
+                int status = e.getResponse().getStatus();
+                
+                // Try to read the response entity if it exists and hasn't been consumed
+                if (e.getResponse().hasEntity()) {
+                    try {
+                        String responseBody = e.getResponse().readEntity(String.class);
+                        if (responseBody != null && !responseBody.trim().isEmpty()) {
+                            errorMessage = responseBody;
+                        }
+                    } catch (Exception readException) {
+                        // Response may have already been consumed, fall back to status-based message
+                        if (status == 403) {
+                            errorMessage = "Access forbidden - License validation may have failed. Please check your license configuration.";
+                        } else {
+                            errorMessage = "Service error (HTTP " + status + "): " + e.getMessage();
+                        }
+                    }
+                } else {
+                    // No response entity, provide status-based error message
+                    if (status == 403) {
+                        errorMessage = "Access forbidden - License validation may have failed. Please check your license configuration.";
+                    } else {
+                        errorMessage = "Service error (HTTP " + status + "): " + e.getMessage();
+                    }
+                }
+            }
+            
+            // Check if the exception message contains clues about license validation
+            if (e.getMessage() != null && e.getMessage().toLowerCase().contains("forbidden")) {
+                if (!errorMessage.toLowerCase().contains("license")) {
+                    errorMessage = "License validation failed - " + errorMessage;
+                }
+            }
+            
             ReportResponse reportResponse = new ReportResponse();
-            reportResponse.innerHTML = e.getMessage();
+            reportResponse.title = "Error - " + rpt.name;
+            reportResponse.innerHTML = "<div style='color: red; padding: 20px; border: 1px solid red; background-color: #ffe6e6;'>" +
+                    "<h3>Report Generation Error</h3>" +
+                    "<p><strong>Service:</strong> " + rpt.name + "</p>" +
+                    "<p><strong>Error:</strong> " + errorMessage + "</p>" +
+                    "<p><em>If this is a license error, please ensure your PREMM5 license is valid and properly configured.</em></p>" +
+                    "</div>";
+
+            PDFDocument pdf = new PDFDocument();
+            pdf.title = "Error - " + rpt.name;
+            Content[] content = new Content[1];
+            Content body = new Content();
+            // Remove newlines and other control characters that might cause PDF encoding issues
+            String cleanErrorMessage = errorMessage.replaceAll("[\\r\\n\\t]", " ").trim();
+            body.text = "Report Generation Error - Service: " + rpt.name + " - Error: " + cleanErrorMessage + " - If this is a license error, please ensure your PREMM5 license is valid and properly configured.";
+            content[0] = body;
+            pdf.content = content;
+            reportResponse.pdf = pdf;
+            return reportResponse;
+        } catch (Exception e) {
+            // Handle other exceptions (network issues, URI parsing, etc.)
+            ReportResponse reportResponse = new ReportResponse();
+            reportResponse.title = "Error - " + rpt.name;
+            reportResponse.innerHTML = "<div style='color: red; padding: 20px; border: 1px solid red; background-color: #ffe6e6;'>" +
+                    "<h3>Report Generation Error</h3>" +
+                    "<p><strong>Service:</strong> " + rpt.name + "</p>" +
+                    "<p><strong>Error:</strong> " + e.getMessage() + "</p>" +
+                    "</div>";
+
+            PDFDocument pdf = new PDFDocument();
+            pdf.title = "Error - " + rpt.name;
+            Content[] content = new Content[1];
+            Content body = new Content();
+            // Remove newlines and other control characters that might cause PDF encoding issues
+            String cleanErrorMessage = (e.getMessage() != null ? e.getMessage() : "Unknown error").replaceAll("[\\r\\n\\t]", " ").trim();
+            body.text = "Report Generation Error - Service: " + rpt.name + " - Error: " + cleanErrorMessage;
+            content[0] = body;
+            pdf.content = content;
+            reportResponse.pdf = pdf;
             return reportResponse;
         }
     }
