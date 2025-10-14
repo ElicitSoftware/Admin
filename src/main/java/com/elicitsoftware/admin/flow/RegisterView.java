@@ -24,7 +24,6 @@ import com.vaadin.flow.component.dialog.Dialog;
 import com.vaadin.flow.component.formlayout.FormLayout;
 import com.vaadin.flow.component.html.*;
 import com.vaadin.flow.component.notification.Notification;
-import com.vaadin.flow.component.orderedlayout.FlexComponent;
 import com.vaadin.flow.component.orderedlayout.HorizontalLayout;
 import com.vaadin.flow.component.orderedlayout.VerticalLayout;
 import com.vaadin.flow.component.textfield.EmailField;
@@ -42,10 +41,12 @@ import io.quarkus.security.identity.SecurityIdentity;
 import jakarta.annotation.PostConstruct;
 import jakarta.annotation.security.RolesAllowed;
 import jakarta.inject.Inject;
+import jakarta.persistence.PersistenceException;
 import jakarta.transaction.Transactional;
 
 import java.time.LocalDate;
 import java.util.ArrayList;
+import java.util.List;
 import java.util.Optional;
 
 /**
@@ -86,46 +87,66 @@ import java.util.Optional;
  *
  * @author Elicit Software
  * @version 1.0
- * @since 1.0
  * @see Subject
  * @see CsvImportService
  * @see TokenService
+ * @since 1.0
  */
 @Route(value = "register", layout = MainLayout.class)
-@RolesAllowed({"elicit_admin","elicit_user"})
+@RolesAllowed({"elicit_admin", "elicit_user"})
 public class RegisterView extends HorizontalLayout implements HasDynamicTitle, BeforeEnterObserver {
 
-    /** Injected service for handling user session and authentication. */
+    /**
+     * Injected service for handling user session and authentication.
+     */
     @Inject
     UiSessionLogin uiSessionLogin;
 
-    /** Injected service for generating and managing survey tokens. */
+    /**
+     * Injected service for generating and managing survey tokens.
+     */
     @Inject
     TokenService tokenService;
 
-    /** Security identity for user authentication and role checking. */
+    /**
+     * Security identity for user authentication and role checking.
+     */
     @Inject
     SecurityIdentity identity;
 
-    /** The current authenticated user. */
+    /**
+     * The current authenticated user.
+     */
     private User user;
 
-    /** The subject entity being registered or updated. */
+    /**
+     * The subject entity being registered or updated.
+     */
     private Subject subject = new Subject();
 
-    /** Data binder for form validation and data binding. */
+    /**
+     * Data binder for form validation and data binding.
+     */
     private Binder<Subject> binder;
 
-    /** Button for saving new subjects. */
+    /**
+     * Button for saving new subjects.
+     */
     private Button saveButton;
 
-    /** Button for updating existing subjects. */
+    /**
+     * Button for updating existing subjects.
+     */
     private Button updateButton;
 
-    /** Left column layout containing the registration form. */
+    /**
+     * Left column layout containing the registration form.
+     */
     private VerticalLayout leftLayout = new VerticalLayout();
 
-    /** Right column layout containing CSV upload and documentation. */
+    /**
+     * Right column layout containing CSV upload and documentation.
+     */
     private VerticalLayout rightLayout = new VerticalLayout();
 
     /**
@@ -243,7 +264,7 @@ public class RegisterView extends HorizontalLayout implements HasDynamicTitle, B
                 .bind("middleName");
 
         binder.forField(dob)
-                .withValidator(date -> date == null || date.isBefore(java.time.LocalDate.now()), "DOB must be in the past")
+                .withValidator(date -> date == null || date.isBefore(LocalDate.now()), "DOB must be in the past")
                 .bind(
                         s -> s.getDob() == null ? null : s.getDob(),
                         (s, value) -> s.setDob(value == null ? null : LocalDate.from(value))
@@ -267,7 +288,7 @@ public class RegisterView extends HorizontalLayout implements HasDynamicTitle, B
         saveButton = new Button("Save", event -> {
             try {
                 saveSubject(binder);
-            } catch (jakarta.persistence.PersistenceException e) {
+            } catch (PersistenceException e) {
                 Notification.show("Duplicate entry: A subject with this External ID " + subject.getXid() + " already exists for this department.", 5000, Notification.Position.MIDDLE);
                 subject = new Subject();
             } catch (Exception e) {
@@ -307,7 +328,7 @@ public class RegisterView extends HorizontalLayout implements HasDynamicTitle, B
         csvUpload.addSucceededListener(event -> {
             try {
                 CsvImportService importService = new CsvImportService(tokenService);
-                AddResponse response =  importService.importSubjects(buffer.getInputStream());
+                AddResponse response = importService.importSubjects(buffer.getInputStream());
                 showSuccessDialog("CSV Import Success", "Successfully imported subjects:\n\n" + response.toString());
             } catch (Exception e) {
                 showErrorDialog("CSV Import Error", e.getMessage());
@@ -361,8 +382,8 @@ public class RegisterView extends HorizontalLayout implements HasDynamicTitle, B
     @Override
     public void beforeEnter(BeforeEnterEvent event) {
         // Authorization is now handled by @RolesAllowed annotation
-        
-        Optional<String> tokenOpt = event.getLocation().getQueryParameters().getParameters().getOrDefault("token", java.util.List.of()).stream().findFirst();
+
+        Optional<String> tokenOpt = event.getLocation().getQueryParameters().getParameters().getOrDefault("token", List.of()).stream().findFirst();
         if (tokenOpt.isPresent()) {
             String token = tokenOpt.get();
             // Fetch the subject by token (implement this in your StatusDataSource or Subject repository)
@@ -420,21 +441,36 @@ public class RegisterView extends HorizontalLayout implements HasDynamicTitle, B
      * allowing for specific error handling for duplicate external IDs within departments.</p>
      *
      * @param binder the data binder containing form validation and data mapping
-     * @throws ValidationException if form validation fails
+     * @throws ValidationException  if form validation fails
      * @throws TokenGenerationError if token creation fails
-     * @throws jakarta.persistence.PersistenceException if database constraints are violated
+     * @throws PersistenceException if database constraints are violated
      */
     @Transactional
-    public void saveSubject(Binder<Subject> binder) throws ValidationException, TokenGenerationError, jakarta.persistence.PersistenceException {
+    public void saveSubject(Binder<Subject> binder) throws ValidationException, TokenGenerationError, PersistenceException {
         try {
+            // Write form values to subject first to get current values
             binder.writeBean(subject);
+            
+            boolean isExluded = ExcludedXid.isExcluded(this.subject.getXid(), (int) this.subject.getDepartmentId());
+            if (isExluded) {
+                // Find the department name from the user's departments by ID
+                String departmentName = user.getDepartments().stream()
+                    .filter(dept -> dept.id == this.subject.getDepartmentId())
+                    .map(Department::getName)
+                    .findFirst()
+                    .orElse("Unknown");
+                    
+                Notification.show("External id " + this.subject.getXid() + " is in the exclude list for department " + departmentName, 3000, Notification.Position.MIDDLE);
+                return; // Exit early if excluded
+            }
+            
             Respondent respondent = tokenService.getToken(1);
             subject.setRespondent(respondent);
             subject.setSurveyId(respondent.survey.id);
             // Optionally, flush to force exception now:
             subject.persistAndFlush();
             ArrayList<Message> messages = Message.createMessagesForSubject(subject);
-            for(Message message : messages) {
+            for (Message message : messages) {
                 message.persistAndFlush();
             }
             Notification.show("Subject saved", 3000, Notification.Position.MIDDLE);
@@ -473,7 +509,7 @@ public class RegisterView extends HorizontalLayout implements HasDynamicTitle, B
      * @throws ValidationException if form validation fails
      */
     @Transactional
-    public void updateSubject(Binder<Subject> binder) throws ValidationException{
+    public void updateSubject(Binder<Subject> binder) throws ValidationException {
         try {
             binder.writeBean(subject);
             subject = Subject.getEntityManager().merge(subject);
@@ -548,11 +584,12 @@ public class RegisterView extends HorizontalLayout implements HasDynamicTitle, B
 
         // Create CSV Structure Accordion
         Details csvDetails = new Details("CSV File Structure", createCsvStructureContent());
-        csvDetails.setOpened(false); // Collapsed by default
+        csvDetails.setOpened(false); // Open by default so users can see the format
 
         div.add(
-            new Paragraph("You can register subjects individually using the form, a rest API, or upload a CSV file with multiple subjects."),
-            csvDetails
+                new Paragraph("You can register subjects individually using the form, a rest API, or upload a CSV file with multiple subjects."),
+                new Paragraph("Click below to see the required CSV file format and examples:"),
+                csvDetails
         );
 
         return div;
@@ -589,31 +626,31 @@ public class RegisterView extends HorizontalLayout implements HasDynamicTitle, B
         Div content = new Div();
 
         content.add(
-            new Paragraph("The CSV file should contain the following columns in order:"),
-            new Paragraph("#departmentId, firstName, lastName, middleName, dob, email, phone, xid"),
-            new Paragraph("All rows starting with a '#' character are considered comments and will be ignored."),
+                new Paragraph("The CSV file should contain the following columns in order:"),
+                new Paragraph("#departmentId, firstName, lastName, middleName, dob, email, phone, xid"),
+                new Paragraph("All rows starting with a '#' character are considered comments and will be ignored."),
 
-            new H4("Column Descriptions:"),
-            new Div() {{
-                getElement().setProperty("innerHTML",
-                    "<ul>" +
-                    "<li><strong>departmentId:</strong> Integer (required) - Must be a valid department ID for the user</li>" +
-                    "<li><strong>firstName:</strong> String (required) - Subject's first name</li>" +
-                    "<li><strong>lastName:</strong> String (required) - Subject's last name</li>" +
-                    "<li><strong>middleName:</strong> String (optional) - Subject's middle name</li>" +
-                    "<li><strong>dob:</strong> Date (optional) - Date of birth in yyyy-MM-dd or MM/dd/yyyy format</li>" +
-                    "<li><strong>email:</strong> String (required) - Valid email address</li>" +
-                    "<li><strong>phone:</strong> String (optional) - Phone number in ###-###-#### format</li>" +
-                    "<li><strong>xid:</strong> String (optional) - External ID for the subject</li>" +
-                    "</ul>"
-                );
-            }},
+                new H4("Column Descriptions:"),
+                new Div() {{
+                    getElement().setProperty("innerHTML",
+                            "<ul>" +
+                                    "<li><strong>departmentId:</strong> Integer (required) - Must be a valid department ID for the user</li>" +
+                                    "<li><strong>firstName:</strong> String (required) - Subject's first name</li>" +
+                                    "<li><strong>lastName:</strong> String (required) - Subject's last name</li>" +
+                                    "<li><strong>middleName:</strong> String (optional) - Subject's middle name</li>" +
+                                    "<li><strong>dob:</strong> Date (optional) - Date of birth in yyyy-MM-dd or MM/dd/yyyy format</li>" +
+                                    "<li><strong>email:</strong> String (required) - Valid email address</li>" +
+                                    "<li><strong>phone:</strong> String (optional) - Phone number in ###-###-#### format</li>" +
+                                    "<li><strong>xid:</strong> String (optional) - External ID for the subject</li>" +
+                                    "</ul>"
+                    );
+                }},
 
-            new H4("Example CSV data:"),
-            new Pre("#departmentId,firstName,lastName,middleName,dob,email,phone,xid\n" +
-                   "1,John,Doe,Michael,1990-01-15,john.doe@email.com,123-456-7890,EXT001\n" +
-                   "2,Jane,Smith,,1985-03-22,jane.smith@email.com,555-123-4567,EXT002\n" +
-                   "1,Bob,Johnson,Robert,12/10/1992,bob.johnson@email.com,999-888-7777,EXT003")
+                new H4("Example CSV data:"),
+                new Pre("#departmentId,firstName,lastName,middleName,dob,email,phone,xid\n" +
+                        "1,John,Doe,Michael,1990-01-15,john.doe@email.com,123-456-7890,EXT001\n" +
+                        "2,Jane,Smith,,1985-03-22,jane.smith@email.com,555-123-4567,EXT002\n" +
+                        "1,Bob,Johnson,Robert,12/10/1992,bob.johnson@email.com,999-888-7777,EXT003")
         );
 
         return content;
@@ -654,72 +691,148 @@ public class RegisterView extends HorizontalLayout implements HasDynamicTitle, B
         Div content = new Div();
 
         content.add(
-            new Paragraph("You can also add subjects programmatically using the REST API endpoints"),
-            new Paragraph("You can post the csv file to:"),
-            new H4("Endpoint:"),
-            new Pre("POST /import/subjects"),
+                new Paragraph("You can also add subjects programmatically using the REST API endpoints"),
+                
+                new H3("1. Single Subject Registration"),
+                new H4("Endpoint:"),
+                new Pre("POST /api/secured/add/subject"),
 
-            new H4("Authentication:"),
-            new Paragraph("Requires a Bearer token with the elicit_import role"),
+                new H4("Authentication:"),
+                new Paragraph("Requires a Bearer token with elicit_admin, elicit_user, or elicit_importer role"),
 
-            new H4("Content-Type:"),
-            new Pre("multipart/form-data"),
-            new Pre("body: file = csv file"),
+                new H4("Content-Type:"),
+                new Pre("application/json"),
 
+                new H4("Request Body Example:"),
+                new Pre("{\n" +
+                        "  \"surveyId\": 1,\n" +
+                        "  \"departmentId\": 1,\n" +
+                        "  \"firstName\": \"John\",\n" +
+                        "  \"lastName\": \"Doe\",\n" +
+                        "  \"middleName\": \"Michael\",\n" +
+                        "  \"dob\": \"1990-01-15\",\n" +
+                        "  \"email\": \"john.doe@email.com\",\n" +
+                        "  \"phone\": \"123-456-7890\",\n" +
+                        "  \"xid\": \"EXT001\"\n" +
+                        "}"),
 
-            new Paragraph("Or post a single subject to:"),
-            new H4("Endpoint:"),
-            new Pre("POST /import/subject"),
+                new H3("2. Bulk Subject Registration"),
+                new H4("Endpoint:"),
+                new Pre("POST /api/secured/add/subjects"),
 
-            new H4("Authentication:"),
-            new Paragraph("Requires a Bearer token with the elicit_import role"),
+                new H4("Authentication:"),
+                new Paragraph("Requires a Bearer token with elicit_admin, elicit_user, or elicit_importer role"),
 
-            new H4("Content-Type:"),
-            new Pre("application/json"),
+                new H4("Content-Type:"),
+                new Pre("application/json"),
 
-            new H4("Request Body Example:"),
-            new Pre("{\n" +
-                   "  \"surveyId\": 1,\n" +
-                   "  \"departmentId\": 1,\n" +
-                   "  \"firstName\": \"John\",\n" +
-                   "  \"lastName\": \"Doe\",\n" +
-                   "  \"middleName\": \"Michael\",\n" +
-                   "  \"dob\": \"1990-01-15\",\n" +
-                   "  \"email\": \"john.doe@email.com\",\n" +
-                   "  \"phone\": \"123-456-7890\",\n" +
-                   "  \"xid\": \"EXT001\"\n" +
-                   "}"),
+                new H4("Request Body Example (Array of Subjects):"),
+                new Pre("[\n" +
+                        "  {\n" +
+                        "    \"surveyId\": 1,\n" +
+                        "    \"departmentId\": 1,\n" +
+                        "    \"firstName\": \"John\",\n" +
+                        "    \"lastName\": \"Doe\",\n" +
+                        "    \"middleName\": \"Michael\",\n" +
+                        "    \"dob\": \"1990-01-15\",\n" +
+                        "    \"email\": \"john.doe@email.com\",\n" +
+                        "    \"phone\": \"123-456-7890\",\n" +
+                        "    \"xid\": \"EXT001\"\n" +
+                        "  },\n" +
+                        "  {\n" +
+                        "    \"surveyId\": 1,\n" +
+                        "    \"departmentId\": 1,\n" +
+                        "    \"firstName\": \"Jane\",\n" +
+                        "    \"lastName\": \"Smith\",\n" +
+                        "    \"email\": \"jane.smith@email.com\",\n" +
+                        "    \"xid\": \"EXT002\"\n" +
+                        "  }\n" +
+                        "]"),
 
-            new H4("Response Example:"),
-            new Pre("""
-                    {
-                        "errors": [
-                        ],
-                        "subjects": [
-                            {
-                                "importStatus": "New Subject",
-                                "status": {
-                                    "created": "08/27/2025",
-                                    "createdDt": "2025-08-27T13:35:34.113Z[UTC]",
-                                    "departmentId": 1,
-                                    "departmentName": "Testing Department",
-                                    "dob": "1990-01-15Z",
-                                    "email": john.doe@email.com,
-                                    "firstName": "John",
-                                    "id": 4,
-                                    "lastName": "Doe",
-                                    "middleName": "Michael",
-                                    "phone": "123-456-7890",
-                                    "respondentId": 4,
-                                    "status": "Not Started",
-                                    "surveyId": 1,
-                                    "token": "8HDXV8k96",
-                                    "xid": "EXT124"
+                new H3("3. CSV File Upload (REST API)"),
+                new H4("Endpoint:"),
+                new Pre("POST /api/secured/add/csv"),
+
+                new H4("Authentication:"),
+                new Paragraph("Requires a Bearer token with elicit_importer role"),
+
+                new H4("Content-Type:"),
+                new Pre("multipart/form-data"),
+
+                new H4("Request Body:"),
+                new Paragraph("Form field 'file' containing CSV file with subject data"),
+
+                new H4("CSV File Format:"),
+                new Paragraph("The CSV file should contain the following columns in order:"),
+                new Pre("departmentId,firstName,lastName,middleName,dob,email,phone,xid"),
+                
+                new Paragraph("Column Requirements:"),
+                new Pre("• departmentId: Integer (required) - Valid department ID\n" +
+                        "• firstName: String (required) - Subject's first name\n" +
+                        "• lastName: String (required) - Subject's last name\n" +
+                        "• middleName: String (optional) - Subject's middle name\n" +
+                        "• dob: Date (optional) - Format: yyyy-MM-dd or MM/dd/yyyy\n" +
+                        "• email: String (required) - Valid email address\n" +
+                        "• phone: String (optional) - Format: ###-###-####\n" +
+                        "• xid: String (optional) - External ID for the subject"),
+
+                new H4("CSV Example:"),
+                new Pre("departmentId,firstName,lastName,middleName,dob,email,phone,xid\n" +
+                        "1,John,Doe,Michael,1990-01-15,john.doe@email.com,123-456-7890,EXT001\n" +
+                        "2,Jane,Smith,,1985-03-22,jane.smith@email.com,555-123-4567,EXT002"),
+
+                new H3("4. CSV File Upload (Web Interface)"),
+                new Paragraph("You can also upload a CSV file using the upload component above in the web interface."),
+
+                new H3("Response Format (All Endpoints)"),
+
+                new H4("Response Example (Single Subject):"),
+                new Pre("""
+                        {
+                            "statuses": [
+                                {
+                                    "status": {
+                                        "id": 123,
+                                        "xid": "EXT001",
+                                        "departmentId": 1,
+                                        "surveyId": 1,
+                                        "firstName": "John",
+                                        "lastName": "Doe",
+                                        "email": "john.doe@email.com",
+                                        "token": "ABC123DEF",
+                                        "created": "2025-10-13"
+                                    },
+                                    "message": "New Subject"
                                 }
-                            }
-                        ]
-                    }
-                    """)
+                            ]
+                        }
+                        """),
+
+                new H4("Response Example (Bulk Subjects):"),
+                new Pre("""
+                        {
+                            "statuses": [
+                                {
+                                    "status": {...},
+                                    "message": "New Subject: EXT001"
+                                },
+                                {
+                                    "status": {...},
+                                    "message": "Existing Subject: EXT002"
+                                },
+                                {
+                                    "status": {...},
+                                    "message": "Excluded Subject: EXT003"
+                                }
+                            ]
+                        }
+                        """),
+
+                new H4("Important Notes:"),
+                new Paragraph("• XID Exclusion: Subjects with XIDs in the exclusion list will not be created"),
+                new Paragraph("• Duplicate Detection: Existing subjects (same XID + department) will be identified"),
+                new Paragraph("• Individual Processing: In bulk requests, each subject is processed independently"),
+                new Paragraph("• Authentication: All endpoints require valid Bearer token authentication")
         );
 
         return content;
@@ -727,12 +840,12 @@ public class RegisterView extends HorizontalLayout implements HasDynamicTitle, B
 
     /**
      * Displays an error dialog with proper formatting for line breaks and detailed error messages.
-     * 
+     *
      * <p>This method creates a modal dialog that can properly display multi-line error messages,
      * including formatted toString() output from response objects. The dialog uses pre-wrap
      * white-space styling to preserve line breaks and formatting.</p>
-     * 
-     * @param title the title to display in the dialog header
+     *
+     * @param title   the title to display in the dialog header
      * @param message the error message to display, which may contain line breaks
      */
     private void showErrorDialog(String title, String message) {
@@ -746,7 +859,7 @@ public class RegisterView extends HorizontalLayout implements HasDynamicTitle, B
         closeButton.getStyle().set("margin-top", "20px");
 
         VerticalLayout dialogLayout = new VerticalLayout(errorMessage, closeButton);
-        dialogLayout.setAlignItems(FlexComponent.Alignment.CENTER);
+        dialogLayout.setAlignItems(Alignment.CENTER);
         dialogLayout.setSpacing(true);
 
         errorDialog.add(dialogLayout);
@@ -761,12 +874,12 @@ public class RegisterView extends HorizontalLayout implements HasDynamicTitle, B
 
     /**
      * Displays a success dialog with proper formatting for line breaks and detailed success messages.
-     * 
+     *
      * <p>This method creates a modal dialog that can properly display multi-line success messages,
      * including formatted toString() output from response objects. The dialog uses pre-wrap
      * white-space styling to preserve line breaks and formatting.</p>
-     * 
-     * @param title the title to display in the dialog header
+     *
+     * @param title   the title to display in the dialog header
      * @param message the success message to display, which may contain line breaks
      */
     private void showSuccessDialog(String title, String message) {
@@ -781,7 +894,7 @@ public class RegisterView extends HorizontalLayout implements HasDynamicTitle, B
         closeButton.getStyle().set("margin-top", "20px");
 
         VerticalLayout dialogLayout = new VerticalLayout(successMessage, closeButton);
-        dialogLayout.setAlignItems(FlexComponent.Alignment.CENTER);
+        dialogLayout.setAlignItems(Alignment.CENTER);
         dialogLayout.setSpacing(true);
 
         successDialog.add(dialogLayout);

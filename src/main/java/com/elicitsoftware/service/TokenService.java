@@ -11,15 +11,18 @@ package com.elicitsoftware.service;
  * ***LICENSE_END***
  */
 
+import com.elicitsoftware.admin.upload.MultipartBody;
 import com.elicitsoftware.exception.TokenGenerationError;
 import com.elicitsoftware.model.*;
 import com.elicitsoftware.request.AddRequest;
 import com.elicitsoftware.response.AddResponse;
 import com.elicitsoftware.response.AddResponseStatus;
+import com.elicitsoftware.service.CsvImportService;
 import com.elicitsoftware.util.RandomString;
 import io.quarkus.logging.Log;
 import jakarta.annotation.security.RolesAllowed;
 import jakarta.enterprise.context.ApplicationScoped;
+import jakarta.inject.Inject;
 import jakarta.transaction.Transactional;
 import jakarta.ws.rs.*;
 import jakarta.ws.rs.core.Context;
@@ -28,6 +31,7 @@ import jakarta.ws.rs.core.UriInfo;
 
 import java.security.SecureRandom;
 import java.util.ArrayList;
+import java.util.List;
 
 /**
  * TokenService provides token-based authentication and subject management for surveys.
@@ -42,6 +46,15 @@ import java.util.ArrayList;
 @Path("/secured")
 @ApplicationScoped
 public class TokenService {
+
+    /**
+     * CSV import service for processing participant data from uploaded files.
+     * <p>
+     * This service handles the core business logic for parsing CSV files,
+     * validating participant data, and creating participant records in the database.
+     */
+    @Inject
+    CsvImportService csvImportService;
 
     @Context
     private UriInfo uriInfo;
@@ -80,26 +93,119 @@ public class TokenService {
         AddResponse response = new AddResponse();
         AddResponseStatus addStatus;
         try {
-            Status status = Status.findByXidAndDepartmentId(request.xid, request.departmentId);
-            if (status == null) {
-                Respondent respondent = getToken(request.surveyId);
-                Subject subject = new Subject(request.xid, request.surveyId, request.departmentId, request.firstName, request.lastName, request.middleName, request.dob, request.email, request.phone);
-                subject.setRespondent(respondent);
-                subject.persistAndFlush();
-                ArrayList<Message> messages = Message.createMessagesForSubject(subject);
-                for (Message message : messages) {
-                    message.persistAndFlush();
+            // Check if this xid and department should be exluded.
+            boolean isExluded = ExcludedXid.isExcluded(request.xid, request.departmentId);
+            if (isExluded) {
+                Status status = new Status();
+                addStatus = new AddResponseStatus(status, "Exluded Subject");
+            } else {
+                // Check if they are an existing respondent.
+                Status status = Status.findByXidAndDepartmentId(request.xid, request.departmentId);
+                if (status == null) {
+                    Respondent respondent = getToken(request.surveyId);
+                    Subject subject = new Subject(request.xid, request.surveyId, request.departmentId, request.firstName, request.lastName, request.middleName, request.dob, request.email, request.phone);
+                    subject.setRespondent(respondent);
+                    subject.persistAndFlush();
+                    ArrayList<Message> messages = Message.createMessagesForSubject(subject);
+                    for (Message message : messages) {
+                        message.persistAndFlush();
+                    }
+                    status = Status.findByXidAndDepartmentId(request.xid, request.departmentId);
+                    addStatus = new AddResponseStatus(status, "New Subject");
+                } else {
+                    addStatus = new AddResponseStatus(status, "Existing Subject");
                 }
-                status = Status.findByXidAndDepartmentId(request.xid, request.departmentId);
-                addStatus = new AddResponseStatus(status, "New Subject");
-            } else{
-                addStatus = new AddResponseStatus(status, "Existing Subject");
             }
             response.addStatus(addStatus);
 
         } catch (TokenGenerationError e) {
             response.setError(e.getMessage());
         }
+        return response;
+    }
+
+    /**
+     * Adds multiple subjects to the survey system in bulk and generates authentication tokens.
+     * <p>
+     * Processes an array of subject registration requests, creating subject records
+     * and generating secure authentication tokens for each valid subject. This method
+     * provides bulk processing capabilities with individual error handling for each subject.
+     *
+     * <p><strong>Processing Logic:</strong></p>
+     * <ul>
+     *   <li><strong>Exclusion Check:</strong> Validates each XID against the exclusion list</li>
+     *   <li><strong>Duplicate Detection:</strong> Checks for existing subjects before creation</li>
+     *   <li><strong>Token Generation:</strong> Creates unique tokens for new subjects</li>
+     *   <li><strong>Message Creation:</strong> Generates communication messages for each subject</li>
+     *   <li><strong>Individual Handling:</strong> Each subject is processed independently</li>
+     * </ul>
+     *
+     * <p><strong>Response Structure:</strong></p>
+     * <ul>
+     *   <li>Contains an array of {@link AddResponseStatus} objects</li>
+     *   <li>Each status corresponds to one input subject request</li>
+     *   <li>Includes success/failure status and descriptive messages</li>
+     *   <li>Failed subjects don't prevent processing of other subjects</li>
+     * </ul>
+     *
+     * @param requests array of subject registration requests containing demographic data
+     * @return AddResponse containing status for each subject (success, exclusion, existing, or error)
+     */
+    @Path("/add/subjects")
+    @POST
+    @RolesAllowed({"elicit_importer", "elicit_admin", "elicit_user"})
+    @Consumes(MediaType.APPLICATION_JSON)
+    @Produces(MediaType.APPLICATION_JSON)
+    @Transactional
+    public AddResponse putSubjects(List<AddRequest> requests) {
+        AddResponse response = new AddResponse();
+        
+        // Process each subject request individually
+        for (AddRequest request : requests) {
+            AddResponseStatus addStatus;
+            try {
+                // Check if this xid and department should be excluded
+                boolean isExcluded = ExcludedXid.isExcluded(request.xid, request.departmentId);
+                if (isExcluded) {
+                    Status status = new Status();
+                    addStatus = new AddResponseStatus(status, "Excluded Subject: " + request.xid);
+                } else {
+                    // Check if they are an existing respondent
+                    Status status = Status.findByXidAndDepartmentId(request.xid, request.departmentId);
+                    if (status == null) {
+                        // Create new subject
+                        Respondent respondent = getToken(request.surveyId);
+                        Subject subject = new Subject(request.xid, request.surveyId, request.departmentId, 
+                                                    request.firstName, request.lastName, request.middleName, 
+                                                    request.dob, request.email, request.phone);
+                        subject.setRespondent(respondent);
+                        subject.persistAndFlush();
+                        
+                        // Create messages for the new subject
+                        ArrayList<Message> messages = Message.createMessagesForSubject(subject);
+                        for (Message message : messages) {
+                            message.persistAndFlush();
+                        }
+                        
+                        status = Status.findByXidAndDepartmentId(request.xid, request.departmentId);
+                        addStatus = new AddResponseStatus(status, "New Subject: " + request.xid);
+                    } else {
+                        addStatus = new AddResponseStatus(status, "Existing Subject: " + request.xid);
+                    }
+                }
+            } catch (TokenGenerationError e) {
+                // Create error status for this individual subject
+                Status errorStatus = new Status();
+                addStatus = new AddResponseStatus(errorStatus, "Error processing " + request.xid + ": " + e.getMessage());
+            } catch (Exception e) {
+                // Handle any other unexpected errors for this subject
+                Status errorStatus = new Status();
+                addStatus = new AddResponseStatus(errorStatus, "Unexpected error processing " + request.xid + ": " + e.getMessage());
+            }
+            
+            response.addStatus(addStatus);
+        }
+        
         return response;
     }
 
@@ -142,6 +248,95 @@ public class TokenService {
         throw new TokenGenerationError("Unable to generate a unique token");
     }
 
+    /**
+     * Imports participant data from an uploaded CSV file.
+     *
+     * <p>This endpoint accepts multipart/form-data uploads containing CSV files with
+     * participant information. It performs comprehensive validation, authentication,
+     * and authorization checks before processing the import.</p>
+     *
+     * <p><strong>Processing Workflow:</strong></p>
+     * <ol>
+     *   <li><strong>Authentication Check:</strong> Verifies valid OIDC token</li>
+     *   <li><strong>User Lookup:</strong> Finds active user in database</li>
+     *   <li><strong>File Validation:</strong> Ensures CSV file is provided</li>
+     *   <li><strong>Import Processing:</strong> Delegates to CsvImportService</li>
+     *   <li><strong>Response Generation:</strong> Returns success count or errors</li>
+     * </ol>
+     *
+     * <p><strong>Input Requirements:</strong></p>
+     * <ul>
+     *   <li><strong>Authentication:</strong> Valid Bearer token in Authorization header</li>
+     *   <li><strong>Content-Type:</strong> multipart/form-data</li>
+     *   <li><strong>File Parameter:</strong> "file" field containing CSV data</li>
+     *   <li><strong>User Status:</strong> Active user account in system</li>
+     * </ul>
+     *
+     * <p><strong>CSV Format:</strong></p>
+     * <pre>
+     * departmentId,firstName,lastName,middleName,dob,email,phone,xid
+     * 1,John,Doe,Michael,1990-01-15,john.doe@email.com,123-456-7890,EXT001
+     * 2,Jane,Smith,,1985-03-22,jane.smith@email.com,555-123-4567,EXT002
+     * </pre>
+     *
+     * <p><strong>Success Response Example:</strong></p>
+     * <pre>{@code
+     * {
+     *   "success": true,
+     *   "message": "Successfully imported 15 participants",
+     *   "importedCount": 15
+     * }
+     * }</pre>
+     *
+     * <p><strong>Error Response Example:</strong></p>
+     * <pre>{@code
+     * {
+     *   "success": false,
+     *   "message": "Import completed with errors:\nLine 3: Invalid department ID: 999\nLine 7: Email is required",
+     *   "importedCount": 0
+     * }
+     * }</pre>
+     *
+     * <p><strong>Error Scenarios:</strong></p>
+     * <ul>
+     *   <li><strong>Authentication Failure:</strong> Invalid or missing token (401)</li>
+     *   <li><strong>Authorization Failure:</strong> Insufficient permissions (403)</li>
+     *   <li><strong>User Not Found:</strong> Authenticated user not in database (403)</li>
+     *   <li><strong>Missing File:</strong> No CSV file provided (400)</li>
+     *   <li><strong>Validation Errors:</strong> CSV format or data validation failures (400)</li>
+     *   <li><strong>System Errors:</strong> Database or service failures (500)</li>
+     * </ul>
+     *
+     * @param multipartBody the multipart form data containing the CSV file and metadata
+     * @return Response with import results or error information
+    //     * @see CsvImportService#importSubjects(java.io.InputStream, User)
+     * @see CsvImportService#importSubjects(java.io.InputStream)
+     * @see MultipartBody
+     */
+    @Path("/add/csv")
+    @POST
+    @Consumes(MediaType.MULTIPART_FORM_DATA)
+    @RolesAllowed("elicit_importer")
+    @Transactional
+    public AddResponse importCsv(MultipartBody multipartBody) {
+        try {
+            // Validate that a file was provided
+            if (multipartBody.file == null) {
+                AddResponse errorResponse = new AddResponse();
+                errorResponse.setError("No CSV file provided in the 'file' field");
+                return errorResponse;
+            }
+            // Process the CSV import
+            AddResponse response = csvImportService.importSubjects(multipartBody.file);
+            return response;
+
+        } catch (Exception e) {
+            // Handle validation errors and other exceptions
+            AddResponse errorResponse = new AddResponse();
+            errorResponse.setError(e.getMessage());
+            return errorResponse;
+        }
+    }
     /**
      * Simple test endpoint to verify service availability.
      * <p>
