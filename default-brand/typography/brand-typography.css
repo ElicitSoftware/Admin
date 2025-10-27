@@ -1,0 +1,52 @@
+/* Elicit Admin - Default Typography */
+/* Uses system font stack for optimal performance and compatibility */
+
+@import url('./font-declarations.css');
+
+:root {
+  /* Font Family Definitions */
+  --brand-font-primary: -apple-system, BlinkMacSystemFont, "Roboto", "Segoe UI", Helvetica, Arial, sans-serif;
+  --brand-font-secondary: var(--brand-font-primary);
+  --brand-font-heading: var(--brand-font-primary);
+  --brand-font-body: var(--brand-font-primary);
+  --brand-font-monospace: "SF Mono", "Monaco", "Inconsolata", "Roboto Mono", "Consolas", "Courier New", monospace;
+  
+  /* Font Weights */
+  --brand-font-weight-light: 300;
+  --brand-font-weight-normal: 400;
+  --brand-font-weight-medium: 500;
+  --brand-font-weight-semibold: 600;
+  --brand-font-weight-bold: 700;
+  
+  /* Font Sizes */
+  --brand-font-size-xs: 0.75rem;    /* 12px */
+  --brand-font-size-sm: 0.875rem;   /* 14px */
+  --brand-font-size-base: 1rem;     /* 16px */
+  --brand-font-size-lg: 1.125rem;   /* 18px */
+  --brand-font-size-xl: 1.25rem;    /* 20px */
+  --brand-font-size-2xl: 1.5rem;    /* 24px */
+  --brand-font-size-3xl: 1.875rem;  /* 30px */
+  --brand-font-size-4xl: 2.25rem;   /* 36px */
+  
+  /* Line Heights */
+  --brand-line-height-tight: 1.25;
+  --brand-line-height-normal: 1.5;
+  --brand-line-height-relaxed: 1.75;
+}
+
+/* Apply brand typography to common elements */
+body {
+  font-family: var(--brand-font-body);
+  font-weight: var(--brand-font-weight-normal);
+  line-height: var(--brand-line-height-normal);
+}
+
+h1, h2, h3, h4, h5, h6 {
+  font-family: var(--brand-font-heading);
+  font-weight: var(--brand-font-weight-semibold);
+  line-height: var(--brand-line-height-tight);
+}
+
+code, pre {
+  font-family: var(--brand-font-monospace);
+}

@@ -1,0 +1,34 @@
+/* Elicit Admin - Default Brand Theme */
+/* Integrates brand colors and typography with Vaadin Lumo theme */
+
+@import url('./colors/brand-colors.css');
+@import url('./typography/brand-typography.css');
+
+/* Brand-specific customizations for Admin application */
+:root {
+  /* Admin-specific brand variables can be defined here */
+  --admin-sidebar-bg: var(--brand-surface);
+  --admin-header-bg: var(--brand-primary);
+  --admin-content-bg: var(--brand-background);
+}
+
+/* Admin application specific styling */
+.admin-layout {
+  background-color: var(--admin-content-bg);
+}
+
+.admin-sidebar {
+  background-color: var(--admin-sidebar-bg);
+  border-right: 1px solid var(--brand-border);
+}
+
+.admin-header {
+  background-color: var(--admin-header-bg);
+  color: var(--brand-primary-contrast);
+}
+
+/* Ensure proper integration with Vaadin components */
+vaadin-app-layout[theme~="admin"] {
+  --lumo-base-color: var(--brand-base);
+  --lumo-primary-color: var(--brand-primary);
+}

@@ -1,0 +1,16 @@
+/* Font Declarations for Elicit Admin Default Brand */
+/* System font stack - no additional font loading required */
+
+/* This file exists for consistency with brand architecture */
+/* External brands may use this file to declare custom web fonts */
+
+/* Example font declaration (commented out for system fonts):
+@font-face {
+  font-family: 'BrandFont';
+  src: url('../fonts/BrandFont-Regular.woff2') format('woff2'),
+       url('../fonts/BrandFont-Regular.woff') format('woff');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+*/

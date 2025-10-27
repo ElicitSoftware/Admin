@@ -1,0 +1,42 @@
+{
+  "brand": {
+    "name": "Elicit Admin Application",
+    "version": "1.0.0",
+    "description": "Typography configuration for Elicit Admin Application"
+  },
+  "typography": {
+    "primary": {
+      "name": "System Font Stack",
+      "family": "system-ui",
+      "fallback": ["-apple-system", "BlinkMacSystemFont", "Segoe UI", "Roboto", "Oxygen", "Ubuntu", "Cantarell", "sans-serif"],
+      "weight": "normal",
+      "style": "normal",
+      "display": "swap"
+    },
+    "secondary": {
+      "name": "System UI",
+      "family": "system-ui",
+      "fallback": ["sans-serif"],
+      "weight": "normal",
+      "style": "normal",
+      "display": "swap"
+    }
+  },
+  "styles": {
+    "body": {
+      "fontFamily": "system-ui",
+      "fontSize": "16px",
+      "lineHeight": "1.5"
+    },
+    "heading": {
+      "fontFamily": "system-ui",
+      "fontSize": "32px",
+      "fontWeight": "400",
+      "textAlign": "start",
+      "textTransform": "none",
+      "lineHeight": "1.6em",
+      "letterSpacing": "normal",
+      "fontStyle": "normal"
+    }
+  }
+}

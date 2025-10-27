@@ -15,7 +15,9 @@ import java.util.List;
 
 import com.elicitsoftware.model.Department;
 import com.vaadin.flow.component.button.Button;
+import com.vaadin.flow.component.button.ButtonVariant;
 import com.vaadin.flow.component.grid.Grid;
+import com.vaadin.flow.component.grid.GridVariant;
 import com.vaadin.flow.component.icon.Icon;
 import com.vaadin.flow.component.icon.VaadinIcon;
 import com.vaadin.flow.component.orderedlayout.HorizontalLayout;
@@ -58,6 +60,7 @@ public class DepartmentsView extends VerticalLayout {
        Grid<Department> grid = new Grid<>(Department.class, false);
         grid.addComponentColumn(department -> {
             Button editBtn = new Button(new Icon(VaadinIcon.EDIT));
+            editBtn.addThemeVariants(ButtonVariant.LUMO_ICON);
             editBtn.addClickListener(e ->
                 editDepartment(department.id)
             );
@@ -80,9 +83,11 @@ public class DepartmentsView extends VerticalLayout {
 
         List<Department> departments = Department.findAll().list();
         grid.setItems(departments);
+        grid.addThemeVariants(GridVariant.LUMO_ROW_STRIPES, GridVariant.LUMO_COMPACT);
         Button newDepartmentButton = new Button("New Department", event ->
             getUI().ifPresent(ui -> ui.navigate("edit-department/0"))
         );
+        newDepartmentButton.addThemeVariants(ButtonVariant.LUMO_PRIMARY);
 
         add(grid);
         add(new HorizontalLayout(newDepartmentButton));

@@ -13,7 +13,9 @@ package com.elicitsoftware.admin.flow;
 
 import com.elicitsoftware.model.MessageTemplate;
 import com.vaadin.flow.component.button.Button;
+import com.vaadin.flow.component.button.ButtonVariant;
 import com.vaadin.flow.component.grid.Grid;
+import com.vaadin.flow.component.grid.GridVariant;
 import com.vaadin.flow.component.icon.Icon;
 import com.vaadin.flow.component.icon.VaadinIcon;
 import com.vaadin.flow.component.orderedlayout.VerticalLayout;
@@ -96,6 +98,7 @@ public class MessageTemplatesView extends VerticalLayout {
 
         grid.addComponentColumn(template -> {
             Button editBtn = new Button(new Icon(VaadinIcon.EDIT));
+            editBtn.addThemeVariants(ButtonVariant.LUMO_ICON);
             editBtn.addClickListener(e ->
                     editTemplate(template)
             );
@@ -106,12 +109,14 @@ public class MessageTemplatesView extends VerticalLayout {
         grid.addColumn(template -> template.department.name).setHeader("Department").setSortable(true).setAutoWidth(true);
         grid.addColumn(template -> template.subject).setHeader("Subject").setSortable(true).setAutoWidth(true);
         grid.addColumn(template -> template.mimeType).setHeader("MIME Type").setSortable(true).setAutoWidth(true);
+        grid.addThemeVariants(GridVariant.LUMO_ROW_STRIPES, GridVariant.LUMO_COMPACT);
 
         add(grid);
 
         Button addBtn = new Button("New Message Template", e -> {
             editTemplate(new MessageTemplate());
         });
+        addBtn.addThemeVariants(ButtonVariant.LUMO_PRIMARY);
         add(addBtn);
     }
 
