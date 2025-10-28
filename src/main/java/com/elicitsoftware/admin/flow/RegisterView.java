@@ -17,9 +17,13 @@ import com.elicitsoftware.response.AddResponse;
 import com.elicitsoftware.service.CsvImportService;
 import com.elicitsoftware.service.TokenService;
 import com.vaadin.flow.component.button.Button;
+import com.vaadin.flow.component.button.ButtonVariant;
 import com.vaadin.flow.component.combobox.ComboBox;
+import com.vaadin.flow.component.combobox.ComboBoxVariant;
 import com.vaadin.flow.component.datepicker.DatePicker;
+import com.vaadin.flow.component.datepicker.DatePickerVariant;
 import com.vaadin.flow.component.details.Details;
+import com.vaadin.flow.component.details.DetailsVariant;
 import com.vaadin.flow.component.dialog.Dialog;
 import com.vaadin.flow.component.formlayout.FormLayout;
 import com.vaadin.flow.component.html.*;
@@ -28,8 +32,9 @@ import com.vaadin.flow.component.orderedlayout.HorizontalLayout;
 import com.vaadin.flow.component.orderedlayout.VerticalLayout;
 import com.vaadin.flow.component.textfield.EmailField;
 import com.vaadin.flow.component.textfield.TextField;
+import com.vaadin.flow.component.textfield.TextFieldVariant;
 import com.vaadin.flow.component.upload.Upload;
-import com.vaadin.flow.component.upload.receivers.MemoryBuffer;
+import com.vaadin.flow.server.streams.UploadHandler;
 import com.vaadin.flow.data.binder.Binder;
 import com.vaadin.flow.data.binder.ValidationException;
 import com.vaadin.flow.data.validator.EmailValidator;
@@ -43,6 +48,7 @@ import jakarta.annotation.security.RolesAllowed;
 import jakarta.inject.Inject;
 import jakarta.persistence.PersistenceException;
 import jakarta.transaction.Transactional;
+import java.io.InputStream;
 
 import java.time.LocalDate;
 import java.util.ArrayList;
@@ -218,13 +224,19 @@ public class RegisterView extends HorizontalLayout implements HasDynamicTitle, B
         }
 
         TextField firstName = new TextField("First Name");
+        firstName.addThemeVariants(TextFieldVariant.LUMO_SMALL);
         TextField lastName = new TextField("Last Name");
+        lastName.addThemeVariants(TextFieldVariant.LUMO_SMALL);
         TextField middleName = new TextField("Middle Name");
+        middleName.addThemeVariants(TextFieldVariant.LUMO_SMALL);
         DatePicker dob = new DatePicker("Date of Birth");
+        dob.addThemeVariants(DatePickerVariant.LUMO_SMALL);
         EmailField email = new EmailField("Email");
         TextField phone = new TextField("Phone");
         phone.setPlaceholder("123-456-7890");
+        phone.addThemeVariants(TextFieldVariant.LUMO_SMALL);
         TextField xid = new TextField("external ID");
+        xid.addThemeVariants(TextFieldVariant.LUMO_SMALL);
 
         formLayout.add(departmentComboBox, firstName, lastName, middleName, dob, email, phone, xid);
 
@@ -296,6 +308,7 @@ public class RegisterView extends HorizontalLayout implements HasDynamicTitle, B
                 subject = new Subject();
             }
         });
+        saveButton.addThemeVariants(ButtonVariant.LUMO_PRIMARY);
 
         updateButton = new Button("Update Subject", event -> {
             try {
@@ -306,6 +319,7 @@ public class RegisterView extends HorizontalLayout implements HasDynamicTitle, B
                 showErrorDialog("Database Error", "Database error: " + e.getMessage());
             }
         });
+        updateButton.addThemeVariants(ButtonVariant.LUMO_PRIMARY);
 
         // By default, show only saveButton
         saveButton.setVisible(true);
@@ -317,26 +331,31 @@ public class RegisterView extends HorizontalLayout implements HasDynamicTitle, B
         leftLayout.setWidth("50%");
         rightLayout.setWidth("50%");
 
-        // Create CSV upload button
-        MemoryBuffer buffer = new MemoryBuffer();
-        Upload csvUpload = new Upload(buffer);
+        // Create CSV upload button using modern UploadHandler API
+        Upload csvUpload = new Upload();
         csvUpload.setAcceptedFileTypes(".csv");
         csvUpload.setMaxFiles(1);
         csvUpload.setMaxFileSize(5 * 1024 * 1024); // 5MB limit
-        csvUpload.setUploadButton(new Button("Upload CSV"));
+        
+        Button uploadButton = new Button("Upload CSV");
+        uploadButton.addThemeVariants(ButtonVariant.LUMO_PRIMARY);
+        csvUpload.setUploadButton(uploadButton);
 
-        csvUpload.addSucceededListener(event -> {
+        // Use modern InMemoryUploadHandler instead of deprecated MemoryBuffer
+        csvUpload.setUploadHandler(UploadHandler.inMemory((metadata, data) -> {
             try {
                 CsvImportService importService = new CsvImportService(tokenService);
-                AddResponse response = importService.importSubjects(buffer.getInputStream());
+                InputStream inputStream = new java.io.ByteArrayInputStream(data);
+                AddResponse response = importService.importSubjects(inputStream);
                 showSuccessDialog("CSV Import Success", "Successfully imported subjects:\n\n" + response.toString());
             } catch (Exception e) {
                 showErrorDialog("CSV Import Error", e.getMessage());
             }
-        });
+        }));
 
         // Create REST API instructions accordion
         Details restApiDetails = new Details("REST API Instructions", createRestApiContent());
+        restApiDetails.addThemeVariants(DetailsVariant.FILLED);
         restApiDetails.setOpened(false);
 
         rightLayout.add(getRestfulInstructionsDiv(), csvUpload, restApiDetails);
@@ -560,6 +579,7 @@ public class RegisterView extends HorizontalLayout implements HasDynamicTitle, B
         ComboBox<Department> departmentComboBox = new ComboBox<>("Deparments");
         departmentComboBox.setItems(user.getDepartments());
         departmentComboBox.setItemLabelGenerator(Department::getName);
+        departmentComboBox.addThemeVariants(ComboBoxVariant.LUMO_SMALL);
         return departmentComboBox;
     }
 
@@ -584,6 +604,7 @@ public class RegisterView extends HorizontalLayout implements HasDynamicTitle, B
 
         // Create CSV Structure Accordion
         Details csvDetails = new Details("CSV File Structure", createCsvStructureContent());
+        csvDetails.addThemeVariants(DetailsVariant.FILLED);
         csvDetails.setOpened(false); // Open by default so users can see the format
 
         div.add(
@@ -856,6 +877,7 @@ public class RegisterView extends HorizontalLayout implements HasDynamicTitle, B
         errorMessage.getStyle().set("white-space", "pre-wrap");
 
         Button closeButton = new Button("Close", evt -> errorDialog.close());
+        closeButton.addThemeVariants(ButtonVariant.LUMO_PRIMARY);
         closeButton.getStyle().set("margin-top", "20px");
 
         VerticalLayout dialogLayout = new VerticalLayout(errorMessage, closeButton);
@@ -891,6 +913,7 @@ public class RegisterView extends HorizontalLayout implements HasDynamicTitle, B
         successMessage.getStyle().set("color", "green");
 
         Button closeButton = new Button("Close", evt -> successDialog.close());
+        closeButton.addThemeVariants(ButtonVariant.LUMO_PRIMARY);
         closeButton.getStyle().set("margin-top", "20px");
 
         VerticalLayout dialogLayout = new VerticalLayout(successMessage, closeButton);

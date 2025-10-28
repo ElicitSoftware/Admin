@@ -13,12 +13,14 @@ package com.elicitsoftware.admin.flow;
 
 import com.elicitsoftware.model.Department;
 import com.vaadin.flow.component.button.Button;
+import com.vaadin.flow.component.button.ButtonVariant;
 import com.vaadin.flow.component.notification.Notification;
 import com.vaadin.flow.component.orderedlayout.HorizontalLayout;
 import com.vaadin.flow.component.orderedlayout.VerticalLayout;
 import com.vaadin.flow.component.textfield.EmailField;
 import com.vaadin.flow.component.textfield.TextArea;
 import com.vaadin.flow.component.textfield.TextField;
+import com.vaadin.flow.component.textfield.TextFieldVariant;
 import com.vaadin.flow.data.binder.Binder;
 import com.vaadin.flow.data.binder.ValidationException;
 import com.vaadin.flow.data.validator.EmailValidator;
@@ -99,15 +101,18 @@ public class EditDepartmentView extends VerticalLayout implements BeforeEnterObs
         nameField.setRequired(true);
         nameField.setRequiredIndicatorVisible(true);
         nameField.setWidth("300px");
+        nameField.addThemeVariants(TextFieldVariant.LUMO_SMALL);
         
         codeField.setHelperText("Short abbreviation for the department (e.g., 'CARD', 'HR')");
         codeField.setWidth("300px");
+        codeField.addThemeVariants(TextFieldVariant.LUMO_SMALL);
         
         defaultMessageIdField.setRequired(true);
         defaultMessageIdField.setRequiredIndicatorVisible(true);
         defaultMessageIdField.setValue("1"); // Default value
         defaultMessageIdField.setHelperText("Default message template ID");
         defaultMessageIdField.setWidth("300px");
+        defaultMessageIdField.addThemeVariants(TextFieldVariant.LUMO_SMALL);
         
         fromEmailField.setRequired(true);
         fromEmailField.setRequiredIndicatorVisible(true);
@@ -124,7 +129,10 @@ public class EditDepartmentView extends VerticalLayout implements BeforeEnterObs
 
         // Configure buttons
         saveBtn.addClickListener(e -> saveDepartment());
+        saveBtn.addThemeVariants(ButtonVariant.LUMO_PRIMARY);
+        
         cancelBtn.addClickListener(e -> cancelEdit());
+        cancelBtn.addThemeVariants(ButtonVariant.LUMO_TERTIARY);
         
         // Button layout
         HorizontalLayout buttonLayout = new HorizontalLayout(saveBtn, cancelBtn);

@@ -13,7 +13,9 @@ package com.elicitsoftware.admin.flow;
 
 import com.elicitsoftware.model.User;
 import com.vaadin.flow.component.button.Button;
+import com.vaadin.flow.component.button.ButtonVariant;
 import com.vaadin.flow.component.grid.Grid;
+import com.vaadin.flow.component.grid.GridVariant;
 import com.vaadin.flow.component.html.Paragraph;
 import com.vaadin.flow.component.icon.Icon;
 import com.vaadin.flow.component.icon.VaadinIcon;
@@ -140,6 +142,7 @@ public class UsersView extends VerticalLayout {
     private void configureGrid() {
         userGrid.addComponentColumn(user -> {
             Button editBtn = new Button(new Icon(VaadinIcon.EDIT));
+            editBtn.addThemeVariants(ButtonVariant.LUMO_ICON);
             editBtn.addClickListener(e ->
                     editUser(user.getId())
             );
@@ -161,6 +164,7 @@ public class UsersView extends VerticalLayout {
 
         userGrid.setMultiSort(true);
         userGrid.setWidthFull();
+        userGrid.addThemeVariants(GridVariant.LUMO_ROW_STRIPES, GridVariant.LUMO_COMPACT);
     }
 
     /**
@@ -234,6 +238,7 @@ public class UsersView extends VerticalLayout {
      */
     private HorizontalLayout createFooter() {
         Button addUserBtn = new Button("Add User", e -> addUser());
+        addUserBtn.addThemeVariants(ButtonVariant.LUMO_PRIMARY);
         return new HorizontalLayout(addUserBtn);
     }
 

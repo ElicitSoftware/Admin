@@ -23,8 +23,11 @@ import com.vaadin.flow.component.UI;
 import com.vaadin.flow.component.button.Button;
 import com.vaadin.flow.component.button.ButtonVariant;
 import com.vaadin.flow.component.combobox.ComboBox;
+import com.vaadin.flow.component.combobox.ComboBoxVariant;
 import com.vaadin.flow.component.combobox.MultiSelectComboBox;
+import com.vaadin.flow.component.combobox.MultiSelectComboBoxVariant;
 import com.vaadin.flow.component.grid.Grid;
+import com.vaadin.flow.component.grid.GridVariant;
 import com.vaadin.flow.component.grid.HeaderRow;
 import com.vaadin.flow.component.html.Div;
 import com.vaadin.flow.component.html.H5;
@@ -35,6 +38,7 @@ import com.vaadin.flow.component.orderedlayout.FlexComponent;
 import com.vaadin.flow.component.orderedlayout.HorizontalLayout;
 import com.vaadin.flow.component.orderedlayout.VerticalLayout;
 import com.vaadin.flow.component.textfield.TextField;
+import com.vaadin.flow.component.textfield.TextFieldVariant;
 import com.vaadin.flow.data.provider.DataProvider;
 import com.vaadin.flow.data.provider.QuerySortOrder;
 import com.vaadin.flow.router.HasDynamicTitle;
@@ -298,21 +302,27 @@ class SearchView extends VerticalLayout implements HasDynamicTitle, BeforeEnterO
         searchBar.add(departmentComboBox);
 
         tokenField = new TextField("Token");
+        tokenField.addThemeVariants(TextFieldVariant.LUMO_SMALL);
         searchBar.add(tokenField);
 
         firstNameField = new TextField("First name");
+        firstNameField.addThemeVariants(TextFieldVariant.LUMO_SMALL);
         searchBar.add(firstNameField);
 
         lastNameField = new TextField("Last name");
+        lastNameField.addThemeVariants(TextFieldVariant.LUMO_SMALL);
         searchBar.add(lastNameField);
 
         emailField = new TextField("Email");
+        emailField.addThemeVariants(TextFieldVariant.LUMO_SMALL);
         searchBar.add(emailField);
 
         phoneField = new TextField("Phone");
+        phoneField.addThemeVariants(TextFieldVariant.LUMO_SMALL);
         searchBar.add(phoneField);
 
         Button searchButton = new Button("Search");
+        searchButton.addThemeVariants(ButtonVariant.LUMO_PRIMARY);
         searchButton.addClickListener(e -> {
             paginationControls.resetToFirstPage();
             pagingDataProvider.refreshAll(); // This will use the latest getStatusSQL() for filtering
@@ -360,6 +370,7 @@ class SearchView extends VerticalLayout implements HasDynamicTitle, BeforeEnterO
     private MultiSelectComboBox<Department> getDepartmentComboBox() {
 
         MultiSelectComboBox<Department> departmentComboBox = new MultiSelectComboBox<>("Deparment(s)");
+        departmentComboBox.addThemeVariants(MultiSelectComboBoxVariant.LUMO_SMALL);
 
         // Create "All Departments" entry
         Department allDepartments = new Department();
@@ -453,6 +464,7 @@ class SearchView extends VerticalLayout implements HasDynamicTitle, BeforeEnterO
         subjectGrid.addColumn(Status::getCreated).setHeader("Created").setSortable(true).setSortProperty("createdDt");
         subjectGrid.addColumn(Status::getStatus).setHeader("Status").setSortable(true).setSortProperty("status");
         subjectGrid.setMultiSort(true, Grid.MultiSortPriority.APPEND);
+        subjectGrid.addThemeVariants(GridVariant.LUMO_ROW_STRIPES, GridVariant.LUMO_COMPACT);
         HeaderRow headerRow = subjectGrid.appendHeaderRow();
 
         // --- Add edit icon column ---
@@ -477,6 +489,7 @@ class SearchView extends VerticalLayout implements HasDynamicTitle, BeforeEnterO
             actionComboBox.setItems("Send Email", "Print Reports");
             actionComboBox.setPlaceholder("Select action");
             actionComboBox.setWidth("120px");
+            actionComboBox.addThemeVariants(ComboBoxVariant.LUMO_SMALL);
 
             // Enable/disable "Print Reports" based on status
             if (!"Finished".equals(status.getStatus())) {

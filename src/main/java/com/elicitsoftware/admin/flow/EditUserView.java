@@ -14,12 +14,15 @@ package com.elicitsoftware.admin.flow;
 import com.elicitsoftware.model.Department;
 import com.elicitsoftware.model.User;
 import com.vaadin.flow.component.button.Button;
+import com.vaadin.flow.component.button.ButtonVariant;
 import com.vaadin.flow.component.checkbox.Checkbox;
 import com.vaadin.flow.component.combobox.MultiSelectComboBox;
+import com.vaadin.flow.component.combobox.MultiSelectComboBoxVariant;
 import com.vaadin.flow.component.notification.Notification;
 import com.vaadin.flow.component.orderedlayout.HorizontalLayout;
 import com.vaadin.flow.component.orderedlayout.VerticalLayout;
 import com.vaadin.flow.component.textfield.TextField;
+import com.vaadin.flow.component.textfield.TextFieldVariant;
 import com.vaadin.flow.router.BeforeEnterEvent;
 import com.vaadin.flow.router.BeforeEnterObserver;
 import com.vaadin.flow.router.Route;
@@ -91,14 +94,22 @@ public class EditUserView extends VerticalLayout implements BeforeEnterObserver 
      * and is populated with all departments from the database.</p>
      */
     public EditUserView() {
+        username.addThemeVariants(TextFieldVariant.LUMO_SMALL);
+        firstName.addThemeVariants(TextFieldVariant.LUMO_SMALL);
+        lastName.addThemeVariants(TextFieldVariant.LUMO_SMALL);
+        
         departmentsBox.setItemLabelGenerator(Department::getName);
+        departmentsBox.addThemeVariants(MultiSelectComboBoxVariant.LUMO_SMALL);
         List<Department> allDepartments = Department.findAll().list();
         departmentsBox.setItems(allDepartments);
 
         add(username, firstName, lastName, activeCheckbox, departmentsBox);
 
         Button saveBtn = new Button("Save", e -> saveUser());
+        saveBtn.addThemeVariants(ButtonVariant.LUMO_PRIMARY);
+        
         Button cancelBtn = new Button("Cancel", e -> cancelEdit());
+        cancelBtn.addThemeVariants(ButtonVariant.LUMO_TERTIARY);
 
         add(new HorizontalLayout(saveBtn, cancelBtn));
     }

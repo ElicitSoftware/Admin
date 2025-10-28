@@ -11,11 +11,14 @@ package com.elicitsoftware.admin.flow;
  * ***LICENSE_END***
  */
 
+import com.elicitsoftware.admin.util.BrandUtil;
 import com.elicitsoftware.model.User;
 import com.vaadin.flow.component.AttachEvent;
 import com.vaadin.flow.component.applayout.AppLayout;
 import com.vaadin.flow.component.applayout.DrawerToggle;
 import com.vaadin.flow.component.html.Anchor;
+import com.vaadin.flow.component.html.Div;
+import com.vaadin.flow.component.html.Image;
 import com.vaadin.flow.component.icon.VaadinIcon;
 import com.vaadin.flow.component.sidenav.SideNav;
 import com.vaadin.flow.component.sidenav.SideNavItem;
@@ -124,24 +127,53 @@ public class MainLayout extends AppLayout implements AfterNavigationListener {
     }
 
     /**
-     * Creates and configures the application header section.
+     * Creates and configures the application header section with brand-aware styling.
      *
-     * <p>The header contains:</p>
+     * <p>This method creates a branded header that adapts to the current brand configuration,
+     * including appropriate logos, colors, and styling. The header contains:</p>
      * <ul>
      *   <li><strong>Drawer toggle:</strong> Button to open/close the navigation drawer</li>
+     *   <li><strong>Brand logo:</strong> Organization logo (if available)</li>
      *   <li><strong>Application title:</strong> Clickable link that navigates to the home page</li>
      * </ul>
      *
-     * <p>The title is styled with enhanced font size and spacing for visual prominence.
-     * The title text is retrieved from the internationalization system using the
-     * "software.name" key, ensuring proper localization support.</p>
+     * <p>The header adapts to different brands (um-brand, test-brand, default-brand)
+     * with appropriate styling and branding elements.</p>
      */
     private void createHeader() {
+        // Detect current brand
+        BrandUtil.BrandInfo brandInfo = BrandUtil.detectCurrentBrand();
+        
+        // Create header container with brand-specific CSS class
+        Div headerContainer = new Div();
+        headerContainer.addClassNames("branded-header", brandInfo.getCssClass());
+        
+        // Create drawer toggle
         DrawerToggle toggle = new DrawerToggle();
-        Anchor title = new Anchor("/", getTranslation("software.name"));
-        title.getStyle().set("font-size", "var(--lumo-font-size-l)")
-                .set("margin", "20");
-        addToNavbar(toggle, title);
+        headerContainer.add(toggle);
+        
+        // Add logo if available
+        try {
+            Image logo = new Image();
+            logo.setSrc(BrandUtil.getLogoResourcePath(brandInfo));
+            logo.setAlt(brandInfo.getDisplayName() + " Logo");
+            logo.addClassName("logo");
+            
+            Div logoContainer = new Div(logo);
+            logoContainer.addClassName("logo-container");
+            headerContainer.add(logoContainer);
+        } catch (Exception e) {
+            // Logo not available, continue without it
+        }
+        
+        // Create application title
+        String appTitle = BrandUtil.getApplicationTitle(brandInfo, "Admin");
+        Anchor title = new Anchor("/", appTitle);
+        title.addClassName("brand-title");
+        headerContainer.add(title);
+        
+        // Add header to navbar
+        addToNavbar(headerContainer);
     }
 
     /**

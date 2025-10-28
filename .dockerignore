@@ -1,0 +1,11 @@
+# Include brand directory in Docker build context
+!default-brand/
+
+# Exclude other common directories
+node_modules/
+.git/
+.idea/
+.vscode/
+*.log
+tmp/
+.DS_Store

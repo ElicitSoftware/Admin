@@ -16,7 +16,9 @@ import com.elicitsoftware.model.MessageTemplate;
 import com.elicitsoftware.model.MessageType;
 import com.elicitsoftware.model.User;
 import com.vaadin.flow.component.button.Button;
+import com.vaadin.flow.component.button.ButtonVariant;
 import com.vaadin.flow.component.combobox.ComboBox;
+import com.vaadin.flow.component.combobox.ComboBoxVariant;
 import com.vaadin.flow.component.formlayout.FormLayout;
 import com.vaadin.flow.component.html.Div;
 import com.vaadin.flow.component.html.H3;
@@ -24,7 +26,9 @@ import com.vaadin.flow.component.notification.Notification;
 import com.vaadin.flow.component.orderedlayout.HorizontalLayout;
 import com.vaadin.flow.component.orderedlayout.VerticalLayout;
 import com.vaadin.flow.component.textfield.TextArea;
+import com.vaadin.flow.component.textfield.TextAreaVariant;
 import com.vaadin.flow.component.textfield.TextField;
+import com.vaadin.flow.component.textfield.TextFieldVariant;
 import com.vaadin.flow.data.binder.Binder;
 import com.vaadin.flow.data.binder.ValidationException;
 import com.vaadin.flow.data.validator.StringLengthValidator;
@@ -117,16 +121,21 @@ public class EditMessageTemplatesView extends VerticalLayout implements BeforeEn
     public void init() {
         user = uiSessionLogin.getUser();
 
+        // Configure form field styling
+        subjectField.addThemeVariants(TextFieldVariant.LUMO_SMALL);
+        messageField.addThemeVariants(TextAreaVariant.LUMO_SMALL);
+
         // Set options for MIME type
         mimeTypeField.setItems("text/html","text/plain");
         mimeTypeField.setAllowCustomValue(false);
+        mimeTypeField.addThemeVariants(ComboBoxVariant.LUMO_SMALL);
 
         // Set options for Department
         departmentField.setItems(user.getDepartments());
-
         departmentField.setItemLabelGenerator(Department::getName);
         departmentField.setRequiredIndicatorVisible(true);
         departmentField.setAllowCustomValue(false);
+        departmentField.addThemeVariants(ComboBoxVariant.LUMO_SMALL);
 
         // Set the main layout to horizontal, with two columns: form and preview
         HorizontalLayout mainLayout = new HorizontalLayout();
@@ -199,7 +208,10 @@ public class EditMessageTemplatesView extends VerticalLayout implements BeforeEn
         });
 
         saveBtn.addClickListener(e -> saveTemplate());
+        saveBtn.addThemeVariants(ButtonVariant.LUMO_PRIMARY);
+        
         updateBtn.addClickListener(e -> updateTemplate());
+        updateBtn.addThemeVariants(ButtonVariant.LUMO_PRIMARY);
 
         // Hide both buttons initially
         saveBtn.setVisible(false);
