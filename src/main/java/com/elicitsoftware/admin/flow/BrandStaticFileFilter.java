@@ -74,6 +74,9 @@ public class BrandStaticFileFilter implements Filter {
             
             // Try external brand mount first, then fall back to local brand directory
             Path brandFile = null;
+            byte[] content = null;
+            String contentType = null;
+            
             Path externalBrandFile = Paths.get("/brand").resolve(relativePath);
             Path localBrandFile = Paths.get("brand").resolve(relativePath);
             
@@ -83,16 +86,25 @@ public class BrandStaticFileFilter implements Filter {
                 brandFile = localBrandFile;
             }
             
-            if (brandFile == null) {
+            if (brandFile != null) {
+                // Serve from brand directory
+                content = Files.readAllBytes(brandFile);
+                String fileName = brandFile.getFileName().toString();
+                contentType = getContentType(fileName);
+            } else {
+                // Fallback: try to serve from embedded META-INF/resources/
+                content = readEmbeddedResource(relativePath);
+                if (content != null) {
+                    contentType = getContentType(relativePath);
+                }
+            }
+            
+            if (content == null) {
                 httpResponse.sendError(HttpServletResponse.SC_NOT_FOUND, "File not found");
                 return;
             }
             
             try {
-                byte[] content = Files.readAllBytes(brandFile);
-                String fileName = brandFile.getFileName().toString();
-                String contentType = getContentType(fileName);
-                
                 httpResponse.setContentType(contentType);
                 httpResponse.setHeader("Cache-Control", "public, max-age=3600");
                 httpResponse.setContentLength(content.length);
@@ -110,6 +122,30 @@ public class BrandStaticFileFilter implements Filter {
         
         // Continue the filter chain for non-brand requests
         chain.doFilter(request, response);
+    }
+    
+    /**
+     * Attempts to read a resource from the embedded META-INF/resources/ directory.
+     * 
+     * @param relativePath The relative path to the resource
+     * @return The file content as byte array, or null if not found
+     */
+    private byte[] readEmbeddedResource(String relativePath) {
+        try {
+            // Try to load the resource from META-INF/resources/
+            String resourcePath = "/META-INF/resources/" + relativePath;
+            java.io.InputStream inputStream = getClass().getResourceAsStream(resourcePath);
+            
+            if (inputStream != null) {
+                try (inputStream) {
+                    return inputStream.readAllBytes();
+                }
+            }
+            
+            return null;
+        } catch (IOException e) {
+            return null;
+        }
     }
     
     /**
