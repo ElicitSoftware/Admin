@@ -49,4 +49,8 @@
   --brand-hover: hsla(214, 90%, 52%, 0.1);
   --brand-active: hsla(214, 90%, 52%, 0.2);
   --brand-focus: hsl(214, 90%, 52%);
+  
+  /* Header-specific brand colors - Default header styling */
+  --brand-header-background: var(--brand-primary);
+  --brand-header-text: var(--brand-primary-contrast);
 }
