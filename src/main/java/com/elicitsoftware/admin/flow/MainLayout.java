@@ -75,6 +75,12 @@ public class MainLayout extends AppLayout implements AfterNavigationListener {
     SecurityIdentity identity;
 
     /**
+     * The brand utility service for managing brand configuration.
+     */
+    @Inject
+    BrandUtil brandUtil;
+
+    /**
      * The current authenticated user.
      */
     User user;
@@ -142,7 +148,7 @@ public class MainLayout extends AppLayout implements AfterNavigationListener {
      */
     private void createHeader() {
         // Detect current brand
-        BrandUtil.BrandInfo brandInfo = BrandUtil.detectCurrentBrand();
+        BrandUtil.BrandInfo brandInfo = brandUtil.detectCurrentBrand();
         
         // Create header container with brand-specific CSS class
         Div headerContainer = new Div();
@@ -155,7 +161,7 @@ public class MainLayout extends AppLayout implements AfterNavigationListener {
         // Add logo if available
         try {
             Image logo = new Image();
-            logo.setSrc(BrandUtil.getLogoResourcePath(brandInfo));
+            logo.setSrc(brandUtil.getLogoResourcePath(brandInfo));
             logo.setAlt(brandInfo.getDisplayName() + " Logo");
             logo.addClassName("logo");
             
@@ -167,7 +173,7 @@ public class MainLayout extends AppLayout implements AfterNavigationListener {
         }
         
         // Create application title
-        String appTitle = BrandUtil.getApplicationTitle(brandInfo, "Admin");
+        String appTitle = brandUtil.getApplicationTitle(brandInfo, "Admin");
         Anchor title = new Anchor("/", appTitle);
         title.addClassName("brand-title");
         headerContainer.add(title);
