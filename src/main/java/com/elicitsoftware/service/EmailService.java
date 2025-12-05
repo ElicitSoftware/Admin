@@ -22,6 +22,8 @@ import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import jakarta.transaction.Transactional;
 import org.eclipse.microprofile.config.inject.ConfigProperty;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.Date;
 import java.util.List;
@@ -39,6 +41,8 @@ import java.util.List;
  */
 @ApplicationScoped
 public class EmailService {
+
+    private static final Logger log = LoggerFactory.getLogger(EmailService.class);
 
     /**
      * Reactive mailer instance for asynchronous email sending.
@@ -108,7 +112,7 @@ public class EmailService {
      * @return true if email was sent successfully, false otherwise
      */
     public boolean sendEmail(Status status) {
-        System.out.println("Sending email for status: " + status.getToken());
+        log.info("Sending email for status: {}", status.getToken());
 
         try {
             Department department = Department.findById(status.getDepartmentId());
@@ -124,13 +128,13 @@ public class EmailService {
                         mailer.send(Mail.withText(status.getEmail(), subject, body).setFrom(fromEmail)).await().indefinitely();
                     }
                 } catch (Exception e) {
-                    e.printStackTrace();
+                    log.error("Failed to send message template: {}", defaultMessageID, e);
                 }
-                System.out.println("Email sent successfully");
+                log.info("Email sent successfully for status: {}", status.getToken());
             }
             return true;
         } catch (Exception ex) {
-            System.out.println("Failed to send email: " + ex.getMessage());
+            log.error("Failed to send email for status: {}", status.getToken(), ex);
             return false;
         }
     }
@@ -187,7 +191,7 @@ public class EmailService {
     @Scheduled(every = "5m")
     @Transactional
     public void processUnsentMessages() {
-        System.out.println("Processing unsent messages...");
+        log.info("Processing unsent messages...");
 
         try {
             // Get up to 100 unsent messages
@@ -195,20 +199,20 @@ public class EmailService {
                     .page(0, 100)
                     .list();
 
-            System.out.println("Found " + unsentMessages.size() + " unsent messages");
+            log.info("Found {} unsent messages", unsentMessages.size());
 
             for (Message message : unsentMessages) {
                 if (sendMessage(message)) {
                     // Mark as sent
                     message.sentDt = new Date();
                     message.persist();
-                    System.out.println("Message " + message.id + " sent successfully");
+                    log.info("Message {} sent successfully", message.id);
                 } else {
-                    System.out.println("Failed to send message " + message.id);
+                    log.warn("Failed to send message {}", message.id);
                 }
             }
         } catch (Exception e) {
-            System.err.println("Error processing unsent messages: " + e.getMessage());
+            log.error("Error processing unsent messages", e);
         }
     }
 
@@ -269,7 +273,7 @@ public class EmailService {
         try {
             // Validate required fields
             if (message.subject == null || message.subject.getEmail() == null) {
-                System.err.println("Message " + message.id + " has no valid recipient email");
+                log.warn("Message {} has no valid recipient email", message.id);
                 return false;
             }
 
@@ -291,7 +295,7 @@ public class EmailService {
             mailer.send(mail).await().indefinitely();
             return true;
         } catch (Exception ex) {
-            System.err.println("Failed to send message " + message.id + ": " + ex.getMessage());
+            log.error("Failed to send message {}", message.id, ex);
             return false;
         }
     }

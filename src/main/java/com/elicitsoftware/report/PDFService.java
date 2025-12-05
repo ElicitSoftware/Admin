@@ -35,6 +35,8 @@ import org.apache.pdfbox.pdmodel.font.PDFont;
 import org.apache.pdfbox.pdmodel.font.PDType1Font;
 import org.apache.pdfbox.pdmodel.font.Standard14Fonts;
 import org.apache.pdfbox.util.Matrix;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.w3c.dom.svg.SVGDocument;
 
 import java.awt.*;
@@ -87,6 +89,8 @@ import java.util.List;
  */
 @RequestScoped
 public class PDFService {
+
+    private static final Logger log = LoggerFactory.getLogger(PDFService.class);
 
     /**
      * Top margin used for headers, in points.
@@ -376,7 +380,7 @@ public class PDFService {
 
                     for (Content content : response.pdf.content) {
                         if (content == null) {
-                            System.out.println("Content is null");
+                            log.warn("Encountered null content in PDF response");
                             continue;
                         }
                         // Close the current content stream if a new page is needed

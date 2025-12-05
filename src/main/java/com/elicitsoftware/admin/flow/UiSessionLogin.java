@@ -18,6 +18,8 @@ import io.quarkus.security.identity.SecurityIdentity;
 import jakarta.annotation.PostConstruct;
 import jakarta.inject.Inject;
 import jakarta.persistence.Transient;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.Serializable;
 import java.util.Set;
@@ -71,6 +73,8 @@ import java.util.Set;
 @UIScoped
 public class UiSessionLogin implements Serializable {
 
+    private static final Logger log = LoggerFactory.getLogger(UiSessionLogin.class);
+
     /** Injected Quarkus security identity for accessing authentication information. */
     @Inject
     SecurityIdentity identity;
@@ -119,7 +123,7 @@ public class UiSessionLogin implements Serializable {
      */
     @PostConstruct
     public void init() {
-        System.out.println("Initializing UI " + identity.getPrincipal().getName());
+        log.info("Initializing UI for user: {}", identity.getPrincipal().getName());
         // This runs once per UI session (browser tab/window)
         User user = User.find("username = ?1 and active = true", identity.getPrincipal().getName()).firstResult();
 

@@ -26,6 +26,8 @@ import com.vaadin.flow.server.StreamResource;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import org.eclipse.microprofile.rest.client.RestClientBuilder;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.net.URI;
 import java.util.ArrayList;
@@ -90,6 +92,8 @@ import java.util.ArrayList;
  */
 @ApplicationScoped
 public class ReportingService {
+
+    private static final Logger log = LoggerFactory.getLogger(ReportingService.class);
 
     /**
      * PDF generation service for converting report responses to downloadable documents.
@@ -195,7 +199,7 @@ public class ReportingService {
             // Open the PDF in a new browser tab
             UI.getCurrent().getPage().open(pdfUrl, "_blank");
         } catch (Exception e) {
-            e.printStackTrace();
+            log.error("Failed to generate PDF", e);
             Notification.show("Failed to generate PDF: " + e.getMessage(), 3000, Notification.Position.MIDDLE);
         }
     }
