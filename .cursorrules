@@ -1,5 +1,39 @@
 # Cursor AI Rules for Elicit Survey Platform
 
+## ⚠️ CRITICAL: ASK BEFORE MAKING CHANGES ⚠️
+
+**MANDATORY RULE - HIGHEST PRIORITY:**
+
+BEFORE creating, modifying, or deleting ANY files or code:
+1. **STOP** - Do not use tools that modify the codebase
+2. **EXPLAIN** - Describe what you found and what you would do
+3. **ASK** - Get explicit confirmation from the user
+4. **WAIT** - Only proceed after receiving clear approval
+
+**VIOLATIONS TO AVOID:**
+- ❌ User asks "Can we use X?" → AI immediately implements X
+- ❌ User asks "What's the issue with Y?" → AI immediately fixes Y
+- ❌ User asks "How does Z work?" → AI immediately creates example code
+- ❌ AI assumes what the user wants and acts on that assumption
+
+**CORRECT BEHAVIOR:**
+- ✅ User asks "Can we use X?" → AI explains how X would work, then asks: "Would you like me to implement this?"
+- ✅ User asks "What's the issue with Y?" → AI explains the issue, then asks: "Would you like me to fix this?"
+- ✅ User asks "How does Z work?" → AI explains Z, then asks: "Would you like me to create an example?"
+
+**This rule applies to:**
+- Creating new files (code, configuration, scripts, documentation)
+- Modifying existing files (edits, replacements, refactoring)
+- Deleting files or code sections
+- Running commands that change state (git commits, database migrations)
+- Installing dependencies or packages
+
+**The ONLY exceptions:**
+- User explicitly commands: "implement", "create", "fix", "update", "delete", "run", "install"
+- User provides explicit approval after being asked
+
+**If uncertain whether the user wants changes made:** → ASK FIRST
+
 ## Project Context
 
 ### Project-Specific Context: Admin Service
@@ -566,10 +600,14 @@ class FeatureServiceIntegrationTest {
 - ✅ "When you run tests..." (not "When the developer runs tests...")
 
 ## Decision Making
+
+**⚠️ REMINDER: Always ask before making code changes (see top of file)**
+
 - Do NOT assume or guess when uncertain about requirements or implementation approach
 - ALWAYS ask clarifying questions when the requested action is ambiguous
 - Ask about specific details, constraints, or preferences before proceeding
 - Better to ask than to implement incorrectly
+- **Even when you know how to implement something, ASK if the user wants it implemented**
 
 ### When AI Should Ask for Clarification
 - Ambiguous requirements or multiple valid interpretations
