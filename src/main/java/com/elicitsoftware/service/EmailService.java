@@ -101,6 +101,12 @@ public class EmailService {
         // Default constructor
     }
 
+    /**
+     * Sends email notifications for the specified status.
+     *
+     * @param status the Status object containing email details
+     * @return true if email was sent successfully, false otherwise
+     */
     public boolean sendEmail(Status status) {
         System.out.println("Sending email for status: " + status.getToken());
 

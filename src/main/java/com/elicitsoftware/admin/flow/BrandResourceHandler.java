@@ -30,6 +30,17 @@ import java.nio.file.Paths;
 @Path("/brand")
 public class BrandResourceHandler {
 
+    /**
+     * Default constructor for BrandResourceHandler.
+     * <p>
+     * Creates a new BrandResourceHandler instance. Configuration properties
+     * are injected by CDI after construction.
+     * </p>
+     */
+    public BrandResourceHandler() {
+        // Default constructor
+    }
+
     @ConfigProperty(name = "brand.file.system.path", defaultValue = "/brand")
     String brandFileSystemPath;
 

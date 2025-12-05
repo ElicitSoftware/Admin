@@ -20,10 +20,20 @@ import com.vaadin.flow.component.orderedlayout.VerticalLayout;
 import com.vaadin.flow.router.Route;
 import jakarta.annotation.security.PermitAll;
 
+/**
+ * View displayed when a user is authenticated but lacks required permissions.
+ * <p>
+ * This view informs users that they need the 'elicit_user' or 'elicit_admin' role
+ * to access the application and provides a logout option.
+ * </p>
+ */
 @Route("unauthorized")
 @PermitAll
 public class UnauthorizedView extends VerticalLayout {
 
+    /**
+     * Constructs the unauthorized view with informational message and logout button.
+     */
     public UnauthorizedView() {
         setAlignItems(Alignment.CENTER);
         setJustifyContentMode(JustifyContentMode.CENTER);

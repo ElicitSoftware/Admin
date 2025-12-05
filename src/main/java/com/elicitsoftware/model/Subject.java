@@ -310,74 +310,164 @@ public class Subject extends PanacheEntityBase {
         this.respondent = respondent;
     }
 
+    /**
+     * Returns the department ID.
+     *
+     * @return the department ID
+     */
     public long getDepartmentId() {
         return departmentId;
     }
 
+    /**
+     * Sets the department ID.
+     *
+     * @param departmentId the department ID to set
+     */
     public void setDepartmentId(long departmentId) {
         this.departmentId = departmentId;
     }
 
+    /**
+     * Returns the survey ID.
+     *
+     * @return the survey ID
+     */
     public long getSurveyId() {
         return surveyId;
     }
 
+    /**
+     * Sets the survey ID.
+     *
+     * @param surveyId the survey ID to set
+     */
     public void setSurveyId(long surveyId) {
         this.surveyId = surveyId;
     }
 
+    /**
+     * Returns the first name.
+     *
+     * @return the first name
+     */
     public String getFirstName() {
         return firstName;
     }
 
+    /**
+     * Sets the first name.
+     *
+     * @param firstName the first name to set
+     */
     public void setFirstName(String firstName) {
         this.firstName = firstName;
     }
 
+    /**
+     * Returns the last name.
+     *
+     * @return the last name
+     */
     public String getLastName() {
         return lastName;
     }
 
+    /**
+     * Sets the last name.
+     *
+     * @param lastName the last name to set
+     */
     public void setLastName(String lastName) {
         this.lastName = lastName;
     }
 
+    /**
+     * Returns the middle name.
+     *
+     * @return the middle name
+     */
     public String getMiddleName() {
         return middleName;
     }
 
+    /**
+     * Sets the middle name.
+     *
+     * @param middleName the middle name to set
+     */
     public void setMiddleName(String middleName) {
         this.middleName = middleName;
     }
 
+    /**
+     * Returns the date of birth.
+     *
+     * @return the date of birth
+     */
     public LocalDate getDob() {
         return dob;
     }
 
+    /**
+     * Sets the date of birth.
+     *
+     * @param dob the date of birth to set
+     */
     public void setDob(LocalDate dob) {
         this.dob = dob;
     }
 
+    /**
+     * Returns the email address.
+     *
+     * @return the email address
+     */
     public String getEmail() {
         return email;
     }
 
+    /**
+     * Sets the email address.
+     *
+     * @param email the email address to set
+     */
     public void setEmail(String email) {
         this.email = email;
     }
 
+    /**
+     * Returns the phone number.
+     *
+     * @return the phone number
+     */
     public String getPhone() {
         return phone;
     }
 
+    /**
+     * Sets the phone number.
+     *
+     * @param phone the phone number to set
+     */
     public void setPhone(String phone) {
         this.phone = phone;
     }
 
+    /**
+     * Returns the creation date.
+     *
+     * @return the creation date
+     */
     public Date getCreatedDt() {
         return createdDt;
     }
 
+    /**
+     * Sets the creation date.
+     *
+     * @param createdDt the creation date to set
+     */
     public void setCreatedDt(Date createdDt) {
         this.createdDt = createdDt;
     }

@@ -20,9 +20,28 @@ import jakarta.inject.Inject;
 import javax.sql.DataSource;
 import java.sql.Connection;
 
+/**
+ * Health check implementation for database connectivity.
+ * <p>
+ * This health check verifies that the application can successfully connect
+ * to the database and execute queries. It is used for readiness probes in
+ * containerized environments.
+ * </p>
+ */
 @Readiness
 @ApplicationScoped
 public class DatabaseHealthCheck implements HealthCheck {
+
+    /**
+     * Default constructor for DatabaseHealthCheck.
+     * <p>
+     * Creates a new DatabaseHealthCheck instance. The datasource is injected
+     * by CDI after construction.
+     * </p>
+     */
+    public DatabaseHealthCheck() {
+        // Default constructor
+    }
 
     @Inject
     DataSource dataSource;

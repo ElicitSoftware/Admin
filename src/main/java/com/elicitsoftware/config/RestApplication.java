@@ -33,6 +33,15 @@ import jakarta.ws.rs.core.Application;
  */
 @ApplicationPath("/api")
 public class RestApplication extends Application {
-    // Empty implementation - Quarkus will automatically discover and register
-    // all JAX-RS resource classes under this application path
+    
+    /**
+     * Default constructor for RestApplication.
+     * <p>
+     * Creates a new RestApplication instance. Quarkus will automatically
+     * discover and register all JAX-RS resource classes under this application path.
+     * </p>
+     */
+    public RestApplication() {
+        // Default constructor
+    }
 }

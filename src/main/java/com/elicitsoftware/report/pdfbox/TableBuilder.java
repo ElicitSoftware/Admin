@@ -84,6 +84,12 @@ public class TableBuilder {
         // Default constructor
     }
 
+    /**
+     * Sets the height of the table.
+     *
+     * @param height the height to set
+     * @return this TableBuilder instance for method chaining
+     */
     public TableBuilder setHeight(float height) {
         table.setHeight(height);
         return this;
