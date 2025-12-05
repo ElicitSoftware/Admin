@@ -249,6 +249,13 @@ public class Status extends PanacheEntityBase {
         super();
     }
 
+    /**
+     * Finds a status by external ID and department ID.
+     *
+     * @param xid the external identifier
+     * @param departmentId the department ID
+     * @return the matching Status, or null if not found
+     */
     public static Status findByXidAndDepartmentId(String xid, int departmentId) {
         return find("xid = ?1 and department_id = ?2", xid, departmentId).firstResult();
     }

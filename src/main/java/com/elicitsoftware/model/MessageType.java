@@ -131,6 +131,11 @@ public class MessageType extends PanacheEntityBase {
         // Default constructor
     }
 
+    /**
+     * Returns the unique identifier for this message type.
+     *
+     * @return the message type ID
+     */
     public long getId() {
         return id;
     }

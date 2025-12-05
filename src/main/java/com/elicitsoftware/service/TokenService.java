@@ -319,6 +319,7 @@ public class TokenService {
     @RolesAllowed("elicit_importer")
     @Transactional
     public AddResponse importCsv(MultipartBody multipartBody) {
+        Log.info("Upload CSV file received");
         try {
             // Validate that a file was provided
             if (multipartBody.file == null) {

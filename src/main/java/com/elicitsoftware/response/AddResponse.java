@@ -161,6 +161,11 @@ public class AddResponse {
         this.subjects = subjects;
     }
 
+    /**
+     * Adds a status to the list of subjects/statuses for this response.
+     *
+     * @param status the AddResponseStatus to add
+     */
     public void addStatus(AddResponseStatus status) {
         this.subjects.add(status);
     }

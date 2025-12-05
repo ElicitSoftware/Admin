@@ -200,6 +200,11 @@ public class User extends PanacheEntityBase {
         // Default constructor
     }
 
+    /**
+     * Returns the unique identifier for this user.
+     *
+     * @return the user ID
+     */
     public long getId() {
         return id;
     }

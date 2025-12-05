@@ -48,13 +48,36 @@ import java.nio.file.Paths;
 @Startup
 public class AppConfig implements AppShellConfigurator {
 
+    /**
+     * Default constructor for AppConfig.
+     * <p>
+     * Creates a new AppConfig instance. Configuration properties are injected
+     * by CDI after construction, and initialization occurs in the {@link #init()} method.
+     * </p>
+     */
+    public AppConfig() {
+        // Default constructor
+    }
+
+    /**
+     * The file system path for the external brand directory.
+     */
     @ConfigProperty(name = "brand.file.system.path", defaultValue = "/brand")
     String brandFileSystemPath;
     
+    /**
+     * The local path for the brand directory.
+     */
     @ConfigProperty(name = "brand.local.path", defaultValue = "brand")
     String brandLocalPath;
     
+    /**
+     * The resolved brand path after initialization.
+     */
     private String resolvedBrandPath;
+    /**
+     * The resolved local brand path after initialization.
+     */
     private String resolvedLocalBrandPath;
     
     @PostConstruct

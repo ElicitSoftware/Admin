@@ -40,13 +40,33 @@ import org.eclipse.microprofile.jwt.JsonWebToken;
 @RolesAllowed({"elicit_admin", "elicit_user"})
 public class DebugView extends VerticalLayout implements HasDynamicTitle {
 
+    /**
+     * Default constructor for DebugView.
+     * <p>
+     * Creates a new DebugView instance. Dependencies are injected by CDI,
+     * and initialization occurs in the {@link #init()} method.
+     * </p>
+     */
+    public DebugView() {
+        // Default constructor
+    }
+
+    /**
+     * The security identity of the current user.
+     */
     @Inject
     SecurityIdentity identity;
 
+    /**
+     * Instance holder for the ID token containing user identity information.
+     */
     @Inject
     @IdToken
     Instance<JsonWebToken> idTokenInstance;
 
+    /**
+     * Instance holder for the access token credential.
+     */
     @Inject
     Instance<AccessTokenCredential> accessTokenInstance;
 

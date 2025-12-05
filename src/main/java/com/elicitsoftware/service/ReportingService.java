@@ -168,6 +168,11 @@ public class ReportingService {
         // Default constructor
     }
 
+    /**
+     * Generates and prints reports for the specified status.
+     *
+     * @param status the Status object containing survey and respondent information
+     */
     public void printReports(Status status) {
         // Implement report generation logic here
         // For example: generate PDF reports for finished surveys

@@ -341,6 +341,12 @@ public class PDFService {
         return lines;
     }
 
+    /**
+     * Generates a PDF document from the provided report responses.
+     *
+     * @param reportResponses the list of report responses to include in the PDF
+     * @return a StreamResource containing the generated PDF
+     */
     public StreamResource generatePDF(ArrayList<ReportResponse> reportResponses) {
         try {
             // Create a new document

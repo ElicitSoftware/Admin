@@ -29,6 +29,17 @@ import org.eclipse.microprofile.config.inject.ConfigProperty;
 @ApplicationScoped
 public class BrandUtil {
     
+    /**
+     * Default constructor for BrandUtil.
+     * <p>
+     * Creates a new BrandUtil instance. Configuration properties are injected
+     * by CDI after construction.
+     * </p>
+     */
+    public BrandUtil() {
+        // Default constructor
+    }
+
     /** Cached brand information */
     private BrandInfo cachedBrandInfo = null;
     
@@ -44,6 +55,14 @@ public class BrandUtil {
         private final String logoPath;
         private final String cssClass;
         
+        /**
+         * Constructs a BrandInfo with the specified brand details.
+         *
+         * @param brandKey the unique key identifying the brand
+         * @param displayName the display name of the brand
+         * @param logoPath the path to the brand logo
+         * @param cssClass the CSS class for brand styling
+         */
         public BrandInfo(String brandKey, String displayName, String logoPath, String cssClass) {
             this.brandKey = brandKey;
             this.displayName = displayName;
@@ -51,9 +70,32 @@ public class BrandUtil {
             this.cssClass = cssClass;
         }
         
+        /**
+         * Returns the brand key.
+         *
+         * @return the brand key
+         */
         public String getBrandKey() { return brandKey; }
+        
+        /**
+         * Returns the display name of the brand.
+         *
+         * @return the brand display name
+         */
         public String getDisplayName() { return displayName; }
+        
+        /**
+         * Returns the path to the brand logo.
+         *
+         * @return the logo path
+         */
         public String getLogoPath() { return logoPath; }
+        
+        /**
+         * Returns the CSS class for brand styling.
+         *
+         * @return the CSS class
+         */
         public String getCssClass() { return cssClass; }
     }
     
