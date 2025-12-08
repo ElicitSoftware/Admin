@@ -20,6 +20,9 @@ import com.elicitsoftware.response.AddResponseStatus;
 import com.elicitsoftware.service.CsvImportService;
 import com.elicitsoftware.util.RandomString;
 import io.quarkus.logging.Log;
+import io.quarkus.security.Authenticated;
+import io.quarkus.security.identity.SecurityIdentity;
+import jakarta.annotation.security.PermitAll;
 import jakarta.annotation.security.RolesAllowed;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
@@ -55,6 +58,12 @@ public class TokenService {
      */
     @Inject
     CsvImportService csvImportService;
+
+    /**
+     * Security identity for accessing authenticated user information and roles.
+     */
+    @Inject
+    SecurityIdentity securityIdentity;
 
     @Context
     private UriInfo uriInfo;
@@ -348,7 +357,22 @@ public class TokenService {
      */
     @Path("/test")
     @GET
+    @PermitAll
     public String test() {
         return "token test";
+    }
+
+    @Path("/roles")
+    @GET
+    @Authenticated
+    public String roles() {
+        StringBuilder sb = new StringBuilder();
+        
+        // Basic identity information
+        sb.append("User: ").append(securityIdentity.getPrincipal().getName()).append("\n");
+        sb.append("Is Anonymous: ").append(securityIdentity.isAnonymous()).append("\n");
+        sb.append("Roles: ").append(securityIdentity.getRoles()).append("\n");
+        
+        return sb.toString();
     }
 }
