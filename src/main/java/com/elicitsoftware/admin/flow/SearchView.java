@@ -254,28 +254,44 @@ public class SearchView extends VerticalLayout implements HasDynamicTitle, Befor
     
     @PostConstruct
     public void init() {
+        try {
+            System.out.println("SearchView.init() starting...");
+            
+            // Safe to call getCurrent here
+            this.ui = UI.getCurrent();
+            System.out.println("UI.getCurrent() successful");
 
-        // Safe to call getCurrent here
-        this.ui = UI.getCurrent();
+            user = uiSessionLogin.getUser();
+            System.out.println("User from session: " + (user != null ? user.getUsername() : "null"));
 
-        user = uiSessionLogin.getUser();
-
-        if (user == null) {
-            Div errorDiv = new Div();
-            errorDiv.getElement().setProperty("innerHTML", " You have successfully logged in to the Open ID connect system.<br/> Unfortunately, there is no user named <b>" + identity.getPrincipal().getName() + "</b> in the application or it is set to inactive.<br/>Please ask an Elicit Admin for help.");
-            add(errorDiv);
-        } else {
-            //Set up the I18n
-            final UI ui = UI.getCurrent();
-            if (ui.getLocale().getLanguage().equals("ar")) {
-                ui.setDirection(Direction.RIGHT_TO_LEFT);
+            if (user == null) {
+                System.out.println("User is null, showing error message");
+                Div errorDiv = new Div();
+                errorDiv.getElement().setProperty("innerHTML", " You have successfully logged in to the Open ID connect system.<br/> Unfortunately, there is no user named <b>" + identity.getPrincipal().getName() + "</b> in the application or it is set to inactive.<br/>Please ask an Elicit Admin for help.");
+                add(errorDiv);
             } else {
-                ui.setDirection(Direction.LEFT_TO_RIGHT);
+                System.out.println("User found, initializing view components...");
+                //Set up the I18n
+                final UI ui = UI.getCurrent();
+                if (ui.getLocale().getLanguage().equals("ar")) {
+                    ui.setDirection(Direction.RIGHT_TO_LEFT);
+                } else {
+                    ui.setDirection(Direction.LEFT_TO_RIGHT);
+                }
+                System.out.println("Adding H5...");
+                add(new H5("Subject search"));
+                System.out.println("Creating search bar...");
+                createSearchBar();
+                System.out.println("Initializing data provider...");
+                initializeDataProvider(); // Initialize data provider after fields are ready
+                System.out.println("Creating subjects table...");
+                createSubjectsTable();
+                System.out.println("SearchView.init() completed successfully");
             }
-            add(new H5("Subject search"));
-            createSearchBar();
-            initializeDataProvider(); // Initialize data provider after fields are ready
-            createSubjectsTable();
+        } catch (Exception e) {
+            System.err.println("ERROR in SearchView.init(): " + e.getMessage());
+            e.printStackTrace();
+            throw e;
         }
     }
 
