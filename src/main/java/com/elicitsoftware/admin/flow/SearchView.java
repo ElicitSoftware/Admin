@@ -114,13 +114,13 @@ import java.util.stream.Collectors;
 public class SearchView extends VerticalLayout implements HasDynamicTitle, BeforeEnterObserver {
 
     /** Pagination controls for managing page navigation and data loading. */
-    private PaginationControls paginationControls;
+    private final PaginationControls paginationControls = new PaginationControls();
 
     /** Data source for executing status queries and managing database connections. */
     private final StatusDataSource dataSource = new StatusDataSource();
 
     /** Scheduled executor for automatic data refresh functionality. */
-    private ScheduledExecutorService scheduler;
+    private final ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(1);
 
     /** Security identity for user authentication and role checking. */
     @Inject
@@ -164,16 +164,8 @@ public class SearchView extends VerticalLayout implements HasDynamicTitle, Befor
 
     /** Text field for phone number search filtering. */
     private TextField phoneField;
-    
-    /** Data provider for the grid - initialized after fields are set up */
-    private DataProvider<Status, String> pagingDataProvider;
-    
-    /**
-     * Creates and initializes the data provider for the grid.
-     * Must be called after the search fields are initialized.
-     */
-    private void initializeDataProvider() {
-        pagingDataProvider = DataProvider.fromFilteringCallbacks(
+    // 1. Update the DataProvider to use the filter parameter:
+    private final DataProvider<Status, String> pagingDataProvider = DataProvider.fromFilteringCallbacks(
             query -> {
                 query.getLimit();
                 query.getOffset();
@@ -219,8 +211,7 @@ public class SearchView extends VerticalLayout implements HasDynamicTitle, Befor
                 var remainingItemsCount = itemCount - offset;
                 return Math.min(remainingItemsCount, limit);
             }
-        );
-    }
+    );
 
     /**
      * Initializes the search view components and layout after dependency injection.
@@ -254,49 +245,27 @@ public class SearchView extends VerticalLayout implements HasDynamicTitle, Befor
     
     @PostConstruct
     public void init() {
-        try {
-            System.out.println("SearchView.init() starting...");
-            
-            // Safe to call getCurrent here
-            this.ui = UI.getCurrent();
-            System.out.println("UI.getCurrent() successful");
 
-            user = uiSessionLogin.getUser();
-            System.out.println("User from session: " + (user != null ? user.getUsername() : "null"));
+        // Safe to call getCurrent here
+        this.ui = UI.getCurrent();
 
-            if (user == null) {
-                System.out.println("User is null, showing error message");
-                Div errorDiv = new Div();
-                errorDiv.getElement().setProperty("innerHTML", " You have successfully logged in to the Open ID connect system.<br/> Unfortunately, there is no user named <b>" + identity.getPrincipal().getName() + "</b> in the application or it is set to inactive.<br/>Please ask an Elicit Admin for help.");
-                add(errorDiv);
+        user = uiSessionLogin.getUser();
+
+        if (user == null) {
+            Div errorDiv = new Div();
+            errorDiv.getElement().setProperty("innerHTML", " You have successfully logged in to the Open ID connect system.<br/> Unfortunately, there is no user named <b>" + identity.getPrincipal().getName() + "</b> in the application or it is set to inactive.<br/>Please ask an Elicit Admin for help.");
+            add(errorDiv);
+        } else {
+            //Set up the I18n
+            final UI ui = UI.getCurrent();
+            if (ui.getLocale().getLanguage().equals("ar")) {
+                ui.setDirection(Direction.RIGHT_TO_LEFT);
             } else {
-                System.out.println("User found, initializing view components...");
-                
-                // Initialize components that couldn't be field-initialized
-                paginationControls = new PaginationControls();
-                scheduler = Executors.newScheduledThreadPool(1);
-                
-                //Set up the I18n
-                final UI ui = UI.getCurrent();
-                if (ui.getLocale().getLanguage().equals("ar")) {
-                    ui.setDirection(Direction.RIGHT_TO_LEFT);
-                } else {
-                    ui.setDirection(Direction.LEFT_TO_RIGHT);
-                }
-                System.out.println("Adding H5...");
-                add(new H5("Subject search"));
-                System.out.println("Creating search bar...");
-                createSearchBar();
-                System.out.println("Initializing data provider...");
-                initializeDataProvider(); // Initialize data provider after fields are ready
-                System.out.println("Creating subjects table...");
-                createSubjectsTable();
-                System.out.println("SearchView.init() completed successfully");
+                ui.setDirection(Direction.LEFT_TO_RIGHT);
             }
-        } catch (Exception e) {
-            System.err.println("ERROR in SearchView.init(): " + e.getMessage());
-            e.printStackTrace();
-            throw e;
+            add(new H5("Subject search"));
+            createSearchBar();
+            createSubjectsTable();
         }
     }
 
