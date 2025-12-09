@@ -114,13 +114,13 @@ import java.util.stream.Collectors;
 public class SearchView extends VerticalLayout implements HasDynamicTitle, BeforeEnterObserver {
 
     /** Pagination controls for managing page navigation and data loading. */
-    private final PaginationControls paginationControls = new PaginationControls();
+    private PaginationControls paginationControls;
 
     /** Data source for executing status queries and managing database connections. */
     private final StatusDataSource dataSource = new StatusDataSource();
 
     /** Scheduled executor for automatic data refresh functionality. */
-    private final ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(1);
+    private ScheduledExecutorService scheduler;
 
     /** Security identity for user authentication and role checking. */
     @Inject
@@ -271,6 +271,11 @@ public class SearchView extends VerticalLayout implements HasDynamicTitle, Befor
                 add(errorDiv);
             } else {
                 System.out.println("User found, initializing view components...");
+                
+                // Initialize components that couldn't be field-initialized
+                paginationControls = new PaginationControls();
+                scheduler = Executors.newScheduledThreadPool(1);
+                
                 //Set up the I18n
                 final UI ui = UI.getCurrent();
                 if (ui.getLocale().getLanguage().equals("ar")) {
