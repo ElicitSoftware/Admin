@@ -119,14 +119,22 @@ public class UiSessionLogin implements Serializable {
      */
     @PostConstruct
     public void init() {
-        System.out.println("Initializing UI " + identity.getPrincipal().getName());
+        String principalName = identity.getPrincipal().getName();
+        System.out.println("Initializing UI for principal: " + principalName);
+        System.out.println("Available roles: " + identity.getRoles());
+        
         // This runs once per UI session (browser tab/window)
-        User user = User.find("username = ?1 and active = true", identity.getPrincipal().getName()).firstResult();
+        User user = User.find("username = ?1 and active = true", principalName).firstResult();
 
         if (user != null) {
+            System.out.println("Found user: " + user.getUsername());
             VaadinSession.getCurrent().setAttribute("user", user);
         } else {
             // User not found or inactive - immediately redirect without loading UI
+            System.out.println("WARNING: User not found in database for principal: " + principalName);
+            System.out.println("Attempting to find similar usernames in database...");
+            List<User> allUsers = User.find("active = true").list();
+            System.out.println("Active users in database: " + allUsers.stream().map(User::getUsername).toList());
             VaadinSession.getCurrent().setAttribute("user", null);
         }
     }
