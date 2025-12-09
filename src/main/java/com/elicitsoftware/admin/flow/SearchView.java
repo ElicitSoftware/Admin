@@ -111,7 +111,7 @@ import java.util.stream.Collectors;
  */
 @Route(value = "", layout = MainLayout.class)
 @RolesAllowed({"elicit_user", "elicit_admin"})
-class SearchView extends VerticalLayout implements HasDynamicTitle, BeforeEnterObserver {
+public class SearchView extends VerticalLayout implements HasDynamicTitle, BeforeEnterObserver {
 
     /** Pagination controls for managing page navigation and data loading. */
     private final PaginationControls paginationControls = new PaginationControls();
