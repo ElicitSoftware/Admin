@@ -20,6 +20,7 @@ import jakarta.inject.Inject;
 import jakarta.persistence.Transient;
 
 import java.io.Serializable;
+import java.util.List;
 import java.util.Set;
 
 /**
