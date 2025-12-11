@@ -164,16 +164,8 @@ public class SearchView extends VerticalLayout implements HasDynamicTitle, Befor
 
     /** Text field for phone number search filtering. */
     private TextField phoneField;
-    
-    /** Data provider for the grid - initialized after fields are set up */
-    private DataProvider<Status, String> pagingDataProvider;
-    
-    /**
-     * Creates and initializes the data provider for the grid.
-     * Must be called after the search fields are initialized.
-     */
-    private void initializeDataProvider() {
-        pagingDataProvider = DataProvider.fromFilteringCallbacks(
+    // 1. Update the DataProvider to use the filter parameter:
+    private final DataProvider<Status, String> pagingDataProvider = DataProvider.fromFilteringCallbacks(
             query -> {
                 query.getLimit();
                 query.getOffset();
@@ -219,8 +211,7 @@ public class SearchView extends VerticalLayout implements HasDynamicTitle, Befor
                 var remainingItemsCount = itemCount - offset;
                 return Math.min(remainingItemsCount, limit);
             }
-        );
-    }
+    );
 
     /**
      * Initializes the search view components and layout after dependency injection.
@@ -274,7 +265,6 @@ public class SearchView extends VerticalLayout implements HasDynamicTitle, Befor
             }
             add(new H5("Subject search"));
             createSearchBar();
-            initializeDataProvider(); // Initialize data provider after fields are ready
             createSubjectsTable();
         }
     }

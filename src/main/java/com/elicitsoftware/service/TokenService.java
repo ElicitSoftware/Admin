@@ -364,9 +364,13 @@ public class TokenService {
 
     @Path("/roles")
     @GET
-    @Authenticated
+    @PermitAll
     public String roles() {
         StringBuilder sb = new StringBuilder();
+        if(securityIdentity.getPrincipal() == null) {
+            sb.append("No principal found\n");
+            return sb.toString();
+        }
         
         // Basic identity information
         sb.append("User: ").append(securityIdentity.getPrincipal().getName()).append("\n");
