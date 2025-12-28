@@ -113,6 +113,14 @@ import java.util.stream.Collectors;
 @RolesAllowed({"elicit_user", "elicit_admin"})
 public class SearchView extends VerticalLayout implements HasDynamicTitle, BeforeEnterObserver {
 
+    /**
+     * Constructs a new SearchView.
+     * Initialization is completed in the {@link #init()} method.
+     */
+    public SearchView() {
+        // Constructor is intentionally empty - initialization happens in @PostConstruct init()
+    }
+
     /** Pagination controls for managing page navigation and data loading. */
     private final PaginationControls paginationControls = new PaginationControls();
 
@@ -164,7 +172,8 @@ public class SearchView extends VerticalLayout implements HasDynamicTitle, Befor
 
     /** Text field for phone number search filtering. */
     private TextField phoneField;
-    // 1. Update the DataProvider to use the filter parameter:
+
+    /** Data provider that fetches paginated status records with filtering support. */
     private final DataProvider<Status, String> pagingDataProvider = DataProvider.fromFilteringCallbacks(
             query -> {
                 query.getLimit();
@@ -233,7 +242,7 @@ public class SearchView extends VerticalLayout implements HasDynamicTitle, Befor
      * the search bar with multiple filter options and the sortable data grid with
      * pagination controls.</p>
      */
-    
+
     /**
      * Checks user authentication and authorization before entering the view.
      * Authorization is now handled by @RolesAllowed annotation.
@@ -242,7 +251,11 @@ public class SearchView extends VerticalLayout implements HasDynamicTitle, Befor
     public void beforeEnter(BeforeEnterEvent event) {
         // Authorization is now handled by @RolesAllowed annotation
     }
-    
+
+    /**
+     * Initializes the search view after construction.
+     * Sets up UI components, loads user information, and configures the grid.
+     */
     @PostConstruct
     public void init() {
 

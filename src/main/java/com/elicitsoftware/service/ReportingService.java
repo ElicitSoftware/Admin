@@ -73,14 +73,14 @@ import java.util.ArrayList;
  * {@code
  * @Inject
  * ReportingService reportingService;
- * 
+ *
  * public void generateParticipantReport(Status completedStatus) {
  *     // Generate and display reports for completed survey
  *     reportingService.printReports(completedStatus);
  * }
  * }
  * </pre>
- * 
+ *
  * @see ReportDefinition
  * @see Status
  * @see Survey
@@ -263,11 +263,11 @@ public class ReportingService {
         } catch (jakarta.ws.rs.WebApplicationException e) {
             // Handle license validation errors and other HTTP errors specifically
             String errorMessage = "Service error: " + e.getMessage();
-            
+
             // Try to extract more detailed error information
             if (e.getResponse() != null) {
                 int status = e.getResponse().getStatus();
-                
+
                 // Try to read the response entity if it exists and hasn't been consumed
                 if (e.getResponse().hasEntity()) {
                     try {
@@ -292,14 +292,14 @@ public class ReportingService {
                     }
                 }
             }
-            
+
             // Check if the exception message contains clues about license validation
             if (e.getMessage() != null && e.getMessage().toLowerCase().contains("forbidden")) {
                 if (!errorMessage.toLowerCase().contains("license")) {
                     errorMessage = "License validation failed - " + errorMessage;
                 }
             }
-            
+
             ReportResponse reportResponse = new ReportResponse();
             reportResponse.title = "Error - " + rpt.name;
             reportResponse.innerHTML = "<div style='color: red; padding: 20px; border: 1px solid red; background-color: #ffe6e6;'>" +

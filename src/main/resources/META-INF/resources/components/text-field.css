@@ -1,0 +1,31 @@
+/*-
+ * ***LICENSE_START***
+ * Elicit Survey
+ * %%
+ * Copyright (C) 2025 The Regents of the University of Michigan - Rogel Cancer Center
+ * %%
+ * PolyForm Noncommercial License 1.0.0
+ * <https://polyformproject.org/licenses/noncommercial/1.0.0>
+ * ***LICENSE_END***
+ */
+
+/* Text Field Component Styling - Vaadin 25 */
+/*
+   Migrated from shadow DOM injection to regular CSS selectors.
+   Shadow DOM injection via components/ folder is deprecated in Vaadin 25.
+
+   For styling Vaadin components in V25, use CSS custom properties and ::part() selectors.
+   See: https://vaadin.com/docs/latest/components/text-field#styling
+*/
+
+/* Example: Style text fields with 'bordered' theme variant */
+vaadin-text-field[theme~="bordered"]::part(input-field) {
+    box-shadow: inset 0 0 0 1px var(--lumo-contrast-30pct);
+    background-color: var(--lumo-base-color);
+}
+
+/* You can also use CSS custom properties to customize text fields globally */
+vaadin-text-field {
+    /* Customize using Lumo/Aura CSS properties */
+    /* --lumo-text-field-size: var(--lumo-size-m); */
+}

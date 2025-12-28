@@ -168,7 +168,7 @@ public class TokenService {
     @Transactional
     public AddResponse putSubjects(List<AddRequest> requests) {
         AddResponse response = new AddResponse();
-        
+
         // Process each subject request individually
         for (AddRequest request : requests) {
             AddResponseStatus addStatus;
@@ -184,18 +184,18 @@ public class TokenService {
                     if (status == null) {
                         // Create new subject
                         Respondent respondent = getToken(request.surveyId);
-                        Subject subject = new Subject(request.xid, request.surveyId, request.departmentId, 
-                                                    request.firstName, request.lastName, request.middleName, 
+                        Subject subject = new Subject(request.xid, request.surveyId, request.departmentId,
+                                                    request.firstName, request.lastName, request.middleName,
                                                     request.dob, request.email, request.phone);
                         subject.setRespondent(respondent);
                         subject.persistAndFlush();
-                        
+
                         // Create messages for the new subject
                         ArrayList<Message> messages = Message.createMessagesForSubject(subject);
                         for (Message message : messages) {
                             message.persistAndFlush();
                         }
-                        
+
                         status = Status.findByXidAndDepartmentId(request.xid, request.departmentId);
                         addStatus = new AddResponseStatus(status, "New Subject: " + request.xid);
                     } else {
@@ -211,10 +211,10 @@ public class TokenService {
                 Status errorStatus = new Status();
                 addStatus = new AddResponseStatus(errorStatus, "Unexpected error processing " + request.xid + ": " + e.getMessage());
             }
-            
+
             response.addStatus(addStatus);
         }
-        
+
         return response;
     }
 
@@ -362,6 +362,11 @@ public class TokenService {
         return "token test";
     }
 
+    /**
+     * Returns the current user's roles and security information.
+     *
+     * @return a string containing the user's principal name and assigned roles
+     */
     @Path("/roles")
     @GET
     @PermitAll
@@ -371,12 +376,12 @@ public class TokenService {
             sb.append("No principal found\n");
             return sb.toString();
         }
-        
+
         // Basic identity information
         sb.append("User: ").append(securityIdentity.getPrincipal().getName()).append("\n");
         sb.append("Is Anonymous: ").append(securityIdentity.isAnonymous()).append("\n");
         sb.append("Roles: ").append(securityIdentity.getRoles()).append("\n");
-        
+
         return sb.toString();
     }
 }
