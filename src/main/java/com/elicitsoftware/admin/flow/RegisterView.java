@@ -23,8 +23,8 @@ import com.vaadin.flow.component.combobox.ComboBoxVariant;
 import com.vaadin.flow.component.datepicker.DatePicker;
 import com.vaadin.flow.component.datepicker.DatePickerVariant;
 import com.vaadin.flow.component.details.Details;
-import com.vaadin.flow.component.details.DetailsVariant;
 import com.vaadin.flow.component.dialog.Dialog;
+import com.vaadin.flow.component.ModalityMode;
 import com.vaadin.flow.component.formlayout.FormLayout;
 import com.vaadin.flow.component.html.*;
 import com.vaadin.flow.component.notification.Notification;
@@ -336,7 +336,7 @@ public class RegisterView extends HorizontalLayout implements HasDynamicTitle, B
         csvUpload.setAcceptedFileTypes(".csv");
         csvUpload.setMaxFiles(1);
         csvUpload.setMaxFileSize(5 * 1024 * 1024); // 5MB limit
-        
+
         Button uploadButton = new Button("Upload CSV");
         uploadButton.addThemeVariants(ButtonVariant.LUMO_PRIMARY);
         csvUpload.setUploadButton(uploadButton);
@@ -355,7 +355,6 @@ public class RegisterView extends HorizontalLayout implements HasDynamicTitle, B
 
         // Create REST API instructions accordion
         Details restApiDetails = new Details("REST API Instructions", createRestApiContent());
-        restApiDetails.addThemeVariants(DetailsVariant.FILLED);
         restApiDetails.setOpened(false);
 
         rightLayout.add(getRestfulInstructionsDiv(), csvUpload, restApiDetails);
@@ -469,7 +468,7 @@ public class RegisterView extends HorizontalLayout implements HasDynamicTitle, B
         try {
             // Write form values to subject first to get current values
             binder.writeBean(subject);
-            
+
             boolean isExluded = ExcludedXid.isExcluded(this.subject.getXid(), (int) this.subject.getDepartmentId());
             if (isExluded) {
                 // Find the department name from the user's departments by ID
@@ -478,11 +477,11 @@ public class RegisterView extends HorizontalLayout implements HasDynamicTitle, B
                     .map(Department::getName)
                     .findFirst()
                     .orElse("Unknown");
-                    
+
                 Notification.show("External id " + this.subject.getXid() + " is in the exclude list for department " + departmentName, 3000, Notification.Position.MIDDLE);
                 return; // Exit early if excluded
             }
-            
+
             Respondent respondent = tokenService.getToken(1);
             subject.setRespondent(respondent);
             subject.setSurveyId(respondent.survey.id);
@@ -604,7 +603,6 @@ public class RegisterView extends HorizontalLayout implements HasDynamicTitle, B
 
         // Create CSV Structure Accordion
         Details csvDetails = new Details("CSV File Structure", createCsvStructureContent());
-        csvDetails.addThemeVariants(DetailsVariant.FILLED);
         csvDetails.setOpened(false); // Open by default so users can see the format
 
         div.add(
@@ -713,7 +711,7 @@ public class RegisterView extends HorizontalLayout implements HasDynamicTitle, B
 
         content.add(
                 new Paragraph("You can also add subjects programmatically using the REST API endpoints"),
-                
+
                 new H3("1. Single Subject Registration"),
                 new H4("Endpoint:"),
                 new Pre("POST /api/secured/add/subject"),
@@ -786,7 +784,7 @@ public class RegisterView extends HorizontalLayout implements HasDynamicTitle, B
                 new H4("CSV File Format:"),
                 new Paragraph("The CSV file should contain the following columns in order:"),
                 new Pre("departmentId,firstName,lastName,middleName,dob,email,phone,xid"),
-                
+
                 new Paragraph("Column Requirements:"),
                 new Pre("• departmentId: Integer (required) - Valid department ID\n" +
                         "• firstName: String (required) - Subject's first name\n" +
@@ -885,7 +883,7 @@ public class RegisterView extends HorizontalLayout implements HasDynamicTitle, B
         dialogLayout.setSpacing(true);
 
         errorDialog.add(dialogLayout);
-        errorDialog.setModal(true);
+        errorDialog.setModality(ModalityMode.STRICT);
         errorDialog.setDraggable(false);
         errorDialog.setResizable(true);
         errorDialog.setWidth("600px");
@@ -921,7 +919,7 @@ public class RegisterView extends HorizontalLayout implements HasDynamicTitle, B
         dialogLayout.setSpacing(true);
 
         successDialog.add(dialogLayout);
-        successDialog.setModal(true);
+        successDialog.setModality(ModalityMode.STRICT);
         successDialog.setDraggable(false);
         successDialog.setResizable(true);
         successDialog.setWidth("600px");

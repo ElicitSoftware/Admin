@@ -149,35 +149,40 @@ public class MainLayout extends AppLayout implements AfterNavigationListener {
     private void createHeader() {
         // Detect current brand
         BrandUtil.BrandInfo brandInfo = brandUtil.detectCurrentBrand();
-        
+
         // Create header container with brand-specific CSS class
         Div headerContainer = new Div();
-        headerContainer.addClassNames("branded-header", brandInfo.getCssClass());
-        
+        headerContainer.addClassName("branded-header");
+
+        // Add brand-specific CSS class if available and not empty
+        if (brandInfo != null && brandInfo.getCssClass() != null && !brandInfo.getCssClass().isEmpty()) {
+            headerContainer.addClassName(brandInfo.getCssClass());
+        }
+
         // Create drawer toggle
         DrawerToggle toggle = new DrawerToggle();
         headerContainer.add(toggle);
-        
+
         // Add logo if available
         try {
             Image logo = new Image();
             logo.setSrc(brandUtil.getLogoResourcePath(brandInfo));
             logo.setAlt(brandInfo.getDisplayName() + " Logo");
             logo.addClassName("logo");
-            
+
             Div logoContainer = new Div(logo);
             logoContainer.addClassName("logo-container");
             headerContainer.add(logoContainer);
         } catch (Exception e) {
             // Logo not available, continue without it
         }
-        
+
         // Create application title
         String appTitle = brandUtil.getApplicationTitle(brandInfo, "Admin");
         Anchor title = new Anchor("/", appTitle);
         title.addClassName("brand-title");
         headerContainer.add(title);
-        
+
         // Add header to navbar
         addToNavbar(headerContainer);
     }
