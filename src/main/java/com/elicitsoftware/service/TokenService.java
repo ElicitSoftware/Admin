@@ -419,30 +419,30 @@ public class TokenService {
                 
                 // Application/Client ID
                 if (jwt.getClaim("appid") != null) {
-                    sb.append("Application ID (appid): ").append(jwt.getClaim("appid")).append("\n");
+                    sb.append("Application ID (appid): ").append(String.valueOf(jwt.getClaim("appid"))).append("\n");
                 }
                 
                 // User information (if present)
                 if (jwt.getClaim("upn") != null) {
-                    sb.append("UPN: ").append(jwt.getClaim("upn")).append("\n");
+                    sb.append("UPN: ").append(String.valueOf(jwt.getClaim("upn"))).append("\n");
                 }
                 if (jwt.getClaim("unique_name") != null) {
-                    sb.append("Unique Name: ").append(jwt.getClaim("unique_name")).append("\n");
+                    sb.append("Unique Name: ").append(String.valueOf(jwt.getClaim("unique_name"))).append("\n");
                 }
                 
                 // Groups
                 if (jwt.getClaim("groups") != null) {
-                    sb.append("Groups: ").append(jwt.getClaim("groups")).append("\n");
+                    sb.append("Groups: ").append(String.valueOf(jwt.getClaim("groups"))).append("\n");
                 }
                 
                 // Roles from token
                 if (jwt.getClaim("roles") != null) {
-                    sb.append("Roles Claim in Token: ").append(jwt.getClaim("roles")).append("\n");
+                    sb.append("Roles Claim in Token: ").append(String.valueOf(jwt.getClaim("roles"))).append("\n");
                 }
                 
                 // Scopes
                 if (jwt.getClaim("scp") != null) {
-                    sb.append("Scopes (scp): ").append(jwt.getClaim("scp")).append("\n");
+                    sb.append("Scopes (scp): ").append(String.valueOf(jwt.getClaim("scp"))).append("\n");
                 }
                 
                 // All claim names for debugging
