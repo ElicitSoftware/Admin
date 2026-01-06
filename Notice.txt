@@ -1,5 +1,5 @@
 
-Lists of 28 third-party dependencies.
+Lists of 29 third-party dependencies.
      (The Apache Software License, Version 2.0) ZXing Core (com.google.zxing:core:3.5.1 - https://github.com/zxing/zxing/core)
      (The Apache Software License, Version 2.0) ZXing Java SE extensions (com.google.zxing:javase:3.5.1 - https://github.com/zxing/zxing/javase)
      (Apache License Version 2.0) Vaadin Platform (vaadin-dev) (com.vaadin:vaadin-dev:25.0.2 - https://vaadin.com)
@@ -26,5 +26,6 @@ Lists of 28 third-party dependencies.
      (The Apache Software License, Version 2.0) Quarkus - REST - JSON-B - Runtime (io.quarkus:quarkus-rest-jsonb:3.30.5 - https://github.com/quarkusio/quarkus)
      (The Apache Software License, Version 2.0) Quarkus - Scheduler - Runtime (io.quarkus:quarkus-scheduler:3.30.5 - https://github.com/quarkusio/quarkus)
      (The Apache Software License, Version 2.0) Quarkus - SmallRye Health - Runtime (io.quarkus:quarkus-smallrye-health:3.30.5 - https://github.com/quarkusio/quarkus)
+     (The Apache Software License, Version 2.0) Quarkus - SmallRye JWT - Runtime (io.quarkus:quarkus-smallrye-jwt:3.30.5 - https://github.com/quarkusio/quarkus)
      (The Apache Software License, Version 2.0) org.apache.xmlgraphics:batik-all (org.apache.xmlgraphics:batik-all:1.16 - http://xmlgraphics.apache.org/batik/batik-all/)
      (The Apache Software License, Version 2.0) Xerces2-j (xerces:xercesImpl:2.12.2 - https://xerces.apache.org/xerces2-j/)
