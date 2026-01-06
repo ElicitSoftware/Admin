@@ -384,7 +384,7 @@ public class TokenService {
      */
     @Path("/roles")
     @GET
-    @PermitAll
+    @RolesAllowed({"elicit_importer", "elicit_admin", "elicit_user"})
     public String roles() {
         StringBuilder sb = new StringBuilder();
         
