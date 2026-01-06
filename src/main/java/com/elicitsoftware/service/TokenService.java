@@ -404,60 +404,71 @@ public class TokenService {
         try {
             if (jwt != null) {
                 sb.append("=== JWT Token Information ===\n");
-                sb.append("Token Name: ").append(jwt.getName()).append("\n");
                 
-                // Token type detection
-                String tokenType = "User Token";
-                if (jwt.getClaim("appidacr") != null) {
-                    tokenType = "Service Principal Token";
-                }
-                sb.append("Token Type: ").append(tokenType).append("\n");
-                
-                // Key claims
-                sb.append("Subject (sub): ").append(jwt.getSubject()).append("\n");
-                sb.append("Issuer (iss): ").append(jwt.getIssuer()).append("\n");
-                
-                // Application/Client ID
-                if (jwt.getClaim("appid") != null) {
-                    sb.append("Application ID (appid): ").append(String.valueOf(jwt.getClaim("appid"))).append("\n");
+                // Check if JWT was actually parsed
+                try {
+                    String tokenName = jwt.getName();
+                    sb.append("Token Name: ").append(tokenName != null ? tokenName : "null (JWT not parsed)").append("\n");
+                } catch (Exception e) {
+                    sb.append("Token Name: Error - ").append(e.getMessage()).append("\n");
                 }
                 
-                // User information (if present)
-                if (jwt.getClaim("upn") != null) {
-                    sb.append("UPN: ").append(String.valueOf(jwt.getClaim("upn"))).append("\n");
-                }
-                if (jwt.getClaim("unique_name") != null) {
-                    sb.append("Unique Name: ").append(String.valueOf(jwt.getClaim("unique_name"))).append("\n");
-                }
-                
-                // Groups
-                if (jwt.getClaim("groups") != null) {
-                    sb.append("Groups: ").append(String.valueOf(jwt.getClaim("groups"))).append("\n");
+                try {
+                    String subject = jwt.getSubject();
+                    sb.append("Subject (sub): ").append(subject != null ? subject : "null").append("\n");
+                } catch (Exception e) {
+                    sb.append("Subject (sub): Error - ").append(e.getMessage()).append("\n");
                 }
                 
-                // Roles from token
-                if (jwt.getClaim("roles") != null) {
-                    sb.append("Roles Claim in Token: ").append(String.valueOf(jwt.getClaim("roles"))).append("\n");
+                try {
+                    String issuer = jwt.getIssuer();
+                    sb.append("Issuer (iss): ").append(issuer != null ? issuer : "null").append("\n");
+                } catch (Exception e) {
+                    sb.append("Issuer (iss): Error - ").append(e.getMessage()).append("\n");
                 }
                 
-                // Scopes
-                if (jwt.getClaim("scp") != null) {
-                    sb.append("Scopes (scp): ").append(String.valueOf(jwt.getClaim("scp"))).append("\n");
+                // If all basic claims are null, the JWT wasn't parsed
+                if (jwt.getName() == null && jwt.getSubject() == null && jwt.getIssuer() == null) {
+                    sb.append("\n⚠️  JWT object exists but has no claims - token validation likely failed\n");
+                    sb.append("Possible issues:\n");
+                    sb.append("  1. Token signature validation failed\n");
+                    sb.append("  2. Token issuer (iss) not trusted in quarkus.oidc.token.issuer configuration\n");
+                    sb.append("  3. Token audience (aud) doesn't match quarkus.oidc.client-id\n");
+                    sb.append("  4. Token expired (check exp claim)\n");
+                    sb.append("  5. OIDC configuration missing or incorrect\n");
+                    sb.append("  6. JWKS endpoint unreachable for signature verification\n\n");
                 }
                 
-                // All claim names for debugging
-                sb.append("\n=== All Token Claims ===\n");
-                for (String claimName : jwt.getClaimNames()) {
-                    Object claimValue = jwt.getClaim(claimName);
-                    sb.append(claimName).append(": ").append(claimValue).append("\n");
+                // Try to get claim names safely
+                sb.append("=== Attempting to read claims ===\n");
+                try {
+                    if (jwt.getClaimNames() != null && !jwt.getClaimNames().isEmpty()) {
+                        sb.append("Found ").append(jwt.getClaimNames().size()).append(" claims:\n");
+                        for (String claimName : jwt.getClaimNames()) {
+                            try {
+                                Object claimValue = jwt.getClaim(claimName);
+                                sb.append("  ").append(claimName).append(": ").append(String.valueOf(claimValue)).append("\n");
+                            } catch (Exception e) {
+                                sb.append("  ").append(claimName).append(": Error reading - ").append(e.getMessage()).append("\n");
+                            }
+                        }
+                    } else {
+                        sb.append("getClaimNames() returned null or empty - JWT was not successfully parsed\n");
+                    }
+                } catch (Exception e) {
+                    sb.append("Error iterating claims: ").append(e.getMessage()).append("\n");
                 }
             } else {
                 sb.append("\n=== JWT Token ===\n");
                 sb.append("JWT is null - token may not be properly injected\n");
+                sb.append("This usually means no Bearer token was provided in the Authorization header\n");
             }
         } catch (Exception e) {
             sb.append("\n=== JWT Error ===\n");
-            sb.append("Error accessing JWT: ").append(e.getMessage()).append("\n");
+            sb.append("Unexpected error accessing JWT: ").append(e.getClass().getName()).append(": ").append(e.getMessage()).append("\n");
+            if (e.getCause() != null) {
+                sb.append("Caused by: ").append(e.getCause().getClass().getName()).append(": ").append(e.getCause().getMessage()).append("\n");
+            }
         }
 
         return sb.toString();
