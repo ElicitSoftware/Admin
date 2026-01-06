@@ -24,6 +24,7 @@ import io.quarkus.security.Authenticated;
 import io.quarkus.security.identity.SecurityIdentity;
 import jakarta.annotation.security.PermitAll;
 import jakarta.annotation.security.RolesAllowed;
+import org.eclipse.microprofile.jwt.JsonWebToken;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import jakarta.transaction.Transactional;
@@ -64,6 +65,12 @@ public class TokenService {
      */
     @Inject
     SecurityIdentity securityIdentity;
+
+    /**
+     * JSON Web Token for accessing token claims and metadata.
+     */
+    @Inject
+    JsonWebToken jwt;
 
     @Context
     private UriInfo uriInfo;
@@ -364,23 +371,94 @@ public class TokenService {
 
     /**
      * Returns the current user's roles and security information.
+     * <p>
+     * Provides detailed diagnostic information about the JWT token including:
+     * <ul>
+     *   <li>Principal name and authentication status</li>
+     *   <li>Roles extracted by Quarkus Security</li>
+     *   <li>Token type (user vs service principal)</li>
+     *   <li>Raw token claims for debugging</li>
+     * </ul>
      *
-     * @return a string containing the user's principal name and assigned roles
+     * @return a string containing comprehensive security and token information
      */
     @Path("/roles")
     @GET
     @PermitAll
     public String roles() {
         StringBuilder sb = new StringBuilder();
-        if(securityIdentity.getPrincipal() == null) {
+        
+        // Check for principal
+        if (securityIdentity.getPrincipal() == null) {
             sb.append("No principal found\n");
             return sb.toString();
         }
 
         // Basic identity information
-        sb.append("User: ").append(securityIdentity.getPrincipal().getName()).append("\n");
+        sb.append("=== Security Identity ===\n");
+        sb.append("Principal Name: ").append(securityIdentity.getPrincipal().getName()).append("\n");
         sb.append("Is Anonymous: ").append(securityIdentity.isAnonymous()).append("\n");
-        sb.append("Roles: ").append(securityIdentity.getRoles()).append("\n");
+        sb.append("Roles from SecurityIdentity: ").append(securityIdentity.getRoles()).append("\n\n");
+
+        // JWT Token information
+        try {
+            if (jwt != null) {
+                sb.append("=== JWT Token Information ===\n");
+                sb.append("Token Name: ").append(jwt.getName()).append("\n");
+                
+                // Token type detection
+                String tokenType = "User Token";
+                if (jwt.getClaim("appidacr") != null) {
+                    tokenType = "Service Principal Token";
+                }
+                sb.append("Token Type: ").append(tokenType).append("\n");
+                
+                // Key claims
+                sb.append("Subject (sub): ").append(jwt.getSubject()).append("\n");
+                sb.append("Issuer (iss): ").append(jwt.getIssuer()).append("\n");
+                
+                // Application/Client ID
+                if (jwt.getClaim("appid") != null) {
+                    sb.append("Application ID (appid): ").append(jwt.getClaim("appid")).append("\n");
+                }
+                
+                // User information (if present)
+                if (jwt.getClaim("upn") != null) {
+                    sb.append("UPN: ").append(jwt.getClaim("upn")).append("\n");
+                }
+                if (jwt.getClaim("unique_name") != null) {
+                    sb.append("Unique Name: ").append(jwt.getClaim("unique_name")).append("\n");
+                }
+                
+                // Groups
+                if (jwt.getClaim("groups") != null) {
+                    sb.append("Groups: ").append(jwt.getClaim("groups")).append("\n");
+                }
+                
+                // Roles from token
+                if (jwt.getClaim("roles") != null) {
+                    sb.append("Roles Claim in Token: ").append(jwt.getClaim("roles")).append("\n");
+                }
+                
+                // Scopes
+                if (jwt.getClaim("scp") != null) {
+                    sb.append("Scopes (scp): ").append(jwt.getClaim("scp")).append("\n");
+                }
+                
+                // All claim names for debugging
+                sb.append("\n=== All Token Claims ===\n");
+                for (String claimName : jwt.getClaimNames()) {
+                    Object claimValue = jwt.getClaim(claimName);
+                    sb.append(claimName).append(": ").append(claimValue).append("\n");
+                }
+            } else {
+                sb.append("\n=== JWT Token ===\n");
+                sb.append("JWT is null - token may not be properly injected\n");
+            }
+        } catch (Exception e) {
+            sb.append("\n=== JWT Error ===\n");
+            sb.append("Error accessing JWT: ").append(e.getMessage()).append("\n");
+        }
 
         return sb.toString();
     }
