@@ -1,5 +1,5 @@
 
-Lists of 29 third-party dependencies.
+Lists of 30 third-party dependencies.
      (The Apache Software License, Version 2.0) ZXing Core (com.google.zxing:core:3.5.1 - https://github.com/zxing/zxing/core)
      (The Apache Software License, Version 2.0) ZXing Java SE extensions (com.google.zxing:javase:3.5.1 - https://github.com/zxing/zxing/javase)
      (Apache License Version 2.0) Vaadin Platform (vaadin-dev) (com.vaadin:vaadin-dev:25.0.2 - https://vaadin.com)
@@ -20,6 +20,7 @@ Lists of 29 third-party dependencies.
      (The Apache Software License, Version 2.0) Quarkus - Micrometer Registry - Prometheus Runtime (io.quarkus:quarkus-micrometer-registry-prometheus:3.30.5 - https://github.com/quarkusio/quarkus)
      (The Apache Software License, Version 2.0) Quarkus - OpenID Connect Adapter - Runtime (io.quarkus:quarkus-oidc:3.30.5 - https://github.com/quarkusio/quarkus)
      (The Apache Software License, Version 2.0) Quarkus - OpenID Connect Token Propagation - Common (io.quarkus:quarkus-oidc-token-propagation-common:3.30.5 - https://github.com/quarkusio/quarkus)
+     (The Apache Software License, Version 2.0) Quarkus - OpenTelemetry - Runtime (io.quarkus:quarkus-opentelemetry:3.30.5 - https://github.com/quarkusio/quarkus)
      (The Apache Software License, Version 2.0) Quarkus - REST - Runtime (io.quarkus:quarkus-rest:3.30.5 - https://github.com/quarkusio/quarkus)
      (The Apache Software License, Version 2.0) Quarkus - REST Client - Runtime (io.quarkus:quarkus-rest-client:3.30.5 - https://github.com/quarkusio/quarkus)
      (The Apache Software License, Version 2.0) Quarkus - REST Client JSON-B (io.quarkus:quarkus-rest-client-jsonb:3.30.5 - https://github.com/quarkusio/quarkus)

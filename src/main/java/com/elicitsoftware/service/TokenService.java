@@ -17,8 +17,10 @@ import com.elicitsoftware.model.*;
 import com.elicitsoftware.request.AddRequest;
 import com.elicitsoftware.response.AddResponse;
 import com.elicitsoftware.response.AddResponseStatus;
+import com.elicitsoftware.service.CsvImportService;
 import com.elicitsoftware.util.RandomString;
 import io.quarkus.logging.Log;
+import io.quarkus.security.Authenticated;
 import io.quarkus.security.identity.SecurityIdentity;
 import jakarta.annotation.security.PermitAll;
 import jakarta.annotation.security.RolesAllowed;
@@ -382,7 +384,7 @@ public class TokenService {
      */
     @Path("/roles")
     @GET
-    @RolesAllowed({"elicit_importer", "elicit_admin", "elicit_user"})
+    @PermitAll
     public String roles() {
         StringBuilder sb = new StringBuilder();
         
