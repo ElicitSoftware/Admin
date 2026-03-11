@@ -178,7 +178,7 @@ public class ReportingService {
         // For example: generate PDF reports for finished surveys
         try {
             Survey survey = Survey.findById(status.getSurveyId());
-            int respondent_id = (int) status.getId();
+            int respondent_id = (int) status.getRespondentId();
             //Make sure this is empty
             this.reportResponses.clear();
             ReportResponse reportResponse;
