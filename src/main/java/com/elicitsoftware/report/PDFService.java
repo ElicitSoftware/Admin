@@ -15,7 +15,8 @@ import com.elicitsoftware.report.pdf.Content;
 import com.elicitsoftware.report.pdfbox.Column;
 import com.elicitsoftware.report.pdfbox.Table;
 import com.elicitsoftware.report.pdfbox.TableBuilder;
-import com.vaadin.flow.server.StreamResource;
+import com.vaadin.flow.server.streams.DownloadHandler;
+import com.vaadin.flow.server.streams.DownloadResponse;
 import de.rototor.pdfbox.graphics2d.PdfBoxGraphics2D;
 import de.rototor.pdfbox.graphics2d.PdfBoxGraphics2DFontTextDrawer;
 import jakarta.enterprise.context.RequestScoped;
@@ -76,17 +77,16 @@ import java.util.List;
  * PDFService pdfService;
  *
  * ArrayList<ReportResponse> responses = getReportData();
- * StreamResource pdfResource = pdfService.generatePDF(responses);
+ * DownloadHandler pdfResource = pdfService.generatePDF(responses);
  * }
  * </pre>
  *
  * @see ReportResponse
  * @see Content
- * @see StreamResource
+ * @see DownloadHandler
  * @since 1.0.0
  */
 @RequestScoped
-@SuppressWarnings({"deprecation", "removal"}) // StreamResource is deprecated for removal
 public class PDFService {
 
     /**
@@ -185,11 +185,11 @@ public class PDFService {
      * 6. Save document to stream and return as downloadable resource
      *
      * @param reportResponses List of report responses containing the content to be rendered
-     * @return StreamResource containing the generated PDF, named "family_history_report.pdf"
-     * @throws RuntimeException if an IOException occurs during PDF generation
-     * @see ReportResponse
-     * @see Content
-     * @see StreamResource
+* @return DownloadHandler containing the generated PDF, named "family_history_report.pdf"
+ * @throws RuntimeException if an IOException occurs during PDF generation
+ * @see ReportResponse
+ * @see Content
+ * @see DownloadHandler
      */
 
     /**
@@ -348,7 +348,7 @@ public class PDFService {
      * @param reportResponses the list of report responses to include in the PDF
      * @return a StreamResource containing the generated PDF
      */
-    public StreamResource generatePDF(ArrayList<ReportResponse> reportResponses) {
+    public DownloadHandler generatePDF(ArrayList<ReportResponse> reportResponses) {
         try {
             // Create a new document
             document = new PDDocument();
@@ -410,8 +410,15 @@ public class PDFService {
 
             ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
             document.save(outputStream);
-            ByteArrayInputStream inputStream = new ByteArrayInputStream(outputStream.toByteArray());
-            return new StreamResource("family_history_report.pdf", () -> inputStream);
+            byte[] pdfBytes = outputStream.toByteArray();
+            return DownloadHandler.fromInputStream(event ->
+                new DownloadResponse(
+                    new ByteArrayInputStream(pdfBytes),
+                    "family_history_report.pdf",
+                    "application/pdf",
+                    pdfBytes.length
+                )
+            ).inline();
         } catch (IOException e) {
             throw new RuntimeException(e);
         }

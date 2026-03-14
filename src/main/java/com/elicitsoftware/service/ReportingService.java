@@ -21,8 +21,9 @@ import com.elicitsoftware.report.ReportService;
 import com.elicitsoftware.report.pdf.Content;
 import com.elicitsoftware.report.pdf.PDFDocument;
 import com.vaadin.flow.component.UI;
+import com.vaadin.flow.component.html.Anchor;
 import com.vaadin.flow.component.notification.Notification;
-import com.vaadin.flow.server.StreamResource;
+import com.vaadin.flow.server.streams.DownloadHandler;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import org.eclipse.microprofile.rest.client.RestClientBuilder;
@@ -188,13 +189,21 @@ public class ReportingService {
                 reportResponses.add(reportResponse);
             }
             // Generate the PDF using the pdfService
-            StreamResource pdfContent = pdfService.generatePDF(this.reportResponses);
+            DownloadHandler pdfHandler = pdfService.generatePDF(this.reportResponses);
 
-            // Register the StreamResource and get its URL
-            String pdfUrl = UI.getCurrent().getSession().getResourceRegistry().registerResource(pdfContent).getResourceUri().toString();
-
-            // Open the PDF in a new browser tab
-            UI.getCurrent().getPage().open(pdfUrl, "_blank");
+            // Create a hidden Anchor with the DownloadHandler and trigger download via JavaScript
+            UI ui = UI.getCurrent();
+            Anchor downloadAnchor = new Anchor(pdfHandler, "");
+            downloadAnchor.setTarget("_blank");
+            downloadAnchor.setId("pdf-download-anchor");
+            downloadAnchor.getStyle().set("display", "none");
+            ui.add(downloadAnchor);
+            
+            // Trigger click on the anchor and then remove it
+            ui.getPage().executeJs(
+                "const anchor = document.getElementById('pdf-download-anchor');" +
+                "if (anchor) { anchor.click(); anchor.remove(); }"
+            );
         } catch (Exception e) {
             e.printStackTrace();
             Notification.show("Failed to generate PDF: " + e.getMessage(), 3000, Notification.Position.MIDDLE);
