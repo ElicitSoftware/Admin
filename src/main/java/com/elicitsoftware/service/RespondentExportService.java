@@ -17,34 +17,72 @@ import jakarta.persistence.EntityManager;
 import jakarta.persistence.Query;
 import jakarta.transaction.Transactional;
 
+import java.time.Instant;
 import java.time.OffsetDateTime;
-import java.time.format.DateTimeFormatter;
-import java.util.ArrayList;
+import java.time.ZoneId;
 import java.util.Date;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
 /**
- * Exports respondent, answer, dependent, subject, message, and PSA rows as an importable SQL script.
+ * Exports respondent, answer, dependent, subject, message, and PSA rows as an importable data file.
+ * <p>
+ * The export format is a custom text format designed for safe import via parameterized queries:
+ * <pre>
+ * # ELICIT_EXPORT_V1
+ * # respondent_id: 123
+ * # timezone: America/Detroit
+ * # generated: 2026-03-13T20:50:38.106350589-04:00
+ * respondents: survey_id|token|logins|created_dt|first_access_dt
+ * answers: survey_id|step|step_instance|...|created_dt|saved_dt
+ * dependents: upstream_display_key|downstream_display_key|relationship_id|deleted
+ * subjects: subject_index|xid|firstname|lastname|...|created_dt
+ * messages: subject_index|message_type|mime_type|...|created_dt|sent_dt
+ * respondent_psa: post_survey_action_id|tries|status|error_msg|created_dt|uploaded_dt
+ * </pre>
+ * <p>
+ * All timestamps are exported in ISO-8601 format with the database's local timezone offset
+ * (e.g., {@code 2026-03-13T20:50:38.106-04:00}).
+ * <p>
+ * Field delimiter: | (pipe)<br>
+ * Escape sequences: \| for literal pipe, \\ for literal backslash, \n for newline
+ *
+ * @see RespondentImportService
  */
 @ApplicationScoped
+@SuppressWarnings("java:S1118") // CDI managed bean
 public class RespondentExportService {
 
-    private static final DateTimeFormatter TIMESTAMP_FORMAT =
-            DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss.SSSSSSX");
+    /**
+     * Default constructor for CDI.
+     */
+    public RespondentExportService() {
+        // CDI managed bean
+    }
+
+    private static final String FORMAT_VERSION = "ELICIT_EXPORT_V1";
+    private static final String FIELD_DELIMITER = "|";
 
     @Inject
     EntityManager em;
 
     /**
-     * Generates an SQL export script for a single respondent.
+     * Generates an export file for a single respondent in the custom Elicit format.
+     * <p>
+     * Queries the database timezone and formats all timestamps with the local timezone offset
+     * for accurate import to databases configured with the same timezone.
      *
      * @param respondentId source respondent identifier
-     * @return SQL script that can be executed on a matching target survey schema
+     * @return export data as a String that can be safely imported via {@link RespondentImportService}
+     * @throws IllegalArgumentException if respondent is not found
      */
     @Transactional
-    public String exportRespondentAsSql(Integer respondentId) {
+    public String exportRespondent(Integer respondentId) {
+        // Get database timezone for consistent timestamp formatting
+        String dbTimezone = (String) em.createNativeQuery("SELECT current_setting('TIMEZONE')").getSingleResult();
+        ZoneId zoneId = ZoneId.of(dbTimezone);
+        
         Object[] respondent = getRespondent(respondentId);
         if (respondent == null) {
             throw new IllegalArgumentException("Respondent not found: " + respondentId);
@@ -56,47 +94,142 @@ public class RespondentExportService {
         List<Object[]> messages = getMessages(respondentId);
         List<Object[]> respondentPsa = getRespondentPsa(respondentId);
 
-        StringBuilder sql = new StringBuilder();
-        sql.append("-- ============================================\n");
-        sql.append("-- Export of Respondent ID: ").append(respondentId).append("\n");
-        sql.append("-- Survey ID: ").append(respondent[1]).append("\n");
-        sql.append("-- Token: ").append(respondent[2]).append("\n");
-        sql.append("-- Answers: ").append(answers.size()).append("\n");
-        sql.append("-- Dependents: ").append(dependents.size()).append("\n");
-        sql.append("-- Subjects: ").append(subjects.size()).append("\n");
-        sql.append("-- Messages: ").append(messages.size()).append("\n");
-        sql.append("-- Respondent PSA: ").append(respondentPsa.size()).append("\n");
-        sql.append("-- Generated: ").append(OffsetDateTime.now().format(TIMESTAMP_FORMAT)).append("\n");
-        sql.append("-- ============================================\n\n");
-
-        sql.append("BEGIN;\n\n");
-        sql.append(generateRespondentSql(respondent));
-        sql.append(generateAnswersSql(answers));
-        sql.append(generateDependentsSql(dependents));
-        sql.append(generateSubjectsAndMessagesSql(subjects, messages));
-        sql.append(generateRespondentPsaSql(respondentPsa));
-
-        sql.append("-- ============================================\n");
-        sql.append("-- Verification\n");
-        sql.append("-- ============================================\n");
-        sql.append("SELECT 'Respondent ID:' AS info, currval('survey.respondents_seq') AS value;\n");
-        sql.append("SELECT 'Answers imported:' AS info, COUNT(*) AS value FROM survey.answers ");
-        sql.append("WHERE respondent_id = currval('survey.respondents_seq');\n");
-        sql.append("SELECT 'Dependents imported:' AS info, COUNT(*) AS value FROM survey.dependents ");
-        sql.append("WHERE respondent_id = currval('survey.respondents_seq');\n\n");
-        sql.append("SELECT 'Subjects imported:' AS info, COUNT(*) AS value FROM survey.subjects ");
-        sql.append("WHERE respondent_id = currval('survey.respondents_seq');\n");
-        sql.append("SELECT 'Messages imported:' AS info, COUNT(*) AS value FROM survey.messages m ");
-        sql.append("JOIN survey.subjects s ON s.id = m.subject_id ");
-        sql.append("WHERE s.respondent_id = currval('survey.respondents_seq');\n");
-        if (!respondentPsa.isEmpty()) {
-            sql.append("SELECT 'Respondent PSA imported:' AS info, COUNT(*) AS value FROM survey.respondent_psa ");
-            sql.append("WHERE respondent_id = currval('survey.respondents_seq');\n");
+        // Build subject ID to index mapping for message references
+        Map<Object, Integer> subjectIdToIndex = new LinkedHashMap<>();
+        for (int i = 0; i < subjects.size(); i++) {
+            subjectIdToIndex.put(subjects.get(i)[0], i);
         }
-        sql.append("\n");
-        sql.append("COMMIT;\n");
 
-        return sql.toString();
+        StringBuilder out = new StringBuilder();
+        
+        // Header
+        out.append("# ").append(FORMAT_VERSION).append("\n");
+        out.append("# respondent_id: ").append(respondentId).append("\n");
+        out.append("# survey_id: ").append(respondent[1]).append("\n");
+        out.append("# token: ").append(respondent[2]).append("\n");
+        out.append("# answers: ").append(answers.size()).append("\n");
+        out.append("# dependents: ").append(dependents.size()).append("\n");
+        out.append("# subjects: ").append(subjects.size()).append("\n");
+        out.append("# messages: ").append(messages.size()).append("\n");
+        out.append("# respondent_psa: ").append(respondentPsa.size()).append("\n");
+        out.append("# timezone: ").append(dbTimezone).append("\n");
+        out.append("# generated: ").append(OffsetDateTime.now(zoneId).toString()).append("\n");
+        out.append("\n");
+
+        // Respondent record
+        // Fields: survey_id, token, logins, created_dt, first_access_dt
+        out.append("respondents: ");
+        out.append(escapeField(respondent[1]));  // survey_id
+        out.append(FIELD_DELIMITER).append(escapeField(respondent[2]));  // token
+        out.append(FIELD_DELIMITER).append(escapeField(respondent[4]));  // logins
+        out.append(FIELD_DELIMITER).append(formatTimestamp(respondent[5], zoneId));  // created_dt
+        out.append(FIELD_DELIMITER).append(formatTimestamp(respondent[6], zoneId));  // first_access_dt
+        out.append("\n");
+
+        // Answer records
+        // Fields: survey_id, step, step_instance, section, section_instance, question_display_order,
+        //         question_instance, section_question_id, question_id, display_key, display_text,
+        //         text_value, deleted, created_dt, saved_dt
+        for (Object[] answer : answers) {
+            out.append("answers: ");
+            out.append(escapeField(answer[1]));  // survey_id
+            out.append(FIELD_DELIMITER).append(escapeField(answer[2]));  // step
+            out.append(FIELD_DELIMITER).append(escapeField(answer[3]));  // step_instance
+            out.append(FIELD_DELIMITER).append(escapeField(answer[4]));  // section
+            out.append(FIELD_DELIMITER).append(escapeField(answer[5]));  // section_instance
+            out.append(FIELD_DELIMITER).append(escapeField(answer[6]));  // question_display_order
+            out.append(FIELD_DELIMITER).append(escapeField(answer[7]));  // question_instance
+            out.append(FIELD_DELIMITER).append(escapeField(answer[8]));  // section_question_id
+            out.append(FIELD_DELIMITER).append(escapeField(answer[9]));  // question_id
+            out.append(FIELD_DELIMITER).append(escapeField(answer[10]));  // display_key
+            out.append(FIELD_DELIMITER).append(escapeField(answer[11]));  // display_text
+            out.append(FIELD_DELIMITER).append(escapeField(answer[12]));  // text_value
+            out.append(FIELD_DELIMITER).append(escapeField(answer[13]));  // deleted
+            out.append(FIELD_DELIMITER).append(formatTimestamp(answer[14], zoneId));  // created_dt
+            out.append(FIELD_DELIMITER).append(formatTimestamp(answer[15], zoneId));  // saved_dt
+            out.append("\n");
+        }
+
+        // Dependent records
+        // Fields: upstream_display_key, downstream_display_key, relationship_id, deleted
+        for (Object[] dependent : dependents) {
+            out.append("dependents: ");
+            out.append(escapeField(dependent[5]));  // upstream_display_key
+            out.append(FIELD_DELIMITER).append(escapeField(dependent[6]));  // downstream_display_key
+            out.append(FIELD_DELIMITER).append(escapeField(dependent[3]));  // relationship_id
+            out.append(FIELD_DELIMITER).append(escapeField(dependent[4]));  // deleted
+            out.append("\n");
+        }
+
+        // Subject records
+        // Fields: subject_index, xid, firstname, lastname, middlename, dob, email, phone,
+        //         department_id, survey_id, created_dt
+        for (int i = 0; i < subjects.size(); i++) {
+            Object[] subject = subjects.get(i);
+            out.append("subjects: ");
+            out.append(i);  // subject_index for message linking
+            out.append(FIELD_DELIMITER).append(escapeField(subject[1]));  // xid
+            out.append(FIELD_DELIMITER).append(escapeField(subject[2]));  // firstname
+            out.append(FIELD_DELIMITER).append(escapeField(subject[3]));  // lastname
+            out.append(FIELD_DELIMITER).append(escapeField(subject[4]));  // middlename
+            out.append(FIELD_DELIMITER).append(formatDate(subject[5]));  // dob
+            out.append(FIELD_DELIMITER).append(escapeField(subject[6]));  // email
+            out.append(FIELD_DELIMITER).append(escapeField(subject[7]));  // phone
+            out.append(FIELD_DELIMITER).append(escapeField(subject[8]));  // department_id
+            out.append(FIELD_DELIMITER).append(escapeField(subject[9]));  // survey_id
+            out.append(FIELD_DELIMITER).append(formatTimestamp(subject[10], zoneId));  // created_dt
+            out.append("\n");
+        }
+
+        // Message records
+        // Fields: subject_index, message_type, mime_type, subjectline, body, created_dt, sent_dt
+        for (Object[] message : messages) {
+            Integer subjectIndex = subjectIdToIndex.get(message[1]);
+            if (subjectIndex == null) {
+                continue;  // Skip orphaned messages
+            }
+            out.append("messages: ");
+            out.append(subjectIndex);  // subject_index
+            out.append(FIELD_DELIMITER).append(escapeField(message[2]));  // message_type
+            out.append(FIELD_DELIMITER).append(escapeField(message[3]));  // mime_type
+            out.append(FIELD_DELIMITER).append(escapeField(message[4]));  // subjectline
+            out.append(FIELD_DELIMITER).append(escapeField(message[5]));  // body
+            out.append(FIELD_DELIMITER).append(formatTimestamp(message[6], zoneId));  // created_dt
+            out.append(FIELD_DELIMITER).append(formatTimestamp(message[7], zoneId));  // sent_dt
+            out.append("\n");
+        }
+
+        // Respondent PSA records
+        // Fields: post_survey_action_id, tries, status, error_msg, created_dt, uploaded_dt
+        for (Object[] psa : respondentPsa) {
+            out.append("respondent_psa: ");
+            out.append(escapeField(psa[2]));  // post_survey_action_id
+            out.append(FIELD_DELIMITER).append(escapeField(psa[3]));  // tries
+            out.append(FIELD_DELIMITER).append(escapeField(psa[4]));  // status
+            out.append(FIELD_DELIMITER).append(escapeField(psa[5]));  // error_msg
+            out.append(FIELD_DELIMITER).append(formatTimestamp(psa[6], zoneId));  // created_dt
+            out.append(FIELD_DELIMITER).append(formatTimestamp(psa[7], zoneId));  // uploaded_dt
+            out.append("\n");
+        }
+
+        return out.toString();
+    }
+
+    /**
+     * Escapes a field value for the export format.
+     * Handles: null, pipe delimiter, backslash, newline
+     */
+    private String escapeField(Object value) {
+        if (value == null) {
+            return "";
+        }
+        String str = value.toString();
+        // Escape backslashes first, then pipes, then newlines
+        str = str.replace("\\", "\\\\");
+        str = str.replace("|", "\\|");
+        str = str.replace("\n", "\\n");
+        str = str.replace("\r", "\\r");
+        return str;
     }
 
     private Object[] getRespondent(Integer respondentId) {
@@ -199,245 +332,33 @@ public class RespondentExportService {
         return rows;
     }
 
-    private String generateRespondentSql(Object[] respondent) {
-        StringBuilder sql = new StringBuilder();
-        sql.append("-- ============================================\n");
-        sql.append("-- Insert Respondent\n");
-        sql.append("-- ============================================\n");
-        sql.append("INSERT INTO survey.respondents (\n");
-        sql.append("    id, survey_id, token, active, logins, created_dt, first_access_dt, finalized_dt\n");
-        sql.append(") VALUES (\n");
-        sql.append("    nextval('survey.respondents_seq'),\n");
-        sql.append("    ").append(nullOrValue(respondent[1])).append(",  -- survey_id\n");
-        sql.append("    ").append(escapeString((String) respondent[2])).append(",  -- token\n");
-        sql.append("    true,  -- active (force active so imported respondent can log in)\n");
-        sql.append("    ").append(nullOrValue(respondent[4])).append(",  -- logins\n");
-        sql.append("    ").append(formatTimestamp(respondent[5])).append(",  -- created_dt\n");
-        sql.append("    ").append(formatTimestamp(respondent[6])).append(",  -- first_access_dt\n");
-        sql.append("    NULL   -- finalized_dt (allow manual finish to trigger ETL)\n");
-        sql.append(");\n\n");
-        return sql.toString();
-    }
-
-    private String generateAnswersSql(List<Object[]> answers) {
-        if (answers.isEmpty()) {
-            return "-- No answers to export\n\n";
-        }
-
-        StringBuilder sql = new StringBuilder();
-        sql.append("-- ============================================\n");
-        sql.append("-- Insert Answers (").append(answers.size()).append(" total)\n");
-        sql.append("-- ============================================\n");
-
-        for (Object[] answer : answers) {
-            sql.append("INSERT INTO survey.answers (\n");
-            sql.append("    id, survey_id, respondent_id, step, step_instance, section, section_instance,\n");
-            sql.append("    question_display_order, question_instance, section_question_id, question_id,\n");
-            sql.append("    display_key, display_text, text_value, deleted, created_dt, saved_dt\n");
-            sql.append(") VALUES (\n");
-            sql.append("    nextval('survey.answers_seq'),\n");
-            sql.append("    ").append(nullOrValue(answer[1])).append(",  -- survey_id\n");
-            sql.append("    currval('survey.respondents_seq'),  -- respondent_id\n");
-            sql.append("    ").append(nullOrValue(answer[2])).append(",  -- step\n");
-            sql.append("    ").append(nullOrValue(answer[3])).append(",  -- step_instance\n");
-            sql.append("    ").append(nullOrValue(answer[4])).append(",  -- section\n");
-            sql.append("    ").append(nullOrValue(answer[5])).append(",  -- section_instance\n");
-            sql.append("    ").append(nullOrValue(answer[6])).append(",  -- question_display_order\n");
-            sql.append("    ").append(nullOrValue(answer[7])).append(",  -- question_instance\n");
-            sql.append("    ").append(nullOrValue(answer[8])).append(",  -- section_question_id\n");
-            sql.append("    ").append(nullOrValue(answer[9])).append(",  -- question_id\n");
-            sql.append("    ").append(escapeString((String) answer[10])).append(",  -- display_key\n");
-            sql.append("    ").append(escapeString((String) answer[11])).append(",  -- display_text\n");
-            sql.append("    ").append(escapeString((String) answer[12])).append(",  -- text_value\n");
-            sql.append("    ").append(booleanOrNull(answer[13])).append(",  -- deleted\n");
-            sql.append("    ").append(formatTimestamp(answer[14])).append(",  -- created_dt\n");
-            sql.append("    ").append(formatTimestamp(answer[15])).append("   -- saved_dt\n");
-            sql.append(");\n");
-        }
-
-        sql.append("\n");
-        return sql.toString();
-    }
-
-    private String generateDependentsSql(List<Object[]> dependents) {
-        if (dependents.isEmpty()) {
-            return "-- No dependents to export\n\n";
-        }
-
-        StringBuilder sql = new StringBuilder();
-        sql.append("-- ============================================\n");
-        sql.append("-- Insert Dependents (").append(dependents.size()).append(" total)\n");
-        sql.append("-- Uses subqueries to look up answer IDs by display_key\n");
-        sql.append("-- ============================================\n");
-
-        for (Object[] dependent : dependents) {
-            String upstreamDisplayKey = (String) dependent[5];
-            String downstreamDisplayKey = (String) dependent[6];
-
-            sql.append("INSERT INTO survey.dependents (\n");
-            sql.append("    id, respondent_id, upstream_id, downstream_id, relationship_id, deleted\n");
-            sql.append(") VALUES (\n");
-            sql.append("    nextval('survey.dependents_seq'),\n");
-            sql.append("    currval('survey.respondents_seq'),\n");
-            sql.append("    (SELECT id FROM survey.answers WHERE respondent_id = currval('survey.respondents_seq') ");
-            sql.append("AND display_key = ").append(escapeString(upstreamDisplayKey)).append("),\n");
-            sql.append("    (SELECT id FROM survey.answers WHERE respondent_id = currval('survey.respondents_seq') ");
-            sql.append("AND display_key = ").append(escapeString(downstreamDisplayKey)).append("),\n");
-            sql.append("    ").append(nullOrValue(dependent[3])).append(",  -- relationship_id\n");
-            sql.append("    ").append(booleanOrNull(dependent[4])).append("   -- deleted\n");
-            sql.append(");\n");
-        }
-
-        sql.append("\n");
-        return sql.toString();
-    }
-
-    private String generateSubjectsAndMessagesSql(List<Object[]> subjects, List<Object[]> messages) {
-        Map<Object, List<Object[]>> messagesBySubjectId = new LinkedHashMap<>();
-        for (Object[] message : messages) {
-            Object sourceSubjectId = message[1];
-            messagesBySubjectId.computeIfAbsent(sourceSubjectId, key -> new ArrayList<>()).add(message);
-        }
-
-        StringBuilder sql = new StringBuilder();
-
-        if (subjects.isEmpty()) {
-            sql.append("-- No subjects to export\n\n");
-            if (!messages.isEmpty()) {
-                sql.append("-- Messages skipped because no subject rows were exported\n\n");
-            }
-            return sql.toString();
-        }
-
-        sql.append("-- ============================================\n");
-        sql.append("-- Insert Subjects (").append(subjects.size()).append(" total)\n");
-        sql.append("-- Insert related messages using currval('survey.subjects_seq')\n");
-        sql.append("-- ============================================\n");
-
-        for (Object[] subject : subjects) {
-            Object sourceSubjectId = subject[0];
-            List<Object[]> subjectMessages = messagesBySubjectId.getOrDefault(sourceSubjectId, List.of());
-
-            sql.append("INSERT INTO survey.subjects (\n");
-            sql.append("    id, xid, firstname, lastname, middlename, dob,\n");
-            sql.append("    email, phone, department_id, survey_id, respondent_id, created_dt\n");
-            sql.append(") VALUES (\n");
-            sql.append("    nextval('survey.subjects_seq'),\n");
-            sql.append("    ").append(escapeString((String) subject[1])).append(",\n");
-            sql.append("    ").append(escapeString((String) subject[2])).append(",\n");
-            sql.append("    ").append(escapeString((String) subject[3])).append(",\n");
-            sql.append("    ").append(escapeString((String) subject[4])).append(",\n");
-            sql.append("    ").append(formatDate(subject[5])).append(",\n");
-            sql.append("    ").append(escapeString((String) subject[6])).append(",\n");
-            sql.append("    ").append(escapeString((String) subject[7])).append(",\n");
-            sql.append("    ").append(nullOrValue(subject[8])).append(",\n");
-            sql.append("    ").append(nullOrValue(subject[9])).append(",\n");
-            sql.append("    currval('survey.respondents_seq'),\n");
-            sql.append("    ").append(formatTimestamp(subject[10])).append("\n");
-            sql.append(");\n");
-
-            for (Object[] message : subjectMessages) {
-                sql.append("INSERT INTO survey.messages (\n");
-                sql.append("    id, subject_id, message_type, mime_type, subjectline, body, created_dt, sent_dt\n");
-                sql.append(") VALUES (\n");
-                sql.append("    nextval('survey.messages_seq'),\n");
-                sql.append("    currval('survey.subjects_seq'),\n");
-                sql.append("    ").append(nullOrValue(message[2])).append(",\n");
-                sql.append("    ").append(escapeString((String) message[3])).append(",\n");
-                sql.append("    ").append(escapeString((String) message[4])).append(",\n");
-                sql.append("    ").append(escapeString((String) message[5])).append(",\n");
-                sql.append("    ").append(formatTimestamp(message[6])).append(",\n");
-                sql.append("    ").append(formatTimestamp(message[7])).append("\n");
-                sql.append(");\n");
-            }
-        }
-
-        sql.append("\n");
-        return sql.toString();
-    }
-
-    private String generateRespondentPsaSql(List<Object[]> respondentPsaRows) {
-        if (respondentPsaRows.isEmpty()) {
-            return "-- No respondent_psa rows to export\n\n";
-        }
-
-        StringBuilder sql = new StringBuilder();
-        sql.append("-- ============================================\n");
-        sql.append("-- Insert respondent_psa (").append(respondentPsaRows.size()).append(" total)\n");
-        sql.append("-- ============================================\n");
-
-        for (Object[] psa : respondentPsaRows) {
-            sql.append("INSERT INTO survey.respondent_psa (\n");
-            sql.append("    id, respondent_id, post_survey_action_id, tries,\n");
-            sql.append("    status, error_msg, created_dt, uploaded_dt\n");
-            sql.append(") VALUES (\n");
-            sql.append("    nextval('survey.respondent_psa_seq'),\n");
-            sql.append("    currval('survey.respondents_seq'),\n");
-            sql.append("    ").append(nullOrValue(psa[2])).append(",\n");
-            sql.append("    ").append(nullOrValue(psa[3])).append(",\n");
-            sql.append("    ").append(escapeString((String) psa[4])).append(",\n");
-            sql.append("    ").append(escapeString((String) psa[5])).append(",\n");
-            sql.append("    ").append(formatTimestamp(psa[6])).append(",\n");
-            sql.append("    ").append(formatTimestamp(psa[7])).append("\n");
-            sql.append(");\n");
-        }
-
-        sql.append("\n");
-        return sql.toString();
-    }
-
     private String formatDate(Object value) {
         if (value == null) {
-            return "NULL";
+            return "";
         }
         if (value instanceof java.sql.Date sqlDate) {
-            return "'" + sqlDate + "'";
+            return sqlDate.toString();
         }
         if (value instanceof Date date) {
-            return "'" + new java.sql.Date(date.getTime()) + "'";
+            return new java.sql.Date(date.getTime()).toString();
         }
-        return escapeString(value.toString());
+        return escapeField(value);
     }
 
-    private String escapeString(String value) {
+    private String formatTimestamp(Object value, ZoneId zoneId) {
         if (value == null) {
-            return "NULL";
-        }
-        return "'" + value.replace("'", "''") + "'";
-    }
-
-    private String nullOrValue(Object value) {
-        return value == null ? "NULL" : value.toString();
-    }
-
-    private String booleanOrNull(Object value) {
-        if (value == null) {
-            return "NULL";
-        }
-        if (value instanceof Boolean bool) {
-            return bool.toString();
-        }
-        String text = value.toString();
-        if ("t".equalsIgnoreCase(text)) {
-            return "true";
-        }
-        if ("f".equalsIgnoreCase(text)) {
-            return "false";
-        }
-        return text;
-    }
-
-    private String formatTimestamp(Object value) {
-        if (value == null) {
-            return "NULL";
+            return OffsetDateTime.now(zoneId).toString();
         }
         if (value instanceof OffsetDateTime offsetDateTime) {
-            return "'" + offsetDateTime.format(TIMESTAMP_FORMAT) + "'";
+            return offsetDateTime.atZoneSameInstant(zoneId).toOffsetDateTime().toString();
         }
-        if (value instanceof Date date) {
-            return "'" + new java.sql.Timestamp(date.getTime()) + "'";
+        if (value instanceof Instant instant) {
+            return instant.atZone(zoneId).toOffsetDateTime().toString();
         }
-        return "'" + value.toString() + "'";
+        if (value instanceof java.sql.Timestamp timestamp) {
+            return timestamp.toInstant().atZone(zoneId).toOffsetDateTime().toString();
+        }
+        throw new IllegalArgumentException("Unexpected timestamp type: " + value.getClass().getName());
     }
 
 }

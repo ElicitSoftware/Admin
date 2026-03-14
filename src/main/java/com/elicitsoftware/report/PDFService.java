@@ -86,6 +86,7 @@ import java.util.List;
  * @since 1.0.0
  */
 @RequestScoped
+@SuppressWarnings({"deprecation", "removal"}) // StreamResource is deprecated for removal
 public class PDFService {
 
     /**
