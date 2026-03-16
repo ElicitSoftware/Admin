@@ -443,29 +443,10 @@
                 <quarkus.native.enabled>true</quarkus.native.enabled>
             </properties>
         </profile>
+        <!-- Production profile - Vaadin Quarkus extension handles production build automatically since Vaadin 25 -->
         <profile>
             <id>production</id>
-            <build>
-                <plugins>
-                    <plugin>
-                        <groupId>com.vaadin</groupId>
-                        <artifactId>vaadin-maven-plugin</artifactId>
-                        <version>${vaadin.version}</version>
-                        <configuration>
-                            <frontendHotdeploy>true</frontendHotdeploy>
-                        </configuration>
-                        <executions>
-                            <execution>
-                                <phase>compile</phase>
-                                <goals>
-                                    <goal>prepare-frontend</goal>
-                                    <goal>build-frontend</goal>
-                                </goals>
-                            </execution>
-                        </executions>
-                    </plugin>
-                </plugins>
-            </build>
+            <!-- No vaadin-maven-plugin needed - the vaadin-quarkus-extension has embedded build support -->
         </profile>
     </profiles>
 </project>
