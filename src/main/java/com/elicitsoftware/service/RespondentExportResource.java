@@ -28,6 +28,13 @@ import jakarta.ws.rs.core.Response;
 @ApplicationScoped
 public class RespondentExportResource {
 
+    /**
+     * Creates the respondent export resource.
+     */
+    public RespondentExportResource() {
+        // Required explicit constructor for Javadoc.
+    }
+
     @Inject
     RespondentExportService respondentExportService;
 
