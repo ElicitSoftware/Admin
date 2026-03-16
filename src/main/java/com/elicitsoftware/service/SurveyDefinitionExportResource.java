@@ -22,36 +22,36 @@ import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
 
 /**
- * REST endpoint that exports respondent data as a safe import file.
+ * REST endpoint that exports a complete survey definition as a safe import file.
  */
-@Path("/secured/respondent/export")
+@Path("/secured/survey/export")
 @ApplicationScoped
-public class RespondentExportResource {
+public class SurveyDefinitionExportResource {
 
     /**
      * Default constructor for CDI.
      */
-    public RespondentExportResource() {
+    public SurveyDefinitionExportResource() {
         // CDI managed bean
     }
 
     @Inject
-    RespondentExportService respondentExportService;
+    SurveyDefinitionExportService surveyDefinitionExportService;
 
     /**
-     * Export respondent data as a custom format file. Preferred query parameter is "id".
+     * Export a survey definition as a custom-format file. All survey definition tables
+     * (surveys, select_groups, select_items, steps, sections, steps_sections, questions,
+     * sections_questions, relationships, reports, post_survey_actions, ontology, metadata)
+     * are included.
      *
-     * @param id respondent id
-     * @param respondentIdAlias optional alias query parameter: respondent_id
-     * @return Export file as a downloadable text file
+     * @param id the survey id to export
+     * @return export file as a downloadable attachment
      */
     @GET
     @RolesAllowed("elicit_admin")
     @Produces(MediaType.APPLICATION_OCTET_STREAM)
-    public Response exportRespondent(@QueryParam("id") Integer id,
-                                     @QueryParam("respondent_id") Integer respondentIdAlias) {
-        Integer respondentId = id != null ? id : respondentIdAlias;
-        if (respondentId == null) {
+    public Response exportSurvey(@QueryParam("id") Integer id) {
+        if (id == null) {
             return Response.status(Response.Status.BAD_REQUEST)
                     .entity("Missing required query parameter: id")
                     .type(MediaType.TEXT_PLAIN)
@@ -59,9 +59,9 @@ public class RespondentExportResource {
         }
 
         try {
-            String exportData = respondentExportService.exportRespondent(respondentId);
+            String exportData = surveyDefinitionExportService.exportSurvey(id);
             return Response.ok(exportData.getBytes(java.nio.charset.StandardCharsets.UTF_8))
-                    .header("Content-Disposition", "attachment; filename=\"respondent_" + respondentId + "_export.elicit\"")
+                    .header("Content-Disposition", "attachment; filename=\"survey_" + id + "_definition.elicit\"")
                     .type(MediaType.APPLICATION_OCTET_STREAM)
                     .build();
         } catch (IllegalArgumentException e) {
