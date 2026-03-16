@@ -47,8 +47,8 @@ import com.elicitsoftware.report.pdf.PDFDocument;
  * 
  * // Generate PDF download
  * if (response.pdf != null) {
- *     StreamResource pdfResource = pdfService.generatePDF(response);
- *     download.setResource(pdfResource);
+ *     DownloadHandler pdfHandler = pdfService.generatePDF(response);
+ *     downloadAnchor.setDownloadHandler(pdfHandler);
  * }
  * }
  * </pre>

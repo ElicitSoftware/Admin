@@ -22,32 +22,33 @@ import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
 
 /**
- * REST endpoint that exports respondent data as SQL.
+ * REST endpoint that exports respondent data as a safe import file.
  */
 @Path("/secured/export")
 @ApplicationScoped
+@SuppressWarnings("java:S1118") // CDI managed bean
 public class RespondentExportResource {
 
     /**
-     * Creates the respondent export resource.
+     * Default constructor for CDI.
      */
     public RespondentExportResource() {
-        // Required explicit constructor for Javadoc.
+        // CDI managed bean
     }
 
     @Inject
     RespondentExportService respondentExportService;
 
     /**
-     * Export respondent data as SQL. Preferred query parameter is "id".
+     * Export respondent data as a custom format file. Preferred query parameter is "id".
      *
      * @param id respondent id
      * @param respondentIdAlias optional alias query parameter: respondent_id
-     * @return SQL script as a downloadable file
+     * @return Export file as a downloadable text file
      */
     @GET
     @RolesAllowed("elicit_admin")
-    @Produces("application/sql")
+    @Produces(MediaType.APPLICATION_OCTET_STREAM)
     public Response exportRespondent(@QueryParam("id") Integer id,
                                      @QueryParam("respondent_id") Integer respondentIdAlias) {
         Integer respondentId = id != null ? id : respondentIdAlias;
@@ -59,9 +60,10 @@ public class RespondentExportResource {
         }
 
         try {
-            String sql = respondentExportService.exportRespondentAsSql(respondentId);
-            return Response.ok(sql)
-                    .header("Content-Disposition", "attachment; filename=\"respondent_" + respondentId + "_export.sql\"")
+            String exportData = respondentExportService.exportRespondent(respondentId);
+            return Response.ok(exportData.getBytes(java.nio.charset.StandardCharsets.UTF_8))
+                    .header("Content-Disposition", "attachment; filename=\"respondent_" + respondentId + "_export.elicit\"")
+                    .type(MediaType.APPLICATION_OCTET_STREAM)
                     .build();
         } catch (IllegalArgumentException e) {
             return Response.status(Response.Status.NOT_FOUND)

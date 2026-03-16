@@ -10,7 +10,20 @@
 ---
 
 -- Respondent export requires read access to these survey response tables.
-GRANT SELECT ON survey.answers TO ${surveyadmin_user};
-GRANT SELECT ON survey.dependents TO ${surveyadmin_user};
-GRANT SELECT ON survey.respondent_psa TO ${surveyadmin_user};
+-- Import requires INSERT access and sequence usage for all response tables.
+
+-- Tables: SELECT for export, INSERT for import
+GRANT SELECT, INSERT ON survey.respondents TO ${surveyadmin_user};
+GRANT SELECT, INSERT ON survey.answers TO ${surveyadmin_user};
+GRANT SELECT, INSERT ON survey.dependents TO ${surveyadmin_user};
+GRANT SELECT, INSERT ON survey.subjects TO ${surveyadmin_user};
+GRANT SELECT, INSERT ON survey.messages TO ${surveyadmin_user};
+GRANT SELECT, INSERT ON survey.respondent_psa TO ${surveyadmin_user};
+
+-- Sequences: needed for INSERT operations
+GRANT ALL ON SEQUENCE survey.respondents_seq TO ${surveyadmin_user};
+GRANT ALL ON SEQUENCE survey.answers_seq TO ${surveyadmin_user};
+GRANT ALL ON SEQUENCE survey.dependents_seq TO ${surveyadmin_user};
+GRANT ALL ON SEQUENCE survey.subjects_seq TO ${surveyadmin_user};
+GRANT ALL ON SEQUENCE survey.messages_seq TO ${surveyadmin_user};
 GRANT ALL ON SEQUENCE survey.respondent_psa_seq TO ${surveyadmin_user};
