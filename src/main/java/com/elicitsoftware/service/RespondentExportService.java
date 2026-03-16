@@ -242,8 +242,7 @@ public class RespondentExportService {
         Query query = em.createNativeQuery(querySql);
         query.setParameter("respondentId", respondentId);
 
-        @SuppressWarnings("unchecked")
-        List<Object[]> results = query.getResultList();
+        List<Object[]> results = toObjectArrayRows(query.getResultList(), "respondent");
         return results.isEmpty() ? null : results.get(0);
     }
 
@@ -259,8 +258,7 @@ public class RespondentExportService {
         Query query = em.createNativeQuery(querySql);
         query.setParameter("respondentId", respondentId);
 
-        @SuppressWarnings("unchecked")
-        List<Object[]> results = query.getResultList();
+        List<Object[]> results = toObjectArrayRows(query.getResultList(), "answers");
         return results;
     }
 
@@ -278,8 +276,7 @@ public class RespondentExportService {
         Query query = em.createNativeQuery(querySql);
         query.setParameter("respondentId", respondentId);
 
-        @SuppressWarnings("unchecked")
-        List<Object[]> results = query.getResultList();
+        List<Object[]> results = toObjectArrayRows(query.getResultList(), "dependents");
         return results;
     }
 
@@ -294,8 +291,7 @@ public class RespondentExportService {
         Query query = em.createNativeQuery(querySql);
         query.setParameter("respondentId", respondentId);
 
-        @SuppressWarnings("unchecked")
-        List<Object[]> results = query.getResultList();
+        List<Object[]> results = toObjectArrayRows(query.getResultList(), "subjects");
         return results;
     }
 
@@ -311,8 +307,7 @@ public class RespondentExportService {
         Query query = em.createNativeQuery(querySql);
         query.setParameter("respondentId", respondentId);
 
-        @SuppressWarnings("unchecked")
-        List<Object[]> results = query.getResultList();
+        List<Object[]> results = toObjectArrayRows(query.getResultList(), "messages");
         return results;
     }
 
@@ -327,8 +322,19 @@ public class RespondentExportService {
         Query query = em.createNativeQuery(querySql);
         query.setParameter("respondentId", respondentId);
 
-        @SuppressWarnings("unchecked")
-        List<Object[]> rows = query.getResultList();
+        List<Object[]> rows = toObjectArrayRows(query.getResultList(), "respondent_psa");
+        return rows;
+    }
+
+    private List<Object[]> toObjectArrayRows(List<?> rawRows, String queryName) {
+        List<Object[]> rows = new ArrayList<>(rawRows.size());
+        for (Object row : rawRows) {
+            if (!(row instanceof Object[] columns)) {
+                throw new IllegalStateException("Unexpected row type for " + queryName + ": " +
+                        (row == null ? "null" : row.getClass().getName()));
+            }
+            rows.add(columns);
+        }
         return rows;
     }
 
