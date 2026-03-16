@@ -90,7 +90,6 @@ import java.util.ArrayList;
  * @since 1.0.0
  */
 @ApplicationScoped
-@SuppressWarnings({"deprecation", "removal"}) // StreamResource is deprecated for removal
 public class ReportingService {
 
     /**

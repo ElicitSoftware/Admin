@@ -26,7 +26,6 @@ import jakarta.ws.rs.core.Response;
  */
 @Path("/secured/export")
 @ApplicationScoped
-@SuppressWarnings("java:S1118") // CDI managed bean
 public class RespondentExportResource {
 
     /**

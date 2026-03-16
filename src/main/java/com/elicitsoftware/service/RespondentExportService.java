@@ -20,6 +20,7 @@ import jakarta.transaction.Transactional;
 import java.time.Instant;
 import java.time.OffsetDateTime;
 import java.time.ZoneId;
+import java.util.ArrayList;
 import java.util.Date;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -51,7 +52,6 @@ import java.util.Map;
  * @see RespondentImportService
  */
 @ApplicationScoped
-@SuppressWarnings("java:S1118") // CDI managed bean
 public class RespondentExportService {
 
     /**

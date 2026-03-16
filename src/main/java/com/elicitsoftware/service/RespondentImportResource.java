@@ -30,7 +30,6 @@ import jakarta.ws.rs.core.Response;
  */
 @Path("/secured/import")
 @ApplicationScoped
-@SuppressWarnings("java:S1118") // CDI managed bean
 public class RespondentImportResource {
 
     /**

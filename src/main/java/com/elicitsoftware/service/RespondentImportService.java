@@ -48,7 +48,6 @@ import java.util.Map;
  * @see RespondentExportService
  */
 @ApplicationScoped
-@SuppressWarnings("java:S1118") // CDI managed bean
 public class RespondentImportService {
 
     /**
