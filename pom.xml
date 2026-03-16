@@ -83,13 +83,7 @@
                 </exclusion>
             </exclusions>
         </dependency>
-        <dependency>
-            <groupId>com.vaadin</groupId>
-            <artifactId>vaadin-dev</artifactId>
-            <version>${vaadin.version}</version>
-            <optional>true</optional>
-        </dependency>
-        <!-- Container Images -->
+<!-- Container Images -->
         <dependency>
             <groupId>io.quarkus</groupId>
             <artifactId>quarkus-container-image-docker</artifactId>
@@ -447,6 +441,23 @@
         <profile>
             <id>production</id>
             <!-- No vaadin-maven-plugin needed - the vaadin-quarkus-extension has embedded build support -->
+        </profile>
+        <!-- Dev profile - include vaadin-dev for live reload during development -->
+        <profile>
+            <id>dev</id>
+            <activation>
+                <property>
+                    <name>quarkus.profile</name>
+                    <value>dev</value>
+                </property>
+            </activation>
+            <dependencies>
+                <dependency>
+                    <groupId>com.vaadin</groupId>
+                    <artifactId>vaadin-dev</artifactId>
+                    <version>${vaadin.version}</version>
+                </dependency>
+            </dependencies>
         </profile>
     </profiles>
 </project>
