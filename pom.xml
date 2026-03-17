@@ -4,7 +4,7 @@
     <modelVersion>4.0.0</modelVersion>
 <groupId>com.elicitsoftware</groupId>
     <artifactId>Admin</artifactId>
-    <version>1.2.6</version>
+    <version>1.2.7</version>
 
     <properties>
         <compiler-plugin.version>3.14.0</compiler-plugin.version>
@@ -83,7 +83,13 @@
                 </exclusion>
             </exclusions>
         </dependency>
-<!-- Container Images -->
+        <dependency>
+            <groupId>com.vaadin</groupId>
+            <artifactId>vaadin-dev</artifactId>
+            <version>${vaadin.version}</version>
+            <optional>true</optional>
+        </dependency>
+        <!-- Container Images -->
         <dependency>
             <groupId>io.quarkus</groupId>
             <artifactId>quarkus-container-image-docker</artifactId>
@@ -437,27 +443,29 @@
                 <quarkus.native.enabled>true</quarkus.native.enabled>
             </properties>
         </profile>
-        <!-- Production profile - Vaadin Quarkus extension handles production build automatically since Vaadin 25 -->
         <profile>
             <id>production</id>
-            <!-- No vaadin-maven-plugin needed - the vaadin-quarkus-extension has embedded build support -->
-        </profile>
-        <!-- Dev profile - include vaadin-dev for live reload during development -->
-        <profile>
-            <id>dev</id>
-            <activation>
-                <property>
-                    <name>quarkus.profile</name>
-                    <value>dev</value>
-                </property>
-            </activation>
-            <dependencies>
-                <dependency>
-                    <groupId>com.vaadin</groupId>
-                    <artifactId>vaadin-dev</artifactId>
-                    <version>${vaadin.version}</version>
-                </dependency>
-            </dependencies>
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>com.vaadin</groupId>
+                        <artifactId>vaadin-maven-plugin</artifactId>
+                        <version>${vaadin.version}</version>
+                        <configuration>
+                            <frontendHotdeploy>true</frontendHotdeploy>
+                        </configuration>
+                        <executions>
+                            <execution>
+                                <phase>compile</phase>
+                                <goals>
+                                    <goal>prepare-frontend</goal>
+                                    <goal>build-frontend</goal>
+                                </goals>
+                            </execution>
+                        </executions>
+                    </plugin>
+                </plugins>
+            </build>
         </profile>
     </profiles>
 </project>
