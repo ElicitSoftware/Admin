@@ -1,5 +1,5 @@
-echo "Set java to 21"
-jenv local 21.0.9
+echo "Set java to 25"
+jenv local 25
 echo "build Admin"
 
 ./mvnw clean package -Dquarkus.profile=docker -Dquarkus.container-image.build=true
