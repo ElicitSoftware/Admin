@@ -11,17 +11,16 @@ package com.elicitsoftware.report;
  * ***LICENSE_END***
  */
 
-import com.elicitsoftware.report.pdf.Content;
-import com.elicitsoftware.report.pdfbox.Column;
-import com.elicitsoftware.report.pdfbox.Table;
-import com.elicitsoftware.report.pdfbox.TableBuilder;
-import com.vaadin.flow.server.streams.DownloadHandler;
-import com.vaadin.flow.server.streams.DownloadResponse;
-import de.rototor.pdfbox.graphics2d.PdfBoxGraphics2D;
-import de.rototor.pdfbox.graphics2d.PdfBoxGraphics2DFontTextDrawer;
-import jakarta.enterprise.context.RequestScoped;
-import jakarta.inject.Inject;
-import jakarta.servlet.http.HttpServletRequest;
+import java.awt.Rectangle;
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
+import java.io.StringReader;
+import java.time.LocalDate;
+import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
+
 import org.apache.batik.anim.dom.SAXSVGDocumentFactory;
 import org.apache.batik.bridge.BridgeContext;
 import org.apache.batik.bridge.GVTBuilder;
@@ -38,16 +37,16 @@ import org.apache.pdfbox.pdmodel.font.Standard14Fonts;
 import org.apache.pdfbox.util.Matrix;
 import org.w3c.dom.svg.SVGDocument;
 
-import java.awt.*;
-import java.io.ByteArrayInputStream;
-import java.io.ByteArrayOutputStream;
-import java.io.IOException;
-import java.io.StringReader;
-import java.time.LocalDate;
-import java.time.format.DateTimeFormatter;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
+import com.elicitsoftware.report.pdf.Content;
+import com.elicitsoftware.report.pdfbox.Column;
+import com.elicitsoftware.report.pdfbox.Table;
+import com.elicitsoftware.report.pdfbox.TableBuilder;
+
+import de.rototor.pdfbox.graphics2d.PdfBoxGraphics2D;
+import de.rototor.pdfbox.graphics2d.PdfBoxGraphics2DFontTextDrawer;
+import jakarta.enterprise.context.RequestScoped;
+import jakarta.inject.Inject;
+import jakarta.servlet.http.HttpServletRequest;
 
 /**
  * PDFService is a request-scoped service responsible for generating PDF documents from report data.
@@ -83,7 +82,6 @@ import java.util.List;
  *
  * @see ReportResponse
  * @see Content
- * @see DownloadHandler
  * @since 1.0.0
  */
 @RequestScoped
@@ -346,9 +344,9 @@ public class PDFService {
      * Generates a PDF document from the provided report responses.
      *
      * @param reportResponses the list of report responses to include in the PDF
-     * @return a StreamResource containing the generated PDF
+    * @return the generated PDF bytes
      */
-    public DownloadHandler generatePDF(ArrayList<ReportResponse> reportResponses) {
+    public byte[] generatePDF(ArrayList<ReportResponse> reportResponses) {
         try {
             // Create a new document
             document = new PDDocument();
@@ -410,15 +408,7 @@ public class PDFService {
 
             ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
             document.save(outputStream);
-            byte[] pdfBytes = outputStream.toByteArray();
-            return DownloadHandler.fromInputStream(event ->
-                new DownloadResponse(
-                    new ByteArrayInputStream(pdfBytes),
-                    "family_history_report.pdf",
-                    "application/pdf",
-                    pdfBytes.length
-                )
-            ).inline();
+            return outputStream.toByteArray();
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
@@ -580,7 +570,7 @@ public class PDFService {
             Rectangle actualBounds = bounds.union(primitiveBounds);
 
             // Add explicit padding to ensure content that extends beyond computed bounds is captured
-            int padding = 30; // Add 30 pixels padding on all sides
+            int padding = 5; // Add 5 pixels padding on all sides
             Rectangle expandedBounds = new Rectangle(
                     actualBounds.x - padding,
                     actualBounds.y - padding,
