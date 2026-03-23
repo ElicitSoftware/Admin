@@ -15,7 +15,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
@@ -115,11 +114,10 @@ import jakarta.inject.Inject;
 @RolesAllowed({"elicit_user", "elicit_admin"})
 
 public class SearchView extends VerticalLayout implements HasDynamicTitle, BeforeEnterObserver {
-    /** In-memory map to store action selection per subject token. */
-    private final Map<String, String> actionSelectionMap = new ConcurrentHashMap<>();
-
     /** Tracks the currently active action token (only one row can have a selection at a time). */
     private String activeActionToken = null;
+    /** Tracks the current action value for the active row. */
+    private String activeActionValue = null;
 
     /**
      * Constructs a new SearchView.
@@ -524,9 +522,9 @@ public class SearchView extends VerticalLayout implements HasDynamicTitle, Befor
             }
 
             String token = status.getToken();
-            String previousSelection = actionSelectionMap.get(token);
-            if (previousSelection != null) {
-                actionComboBox.setValue(previousSelection);
+            // Set value only if this is the active row
+            if (activeActionToken != null && activeActionToken.equals(token)) {
+                actionComboBox.setValue(activeActionValue);
             }
 
             Button submitButton = new Button("Submit");
@@ -545,19 +543,20 @@ public class SearchView extends VerticalLayout implements HasDynamicTitle, Befor
                 if (value != null) {
                     // If another row is active, clear its selection
                     if (activeActionToken != null && !activeActionToken.equals(token)) {
-                        actionSelectionMap.remove(activeActionToken);
+                        activeActionToken = null;
+                        activeActionValue = null;
                         // Refresh the grid to update the previous row's UI
                         subjectGrid.getDataProvider().refreshAll();
                     }
-                    actionSelectionMap.put(token, value);
                     activeActionToken = token;
+                    activeActionValue = value;
                     if (!actionLayout.getChildren().anyMatch(c -> c.equals(submitButton))) {
                         actionLayout.add(submitButton);
                     }
                 } else {
-                    actionSelectionMap.remove(token);
                     if (activeActionToken != null && activeActionToken.equals(token)) {
                         activeActionToken = null;
+                        activeActionValue = null;
                     }
                     actionLayout.remove(submitButton);
                 }
@@ -583,11 +582,11 @@ public class SearchView extends VerticalLayout implements HasDynamicTitle, Befor
                     }
                     // Clear selection and remove submit button after action
                     actionComboBox.clear();
-                    actionSelectionMap.remove(token);
-                    actionLayout.remove(submitButton);
                     if (activeActionToken != null && activeActionToken.equals(token)) {
                         activeActionToken = null;
+                        activeActionValue = null;
                     }
+                    actionLayout.remove(submitButton);
                 }
             });
 
