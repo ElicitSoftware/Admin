@@ -270,6 +270,9 @@ public class SearchView extends VerticalLayout implements HasDynamicTitle, Befor
         // Safe to call getCurrent here
         this.ui = UI.getCurrent();
 
+        // Make the root SearchView fill the available space
+        setSizeFull();
+
         user = uiSessionLogin.getUser();
 
         if (user == null) {
@@ -363,8 +366,10 @@ public class SearchView extends VerticalLayout implements HasDynamicTitle, Befor
     private void createSubjectsTable() {
         VerticalLayout respondentsLayout = new VerticalLayout();
         respondentsLayout.setSizeFull();
+        respondentsLayout.setPadding(false);
+        respondentsLayout.setSpacing(false);
         add(respondentsLayout);
-        getSubjectGrid();
+        getSubjectGrid(respondentsLayout);
     }
 
     /**
@@ -473,8 +478,9 @@ public class SearchView extends VerticalLayout implements HasDynamicTitle, Befor
      * <p>The grid is integrated with pagination controls and includes comprehensive error
      * handling for all user actions.</p>
      */
-    private void getSubjectGrid() {
+    private void getSubjectGrid(VerticalLayout respondentsLayout) {
         subjectGrid = new Grid<>(Status.class, false);
+        subjectGrid.setSizeFull();
         subjectGrid.addColumn(Status::getToken).setHeader("Token").setSortable(true).setSortProperty("token").setWidth("150px").setFlexGrow(0);
         subjectGrid.addColumn(Status::getDepartmentName).setHeader("Department").setSortable(true).setSortProperty("departmentName");
         subjectGrid.addColumn(Status::getFirstName).setHeader("First name").setSortable(true).setSortProperty("firstName");
@@ -604,7 +610,11 @@ public class SearchView extends VerticalLayout implements HasDynamicTitle, Befor
             }
         }, 0, 10, TimeUnit.SECONDS);
 
-        add(wrapWithVerticalLayout(subjectGrid, paginationControls));
+        // Add the grid and pagination controls to a layout that fills the parent
+        VerticalLayout gridWithPaginationLayout = wrapWithVerticalLayout(subjectGrid, paginationControls);
+        gridWithPaginationLayout.setSizeFull();
+        respondentsLayout.add(gridWithPaginationLayout);
+        respondentsLayout.setFlexGrow(1, gridWithPaginationLayout);
     }
 
     /**
