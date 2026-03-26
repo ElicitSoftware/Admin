@@ -11,6 +11,15 @@ package com.elicitsoftware.admin.flow;
  * ***LICENSE_END***
  */
 
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
+
 import com.elicitsoftware.model.Department;
 import com.elicitsoftware.model.Status;
 import com.elicitsoftware.model.User;
@@ -41,24 +50,16 @@ import com.vaadin.flow.component.textfield.TextField;
 import com.vaadin.flow.component.textfield.TextFieldVariant;
 import com.vaadin.flow.data.provider.DataProvider;
 import com.vaadin.flow.data.provider.QuerySortOrder;
+import com.vaadin.flow.router.BeforeEnterEvent;
+import com.vaadin.flow.router.BeforeEnterObserver;
 import com.vaadin.flow.router.HasDynamicTitle;
 import com.vaadin.flow.router.QueryParameters;
 import com.vaadin.flow.router.Route;
-import com.vaadin.flow.router.BeforeEnterObserver;
-import com.vaadin.flow.router.BeforeEnterEvent;
+
 import io.quarkus.security.identity.SecurityIdentity;
 import jakarta.annotation.PostConstruct;
 import jakarta.annotation.security.RolesAllowed;
 import jakarta.inject.Inject;
-
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.concurrent.Executors;
-import java.util.concurrent.ScheduledExecutorService;
-import java.util.concurrent.TimeUnit;
-import java.util.stream.Collectors;
 
 /**
  * A comprehensive subject search and management view that provides advanced filtering,
@@ -111,7 +112,12 @@ import java.util.stream.Collectors;
  */
 @Route(value = "", layout = MainLayout.class)
 @RolesAllowed({"elicit_user", "elicit_admin"})
+
 public class SearchView extends VerticalLayout implements HasDynamicTitle, BeforeEnterObserver {
+    /** Tracks the currently active action token (only one row can have a selection at a time). */
+    private String activeActionToken = null;
+    /** Tracks the current action value for the active row. */
+    private String activeActionValue = null;
 
     /**
      * Constructs a new SearchView.
@@ -262,6 +268,9 @@ public class SearchView extends VerticalLayout implements HasDynamicTitle, Befor
         // Safe to call getCurrent here
         this.ui = UI.getCurrent();
 
+        // Make the root SearchView fill the available space
+        setSizeFull();
+
         user = uiSessionLogin.getUser();
 
         if (user == null) {
@@ -355,8 +364,10 @@ public class SearchView extends VerticalLayout implements HasDynamicTitle, Befor
     private void createSubjectsTable() {
         VerticalLayout respondentsLayout = new VerticalLayout();
         respondentsLayout.setSizeFull();
+        respondentsLayout.setPadding(false);
+        respondentsLayout.setSpacing(false);
         add(respondentsLayout);
-        getSubjectGrid();
+        getSubjectGrid(respondentsLayout);
     }
 
     /**
@@ -465,8 +476,9 @@ public class SearchView extends VerticalLayout implements HasDynamicTitle, Befor
      * <p>The grid is integrated with pagination controls and includes comprehensive error
      * handling for all user actions.</p>
      */
-    private void getSubjectGrid() {
+    private void getSubjectGrid(VerticalLayout respondentsLayout) {
         subjectGrid = new Grid<>(Status.class, false);
+        subjectGrid.setSizeFull();
         subjectGrid.addColumn(Status::getToken).setHeader("Token").setSortable(true).setSortProperty("token").setWidth("150px").setFlexGrow(0);
         subjectGrid.addColumn(Status::getDepartmentName).setHeader("Department").setSortable(true).setSortProperty("departmentName");
         subjectGrid.addColumn(Status::getFirstName).setHeader("First name").setSortable(true).setSortProperty("firstName");
@@ -509,13 +521,45 @@ public class SearchView extends VerticalLayout implements HasDynamicTitle, Befor
                 actionComboBox.setItems("Send Email");
             }
 
+            String token = status.getToken();
+            // Set value only if this is the active row
+            if (activeActionToken != null && activeActionToken.equals(token)) {
+                actionComboBox.setValue(activeActionValue);
+            }
+
             Button submitButton = new Button("Submit");
             submitButton.addThemeVariants(ButtonVariant.LUMO_PRIMARY, ButtonVariant.LUMO_SMALL);
-            submitButton.setEnabled(false);
 
-            // Enable submit button when action is selected
+            // Only add the submit button if a selection exists
+            if (actionComboBox.getValue() != null) {
+                actionLayout.add(actionComboBox, submitButton);
+            } else {
+                actionLayout.add(actionComboBox);
+            }
+
+            // Value change listener: ensure only one row is active at a time
             actionComboBox.addValueChangeListener(event -> {
-                submitButton.setEnabled(event.getValue() != null);
+                String value = event.getValue();
+                if (value != null) {
+                    // If another row is active, clear its selection
+                    if (activeActionToken != null && !activeActionToken.equals(token)) {
+                        activeActionToken = null;
+                        activeActionValue = null;
+                        // Refresh the grid to update the previous row's UI
+                        subjectGrid.getDataProvider().refreshAll();
+                    }
+                    activeActionToken = token;
+                    activeActionValue = value;
+                    if (!actionLayout.getChildren().anyMatch(c -> c.equals(submitButton))) {
+                        actionLayout.add(submitButton);
+                    }
+                } else {
+                    if (activeActionToken != null && activeActionToken.equals(token)) {
+                        activeActionToken = null;
+                        activeActionValue = null;
+                    }
+                    actionLayout.remove(submitButton);
+                }
             });
 
             submitButton.addClickListener(e -> {
@@ -536,13 +580,16 @@ public class SearchView extends VerticalLayout implements HasDynamicTitle, Befor
                             Notification.show("Failed to generate reports: " + ex.getMessage(), 5000, Notification.Position.TOP_CENTER);
                         }
                     }
-                    // Reset the combo box after action
+                    // Clear selection and remove submit button after action
                     actionComboBox.clear();
-                    submitButton.setEnabled(false);
+                    if (activeActionToken != null && activeActionToken.equals(token)) {
+                        activeActionToken = null;
+                        activeActionValue = null;
+                    }
+                    actionLayout.remove(submitButton);
                 }
             });
 
-            actionLayout.add(actionComboBox, submitButton);
             return actionLayout;
         }).setHeader("Action").setWidth("250px").setFlexGrow(0);
         // --- End action column ---
@@ -562,7 +609,11 @@ public class SearchView extends VerticalLayout implements HasDynamicTitle, Befor
             }
         }, 0, 10, TimeUnit.SECONDS);
 
-        add(wrapWithVerticalLayout(subjectGrid, paginationControls));
+        // Add the grid and pagination controls to a layout that fills the parent
+        VerticalLayout gridWithPaginationLayout = wrapWithVerticalLayout(subjectGrid, paginationControls);
+        gridWithPaginationLayout.setSizeFull();
+        respondentsLayout.add(gridWithPaginationLayout);
+        respondentsLayout.setFlexGrow(1, gridWithPaginationLayout);
     }
 
     /**
