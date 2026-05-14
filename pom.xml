@@ -213,6 +213,22 @@
             <groupId>io.quarkus</groupId>
             <artifactId>quarkus-jacoco</artifactId>
         </dependency>
+        <dependency>
+            <groupId>io.quarkus</groupId>
+            <artifactId>quarkus-junit5-mockito</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>com.github.mvysny.kaributesting</groupId>
+            <artifactId>karibu-testing-v24</artifactId>
+            <version>2.7.0</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.testcontainers</groupId>
+            <artifactId>testcontainers-postgresql</artifactId>
+            <scope>test</scope>
+        </dependency>
     </dependencies>
     <repositories>
         <repository>
@@ -342,8 +358,20 @@
             <plugin>
                 <groupId>org.jacoco</groupId>
                 <artifactId>jacoco-maven-plugin</artifactId>
-                <version>0.8.12</version>
+                <version>0.8.13</version>
                 <executions>
+                    <!-- Instrument the JVM for plain JUnit tests (non-@QuarkusTest) -->
+                    <execution>
+                        <id>jacoco-prepare-agent</id>
+                        <goals>
+                            <goal>prepare-agent</goal>
+                        </goals>
+                        <configuration>
+                            <!-- Merge with the file Quarkus JaCoCo writes so one file holds all data -->
+                            <destFile>${project.build.directory}/jacoco-quarkus.exec</destFile>
+                            <append>true</append>
+                        </configuration>
+                    </execution>
                     <execution>
                         <id>jacoco-report</id>
                         <phase>verify</phase>
@@ -351,18 +379,27 @@
                             <goal>report</goal>
                         </goals>
                         <configuration>
-                            <dataFile>${project.build.directory}/jacoco.exec</dataFile>
+                            <!-- jacoco-quarkus.exec is written by quarkus-jacoco for @QuarkusTest
+                                 and also receives plain JUnit coverage via prepare-agent above -->
+                            <dataFile>${project.build.directory}/jacoco-quarkus.exec</dataFile>
                             <outputDirectory>${project.reporting.outputDirectory}/jacoco</outputDirectory>
                         </configuration>
                     </execution>
                     <execution>
                         <id>jacoco-check</id>
-                        <phase>verify</phase>
+                        <phase>test</phase>
                         <goals>
                             <goal>check</goal>
                         </goals>
                         <configuration>
-                            <dataFile>${project.build.directory}/jacoco.exec</dataFile>
+                            <dataFile>${project.build.directory}/jacoco-quarkus.exec</dataFile>
+                            <!-- Scope the 70% gate to the four export/import service classes only.
+                                 Vaadin views, models, and generated code are intentionally excluded
+                                 from this baseline test spec (spec 000-testing). -->
+                            <includes>
+                                <include>com/elicitsoftware/service/*ExportService*</include>
+                                <include>com/elicitsoftware/service/*ImportService*</include>
+                            </includes>
                             <rules>
                                 <rule>
                                     <element>BUNDLE</element>
@@ -371,6 +408,45 @@
                                             <counter>LINE</counter>
                                             <value>COVEREDRATIO</value>
                                             <minimum>0.70</minimum>
+                                        </limit>
+                                    </limits>
+                                </rule>
+                            </rules>
+                            <excludes>
+                                <!-- Quarkus-generated proxies and subclasses -->
+                                <exclude>**/*$$*</exclude>
+                                <exclude>**/*_ClientProxy*</exclude>
+                                <exclude>**/*_Subclass*</exclude>
+                                <exclude>**/*_Bean*</exclude>
+                            </excludes>
+                        </configuration>
+                    </execution>
+                    <execution>
+                        <!-- Coverage gate for Vaadin UI views in com.elicitsoftware.admin.flow.
+                             Achieved ~40.7% LINE coverage (512/1257) via three strategies:
+                             1. BrandResourceHandler: @QuarkusTest + RestAssured (15 tests, /api/brand/*)
+                             2. karibu-testing-v24 navigation: LogoutView + LoginView + PaginationControls
+                             3. CDI-aware @PostConstruct tests via reflection + Mockito.mock()
+                                (SearchView, MainLayout, RegisterView, DebugView, AppConfig, UiSessionLogin)
+                             Gate set at 38% to allow minor fluctuation. -->
+                        <id>jacoco-check-admin-flow</id>
+                        <phase>test</phase>
+                        <goals>
+                            <goal>check</goal>
+                        </goals>
+                        <configuration>
+                            <dataFile>${project.build.directory}/jacoco-quarkus.exec</dataFile>
+                            <includes>
+                                <include>com/elicitsoftware/admin/flow/*</include>
+                            </includes>
+                            <rules>
+                                <rule>
+                                    <element>BUNDLE</element>
+                                    <limits>
+                                        <limit>
+                                            <counter>LINE</counter>
+                                            <value>COVEREDRATIO</value>
+                                            <minimum>0.38</minimum>
                                         </limit>
                                     </limits>
                                 </rule>

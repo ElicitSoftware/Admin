@@ -115,7 +115,7 @@ public class SurveyDefinitionExportService {
         // Header
         out.append("# ").append(FORMAT_VERSION).append("\n");
         out.append("# survey_id: ").append(surveyId).append("\n");
-        out.append("# survey_name: ").append(survey[1]).append("\n");
+        out.append("# survey_name: ").append(escapeField(survey[1])).append("\n");
         out.append("# surveys: 1\n");
         out.append("# select_groups: ").append(selectGroups.size()).append("\n");
         out.append("# select_items: ").append(selectItems.size()).append("\n");
@@ -542,7 +542,7 @@ public class SurveyDefinitionExportService {
      * @param value field value (nullable)
      * @return escaped string safe for export format
      */
-    private String escapeField(Object value) {
+    static String escapeField(Object value) {
         if (value == null) {
             return "";
         }

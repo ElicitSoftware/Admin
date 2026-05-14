@@ -830,7 +830,7 @@ public class SurveyDefinitionImportService {
     /**
      * Parse pipe-delimited fields with escape sequence handling.
      */
-    private String[] parseFields(String data) {
+    static String[] parseFields(String data) {
         List<String> fieldList = new ArrayList<>();
         StringBuilder current = new StringBuilder();
         boolean escaped = false;
