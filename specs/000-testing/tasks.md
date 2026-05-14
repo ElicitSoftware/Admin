@@ -15,7 +15,7 @@
 
 **Purpose**: Add test dependencies and create the test directory skeleton.
 
-- [ ] T001 Add `com.microsoft.playwright:playwright:1.49.0` (test scope) and `org.testcontainers:testcontainers` (test scope, version managed by Quarkus BOM) to `pom.xml`
+- [ ] T001 Add `com.github.mvysny.kaributesting:karibu-testing-v24:2.2.0` (test scope, pin version explicitly — not managed by Quarkus BOM) to `pom.xml`
 
 ---
 
@@ -27,8 +27,8 @@
 
 - [ ] T002 Create `src/test/resources/db/test/V0.0.0__CREATE_SURVEY_SCHEMA_STUBS.sql` — DDL for all survey schema tables referenced by Admin Flyway FKs (`survey.surveys`, `survey.respondents`, `survey.answers`, `survey.steps`, `survey.sections`, `survey.questions`, `survey.question_types`, `survey.operators`, `survey.actions`, `survey.select_groups`, `survey.select_items`, `survey.steps_sections`, `survey.sections_questions`, `survey.relationships`, `survey.dimensions`, `survey.ontology`, `survey.metadata`, `survey.reports`, `survey.post_survey_actions`) plus static seed rows for `question_types`, `operators`, and `actions` lookup tables
 - [ ] T003 Add `%test` profile entries to `src/main/resources/application.properties`: `%test.quarkus.oidc.enabled=false`, `%test.quarkus.http.auth.permission.authenticated.policy=permit`, `%test.quarkus.flyway.owner.locations=db/migration,db/test`, `%test.quarkus.flyway.owner.schemas=survey`
-- [ ] T004 [P] Promote `escapeField()` from `private` to package-private (remove `private` modifier) in `src/main/java/com/elicitsoftware/service/SurveyDefinitionExportService.java`
-- [ ] T005 [P] Promote `parseFields()` from `private` to package-private (remove `private` modifier) in `src/main/java/com/elicitsoftware/service/SurveyDefinitionImportService.java`
+- [ ] T004 [P] Make `escapeField()` `static` package-private in `src/main/java/com/elicitsoftware/service/SurveyDefinitionExportService.java`: remove the `private` modifier and add the `static` keyword (the method is a pure string function with no instance state, so making it `static` allows `EscapeUnescapeTest` to call `SurveyDefinitionExportService.escapeField(value)` directly without CDI or `@QuarkusTest`)
+- [ ] T005 [P] Make `parseFields()` `static` package-private in `src/main/java/com/elicitsoftware/service/SurveyDefinitionImportService.java`: remove the `private` modifier and add the `static` keyword (pure string parsing, no instance state — same rationale as T004)
 
 **Checkpoint**: Foundation ready — run `mvn compile` and confirm zero compilation errors before proceeding.
 
@@ -87,35 +87,35 @@
 
 **Independent Test**: Run `mvn test -Dtest=EscapeUnescapeTest` — passes with no Dev Services container.
 
-- [ ] T020 [US4] Create `src/test/java/com/elicitsoftware/service/EscapeUnescapeTest.java` as a plain JUnit 5 class; instantiate `SurveyDefinitionExportService` directly (or use `@QuarkusTest` with no DB interaction); implement `pipeEscapedAndRestored()`: pass `"a|b"` through `exportService.escapeField()` and `importService.parseFields()`, assert round-trip result equals `"a|b"` and the escaped intermediate equals `"a\\|b"`
-- [ ] T021 [US4] Implement `backslashEscapedAndRestored()` in `EscapeUnescapeTest.java`: pass `"a\\b"` through escape then unescape; assert result equals `"a\\b"` and escaped form is `"a\\\\b"`
-- [ ] T022 [US4] Implement `nullEscapesToEmptyStringAndUnescapesToNull()` in `EscapeUnescapeTest.java`: assert `escapeField(null)` returns `""` and that `parseFields` treats an empty field as `null`
-- [ ] T023 [US4] Implement `newlineAndCarriageReturnPreservedAfterRoundTrip()` in `EscapeUnescapeTest.java`: pass `"line1\nline2\r\nline3"` through escape then unescape; assert result equals the original string exactly
+- [ ] T020 [US4] Create `src/test/java/com/elicitsoftware/service/EscapeUnescapeTest.java` as a plain JUnit 5 class (no `@QuarkusTest`, no Quarkus startup); implement `pipeEscapedAndRestored()`: call `SurveyDefinitionExportService.escapeField("a|b")` directly as a static method, assert the result equals `"a\\|b"`, then call `SurveyDefinitionImportService.parseFields("a\\|b")` and assert `fields[0]` equals `"a|b"`
+- [ ] T021 [US4] Implement `backslashEscapedAndRestored()` in `EscapeUnescapeTest.java`: call `SurveyDefinitionExportService.escapeField("a\\b")` and assert the result is `"a\\\\b"`; then call `SurveyDefinitionImportService.parseFields("a\\\\b")` and assert `fields[0]` equals `"a\\b"`
+- [ ] T022 [US4] Implement `nullEscapesToEmptyString()` in `EscapeUnescapeTest.java`: call `SurveyDefinitionExportService.escapeField(null)` and assert the result is `""` (empty string, not `null`)
+- [ ] T023 [US4] Implement `newlineAndCarriageReturnPreservedAfterRoundTrip()` in `EscapeUnescapeTest.java`: call `SurveyDefinitionExportService.escapeField("line1\nline2\r\nline3")`, then pass the escaped string to `SurveyDefinitionImportService.parseFields()`, and assert `fields[0]` equals `"line1\nline2\r\nline3"` exactly
 
 **Checkpoint**: `mvn test -Dtest=EscapeUnescapeTest` passes with no Docker required. User Story 4 is independently verified.
 
 ---
 
-## Phase 7: User Story 5 — UI Smoke Test via Browserless (Priority: P2)
+## Phase 7: User Story 5 — UI View Tests via Karibu-Testing (Priority: P2)
 
-**Goal**: Confirm the Admin UI boots, the Vaadin shell renders in a real browser, and no console errors appear.
+**Goal**: Confirm the Admin Vaadin views initialise and navigate correctly in a simulated environment, sharing the same Dev Services PostgreSQL container as the round-trip tests. No extra Docker container or packaged-app server is required.
 
-**Independent Test**: Run `mvn failsafe:integration-test -Dit.test=UiSmokeTest` — all four test methods pass with Docker running.
+**Independent Test**: Run `mvn test -Dtest=AdminViewTest` — all four test methods pass with Docker running (Dev Services PostgreSQL only; no browser container needed).
 
-- [ ] T024 [US5] Create `src/test/java/com/elicitsoftware/service/UiSmokeTest.java` as a `@QuarkusIntegrationTest` class; add `@BeforeAll static void startBrowserless()` that creates a `GenericContainer<>("ghcr.io/browserless/chromium:latest").withExposedPorts(3000)`, starts it, builds the WebSocket endpoint `ws://<host>:<port>`, creates a `Playwright` instance, calls `playwright.chromium().connect(wsEndpoint)` to obtain a `Browser`, and stores `browser` and `context` as static fields; add `@AfterAll static void stopBrowserless()` that closes the browser and stops the container
-- [ ] T025 [US5] Implement `@Test rootPageReturnsHttpOkAndNonEmptyTitle()` in `UiSmokeTest.java`: create a `Page`, call `page.navigate(appUrl)` where `appUrl` is the Quarkus test HTTP URL (`http://localhost:` + `@TestHTTPPort`), assert `page.title()` is non-null and non-empty
-- [ ] T026 [US5] Implement `@Test rootPageHasNoConsoleErrors()` in `UiSmokeTest.java`: register a `page.onConsoleMessage()` listener before navigating; navigate to `/`; after page load, assert that no captured console messages have `type().equals("error")`
-- [ ] T027 [US5] Implement `@Test vaadinShellElementPresent()` in `UiSmokeTest.java`: navigate to `/`, call `page.waitForSelector("vaadin-app-layout", new Page.WaitForSelectorOptions().setTimeout(10_000))`, assert the returned `ElementHandle` is not null
-- [ ] T028 [US5] Implement `@Test departmentsMenuNavigatesToDepartmentsRoute()` in `UiSmokeTest.java`: navigate to `/`, wait for `vaadin-app-layout`, find and click the `SideNavItem` whose text is "Departments", wait for URL to contain `/departments` and for a `vaadin-grid` element to appear within 10 seconds, assert `page.url()` contains `/departments`
+- [ ] T024 [US5] Create `src/test/java/com/elicitsoftware/service/AdminViewTest.java` as a `@QuarkusTest` class; add `@BeforeEach void setup()` that calls `MockVaadin.setup()` (no-arg form — the Quarkus Vaadin extension registers routes when the CDI context starts, so no explicit route-scanning argument is needed); add `@AfterEach void tearDown()` that calls `MockVaadin.teardown()`
+- [ ] T025 [US5] Implement `@Test navigateToRootRendersAppLayout()` in `AdminViewTest.java`: call `UI.getCurrent().navigate("")`, then use `_get(AppLayout.class)` and assert it is not null
+- [ ] T026 [US5] Implement `@Test navigateToDepartmentsRendersGrid()` in `AdminViewTest.java`: call `UI.getCurrent().navigate("departments")`, then use `_get(Grid.class)` and assert it is not null
+- [ ] T027 [US5] Implement `@Test navigateToDepartmentsDoesNotThrow()` in `AdminViewTest.java`: assert that `UI.getCurrent().navigate("departments")` completes without throwing a `NotFoundException` or `NullPointerException`
+- [ ] T028 [US5] Implement `@Test departmentsSideNavItemExists()` in `AdminViewTest.java`: call `UI.getCurrent().navigate("")`, then use `_get(SideNavItem.class, spec -> spec.withText("Departments"))` and assert the returned component is not null
 
-**Checkpoint**: `mvn failsafe:integration-test -Dit.test=UiSmokeTest` passes with Docker running. User Story 5 is independently verified.
+**Checkpoint**: `mvn test -Dtest=AdminViewTest` passes. User Story 5 is independently verified.
 
 ---
 
 ## Phase 8: Polish & Cross-Cutting Concerns
 
-- [ ] T029 Run `mvn verify` from the repo root and confirm: all 28+ test methods pass, JaCoCo reports ≥ 0.70 line coverage ratio, and the build exits with `BUILD SUCCESS`; fix any coverage shortfall by adding targeted test cases rather than excluding classes
-- [ ] T030 [P] Update `src/main/resources/application.properties` to add a comment block documenting the `%test` profile entries added in T003, referencing `specs/000-testing/quickstart.md`
+- [ ] T029 Run `mvn verify` from the repo root and confirm: all 28+ test methods pass, JaCoCo reports ≥ 0.70 line coverage ratio, and the build exits with `BUILD SUCCESS`; if coverage is short, investigate `SurveyDefinitionExportService` (export loop paths), `SurveyDefinitionImportService` (parse edge cases), and `RespondentExportService`/`RespondentImportService` (answer-type branches) as the most likely under-covered classes; add targeted test cases rather than excluding classes
+- [ ] T030 [P] Add a one-line comment above each `%test` profile entry in `src/main/resources/application.properties` explaining its purpose (e.g. `# Test profile: disable OIDC so Vaadin views are reachable without credentials`)
 
 ---
 
@@ -133,7 +133,7 @@
 - **US1 (P1)**: Can start after Phase 2 — no dependency on US2–US5
 - **US2 (P1)**: Can start after Phase 2 — no dependency on US1, US3–US5
 - **US3 (P2)**: Can start after Phase 2 — requires access to export strings; can use output from US1/US2 fixtures or build minimal strings inline
-- **US4 (P2)**: Can start after Phase 2 (requires T004/T005 for package-private access) — no DB dependency
+- **US4 (P2)**: Can start after Phase 2 (requires T004/T005 to make `escapeField`/`parseFields` static) — no DB dependency, no Quarkus startup
 - **US5 (P2)**: Can start after Phase 2 — no dependency on US1–US4 test output
 
 ### Within Each User Story

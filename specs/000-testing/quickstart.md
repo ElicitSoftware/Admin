@@ -24,9 +24,8 @@ Docker must be running before executing any test that touches the database or th
 
 This runs:
 1. **Unit tests** (Surefire, `*Test.java`): `EscapeUnescapeTest`, `ExportFormatContractTest` — no Docker required for these two classes.
-2. **Integration tests** (Surefire, `@QuarkusTest`): `SurveyDefinitionRoundTripTest`, `RespondentRoundTripTest` — Quarkus Dev Services starts a PostgreSQL 17 container automatically.
-3. **System tests** (Failsafe, `@QuarkusIntegrationTest`): `UiSmokeTest` — packages the app, starts it on a random port, spins up `ghcr.io/browserless/chromium`.
-4. **JaCoCo coverage check** — enforces ≥ 70% line coverage; build fails if threshold is not met.
+2. **Integration and UI tests** (Surefire, `@QuarkusTest`): `SurveyDefinitionRoundTripTest`, `RespondentRoundTripTest`, `AdminViewTest` — Quarkus Dev Services starts **a single** PostgreSQL 17 container automatically; Karibu-Testing drives the Vaadin UI in-process with no additional Docker container.
+3. **JaCoCo coverage check** — enforces ≥ 70% line coverage; build fails if threshold is not met.
 
 Coverage report is written to `target/site/jacoco/index.html`.
 
@@ -44,9 +43,9 @@ Coverage report is written to `target/site/jacoco/index.html`.
 ./mvnw test -pl . -Dtest="SurveyDefinitionRoundTripTest,RespondentRoundTripTest"
 ```
 
-### UI smoke test only
+### UI tests only (Karibu, no browser)
 ```bash
-./mvnw failsafe:integration-test -Dit.test="UiSmokeTest"
+./mvnw test -pl . -Dtest="AdminViewTest"
 ```
 
 ### Skip integration tests (fast unit-only build)
@@ -77,7 +76,7 @@ The following `%test` profile entries must be present in `src/main/resources/app
 
 ## Test Database Setup (automatic)
 
-Quarkus Dev Services starts a fresh PostgreSQL 17 container for `@QuarkusTest` tests. Flyway runs two migration sets in order:
+Quarkus Dev Services starts **a single** fresh PostgreSQL 17 container shared across all `@QuarkusTest` classes (`SurveyDefinitionRoundTripTest`, `RespondentRoundTripTest`, `AdminViewTest`). No additional container is started for the Karibu UI tests. Flyway runs two migration sets in order:
 
 1. `db/test/V0.0.0__CREATE_SURVEY_SCHEMA_STUBS.sql` — creates `survey.surveys`, `survey.respondents`, `survey.answers`, `survey.steps`, `survey.sections`, `survey.questions`, `survey.question_types`, `survey.operators`, `survey.actions`, and all other tables the Admin migrations FK-reference. Seeds static lookup rows.
 2. `db/migration/V0.0.1__CREATE_ADMIN_SCHEMA.sql` and subsequent migrations — creates Admin tables (departments, subjects, users, etc.).
@@ -92,6 +91,5 @@ Each `@QuarkusTest` method annotated with `@TestTransaction` runs inside a rolle
 |---------|-------------|-----|
 | `relation "survey.surveys" does not exist` | `db/test` not in Flyway locations | Add `%test.quarkus.flyway.owner.locations=db/migration,db/test` |
 | `Cannot connect to Docker` | Docker not running | Start Docker Desktop |
-| `address already in use` (port 3000) | Another browserless container running | `docker ps` and stop conflicting containers |
 | JaCoCo check fails (`< 0.70 line coverage`) | New code not covered by tests | Add test cases or justify exclusion via `@ExcludeFromJacocoReport` |
-| `UiSmokeTest` times out waiting for Vaadin | App still initialising | Increase Playwright `waitForSelector` timeout (default 10 s) |
+| Karibu `_get()` throws `AssertionError` | View not registered or route path wrong | Check `@Route` annotation on the view class and verify the route string passed to `navigate()` |

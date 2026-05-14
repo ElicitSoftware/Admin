@@ -38,7 +38,7 @@ Quarkus Dev Services starts a fresh PostgreSQL container for `@QuarkusTest`; the
 
 **Discovery**: Code inspection confirms both methods are `private`. The spec requires pure unit tests (FR-007: no DB) for escape/unescape symmetry.
 
-**Decision**: Promote both methods to package-private (remove the `private` modifier, leave no access modifier). Test classes in `com.elicitsoftware.service` can then call them directly. This is a minimal, reversible change that doesn't affect any callers outside the package (there are none).
+**Decision**: Promote both methods to `static` package-private (remove the `private` modifier and add `static`). Both `escapeField` and `parseFields` are pure string transformation functions with no instance state — `escapeField` does four `String.replace` calls and `parseFields` does character-by-character parsing, neither touching `EntityManager`. Making them `static` allows `EscapeUnescapeTest` to call `SurveyDefinitionExportService.escapeField(value)` and `SurveyDefinitionImportService.parseFields(data)` directly from a plain JUnit 5 class with no CDI container, no `@QuarkusTest`, and no Quarkus startup overhead. This is a minimal, reversible change — there are no callers outside the class, and the `static` keyword is strictly more expressive than package-private instance access for a stateless utility function.
 
 **Rationale**: Alternatives considered:
 - *Test through round-trip only* — rejected; a round-trip failure for an escape bug would require DB setup, making the feedback loop slow.
@@ -47,36 +47,31 @@ Quarkus Dev Services starts a fresh PostgreSQL container for `@QuarkusTest`; the
 
 ---
 
-## Finding 3 — Playwright + Browserless Integration
+## Finding 3 — Karibu-Testing Integration
 
-**Question**: Which Java Playwright version and browserless image should be used, and how is the WebSocket connection established?
+**Question**: Which Karibu-Testing version supports Vaadin 25, and how is the simulated Vaadin environment configured in a `@QuarkusTest` class?
 
 **Decision**:
-- **Library**: `com.microsoft.playwright:playwright:1.49.0` (latest stable as of May 2026, compatible with Java 21).
-- **Image**: `ghcr.io/browserless/chromium:latest` — exposes a Playwright-compatible WebSocket server on port `3000`. The endpoint pattern is `ws://<host>:<port>`.
-- **Connection**: Use `playwright.chromium().connect(wsEndpoint)` (not `connectOverCDP`) — browserless's chromium image supports the Playwright protocol directly.
-- **Testcontainers**: `GenericContainer<>("ghcr.io/browserless/chromium:latest").withExposedPorts(3000)` in a `@BeforeAll` static block of a `@QuarkusIntegrationTest` class.
+- **Library**: `com.github.mvysny.kaributesting:karibu-testing-v24:2.2.0` — the `v24` artifact supports Vaadin 24 and above, including Vaadin 25.
+- **Setup**: Annotate the test class with `@QuarkusTest`. In `@BeforeEach`, call `MockVaadin.setup()` (no-arg Java form — do **not** pass `new Routes().autoDiscoverViews(...)`, which is a Kotlin-idiomatic overload). When running under `@QuarkusTest`, the Quarkus Vaadin extension initialises the route registry as part of CDI container startup, so MockVaadin's no-arg setup picks up all `@Route`-annotated views automatically. In `@AfterEach`, call `MockVaadin.teardown()` (note: lowercase `d`).
+- **Navigation**: Use `UI.getCurrent().navigate("route")` to trigger Vaadin's router, then `_get(ComponentClass.class)` to assert the component is present in the component tree.
+- **Dev Services**: All Karibu tests run as `@QuarkusTest`, sharing the **single** Dev Services PostgreSQL container already started for the round-trip tests. No additional Docker container or `@QuarkusIntegrationTest` is needed.
 
 **Configuration required**: Add to `pom.xml` test scope:
 ```xml
 <dependency>
-    <groupId>com.microsoft.playwright</groupId>
-    <artifactId>playwright</artifactId>
-    <version>1.49.0</version>
-    <scope>test</scope>
-</dependency>
-<dependency>
-    <groupId>org.testcontainers</groupId>
-    <artifactId>testcontainers</artifactId>
+    <groupId>com.github.mvysny.kaributesting</groupId>
+    <artifactId>karibu-testing-v24</artifactId>
+    <version>2.2.0</version>
     <scope>test</scope>
 </dependency>
 ```
 
-`org.testcontainers:testcontainers` version is managed by the Quarkus BOM (3.34.1 includes Testcontainers 1.20.x).
+Version is not managed by the Quarkus BOM; pin explicitly.
 
 **Alternatives considered**:
-- *Selenium + ChromeDriver* — rejected; requires a separate ChromeDriver binary and is more complex to configure with a remote browser.
-- *Karibu-Testing for smoke test* — rejected (see Complexity Tracking in plan.md); Karibu cannot test HTTP-level rendering or JS bundle initialisation.
+- *Playwright + browserless* — rejected by user preference; avoids extra Docker container overhead and `@QuarkusIntegrationTest` complexity.
+- *Selenium + ChromeDriver* — rejected; requires a separate ChromeDriver binary and a real browser.
 
 ---
 
@@ -114,6 +109,6 @@ This disables OIDC for the `%test` profile and permits all requests, so the brow
 |-----------|--------|-------|
 | I — Specification-First | ✅ PASS | Design follows spec; no scope creep |
 | II — Test-First (TDD) | ✅ PASS | All test classes written before production helper changes |
-| III — Browserless UI Testing | ⚠️ JUSTIFIED DEVIATION | `UiSmokeTest` uses Playwright; individual view tests use Karibu-Testing (separate follow-on) |
+| III — Browserless UI Testing | ✅ PASS | UI tests use Karibu-Testing (MockVaadin) as required; single Dev Services PostgreSQL shared by all `@QuarkusTest` classes |
 | IV — 70% Coverage Gate | ✅ PASS | `jacoco-maven-plugin` enforces 0.70 at `verify` phase |
 | V — Observability | N/A | No new state-changing production operations |

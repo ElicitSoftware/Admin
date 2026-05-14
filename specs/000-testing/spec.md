@@ -85,22 +85,22 @@ A developer can confirm that the escape and unescape logic is inverse — any st
 
 ---
 
-### User Story 5 — UI Smoke Tests via Browserless (Priority: P2)
+### User Story 5 — UI Smoke Tests via Karibu-Testing (Priority: P2)
 
-A developer runs the test suite and verifies that the Admin UI loads and the core navigation pages render without JavaScript errors, using a real headless Chromium browser connected through a [browserless](https://www.browserless.io/) service.
+A developer runs the test suite and verifies that the Admin UI views render and navigate correctly using the Karibu-Testing framework, which drives the Vaadin component tree in-process without a real browser.
 
-**Why this priority**: Export/import services are exercised indirectly through the UI. A broken view — missing Vaadin components, failed CDN resources, or JS errors — would prevent any manual verification of spec 001 changes. Catching rendering failures automatically reduces the feedback loop.
+**Why this priority**: Export/import services are exercised indirectly through the UI. A broken view — missing required CDI beans, misconfigured routes, or navigation errors — would prevent any manual verification of spec 001 changes. Catching rendering failures automatically reduces the feedback loop.
 
-**Approach**: A Testcontainers `GenericContainer` launches `ghcr.io/browserless/chromium` on an ephemeral port. The test connects to it using the [Java Playwright](https://playwright.dev/java/) library via the exposed WebSocket endpoint (`ws://<host>:<port>`). The Quarkus application is started via `@QuarkusIntegrationTest` (full server on a random HTTP port). Playwright navigates to the running app and asserts page-level outcomes.
+**Approach**: Karibu-Testing (MockVaadin) initialises a simulated Vaadin environment inside the `@QuarkusTest` JVM. Tests call `UI.getCurrent().navigate()` to trigger Vaadin's router, then inspect the resulting component tree using Karibu's `_get()` / `_find()` DSL. No browser, no extra Docker container, and no HTTP port are required — the same single Dev Services PostgreSQL container used by round-trip tests is reused.
 
-**Independent Test**: Start the application and the browserless container. Connect Playwright to the browserless endpoint. Navigate to the app root URL. Assert that the page title and at least one Vaadin-rendered element are present, and that the browser console contains no uncaught errors.
+**Independent Test**: Annotate the test class with `@QuarkusTest`. In `@BeforeEach`, call `MockVaadin.setup()`. Navigate to the root view and assert that the `AppLayout` shell component is present. Navigate to `/departments` and assert a `Grid` component is present.
 
 **Acceptance Scenarios**:
 
-1. **Given** the application is running and the browserless container is up, **When** Playwright navigates to `/`, **Then** the HTTP response is 200 and the page `<title>` is non-empty.
-2. **Given** the home page has loaded, **When** the browser console logs are inspected, **Then** there are no messages at level `error` originating from application scripts.
-3. **Given** the home page has loaded, **When** the DOM is queried for a Vaadin-specific element (`vaadin-app-layout` or equivalent), **Then** at least one such element is present, confirming the Vaadin client bundle initialised.
-4. **Given** the navigation menu is visible, **When** the "Departments" menu item is clicked, **Then** the URL changes to `/departments` and a `vaadin-grid` element appears on the page.
+1. **Given** MockVaadin is set up, **When** the test navigates to the root route, **Then** an `AppLayout` component is present in the component tree.
+2. **Given** MockVaadin is set up, **When** the test navigates to `/departments`, **Then** a `Grid` component is present in the component tree.
+3. **Given** MockVaadin is set up, **When** the test navigates to `/departments`, **Then** the navigation completes without throwing an exception.
+4. **Given** MockVaadin is set up, **When** the test calls `_get(SideNavItem.class, spec -> spec.withText("Departments"))`, **Then** the item is found without exception, confirming the nav item is registered.
 
 ---
 
@@ -109,9 +109,7 @@ A developer runs the test suite and verifies that the Admin UI loads and the cor
 - What happens when the export is called for a survey ID that does not exist?
 - What happens when the import receives an empty input stream?
 - What happens when an import file has a corrupted line (wrong field count)?
-- What happens when `importSurvey` is called on a file that was already imported (duplicate source_id)?
-- What happens when the browserless container fails to start (port conflict or image pull failure)?
-
+- What happens when `importSurvey` is called on a file that was already imported (duplicate `source_id`)? *(deferred to spec 001 — this scenario arises during Kimball Type 2 migration rehearsals where the same export is re-imported into a target schema that already contains the data)*
 ---
 
 ## Requirements *(mandatory)*
@@ -127,9 +125,9 @@ A developer runs the test suite and verifies that the Admin UI loads and the cor
 - **FR-007**: Field escape/unescape tests MUST be pure unit tests (no database) covering pipe, backslash, newline, carriage-return, and null inputs.
 - **FR-008**: All tests MUST pass on the current V1 codebase before any spec 001 changes are applied.
 - **FR-009**: Test fixture data MUST be inserted and rolled back within each test transaction so tests are isolated and repeatable.
-- **FR-010**: A `@QuarkusIntegrationTest` MUST start a `ghcr.io/browserless/chromium` Testcontainers container and connect to it using Java Playwright via the WebSocket endpoint (`ws://<host>:<port>`).
-- **FR-011**: The UI smoke test MUST navigate to the application root and assert: HTTP 200, non-empty page title, no console-level errors, and presence of at least one Vaadin top-level element.
-- **FR-012**: The browserless container MUST be shared across all UI test methods in the class using a `@BeforeAll` static lifecycle, to avoid per-test container startup overhead.
+- **FR-010**: A `@QuarkusTest` class using Karibu-Testing MUST call `MockVaadin.setup()` in `@BeforeEach` to initialise a simulated Vaadin environment, and `MockVaadin.tearDown()` in `@AfterEach` to clean up.
+- **FR-011**: The UI smoke test MUST navigate to the application root and assert that an `AppLayout` (or equivalent top-level Vaadin shell component) is present in the component tree; and navigate to `/departments` and assert a `Grid` component is present.
+- **FR-012**: All UI tests MUST run as `@QuarkusTest` (not `@QuarkusIntegrationTest`), sharing the single Dev Services PostgreSQL container started for the round-trip integration tests.
 - **FR-013**: The `jacoco-maven-plugin` MUST be configured with a `check` goal (phase `verify`) enforcing a minimum **line coverage ratio of 0.70** across the production bundle, matching the constitution's 70% floor. Quarkus-generated proxies (`**/*$$*`, `**/*_ClientProxy*`, `**/*_Subclass*`, `**/*_Bean*`) MUST be excluded from measurement. The build MUST fail if coverage drops below this threshold.
 
 ### Key Entities
@@ -152,7 +150,7 @@ A developer runs the test suite and verifies that the Admin UI loads and the cor
 - **SC-003**: The respondent round-trip test verifies all answer fields (`text_value`, `deleted`) match the fixture for 100% of answer rows.
 - **SC-004**: Export format contract tests assert field counts for all fourteen export sections (surveys through metadata).
 - **SC-005**: All tests remain passing after spec 001 is fully implemented, confirming backward-compatible behaviour is preserved.
-- **SC-006**: The UI smoke test navigates the app root, logs zero console errors, and asserts the Vaadin shell element is present within a 10-second timeout.
+- **SC-006**: The Karibu UI test navigates the app root and asserts an `AppLayout` component is present; navigates to `/departments` and asserts a `Grid` component is present; all four test methods pass without throwing exceptions.
 - **SC-007**: `mvn verify` reports a JaCoCo line coverage ratio ≥ 0.70 across the production bundle after all tests run; the build fails automatically if this threshold is not met.
 
 ---
@@ -164,7 +162,7 @@ A developer runs the test suite and verifies that the Admin UI loads and the cor
 - Static lookup rows (`question_types`, `operators`, `actions`) required by import FK constraints must be seeded into the test database before the round-trip tests run.
 - Test fixture data is self-contained and does not rely on any pre-existing data in the database.
 - The escape/unescape tests access package-private or exposed helper methods; if those methods are private, they will be tested indirectly through the round-trip tests.
-- The browserless container image `ghcr.io/browserless/chromium` is accessible from the CI environment (either via internet or a local registry mirror). The image exposes Playwright-compatible connections on port `3000`.
-- UI smoke tests run as `@QuarkusIntegrationTest` (not `@QuarkusTest`) so the app is packaged and started as a real server before the browser connects. The test configures Playwright with `connectOverCDP` (Chrome DevTools Protocol) or the Playwright browser-server WebSocket URL exposed by browserless.
-- Authentication is **not** exercised in the initial smoke tests; if OIDC is enforced at the network layer, the test profile disables it (`%test.quarkus.oidc.enabled=false`) so the UI is reachable without credentials.
+- Karibu-Testing runs entirely in-process; no external browser or Docker container is required for UI tests. The same single Dev Services PostgreSQL container used by `@QuarkusTest` round-trip tests is reused, so only one PostgreSQL container runs for the entire test suite.
+- UI tests run as `@QuarkusTest` alongside the round-trip integration tests, sharing the same Dev Services PostgreSQL container. No `@QuarkusIntegrationTest` or packaged-app server is needed for UI smoke tests.
+- Authentication is **not** exercised in the initial smoke tests; the test profile disables OIDC (`%test.quarkus.oidc.enabled=false`) so the Vaadin views are reachable without credentials in the MockVaadin environment.
 
