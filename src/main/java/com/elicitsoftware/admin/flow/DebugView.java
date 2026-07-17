@@ -11,6 +11,7 @@ package com.elicitsoftware.admin.flow;
  * ***LICENSE_END***
  */
 
+import com.elicitsoftware.security.RoleSecurityIdentityAugmentor;
 import com.vaadin.flow.component.html.H1;
 import com.vaadin.flow.component.html.Pre;
 import com.vaadin.flow.component.orderedlayout.VerticalLayout;
@@ -83,6 +84,8 @@ public class DebugView extends VerticalLayout implements HasDynamicTitle {
         sb.append("User: ").append(identity.getPrincipal().getName()).append("\n");
         sb.append("Is Anonymous: ").append(identity.isAnonymous()).append("\n");
         sb.append("Roles: ").append(identity.getRoles()).append("\n");
+        String roleSource = identity.getAttribute(RoleSecurityIdentityAugmentor.ROLE_SOURCE_ATTRIBUTE);
+        sb.append("Role Source: ").append(roleSource).append("\n");
         sb.append("Has elicit_admin: ").append(identity.hasRole("elicit_admin")).append("\n");
         sb.append("Has elicit_user: ").append(identity.hasRole("elicit_user")).append("\n");
         sb.append("\n");
