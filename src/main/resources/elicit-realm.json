@@ -372,10 +372,6 @@
     } ],
     "disableableCredentialTypes" : [ ],
     "requiredActions" : [ ],
-    "realmRoles" : [ "default-roles-elicit" ],
-    "clientRoles" : {
-      "elicit-admin" : [ "elicit_user", "elicit_admin" ]
-    },
     "notBefore" : 0,
     "groups" : [ ]
   }, {

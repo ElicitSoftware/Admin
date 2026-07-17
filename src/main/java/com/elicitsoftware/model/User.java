@@ -34,7 +34,10 @@ import java.util.Set;
  * 
  * <p><strong>Authorization Model:</strong></p>
  * <ul>
- *   <li><strong>OIDC Roles:</strong> "elicit_admin" and "elicit_user" roles managed in OIDC provider</li>
+ *   <li><strong>OIDC Roles:</strong> "elicit_admin", "elicit_user", and "elicit_importer" roles are
+ *       sourced from the OIDC provider first; if the OIDC identity carries none of these roles,
+ *       roles are looked up from the {@code survey.user_roles} table as a fallback (see
+ *       {@link com.elicitsoftware.security.RoleSecurityIdentityAugmentor})</li>
  *   <li><strong>Department Access:</strong> Users can access data for their assigned departments</li>
  *   <li><strong>Survey Permissions:</strong> Users can manage surveys they're assigned to</li>
  *   <li><strong>Active Status:</strong> Inactive users cannot access the system</li>
@@ -74,7 +77,9 @@ import java.util.Set;
  *   <li><strong>OIDC Integration:</strong> Username should match OIDC subject identifier</li>
  *   <li><strong>Data Segregation:</strong> Department assignments control data access</li>
  *   <li><strong>Active Status:</strong> Provides quick way to disable access without deletion</li>
- *   <li><strong>Role Management:</strong> Actual permissions managed in OIDC provider</li>
+ *   <li><strong>Role Management:</strong> Roles are managed in the OIDC provider by default; the
+ *       {@code survey.user_roles} table is a fallback source used only when the OIDC identity
+ *       carries none of the application's Elicit roles</li>
  * </ul>
  * 
  * @author Elicit Software
