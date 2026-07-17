@@ -1,0 +1,59 @@
+package com.elicitsoftware.security;
+
+/*-
+ * ***LICENSE_START***
+ * Elicit Survey
+ * %%
+ * Copyright (C) 2025 The Regents of the University of Michigan - Rogel Cancer Center
+ * %%
+ * PolyForm Noncommercial License 1.0.0
+ * <https://polyformproject.org/licenses/noncommercial/1.0.0>
+ * ***LICENSE_END***
+ */
+
+import io.quarkus.security.identity.SecurityIdentity;
+import io.quarkus.security.runtime.QuarkusSecurityIdentity;
+import jakarta.enterprise.context.ApplicationScoped;
+import jakarta.enterprise.context.control.ActivateRequestContext;
+import jakarta.inject.Inject;
+import jakarta.persistence.EntityManager;
+
+import java.util.HashSet;
+import java.util.List;
+
+/**
+ * Looks up Elicit roles for a user from {@code survey.user_roles}.
+ *
+ * <p>The lookup runs inside an explicitly activated CDI request context via
+ * {@link ActivateRequestContext}, which only takes effect when this method is
+ * invoked through this bean's CDI proxy (e.g. from {@code runBlocking} via an
+ * injected reference) -- without it the injected {@link EntityManager} has no
+ * active transaction or request context to run in.</p>
+ */
+@ApplicationScoped
+public class UserRoleDatabaseLookup {
+
+    @Inject
+    EntityManager entityManager;
+
+    @ActivateRequestContext
+    @SuppressWarnings("unchecked")
+    public SecurityIdentity augment(SecurityIdentity identity) {
+        String username = identity.getPrincipal().getName();
+        List<String> dbRoles = entityManager.createNativeQuery(
+                        "SELECT ur.role_name FROM survey.user_roles ur " +
+                                "JOIN survey.users u ON u.id = ur.user_id " +
+                                "WHERE u.username = :username AND u.active = true", String.class)
+                .setParameter("username", username)
+                .getResultList();
+        if (dbRoles.isEmpty()) {
+            return RoleSecurityIdentityAugmentor.withRoleSource(identity,
+                    RoleSecurityIdentityAugmentor.ROLE_SOURCE_OIDC);
+        }
+        return QuarkusSecurityIdentity.builder(identity)
+                .addRoles(new HashSet<>(dbRoles))
+                .addAttribute(RoleSecurityIdentityAugmentor.ROLE_SOURCE_ATTRIBUTE,
+                        RoleSecurityIdentityAugmentor.ROLE_SOURCE_DATABASE)
+                .build();
+    }
+}

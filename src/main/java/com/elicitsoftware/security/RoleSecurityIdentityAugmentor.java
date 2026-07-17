@@ -18,10 +18,7 @@ import io.quarkus.security.runtime.QuarkusSecurityIdentity;
 import io.smallrye.mutiny.Uni;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
-import jakarta.persistence.EntityManager;
 
-import java.util.HashSet;
-import java.util.List;
 import java.util.Set;
 
 /**
@@ -49,7 +46,7 @@ public class RoleSecurityIdentityAugmentor implements SecurityIdentityAugmentor 
     private static final Set<String> ELICIT_ROLES = Set.of("elicit_admin", "elicit_user", "elicit_importer");
 
     @Inject
-    EntityManager entityManager;
+    UserRoleDatabaseLookup userRoleDatabaseLookup;
 
     @Override
     public Uni<SecurityIdentity> augment(SecurityIdentity identity, AuthenticationRequestContext context) {
@@ -60,28 +57,10 @@ public class RoleSecurityIdentityAugmentor implements SecurityIdentityAugmentor 
         if (hasElicitRole) {
             return Uni.createFrom().item(withRoleSource(identity, ROLE_SOURCE_OIDC));
         }
-        return context.runBlocking(() -> augmentFromDatabase(identity));
+        return context.runBlocking(() -> userRoleDatabaseLookup.augment(identity));
     }
 
-    @SuppressWarnings("unchecked")
-    private SecurityIdentity augmentFromDatabase(SecurityIdentity identity) {
-        String username = identity.getPrincipal().getName();
-        List<String> dbRoles = entityManager.createNativeQuery(
-                        "SELECT ur.role_name FROM survey.user_roles ur " +
-                                "JOIN survey.users u ON u.id = ur.user_id " +
-                                "WHERE u.username = :username AND u.active = true", String.class)
-                .setParameter("username", username)
-                .getResultList();
-        if (dbRoles.isEmpty()) {
-            return withRoleSource(identity, ROLE_SOURCE_OIDC);
-        }
-        return QuarkusSecurityIdentity.builder(identity)
-                .addRoles(new HashSet<>(dbRoles))
-                .addAttribute(ROLE_SOURCE_ATTRIBUTE, ROLE_SOURCE_DATABASE)
-                .build();
-    }
-
-    private SecurityIdentity withRoleSource(SecurityIdentity identity, String source) {
+    static SecurityIdentity withRoleSource(SecurityIdentity identity, String source) {
         return QuarkusSecurityIdentity.builder(identity)
                 .addAttribute(ROLE_SOURCE_ATTRIBUTE, source)
                 .build();
