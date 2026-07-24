@@ -86,13 +86,24 @@ Ordered by priority. Check off as completed.
 - [x] **10. `System.out.println` auth logging** — `UiSessionLogin.java:124-138`
   Use a proper logger; note it dumps all active usernames to stdout on failed lookup (info leak).
 - [~] **11. No tests** — CLAUDE.md requires tests traceable to `UC-XXX`.
-  *In progress:* a JUnit 5 suite now exists — unit tests (validators, token
-  generator, DTOs), `@QuarkusTest` DB/security tests (Testcontainers + mock
-  OIDC), and browserless UI tests (`PaginationControlsTest`,
-  `UnauthorizedViewTest`) for the dependency-free views. Added
-  `StatusDataSourceTest` (UC-002): parameterized filtering, DB-level paging, and
-  an injection-regression test for finding #1. The remaining data-heavy views
-  (`SearchView`, `RegisterView`, the edit views) still need view-level coverage.
+  *Substantially covered:* a JUnit 5 suite now exists — unit tests (validators,
+  token generator, DTOs, entity identity), `@QuarkusTest` DB/security tests
+  (Testcontainers + mock OIDC), and browserless UI tests. Coverage added for the
+  remediated code:
+  - `StatusDataSourceTest` (UC-002) — parameterized filtering, DB-level paging,
+    and an injection-regression test for finding #1.
+  - `UserServiceTest` / `DepartmentServiceTest` (UC-009/UC-010) — the extracted
+    persistence services from finding #7 (insert-on-create, merge-on-update).
+  - `EntityIdentityTest` — ID-based `equals`/`hashCode` from finding #3,
+    including the "All Departments" sentinel.
+  - `EditUserViewTest` / `EditDepartmentViewTest` (UC-009/UC-010) — browserless
+    tests of Binder validation and the Save-button-tracks-validity contract
+    (finding #6); views obtained via CDI so `@Inject` services resolve.
+  - `SearchViewTest` (UC-002) — browserless test asserting the grid's sortable
+    columns are wired to the `Status.PROP_*` constants (finding #12 drift guard).
+
+  Full suite: 59 passing. `RegisterView` (CSV/REST docs, bulk import) still has
+  no view-level test; its changed surface (#8) is static markup only.
 - [x] **12. Duplicated sort-column mapping** — `SearchView` string `switch` can drift from
   `setSortProperty`. Use column-name constants on the entity.
   *Done:* added `Status.PROP_*` constants used by both the grid `setSortProperty`
