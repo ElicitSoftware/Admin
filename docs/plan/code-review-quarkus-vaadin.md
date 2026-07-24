@@ -25,7 +25,7 @@ Ordered by priority. Check off as completed.
 
 ### 🔴 Critical
 
-- [ ] **1. HQL injection in `SearchView.getStatusSQL()`** — `SearchView.java:662-693`
+- [x] **1. HQL injection in `SearchView.getStatusSQL()`** — `SearchView.java:662-693`
   User input from every filter field (`token`, `firstName`, `lastName`, `email`, `phone`)
   is concatenated directly into the query string and executed via
   `StatusDataSource.fetch(sql, ...)`. A value like `') OR ('1'='1` alters the query.
@@ -35,7 +35,7 @@ Ordered by priority. Check off as completed.
 
 ### 🟠 Significant
 
-- [ ] **2. Leaked `ScheduledExecutorService`** — `SearchView.java:137, 603`
+- [x] **2. Leaked `ScheduledExecutorService`** — `SearchView.java:137, 603`
   Each `SearchView` creates `Executors.newScheduledThreadPool(1)` and schedules a 10s
   refresh with no `onDetach`/shutdown. Every navigation spawns a pool that never dies and
   keeps calling `ui.access()` on a detached UI.
@@ -43,13 +43,13 @@ Ordered by priority. Check off as completed.
   Confirm `@Push` is configured (or use polling) — `ui.access()` won't reach the browser
   between requests otherwise.
 
-- [ ] **3. Entities lack `equals`/`hashCode`** — `Status`, `User`, `Department`
+- [x] **3. Entities lack `equals`/`hashCode`** — `Status`, `User`, `Department`
   All extend `PanacheEntityBase` with no override. The data-providers skill requires
   ID-based identity for correct `Grid` selection tracking and `refreshItem`. The
   "All Departments" `id == -1` sentinel hack in `SearchView` is a symptom.
   **Fix:** add ID-based `equals`/`hashCode` to entities used as Grid/ComboBox items.
 
-- [ ] **4. In-memory pagination in `StatusDataSource`** — `StatusDataSource.java:160, 222`
+- [x] **4. In-memory pagination in `StatusDataSource`** — `StatusDataSource.java:160, 222`
   `Status.stream(sql).skip(offset).limit(limit)` and `Status.stream(sql).count()` stream
   the entire result set from the DB, then page/count in Java. The 10s auto-refresh
   multiplies the cost.
@@ -58,38 +58,46 @@ Ordered by priority. Check off as completed.
 
 ### 🟡 Moderate
 
-- [ ] **5. Eager `setItems(listAll())` in grids** — `UsersView.java:186`, `DepartmentsView.java:84`
+- [x] **5. Eager `setItems(listAll())` in grids** — `UsersView.java:186`, `DepartmentsView.java:84`
   Loads all rows. Acceptable for small admin tables today; add a comment noting the ceiling
   and switch to lazy loading if these grow past ~1000 rows.
 
-- [ ] **6. `EditUserView` doesn't use `Binder`** — `EditUserView.java:184-190`
+- [x] **6. `EditUserView` doesn't use `Binder`** — `EditUserView.java:184-190`
   Manually reads each field into the entity, with no validation on username/name.
   **Fix:** convert to `Binder` to match `EditDepartmentView`.
 
-- [ ] **7. Persistence logic inside views** — `EditUserView.saveUser`, `EditDepartmentView.saveDepartment`
+- [x] **7. Persistence logic inside views** — `EditUserView.saveUser`, `EditDepartmentView.saveDepartment`
   `@Transactional` persistence + `entityManager.merge` run in the Vaadin view.
   **Fix:** move data access into a service, keeping views focused on UI.
 
-- [ ] **8. Raw `innerHTML` injection (XSS)** — `SearchView.java:278`, `RegisterView.java:654`
+- [x] **8. Raw `innerHTML` injection (XSS)** — `SearchView.java:278`, `RegisterView.java:654`
   `setProperty("innerHTML", ... + principalName + ...)` interpolates untrusted data and
   bypasses the component API.
   **Fix:** use `Span`/`Html`/text nodes instead of `innerHTML`.
 
 ### 🟢 Minor / polish
 
-- [ ] **9. Inline styles** — replace `getStyle().set(...)` (margins, colors, `white-space`)
+- [~] **9. Inline styles** — replace `getStyle().set(...)` (margins, colors, `white-space`)
   with `LumoUtility` classes or CSS, following the `PaginationControls` pattern.
-- [ ] **10. `System.out.println` auth logging** — `UiSessionLogin.java:124-138`
+  *In progress:* converted the reviewed-scope case (`UsersView` info text →
+  `LumoUtility.Margin`/`TextColor`). Remaining occurrences live in views outside
+  the review scope (`DebugView`, `EditMessageTemplatesView`) or use CSS properties
+  without a direct `LumoUtility` equivalent (`flex`, `white-space`, `background`).
+- [x] **10. `System.out.println` auth logging** — `UiSessionLogin.java:124-138`
   Use a proper logger; note it dumps all active usernames to stdout on failed lookup (info leak).
 - [~] **11. No tests** — CLAUDE.md requires tests traceable to `UC-XXX`.
   *In progress:* a JUnit 5 suite now exists — unit tests (validators, token
   generator, DTOs), `@QuarkusTest` DB/security tests (Testcontainers + mock
   OIDC), and browserless UI tests (`PaginationControlsTest`,
-  `UnauthorizedViewTest`) for the dependency-free views. The data-heavy views
-  (`SearchView`, `RegisterView`, the edit views) still need coverage and are
-  best tackled alongside findings #1–#8, which make them testable.
-- [ ] **12. Duplicated sort-column mapping** — `SearchView` string `switch` can drift from
+  `UnauthorizedViewTest`) for the dependency-free views. Added
+  `StatusDataSourceTest` (UC-002): parameterized filtering, DB-level paging, and
+  an injection-regression test for finding #1. The remaining data-heavy views
+  (`SearchView`, `RegisterView`, the edit views) still need view-level coverage.
+- [x] **12. Duplicated sort-column mapping** — `SearchView` string `switch` can drift from
   `setSortProperty`. Use column-name constants on the entity.
+  *Done:* added `Status.PROP_*` constants used by both the grid `setSortProperty`
+  calls and the query builder; the sort mapping now derives directly from the
+  grid sort property via a Panache `Sort`, removing the hand-maintained `switch`.
 
 ## Summary
 

@@ -14,14 +14,13 @@ package com.elicitsoftware.admin.flow;
 import com.elicitsoftware.model.User;
 import com.vaadin.flow.server.VaadinSession;
 import com.vaadin.quarkus.annotation.UIScoped;
+import io.quarkus.logging.Log;
 import io.quarkus.security.identity.SecurityIdentity;
 import jakarta.annotation.PostConstruct;
 import jakarta.inject.Inject;
 import jakarta.persistence.Transient;
 
 import java.io.Serializable;
-import java.util.List;
-import java.util.Set;
 
 /**
  * A UI-scoped service that manages user authentication and session state within Vaadin applications.
@@ -121,21 +120,18 @@ public class UiSessionLogin implements Serializable {
     @PostConstruct
     public void init() {
         String principalName = identity.getPrincipal().getName();
-        System.out.println("Initializing UI for principal: " + principalName);
-        System.out.println("Available roles: " + identity.getRoles());
-        
+        Log.debugf("Initializing UI for principal: %s", principalName);
+
         // This runs once per UI session (browser tab/window)
         User user = User.find("username = ?1 and active = true", principalName).firstResult();
 
         if (user != null) {
-            System.out.println("Found user: " + user.getUsername());
+            Log.debugf("Found active user for principal: %s", principalName);
             VaadinSession.getCurrent().setAttribute("user", user);
         } else {
-            // User not found or inactive - immediately redirect without loading UI
-            System.out.println("WARNING: User not found in database for principal: " + principalName);
-            System.out.println("Attempting to find similar usernames in database...");
-            List<User> allUsers = User.find("active = true").list();
-            System.out.println("Active users in database: " + allUsers.stream().map(User::getUsername).toList());
+            // User not found or inactive - the UI handles the error state and redirects.
+            // Note: we deliberately do not log the roster of active usernames here (info leak).
+            Log.warnf("No active user found for authenticated principal: %s", principalName);
             VaadinSession.getCurrent().setAttribute("user", null);
         }
     }

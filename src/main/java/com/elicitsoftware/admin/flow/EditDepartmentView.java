@@ -12,6 +12,7 @@ package com.elicitsoftware.admin.flow;
  */
 
 import com.elicitsoftware.model.Department;
+import com.elicitsoftware.service.DepartmentService;
 import com.vaadin.flow.component.button.Button;
 import com.vaadin.flow.component.button.ButtonVariant;
 import com.vaadin.flow.component.notification.Notification;
@@ -29,7 +30,7 @@ import com.vaadin.flow.router.BeforeEnterEvent;
 import com.vaadin.flow.router.BeforeEnterObserver;
 import com.vaadin.flow.router.Route;
 import jakarta.annotation.security.RolesAllowed;
-import jakarta.transaction.Transactional;
+import jakarta.inject.Inject;
 
 /**
  * A Vaadin Flow view for editing department information.
@@ -52,6 +53,10 @@ import jakarta.transaction.Transactional;
 @Route(value = "edit-department/:id?", layout = MainLayout.class)
 @RolesAllowed("elicit_admin")
 public class EditDepartmentView extends VerticalLayout implements BeforeEnterObserver {
+
+    /** Service that owns the transactional persistence of departments. */
+    @Inject
+    DepartmentService departmentService;
 
     /** The department entity being edited or created. */
     private Department department;
@@ -263,25 +268,20 @@ public class EditDepartmentView extends VerticalLayout implements BeforeEnterObs
      * <p>If validation fails, error messages are displayed and the save operation
      * is not performed.</p>
      */
-    @Transactional
     public void saveDepartment() {
         try {
             // Validate and write form data to the department entity
             binder.writeBean(department);
-            
-            if (department.id == 0) {
-                // Create new department
-                department.persist();
-                Notification.show("Department created successfully", 3000, Notification.Position.MIDDLE);
-            } else {
-                // Update existing department
-                Department.getEntityManager().merge(department);
-                Notification.show("Department updated successfully", 3000, Notification.Position.MIDDLE);
-            }
-            
+
+            boolean isNew = department.id == 0;
+            // Persistence (transaction + insert/merge) lives in the service layer.
+            departmentService.save(department);
+            Notification.show(isNew ? "Department created successfully" : "Department updated successfully",
+                    3000, Notification.Position.MIDDLE);
+
             // Navigate back to departments list
             getUI().ifPresent(ui -> ui.navigate(DepartmentsView.class));
-            
+
         } catch (ValidationException e) {
             Notification.show("Please fix the validation errors before saving", 
                     3000, Notification.Position.MIDDLE);
@@ -315,7 +315,6 @@ public class EditDepartmentView extends VerticalLayout implements BeforeEnterObs
      * @deprecated Use {@link #saveDepartment()} instead
      */
     @Deprecated
-    @Transactional
     public void updateDepartment() {
         saveDepartment();
     }

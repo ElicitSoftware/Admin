@@ -22,6 +22,7 @@ import com.vaadin.flow.component.icon.VaadinIcon;
 import com.vaadin.flow.component.orderedlayout.HorizontalLayout;
 import com.vaadin.flow.component.orderedlayout.VerticalLayout;
 import com.vaadin.flow.router.Route;
+import com.vaadin.flow.theme.lumo.LumoUtility;
 import jakarta.annotation.security.RolesAllowed;
 
 
@@ -110,8 +111,7 @@ public class UsersView extends VerticalLayout {
      */
     private Paragraph createInfoText() {
         Paragraph info = new Paragraph("Users must be configured in the OpenID Connect (OIDC) authentication system with the roles \"Admin\" or \"User\". Departments are assigned through this interface.");
-        info.getStyle().set("margin-bottom", "1em");
-        info.getStyle().set("color", "var(--lumo-secondary-text-color)");
+        info.addClassNames(LumoUtility.Margin.Bottom.MEDIUM, LumoUtility.TextColor.SECONDARY);
         return info;
     }
 
@@ -183,6 +183,8 @@ public class UsersView extends VerticalLayout {
      * @see User#listAll()
      */
     private void updateGrid() {
+        // Eager load: acceptable for the small admin user table. If the user count grows
+        // past ~1000 rows, switch to a lazy CallbackDataProvider (see the data-providers skill).
         List<User> users = User.listAll();
         userGrid.setItems(users);
     }

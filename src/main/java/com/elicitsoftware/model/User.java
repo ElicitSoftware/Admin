@@ -368,4 +368,35 @@ public class User extends PanacheEntityBase {
         }
         return null;
     }
+
+    /**
+     * Compares this user to another based on its primary key.
+     *
+     * <p>ID-based identity is required for correct {@code Grid} selection tracking and
+     * {@code refreshItem} behaviour in the Vaadin data-provider layer (see the
+     * {@code data-providers} skill).</p>
+     *
+     * @param o the object to compare with
+     * @return {@code true} if the other object is a {@code User} with the same id
+     */
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) {
+            return true;
+        }
+        if (!(o instanceof User other)) {
+            return false;
+        }
+        return id == other.id;
+    }
+
+    /**
+     * Returns a hash code derived from the primary key, consistent with {@link #equals(Object)}.
+     *
+     * @return the hash code for this user
+     */
+    @Override
+    public int hashCode() {
+        return Long.hashCode(id);
+    }
 }

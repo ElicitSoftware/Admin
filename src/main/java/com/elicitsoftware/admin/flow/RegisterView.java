@@ -650,20 +650,7 @@ public class RegisterView extends HorizontalLayout implements HasDynamicTitle, B
                 new Paragraph("All rows starting with a '#' character are considered comments and will be ignored."),
 
                 new H4("Column Descriptions:"),
-                new Div() {{
-                    getElement().setProperty("innerHTML",
-                            "<ul>" +
-                                    "<li><strong>departmentId:</strong> Integer (required) - Must be a valid department ID for the user</li>" +
-                                    "<li><strong>firstName:</strong> String (required) - Subject's first name</li>" +
-                                    "<li><strong>lastName:</strong> String (required) - Subject's last name</li>" +
-                                    "<li><strong>middleName:</strong> String (optional) - Subject's middle name</li>" +
-                                    "<li><strong>dob:</strong> Date (optional) - Date of birth in yyyy-MM-dd or MM/dd/yyyy format</li>" +
-                                    "<li><strong>email:</strong> String (required) - Valid email address</li>" +
-                                    "<li><strong>phone:</strong> String (optional) - Phone number in ###-###-#### format</li>" +
-                                    "<li><strong>xid:</strong> String (optional) - External ID for the subject</li>" +
-                                    "</ul>"
-                    );
-                }},
+                columnDescriptionsList(),
 
                 new H4("Example CSV data:"),
                 new Pre("#departmentId,firstName,lastName,middleName,dob,email,phone,xid\n" +
@@ -673,6 +660,41 @@ public class RegisterView extends HorizontalLayout implements HasDynamicTitle, B
         );
 
         return content;
+    }
+
+    /**
+     * Builds the CSV column-description list using Vaadin HTML components.
+     *
+     * <p>This replaces a raw {@code innerHTML} assignment: each item is composed from an
+     * {@link Anchor}-free {@link ListItem} containing a bold {@link Span} label and a plain
+     * text description, so no markup string is injected into the DOM.</p>
+     *
+     * @return an {@link UnorderedList} describing each CSV column
+     */
+    private UnorderedList columnDescriptionsList() {
+        UnorderedList list = new UnorderedList();
+        list.add(columnDescription("departmentId:", " Integer (required) - Must be a valid department ID for the user"));
+        list.add(columnDescription("firstName:", " String (required) - Subject's first name"));
+        list.add(columnDescription("lastName:", " String (required) - Subject's last name"));
+        list.add(columnDescription("middleName:", " String (optional) - Subject's middle name"));
+        list.add(columnDescription("dob:", " Date (optional) - Date of birth in yyyy-MM-dd or MM/dd/yyyy format"));
+        list.add(columnDescription("email:", " String (required) - Valid email address"));
+        list.add(columnDescription("phone:", " String (optional) - Phone number in ###-###-#### format"));
+        list.add(columnDescription("xid:", " String (optional) - External ID for the subject"));
+        return list;
+    }
+
+    /**
+     * Creates a single CSV column-description list item with a bold field name.
+     *
+     * @param label       the column name, rendered in bold
+     * @param description the human-readable description text
+     * @return a {@link ListItem} for the column
+     */
+    private ListItem columnDescription(String label, String description) {
+        Span name = new Span(label);
+        name.getElement().getStyle().set("font-weight", "bold");
+        return new ListItem(name, new Span(description));
     }
 
     /**
