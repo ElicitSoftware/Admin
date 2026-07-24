@@ -81,8 +81,13 @@ Ordered by priority. Check off as completed.
   with `LumoUtility` classes or CSS, following the `PaginationControls` pattern.
 - [ ] **10. `System.out.println` auth logging** — `UiSessionLogin.java:124-138`
   Use a proper logger; note it dumps all active usernames to stdout on failed lookup (info leak).
-- [ ] **11. No tests** — CLAUDE.md requires tests traceable to `UC-XXX`; there are none.
-  Add browserless/UI unit tests for the views.
+- [~] **11. No tests** — CLAUDE.md requires tests traceable to `UC-XXX`.
+  *In progress:* a JUnit 5 suite now exists — unit tests (validators, token
+  generator, DTOs), `@QuarkusTest` DB/security tests (Testcontainers + mock
+  OIDC), and browserless UI tests (`PaginationControlsTest`,
+  `UnauthorizedViewTest`) for the dependency-free views. The data-heavy views
+  (`SearchView`, `RegisterView`, the edit views) still need coverage and are
+  best tackled alongside findings #1–#8, which make them testable.
 - [ ] **12. Duplicated sort-column mapping** — `SearchView` string `switch` can drift from
   `setSortProperty`. Use column-name constants on the entity.
 

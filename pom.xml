@@ -17,6 +17,7 @@
         <skipITs>true</skipITs>
         <surefire-plugin.version>3.5.2</surefire-plugin.version>
         <vaadin.version>25.2.3</vaadin.version>
+        <browserless-test.version>1.1.1</browserless-test.version>
         <javadoc-plugin.version>3.12.0</javadoc-plugin.version>
         <site-plugin.version>3.21.0</site-plugin.version>
         <!-- license-maven-plugin properties -->
@@ -28,10 +29,32 @@
 
     <dependencyManagement>
         <dependencies>
+            <!--
+                Align all JUnit 5 artifacts. Quarkus 3.37's internal test modules
+                pull a skewed mix (junit-jupiter-api 6.0.3 vs platform/engine 6.1.1),
+                which makes the Surefire JUnit Platform provider fail with a
+                NoClassDefFoundError. Importing the JUnit BOM first forces a single
+                consistent version across api/params/engine/platform.
+            -->
+            <dependency>
+                <groupId>org.junit</groupId>
+                <artifactId>junit-bom</artifactId>
+                <version>6.1.1</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
             <dependency>
                 <groupId>com.vaadin</groupId>
                 <artifactId>vaadin-bom</artifactId>
                 <version>${vaadin.version}</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
+            <!-- Vaadin browserless (UI unit) testing — not managed by vaadin-bom. -->
+            <dependency>
+                <groupId>com.vaadin</groupId>
+                <artifactId>browserless-test-bom</artifactId>
+                <version>${browserless-test.version}</version>
                 <type>pom</type>
                 <scope>import</scope>
             </dependency>
@@ -209,6 +232,30 @@
             <artifactId>rest-assured</artifactId>
             <scope>test</scope>
         </dependency>
+        <!-- Annotation-based security mocking for @QuarkusTest: @TestSecurity + @OidcSecurity -->
+        <dependency>
+            <groupId>io.quarkus</groupId>
+            <artifactId>quarkus-test-security</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>io.quarkus</groupId>
+            <artifactId>quarkus-test-security-oidc</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <!-- Shared PostgreSQL container for @QuarkusTest (one container, both datasources).
+             Version is managed by the Quarkus BOM (Testcontainers 2.x). -->
+        <dependency>
+            <groupId>org.testcontainers</groupId>
+            <artifactId>testcontainers-postgresql</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <!-- Vaadin browserless UI testing (Quarkus base class QuarkusBrowserlessTest) -->
+        <dependency>
+            <groupId>com.vaadin</groupId>
+            <artifactId>browserless-test-quarkus</artifactId>
+            <scope>test</scope>
+        </dependency>
         <dependency>
             <groupId>io.quarkus</groupId>
             <artifactId>quarkus-jacoco</artifactId>
@@ -342,8 +389,25 @@
             <plugin>
                 <groupId>org.jacoco</groupId>
                 <artifactId>jacoco-maven-plugin</artifactId>
-                <version>0.8.12</version>
+                <!-- 0.8.15 supports Java 26 class files; 0.8.12 fails to instrument
+                     them (the JDK on this machine is newer than the Java 21 target). -->
+                <version>0.8.15</version>
                 <executions>
+                    <execution>
+                        <!--
+                            Instrument plain (non-@QuarkusTest) unit tests. The
+                            quarkus-jacoco extension only covers @QuarkusTest runs,
+                            so without this agent the JUnit unit tests execute
+                            un-instrumented and produce no coverage data.
+                        -->
+                        <id>jacoco-prepare-agent</id>
+                        <goals>
+                            <goal>prepare-agent</goal>
+                        </goals>
+                        <configuration>
+                            <destFile>${project.build.directory}/jacoco.exec</destFile>
+                        </configuration>
+                    </execution>
                     <execution>
                         <id>jacoco-report</id>
                         <phase>verify</phase>

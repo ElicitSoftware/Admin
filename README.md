@@ -154,6 +154,77 @@ After running the `docker-compose` command, open [http://localhost:8080](http://
 <div align="center"><image src="images/samplePedigree.png" height=600></div>
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 
+## Testing
+The test suite lives under `src/test/java` and is traceable to the AIUP use
+cases in `docs/use_cases` (each test references its `UC-XXX` ID).
+
+Two tiers of tests exist:
+
+- **Unit tests** — fast, no external services. They cover pure logic such as
+  the token generator (UC-015), respondent contact validation (UC-003), the
+  validation `Result` wrapper (UC-006/UC-007), the integration-API response DTO
+  (UC-010), and brand presentation helpers (UC-001).
+- **Booted tests** (`@QuarkusTest`) — start the full application against a
+  throwaway **PostgreSQL container** (Testcontainers) and **mock OIDC**, with no
+  external services required. They cover the `survey.status` view via Panache
+  (UC-002) and role-based endpoint access (UC-001/UC-008). **Docker must be
+  running.**
+- **Browserless UI tests** — exercise Vaadin views server-side with no browser,
+  using the `browserless-test-quarkus` framework (`QuarkusBrowserlessTest`).
+  `PaginationControlsTest` verifies the pagination component's offset/page-count
+  logic (UC-002); `UnauthorizedViewTest` builds `UnauthorizedView` in the Vaadin
+  test environment and asserts the rendered heading, message, and Logout button
+  (UC-001 A1). These also boot the app, so Docker is required.
+
+  > Note: under `@QuarkusTest` the Vaadin route registry is not populated by the
+  > browserless route scanner, so `navigate(ViewClass.class)` raises
+  > `NotFoundException`. Instead, instantiate the view and `UI.getCurrent().add(...)`
+  > it, then query with `find(Component.class, view)`. This works for views with
+  > no injected/DB dependencies; data-heavy views (SearchView, RegisterView, the
+  > edit views) need the code-review remediations in
+  > `docs/plan/code-review-quarkus-vaadin.md` before they are cleanly testable.
+
+The booted tests rely on:
+
+- `src/test/resources/application.properties` (`%test` profile) — mock OIDC
+  (`quarkus.oidc.tenant-enabled=false`), mock mailer, and Flyway pointed at
+  `db/migration,db/test`.
+- `PostgresTestResource` — a `QuarkusTestResourceLifecycleManager` that starts
+  one PostgreSQL container and injects its URL into both the default and `owner`
+  datasources.
+- `src/test/resources/db/test/V0.0.0.1__TEST_BOOTSTRAP.sql` — a **test-only**
+  Flyway migration that creates the DB roles, schemas, and cross-module stub
+  tables the Admin migrations assume already exist in production, so the full
+  `db/migration` history applies cleanly on a bare container.
+
+Identity in booted tests is supplied with `@TestSecurity` / `@OidcSecurity`
+(from `quarkus-test-security-oidc`) — no Keycloak needed.
+
+Run all unit + booted tests (needs Docker):
+
+```shell
+./mvnw test -Dquarkus.container-image.build=false
+```
+
+Run tests and generate a JaCoCo coverage report
+(`target/site/jacoco/index.html`):
+
+```shell
+./mvnw test jacoco:report -Dquarkus.container-image.build=false
+```
+
+Also run the opt-in `TokenServiceEndpointIT` smoke test:
+
+```shell
+./mvnw test -Dit.integration=true -Dquarkus.container-image.build=false
+```
+
+> **Coverage gate:** `pom.xml` configures a JaCoCo `check` that requires 70%
+> line coverage. This initial suite is a starting point and does not yet meet
+> that bar; expand the tests toward each use case's scenarios to reach it.
+
+<p align="right">(<a href="#readme-top">back to top</a>)</p>
+
 ## Configuration
 The OIDC server can be congifured with enviromental properties. 
 Please visit <a href="https://quarkus.io/guides/security-oidc-configuration-properties-reference" target="_blank">Quarkus.io</a> for a list of configuration properties. 
