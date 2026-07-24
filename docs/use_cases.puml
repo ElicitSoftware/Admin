@@ -1,0 +1,72 @@
+@startuml Use Cases Overview
+left to right direction
+
+actor "Survey User" as user
+actor "Survey Administrator" as admin
+actor "Integration Client" as importer
+actor "OIDC Provider" as oidc
+actor "Scheduler" as scheduler
+actor "Report Service" as reportsvc
+
+rectangle "Elicit Admin" {
+    ' --- Interactive console (user + admin) ---
+    usecase "UC-001\nAuthenticate and Access the Admin Console" as UC001
+    usecase "UC-002\nSearch and Monitor Subject Progress" as UC002
+    usecase "UC-003\nRegister or Update a Subject" as UC003
+    usecase "UC-004\nSend Invitation or Reminder Email" as UC004
+    usecase "UC-005\nGenerate and Download a Subject Report" as UC005
+    usecase "UC-009\nView Security Diagnostics" as UC009
+
+    ' --- Administration (admin only) ---
+    usecase "UC-006\nManage Departments" as UC006
+    usecase "UC-007\nManage Message Templates" as UC007
+    usecase "UC-008\nManage Users" as UC008
+
+    ' --- Integration and data lifecycle ---
+    usecase "UC-010\nRegister Subjects via Integration API" as UC010
+    usecase "UC-011\nExport Respondent Data" as UC011
+    usecase "UC-012\nImport Respondent Data" as UC012
+    usecase "UC-013\nExport Survey Definition" as UC013
+    usecase "UC-014\nImport Survey Definition" as UC014
+
+    ' --- Shared subflow ---
+    usecase "UC-015\nGenerate Survey Access Token" as UC015
+}
+
+' Survey User
+user --> UC001
+user --> UC002
+user --> UC003
+user --> UC004
+user --> UC005
+user --> UC009
+
+' Administrator (inherits user goals plus administration and data lifecycle)
+admin --> UC001
+admin --> UC002
+admin --> UC003
+admin --> UC004
+admin --> UC005
+admin --> UC006
+admin --> UC007
+admin --> UC008
+admin --> UC009
+admin --> UC010
+admin --> UC011
+admin --> UC012
+admin --> UC013
+admin --> UC014
+
+' Integration Client
+importer --> UC010
+
+' External systems
+oidc --> UC001
+scheduler --> UC004
+reportsvc --> UC005
+
+' Shared subflows
+UC003 ..> UC015 : <<include>>
+UC010 ..> UC015 : <<include>>
+
+@enduml
