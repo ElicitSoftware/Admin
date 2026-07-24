@@ -85,11 +85,10 @@ Ordered by priority. Check off as completed.
   without a direct `LumoUtility` equivalent (`flex`, `white-space`, `background`).
 - [x] **10. `System.out.println` auth logging** — `UiSessionLogin.java:124-138`
   Use a proper logger; note it dumps all active usernames to stdout on failed lookup (info leak).
-- [~] **11. No tests** — CLAUDE.md requires tests traceable to `UC-XXX`.
-  *Substantially covered:* a JUnit 5 suite now exists — unit tests (validators,
-  token generator, DTOs, entity identity), `@QuarkusTest` DB/security tests
-  (Testcontainers + mock OIDC), and browserless UI tests. Coverage added for the
-  remediated code:
+- [x] **11. No tests** — CLAUDE.md requires tests traceable to `UC-XXX`.
+  A JUnit 5 suite now exists — unit tests (validators, token generator, DTOs,
+  entity identity), `@QuarkusTest` DB/security tests (Testcontainers + mock
+  OIDC), and browserless UI tests. Coverage added for every remediated area:
   - `StatusDataSourceTest` (UC-002) — parameterized filtering, DB-level paging,
     and an injection-regression test for finding #1.
   - `UserServiceTest` / `DepartmentServiceTest` (UC-009/UC-010) — the extracted
@@ -101,9 +100,11 @@ Ordered by priority. Check off as completed.
     (finding #6); views obtained via CDI so `@Inject` services resolve.
   - `SearchViewTest` (UC-002) — browserless test asserting the grid's sortable
     columns are wired to the `Status.PROP_*` constants (finding #12 drift guard).
+  - `RegisterViewTest` (UC-003) — browserless test that the CSV column docs
+    render as a real `UnorderedList`/`ListItem` tree (one item per column) with
+    no raw markup, guarding the `innerHTML` removal in finding #8.
 
-  Full suite: 59 passing. `RegisterView` (CSV/REST docs, bulk import) still has
-  no view-level test; its changed surface (#8) is static markup only.
+  Full suite: 61 passing.
 - [x] **12. Duplicated sort-column mapping** — `SearchView` string `switch` can drift from
   `setSortProperty`. Use column-name constants on the entity.
   *Done:* added `Status.PROP_*` constants used by both the grid `setSortProperty`
