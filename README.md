@@ -154,6 +154,47 @@ After running the `docker-compose` command, open [http://localhost:8080](http://
 <div align="center"><image src="images/samplePedigree.png" height=600></div>
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 
+## Testing
+The test suite lives under `src/test/java` and is traceable to the AIUP use
+cases in `docs/use_cases` (each test references its `UC-XXX` ID).
+
+Two tiers of tests exist:
+
+- **Unit tests** — fast, no external services. They cover pure logic such as
+  the token generator (UC-015), respondent contact validation (UC-003), the
+  validation `Result` wrapper (UC-006/UC-007), the integration-API response DTO
+  (UC-010), and brand presentation helpers (UC-001).
+- **Integration tests** (`*IT`, `@QuarkusTest`) — boot the application and
+  require a reachable PostgreSQL database (Flyway `migrate-at-start`) and OIDC
+  provider. These are **opt-in** and gated behind a system property so the unit
+  build stays green without infrastructure.
+
+Run the unit tests:
+
+```shell
+./mvnw test -Dquarkus.container-image.build=false
+```
+
+Run the unit tests and generate a JaCoCo coverage report
+(`target/site/jacoco/index.html`):
+
+```shell
+./mvnw test jacoco:report -Dquarkus.container-image.build=false
+```
+
+Include the booted integration tests once a database and OIDC provider are
+available for the test profile:
+
+```shell
+./mvnw verify -Dit.integration=true
+```
+
+> **Coverage gate:** `pom.xml` configures a JaCoCo `check` that requires 70%
+> line coverage. This initial suite is a starting point and does not yet meet
+> that bar; expand the tests toward each use case's scenarios to reach it.
+
+<p align="right">(<a href="#readme-top">back to top</a>)</p>
+
 ## Configuration
 The OIDC server can be congifured with enviromental properties. 
 Please visit <a href="https://quarkus.io/guides/security-oidc-configuration-properties-reference" target="_blank">Quarkus.io</a> for a list of configuration properties. 
