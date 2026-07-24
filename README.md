@@ -164,29 +164,45 @@ Two tiers of tests exist:
   the token generator (UC-015), respondent contact validation (UC-003), the
   validation `Result` wrapper (UC-006/UC-007), the integration-API response DTO
   (UC-010), and brand presentation helpers (UC-001).
-- **Integration tests** (`*IT`, `@QuarkusTest`) — boot the application and
-  require a reachable PostgreSQL database (Flyway `migrate-at-start`) and OIDC
-  provider. These are **opt-in** and gated behind a system property so the unit
-  build stays green without infrastructure.
+- **Booted tests** (`@QuarkusTest`) — start the full application against a
+  throwaway **PostgreSQL container** (Testcontainers) and **mock OIDC**, with no
+  external services required. They cover the `survey.status` view via Panache
+  (UC-002) and role-based endpoint access (UC-001/UC-008). **Docker must be
+  running.**
 
-Run the unit tests:
+The booted tests rely on:
+
+- `src/test/resources/application.properties` (`%test` profile) — mock OIDC
+  (`quarkus.oidc.tenant-enabled=false`), mock mailer, and Flyway pointed at
+  `db/migration,db/test`.
+- `PostgresTestResource` — a `QuarkusTestResourceLifecycleManager` that starts
+  one PostgreSQL container and injects its URL into both the default and `owner`
+  datasources.
+- `src/test/resources/db/test/V0.0.0.1__TEST_BOOTSTRAP.sql` — a **test-only**
+  Flyway migration that creates the DB roles, schemas, and cross-module stub
+  tables the Admin migrations assume already exist in production, so the full
+  `db/migration` history applies cleanly on a bare container.
+
+Identity in booted tests is supplied with `@TestSecurity` / `@OidcSecurity`
+(from `quarkus-test-security-oidc`) — no Keycloak needed.
+
+Run all unit + booted tests (needs Docker):
 
 ```shell
 ./mvnw test -Dquarkus.container-image.build=false
 ```
 
-Run the unit tests and generate a JaCoCo coverage report
+Run tests and generate a JaCoCo coverage report
 (`target/site/jacoco/index.html`):
 
 ```shell
 ./mvnw test jacoco:report -Dquarkus.container-image.build=false
 ```
 
-Include the booted integration tests once a database and OIDC provider are
-available for the test profile:
+Also run the opt-in `TokenServiceEndpointIT` smoke test:
 
 ```shell
-./mvnw verify -Dit.integration=true
+./mvnw test -Dit.integration=true -Dquarkus.container-image.build=false
 ```
 
 > **Coverage gate:** `pom.xml` configures a JaCoCo `check` that requires 70%

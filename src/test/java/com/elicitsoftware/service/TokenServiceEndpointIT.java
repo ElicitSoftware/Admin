@@ -26,12 +26,11 @@ import static org.hamcrest.Matchers.containsString;
  * {@link QuarkusTest} that exercises the public, permit-all {@code /api/secured/test}
  * probe to confirm the JAX-RS application and security pipeline start correctly.</p>
  *
- * <p><strong>Opt-in:</strong> a full {@code @QuarkusTest} boots the application,
- * which requires a reachable PostgreSQL database (Flyway {@code migrate-at-start})
- * and OIDC provider. Because those are not available in a plain unit build, this
- * test only runs when {@code -Dit.integration=true} is passed. Enable it once the
- * backing services (or Quarkus Dev Services / Testcontainers) are configured for
- * the test profile:</p>
+ * <p><strong>Opt-in:</strong> the {@code %test} profile now provides PostgreSQL
+ * Dev Services (Testcontainers) and mock OIDC, so this test <em>can</em> boot in
+ * a plain build. It stays gated behind {@code -Dit.integration=true} so a routine
+ * {@code ./mvnw test} does not pay the extra app-boot cost for a probe that the
+ * other {@code @QuarkusTest} classes already cover. Run it explicitly with:</p>
  *
  * <pre>{@code ./mvnw test -Dit.integration=true}</pre>
  */
