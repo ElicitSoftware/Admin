@@ -169,6 +169,20 @@ Two tiers of tests exist:
   external services required. They cover the `survey.status` view via Panache
   (UC-002) and role-based endpoint access (UC-001/UC-008). **Docker must be
   running.**
+- **Browserless UI tests** — exercise Vaadin views server-side with no browser,
+  using the `browserless-test-quarkus` framework (`QuarkusBrowserlessTest`).
+  `PaginationControlsTest` verifies the pagination component's offset/page-count
+  logic (UC-002); `UnauthorizedViewTest` builds `UnauthorizedView` in the Vaadin
+  test environment and asserts the rendered heading, message, and Logout button
+  (UC-001 A1). These also boot the app, so Docker is required.
+
+  > Note: under `@QuarkusTest` the Vaadin route registry is not populated by the
+  > browserless route scanner, so `navigate(ViewClass.class)` raises
+  > `NotFoundException`. Instead, instantiate the view and `UI.getCurrent().add(...)`
+  > it, then query with `find(Component.class, view)`. This works for views with
+  > no injected/DB dependencies; data-heavy views (SearchView, RegisterView, the
+  > edit views) need the code-review remediations in
+  > `docs/plan/code-review-quarkus-vaadin.md` before they are cleanly testable.
 
 The booted tests rely on:
 
