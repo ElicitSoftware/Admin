@@ -70,6 +70,27 @@ import java.util.Date;
 @Table(name = "status", schema = "survey")
 public class Status extends PanacheEntityBase {
 
+    /** Sortable/filterable entity attribute name for the survey token. */
+    public static final String PROP_TOKEN = "token";
+    /** Sortable entity attribute name for the department name. */
+    public static final String PROP_DEPARTMENT_NAME = "departmentName";
+    /** Filterable entity attribute name for the numeric department id. */
+    public static final String PROP_DEPARTMENT_ID = "department_id";
+    /** Sortable/filterable entity attribute name for the first name. */
+    public static final String PROP_FIRST_NAME = "firstName";
+    /** Sortable entity attribute name for the middle name. */
+    public static final String PROP_MIDDLE_NAME = "middleName";
+    /** Sortable/filterable entity attribute name for the last name. */
+    public static final String PROP_LAST_NAME = "lastName";
+    /** Sortable/filterable entity attribute name for the email address. */
+    public static final String PROP_EMAIL = "email";
+    /** Sortable/filterable entity attribute name for the phone number. */
+    public static final String PROP_PHONE = "phone";
+    /** Sortable entity attribute name for the participation status. */
+    public static final String PROP_STATUS = "status";
+    /** Sortable entity attribute name for the creation timestamp. */
+    public static final String PROP_CREATED_DT = "createdDt";
+
     /** Date formatter for displaying creation dates in MM/dd/yyyy format. */
     @Transient
     private final static SimpleDateFormat sdf = new SimpleDateFormat("MM/dd/yyyy");
@@ -587,5 +608,36 @@ public class Status extends PanacheEntityBase {
         sb.append(this.token != null ? this.token : "null").append(", ");
         sb.append(this.createdDt != null ? sdf.format(this.createdDt) : "null").append(", ");
         return sb.toString();
+    }
+
+    /**
+     * Compares this status to another based on its primary key.
+     *
+     * <p>ID-based identity is required for correct {@code Grid} selection tracking and
+     * {@code refreshItem} behaviour in the Vaadin data-provider layer (see the
+     * {@code data-providers} skill).</p>
+     *
+     * @param o the object to compare with
+     * @return {@code true} if the other object is a {@code Status} with the same id
+     */
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) {
+            return true;
+        }
+        if (!(o instanceof Status other)) {
+            return false;
+        }
+        return id == other.id;
+    }
+
+    /**
+     * Returns a hash code derived from the primary key, consistent with {@link #equals(Object)}.
+     *
+     * @return the hash code for this status
+     */
+    @Override
+    public int hashCode() {
+        return Long.hashCode(id);
     }
 }

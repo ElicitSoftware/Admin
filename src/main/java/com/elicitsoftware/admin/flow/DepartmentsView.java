@@ -81,6 +81,8 @@ public class DepartmentsView extends VerticalLayout {
 //            return emails.length() > 50 ? emails.substring(0, 47) + "..." : emails;
 //        }).setHeader("Notification Emails").setSortable(true).setAutoWidth(true);
 
+        // Eager load: acceptable for the small departments table. If the department count grows
+        // past ~1000 rows, switch to a lazy CallbackDataProvider (see the data-providers skill).
         List<Department> departments = Department.findAll().list();
         grid.setItems(departments);
         grid.addThemeVariants(GridVariant.LUMO_ROW_STRIPES, GridVariant.LUMO_COMPACT);

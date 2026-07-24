@@ -43,6 +43,8 @@
 /* Import component styles */
 @import 'components/branded-header.css';
 @import 'components/text-field.css';
+@import 'components/debug-view.css';
+@import 'components/edit-message-templates.css';
 
 /* Brand Integration Architecture */
 /* These CSS custom properties provide the contract between brands and the application */

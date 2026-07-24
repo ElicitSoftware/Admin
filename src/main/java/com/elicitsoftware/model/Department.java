@@ -315,4 +315,35 @@ public class Department extends PanacheEntityBase {
     public void setNotificationEmails(String notificationEmails) {
         this.notificationEmails = notificationEmails;
     }
+
+    /**
+     * Compares this department to another based on its primary key.
+     *
+     * <p>ID-based identity is required for correct {@code MultiSelectComboBox}/{@code Grid}
+     * selection tracking (see the {@code data-providers} skill). It also gives the
+     * "All Departments" sentinel ({@code id == -1}) a stable identity.</p>
+     *
+     * @param o the object to compare with
+     * @return {@code true} if the other object is a {@code Department} with the same id
+     */
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) {
+            return true;
+        }
+        if (!(o instanceof Department other)) {
+            return false;
+        }
+        return id == other.id;
+    }
+
+    /**
+     * Returns a hash code derived from the primary key, consistent with {@link #equals(Object)}.
+     *
+     * @return the hash code for this department
+     */
+    @Override
+    public int hashCode() {
+        return Long.hashCode(id);
+    }
 }

@@ -12,11 +12,13 @@ package com.elicitsoftware.admin.flow;
  */
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
@@ -26,7 +28,9 @@ import com.elicitsoftware.model.User;
 import com.elicitsoftware.service.EmailService;
 import com.elicitsoftware.service.ReportingService;
 import com.elicitsoftware.service.StatusDataSource;
+import com.elicitsoftware.service.StatusQuery;
 import com.vaadin.flow.component.Component;
+import com.vaadin.flow.component.DetachEvent;
 import com.vaadin.flow.component.Direction;
 import com.vaadin.flow.component.UI;
 import com.vaadin.flow.component.button.Button;
@@ -40,6 +44,8 @@ import com.vaadin.flow.component.grid.GridVariant;
 import com.vaadin.flow.component.grid.HeaderRow;
 import com.vaadin.flow.component.html.Div;
 import com.vaadin.flow.component.html.H5;
+import com.vaadin.flow.component.html.Paragraph;
+import com.vaadin.flow.component.html.Span;
 import com.vaadin.flow.component.icon.Icon;
 import com.vaadin.flow.component.icon.VaadinIcon;
 import com.vaadin.flow.component.notification.Notification;
@@ -55,7 +61,9 @@ import com.vaadin.flow.router.BeforeEnterObserver;
 import com.vaadin.flow.router.HasDynamicTitle;
 import com.vaadin.flow.router.QueryParameters;
 import com.vaadin.flow.router.Route;
+import com.vaadin.flow.theme.lumo.LumoUtility;
 
+import io.quarkus.panache.common.Sort;
 import io.quarkus.security.identity.SecurityIdentity;
 import jakarta.annotation.PostConstruct;
 import jakarta.annotation.security.RolesAllowed;
@@ -136,6 +144,9 @@ public class SearchView extends VerticalLayout implements HasDynamicTitle, Befor
     /** Scheduled executor for automatic data refresh functionality. */
     private final ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(1);
 
+    /** Handle to the scheduled refresh task so it can be cancelled on detach. */
+    private ScheduledFuture<?> refreshTask;
+
     /** Security identity for user authentication and role checking. */
     @Inject
     SecurityIdentity identity;
@@ -180,46 +191,21 @@ public class SearchView extends VerticalLayout implements HasDynamicTitle, Befor
     private TextField phoneField;
 
     /** Data provider that fetches paginated status records with filtering support. */
-    private final DataProvider<Status, String> pagingDataProvider = DataProvider.fromFilteringCallbacks(
+    private final DataProvider<Status, StatusQuery> pagingDataProvider = DataProvider.fromFilteringCallbacks(
             query -> {
                 query.getLimit();
                 query.getOffset();
 
                 var offset = paginationControls.calculateOffset();
                 var limit = paginationControls.getPageSize();
-                String sql = query.getFilter().orElse(getStatusSQL());
-                // Build ORDER BY from query.getSortOrders()
-                List<QuerySortOrder> sortOrders = query.getSortOrders();
-                String orderBy = sortOrders.stream()
-                        .map(order -> {
-                            String column = switch (order.getSorted()) {
-                                case "token" -> "s.token";
-                                case "departmentName" -> "s.departmentName";
-                                case "firstName" -> "s.firstName";
-                                case "middleName" -> "s.middleName";
-                                case "lastName" -> "s.lastName";
-                                case "email" -> "s.email";
-                                case "phone" -> "s.phone";
-                                case "status" -> "s.status";
-                                case "createdDt" -> "s.createdDt";
-                                default -> null;
-                            };
-                            if (column != null) {
-                                return column + (order.getDirection().name().equals("DESCENDING") ? " DESC" : " ASC");
-                            }
-                            return null;
-                        })
-                        .filter(x -> x != null)
-                        .reduce((a, b) -> a + ", " + b)
-                        .map(s -> " ORDER BY " + s)
-                        .orElse("");
-
-                sql = sql + orderBy;
-                return dataSource.fetch(sql, offset, limit);
+                StatusQuery statusQuery = query.getFilter().orElseGet(this::buildStatusQuery);
+                Sort sort = buildSort(query.getSortOrders());
+                StatusQuery sorted = new StatusQuery(statusQuery.whereClause(), statusQuery.params(), sort);
+                return dataSource.fetch(sorted, offset, limit).stream();
             },
             query -> {
-                String sql = query.getFilter().orElse(getStatusSQL());
-                var itemCount = dataSource.count(sql);
+                StatusQuery statusQuery = query.getFilter().orElseGet(this::buildStatusQuery);
+                var itemCount = dataSource.count(statusQuery);
                 paginationControls.recalculatePageCount(itemCount);
                 var offset = paginationControls.calculateOffset();
                 var limit = paginationControls.getPageSize();
@@ -227,6 +213,33 @@ public class SearchView extends VerticalLayout implements HasDynamicTitle, Befor
                 return Math.min(remainingItemsCount, limit);
             }
     );
+
+    /**
+     * Translates the grid's sort orders into a Panache {@link Sort}, mapping each grid
+     * sort property to its entity attribute via the {@code Status.PROP_*} constants so the
+     * mapping cannot drift from the column definitions.
+     *
+     * @param sortOrders the sort orders requested by the grid
+     * @return a {@link Sort}, or {@code null} when no sortable column is active
+     */
+    private Sort buildSort(List<QuerySortOrder> sortOrders) {
+        Sort sort = null;
+        for (QuerySortOrder order : sortOrders) {
+            String property = order.getSorted();
+            if (property == null) {
+                continue;
+            }
+            Sort.Direction direction = order.getDirection().name().equals("DESCENDING")
+                    ? Sort.Direction.Descending
+                    : Sort.Direction.Ascending;
+            if (sort == null) {
+                sort = Sort.by(property, direction);
+            } else {
+                sort.and(property, direction);
+            }
+        }
+        return sort;
+    }
 
     /**
      * Initializes the search view components and layout after dependency injection.
@@ -274,8 +287,19 @@ public class SearchView extends VerticalLayout implements HasDynamicTitle, Befor
         user = uiSessionLogin.getUser();
 
         if (user == null) {
+            // Build the message from element components so the untrusted principal name is
+            // treated as text, never markup (no innerHTML injection).
             Div errorDiv = new Div();
-            errorDiv.getElement().setProperty("innerHTML", " You have successfully logged in to the Open ID connect system.<br/> Unfortunately, there is no user named <b>" + identity.getPrincipal().getName() + "</b> in the application or it is set to inactive.<br/>Please ask an Elicit Admin for help.");
+            errorDiv.add(new Paragraph("You have successfully logged in to the Open ID connect system."));
+
+            Span principal = new Span(identity.getPrincipal().getName());
+            principal.addClassName(LumoUtility.FontWeight.BOLD);
+            Paragraph missingUser = new Paragraph(new Span("Unfortunately, there is no user named "),
+                    principal,
+                    new Span(" in the application or it is set to inactive."));
+            errorDiv.add(missingUser);
+
+            errorDiv.add(new Paragraph("Please ask an Elicit Admin for help."));
             add(errorDiv);
         } else {
             //Set up the I18n
@@ -479,15 +503,15 @@ public class SearchView extends VerticalLayout implements HasDynamicTitle, Befor
     private void getSubjectGrid(VerticalLayout respondentsLayout) {
         subjectGrid = new Grid<>(Status.class, false);
         subjectGrid.setSizeFull();
-        subjectGrid.addColumn(Status::getToken).setHeader("Token").setSortable(true).setSortProperty("token").setWidth("150px").setFlexGrow(0);
-        subjectGrid.addColumn(Status::getDepartmentName).setHeader("Department").setSortable(true).setSortProperty("departmentName");
-        subjectGrid.addColumn(Status::getFirstName).setHeader("First name").setSortable(true).setSortProperty("firstName");
-        subjectGrid.addColumn(Status::getMiddleName).setHeader("Middle name").setSortable(true).setSortProperty("middleName");
-        subjectGrid.addColumn(Status::getLastName).setHeader("Last name").setSortable(true).setSortProperty("lastName");
-        subjectGrid.addColumn(Status::getEmail).setHeader("Email").setSortable(true).setSortProperty("email");
-        subjectGrid.addColumn(Status::getPhone).setHeader("Phone").setSortable(true).setSortProperty("phone");
-        subjectGrid.addColumn(Status::getCreated).setHeader("Created").setSortable(true).setSortProperty("createdDt");
-        subjectGrid.addColumn(Status::getStatus).setHeader("Status").setSortable(true).setSortProperty("status");
+        subjectGrid.addColumn(Status::getToken).setHeader("Token").setSortable(true).setSortProperty(Status.PROP_TOKEN).setWidth("150px").setFlexGrow(0);
+        subjectGrid.addColumn(Status::getDepartmentName).setHeader("Department").setSortable(true).setSortProperty(Status.PROP_DEPARTMENT_NAME);
+        subjectGrid.addColumn(Status::getFirstName).setHeader("First name").setSortable(true).setSortProperty(Status.PROP_FIRST_NAME);
+        subjectGrid.addColumn(Status::getMiddleName).setHeader("Middle name").setSortable(true).setSortProperty(Status.PROP_MIDDLE_NAME);
+        subjectGrid.addColumn(Status::getLastName).setHeader("Last name").setSortable(true).setSortProperty(Status.PROP_LAST_NAME);
+        subjectGrid.addColumn(Status::getEmail).setHeader("Email").setSortable(true).setSortProperty(Status.PROP_EMAIL);
+        subjectGrid.addColumn(Status::getPhone).setHeader("Phone").setSortable(true).setSortProperty(Status.PROP_PHONE);
+        subjectGrid.addColumn(Status::getCreated).setHeader("Created").setSortable(true).setSortProperty(Status.PROP_CREATED_DT);
+        subjectGrid.addColumn(Status::getStatus).setHeader("Status").setSortable(true).setSortProperty(Status.PROP_STATUS);
         subjectGrid.setMultiSort(true, Grid.MultiSortPriority.APPEND);
         subjectGrid.addThemeVariants(GridVariant.LUMO_ROW_STRIPES, GridVariant.LUMO_COMPACT);
         HeaderRow headerRow = subjectGrid.appendHeaderRow();
@@ -599,8 +623,10 @@ public class SearchView extends VerticalLayout implements HasDynamicTitle, Befor
 
         paginationControls.onPageChanged(() -> subjectGrid.getDataProvider().refreshAll());
 
-        // Schedule data refresh every 10 seconds
-        scheduler.scheduleAtFixedRate(() -> {
+        // Schedule data refresh every 10 seconds. The handle is retained so the task can be
+        // cancelled in onDetach, preventing a leaked thread pool that keeps calling
+        // ui.access() on a detached UI after navigation.
+        refreshTask = scheduler.scheduleAtFixedRate(() -> {
             if (ui != null) {
                 ui.access(() -> {
                     // Replace existing data
@@ -636,14 +662,15 @@ public class SearchView extends VerticalLayout implements HasDynamicTitle, Befor
     }
 
     /**
-     * Generates the SQL query string based on current filter criteria.
+     * Builds an injection-safe, parameterized query from the current filter criteria.
      *
-     * <p>This method dynamically constructs a JPQL query that incorporates all active
-     * filter conditions from the search form. The query building process includes:</p>
+     * <p>Every filter value is bound as a named parameter (see {@link StatusQuery}) rather than
+     * concatenated into the query text, so user input can never alter the query structure.
+     * The query building process includes:</p>
      *
      * <h4>Required Filters:</h4>
      * <ul>
-     *   <li><strong>Department Filter:</strong> Always applied based on selected departments</li>
+     *   <li><strong>Department Filter:</strong> Always applied, restricted to the user's departments</li>
      * </ul>
      *
      * <h4>Optional Filters:</h4>
@@ -654,42 +681,50 @@ public class SearchView extends VerticalLayout implements HasDynamicTitle, Befor
      *   <li><strong>Phone Filter:</strong> Partial matching without case conversion</li>
      * </ul>
      *
-     * <p>All text-based filters use LIKE operators with wildcard matching for flexible
-     * search capabilities. Only non-blank filter values are included in the query.</p>
+     * <p>All text-based filters use LIKE operators with wildcard matching. Only non-blank
+     * filter values are included in the query.</p>
      *
-     * @return a JPQL query string incorporating all active filter criteria
+     * @return a parameterized {@link StatusQuery} incorporating all active filter criteria
      */
-    private String getStatusSQL() {
-        String departments = getSelectedDepartmentIds(departmentComboBox);
+    private StatusQuery buildStatusQuery() {
+        List<Long> departmentIds = getSelectedDepartmentIds(departmentComboBox);
         String token = tokenField.getValue();
         String firstName = firstNameField.getValue();
         String lastName = lastNameField.getValue();
         String email = emailField.getValue();
         String phone = phoneField.getValue();
 
-        StringBuilder jpql = new StringBuilder("SELECT s FROM Status s WHERE ");
+        StringBuilder where = new StringBuilder();
+        Map<String, Object> params = new HashMap<>();
 
-        // Department IDs (required)
-        jpql.append("s.department_id IN (").append(departments).append(")");
+        // Department IDs (required). An empty selection yields an empty "in ()" that matches
+        // nothing, which is the intended behaviour when the user clears the required filter.
+        where.append(Status.PROP_DEPARTMENT_ID).append(" in :departments");
+        params.put("departments", departmentIds);
 
-        // Optional filters
+        // Optional filters — values bound as parameters, wildcards added to the value only.
         if (token != null && !token.isBlank()) {
-            jpql.append(" AND LOWER(s.token) LIKE LOWER('%").append(token).append("%')");
+            where.append(" and lower(").append(Status.PROP_TOKEN).append(") like :token");
+            params.put("token", "%" + token.toLowerCase() + "%");
         }
         if (firstName != null && !firstName.isBlank()) {
-            jpql.append(" AND LOWER(s.firstName) LIKE LOWER('%").append(firstName).append("%')");
+            where.append(" and lower(").append(Status.PROP_FIRST_NAME).append(") like :firstName");
+            params.put("firstName", "%" + firstName.toLowerCase() + "%");
         }
         if (lastName != null && !lastName.isBlank()) {
-            jpql.append(" AND LOWER(s.lastName) LIKE LOWER('%").append(lastName).append("%')");
+            where.append(" and lower(").append(Status.PROP_LAST_NAME).append(") like :lastName");
+            params.put("lastName", "%" + lastName.toLowerCase() + "%");
         }
         if (email != null && !email.isBlank()) {
-            jpql.append(" AND LOWER(s.email) LIKE LOWER('%").append(email).append("%')");
+            where.append(" and lower(").append(Status.PROP_EMAIL).append(") like :email");
+            params.put("email", "%" + email.toLowerCase() + "%");
         }
         if (phone != null && !phone.isBlank()) {
-            jpql.append(" AND s.phone LIKE '%").append(phone).append("%'");
+            where.append(" and ").append(Status.PROP_PHONE).append(" like :phone");
+            params.put("phone", "%" + phone + "%");
         }
 
-        return jpql.toString();
+        return new StatusQuery(where.toString(), params, null);
     }
 
     /**
@@ -700,7 +735,7 @@ public class SearchView extends VerticalLayout implements HasDynamicTitle, Befor
      *
      * <h4>Processing Logic:</h4>
      * <ul>
-     *   <li><strong>Empty Selection:</strong> Shows notification and returns empty string</li>
+     *   <li><strong>Empty Selection:</strong> Shows notification and returns an empty list</li>
      *   <li><strong>"All Departments" Selected:</strong> Expands to all user's department IDs</li>
      *   <li><strong>Individual Departments:</strong> Returns specific department IDs</li>
      * </ul>
@@ -709,26 +744,45 @@ public class SearchView extends VerticalLayout implements HasDynamicTitle, Befor
      * to access, maintaining security boundaries in the search functionality.</p>
      *
      * @param departmentComboBox the multi-select combo box containing department selections
-     * @return a comma-separated string of department IDs for use in SQL queries
+     * @return the list of department IDs to bind as a query parameter
      */
-    private String getSelectedDepartmentIds(MultiSelectComboBox<Department> departmentComboBox) {
-        String ids = "";
-        Set<Department> selecteDepartments = departmentComboBox.getSelectedItems();
-        if (selecteDepartments.isEmpty()) {
+    private List<Long> getSelectedDepartmentIds(MultiSelectComboBox<Department> departmentComboBox) {
+        List<Long> ids = new ArrayList<>();
+        Set<Department> selectedDepartments = departmentComboBox.getSelectedItems();
+        if (selectedDepartments.isEmpty()) {
             Notification.show("Please select one or more departments", 3000, Notification.Position.MIDDLE);
         } else {
-            for (Department department : selecteDepartments) {
+            for (Department department : selectedDepartments) {
                 if (department.id == -1) {
+                    // "All Departments" sentinel — expand to every department the user can access.
+                    ids.clear();
                     for (Department d : user.getDepartments()) {
-                        ids += d.id + ",";
+                        ids.add(d.id);
                     }
                     break;
                 }
-                ids += department.id + ",";
+                ids.add(department.id);
             }
-            ids = ids.substring(0, ids.length() - 1);
         }
         return ids;
+    }
+
+    /**
+     * Cancels the scheduled auto-refresh task when the view is detached from the UI.
+     *
+     * <p>Without this, each navigation to and from the search view would leave a scheduled
+     * task running against a detached UI, leaking threads and repeatedly calling
+     * {@code ui.access()} on a UI that is no longer attached.</p>
+     *
+     * @param detachEvent the detach event
+     */
+    @Override
+    protected void onDetach(DetachEvent detachEvent) {
+        if (refreshTask != null) {
+            refreshTask.cancel(true);
+        }
+        scheduler.shutdownNow();
+        super.onDetach(detachEvent);
     }
 
     /**

@@ -13,6 +13,7 @@ package com.elicitsoftware.admin.flow;
 
 import com.elicitsoftware.model.Department;
 import com.elicitsoftware.model.User;
+import com.elicitsoftware.service.UserService;
 import com.vaadin.flow.component.button.Button;
 import com.vaadin.flow.component.button.ButtonVariant;
 import com.vaadin.flow.component.checkbox.Checkbox;
@@ -23,11 +24,14 @@ import com.vaadin.flow.component.orderedlayout.HorizontalLayout;
 import com.vaadin.flow.component.orderedlayout.VerticalLayout;
 import com.vaadin.flow.component.textfield.TextField;
 import com.vaadin.flow.component.textfield.TextFieldVariant;
+import com.vaadin.flow.data.binder.Binder;
+import com.vaadin.flow.data.binder.ValidationException;
+import com.vaadin.flow.data.validator.StringLengthValidator;
 import com.vaadin.flow.router.BeforeEnterEvent;
 import com.vaadin.flow.router.BeforeEnterObserver;
 import com.vaadin.flow.router.Route;
 import jakarta.annotation.security.RolesAllowed;
-import jakarta.transaction.Transactional;
+import jakarta.inject.Inject;
 
 import java.util.HashSet;
 import java.util.List;
@@ -61,23 +65,33 @@ import java.util.Set;
 @RolesAllowed("elicit_admin")
 public class EditUserView extends VerticalLayout implements BeforeEnterObserver {
 
+    /** Service that owns the transactional persistence of users. */
+    @Inject
+    UserService userService;
+
     /** The user entity being edited or created. */
     private User user;
-    
+
     /** Text field for the user's username. */
     private TextField username = new TextField("Username");
-    
+
     /** Text field for the user's first name. */
     private TextField firstName = new TextField("First Name");
-    
+
     /** Text field for the user's last name. */
     private TextField lastName = new TextField("Last Name");
-    
+
     /** Checkbox to control whether the user account is active. */
     private Checkbox activeCheckbox = new Checkbox("Active");
-    
+
     /** Multi-select combo box for assigning the user to departments. */
     private MultiSelectComboBox<Department> departmentsBox = new MultiSelectComboBox<>("Departments");
+
+    /** Data binder for form validation and field binding. */
+    private final Binder<User> binder = new Binder<>(User.class);
+
+    /** Save button, enabled only when the form is valid. */
+    private final Button saveBtn = new Button("Save");
 
     /**
      * Constructs a new EditUserView.
@@ -95,9 +109,12 @@ public class EditUserView extends VerticalLayout implements BeforeEnterObserver 
      */
     public EditUserView() {
         username.addThemeVariants(TextFieldVariant.LUMO_SMALL);
+        username.setRequiredIndicatorVisible(true);
         firstName.addThemeVariants(TextFieldVariant.LUMO_SMALL);
+        firstName.setRequiredIndicatorVisible(true);
         lastName.addThemeVariants(TextFieldVariant.LUMO_SMALL);
-        
+        lastName.setRequiredIndicatorVisible(true);
+
         departmentsBox.setItemLabelGenerator(Department::getName);
         departmentsBox.addThemeVariants(MultiSelectComboBoxVariant.LUMO_SMALL);
         List<Department> allDepartments = Department.findAll().list();
@@ -105,13 +122,52 @@ public class EditUserView extends VerticalLayout implements BeforeEnterObserver 
 
         add(username, firstName, lastName, activeCheckbox, departmentsBox);
 
-        Button saveBtn = new Button("Save", e -> saveUser());
+        saveBtn.addClickListener(e -> saveUser());
         saveBtn.addThemeVariants(ButtonVariant.LUMO_PRIMARY);
-        
+
         Button cancelBtn = new Button("Cancel", e -> cancelEdit());
         cancelBtn.addThemeVariants(ButtonVariant.LUMO_TERTIARY);
 
         add(new HorizontalLayout(saveBtn, cancelBtn));
+
+        setupValidation();
+    }
+
+    /**
+     * Configures field binding and validation using Vaadin's {@link Binder}.
+     *
+     * <p>Validation rules:</p>
+     * <ul>
+     *   <li>Username: required, 1-255 characters</li>
+     *   <li>First name: required, 1-255 characters</li>
+     *   <li>Last name: required, 1-255 characters</li>
+     * </ul>
+     *
+     * <p>The save button is enabled only while the bound form is valid.</p>
+     */
+    private void setupValidation() {
+        binder.forField(username)
+                .asRequired("Username is required")
+                .withValidator(new StringLengthValidator(
+                        "Username must be 1-255 characters", 1, 255))
+                .bind(User::getUsername, User::setUsername);
+
+        binder.forField(firstName)
+                .asRequired("First name is required")
+                .withValidator(new StringLengthValidator(
+                        "First name must be 1-255 characters", 1, 255))
+                .bind(User::getFirstName, User::setFirstName);
+
+        binder.forField(lastName)
+                .asRequired("Last name is required")
+                .withValidator(new StringLengthValidator(
+                        "Last name must be 1-255 characters", 1, 255))
+                .bind(User::getLastName, User::setLastName);
+
+        binder.forField(activeCheckbox)
+                .bind(User::isActive, User::setActive);
+
+        binder.addStatusChangeListener(event -> saveBtn.setEnabled(binder.isValid()));
     }
 
     /**
@@ -137,30 +193,22 @@ public class EditUserView extends VerticalLayout implements BeforeEnterObserver 
     @Override
     public void beforeEnter(BeforeEnterEvent event) {
         String idStr = event.getRouteParameters().get("id").orElse(null);
-        if (idStr != null) {
+        if (idStr != null && !idStr.equals("0")) {
             long id = Long.parseLong(idStr);
-            if (id == 0) {
-                user = new User();
-                activeCheckbox.setValue(true); // Default new users to active
-            } else {
-                user = User.findById(id);
-                if (user == null) {
-                    Notification.show("User not found");
-                    event.forwardTo(UsersView.class);
-                    return;
-                }
-                // Populate fields
-                username.setValue(user.getUsername() != null ? user.getUsername() : "");
-                firstName.setValue(user.getFirstName() != null ? user.getFirstName() : "");
-                lastName.setValue(user.getLastName() != null ? user.getLastName() : "");
-                activeCheckbox.setValue(user.isActive());
-                if (user.getDepartments() != null) {
-                    departmentsBox.setValue(user.getDepartments());
-                }
+            user = User.findById(id);
+            if (user == null) {
+                Notification.show("User not found");
+                event.forwardTo(UsersView.class);
+                return;
+            }
+            binder.setBean(user);
+            if (user.getDepartments() != null) {
+                departmentsBox.setValue(user.getDepartments());
             }
         } else {
             user = new User();
-            activeCheckbox.setValue(true); // Default new users to active
+            user.setActive(true); // Default new users to active
+            binder.setBean(user);
         }
     }
 
@@ -180,20 +228,20 @@ public class EditUserView extends VerticalLayout implements BeforeEnterObserver 
      * <p>For new users (ID = 0), the persist() method is used. For existing users,
      * the merge() operation is performed to update the database with changes.</p>
      */
-    @Transactional
     public void saveUser() {
-        user.setUsername(username.getValue());
-        user.setFirstName(firstName.getValue());
-        user.setLastName(lastName.getValue());
-        user.setActive(activeCheckbox.getValue());
+        try {
+            // Validate and write the bound fields (username, names, active) into the entity.
+            binder.writeBean(user);
+        } catch (ValidationException e) {
+            Notification.show("Please fix the validation errors before saving");
+            return;
+        }
+
+        // Departments are managed outside the binder (multi-select), so copy them explicitly.
         Set<Department> selectedDepartments = departmentsBox.getValue();
         user.setDepartments(selectedDepartments != null ? selectedDepartments : new HashSet<>());
 
-        if (user.getId() == 0) {
-            user.persist();
-        } else {
-            user = (User) User.getEntityManager().merge(user);
-        }
+        userService.save(user);
 
         Notification.show("User saved");
         getUI().ifPresent(ui -> ui.navigate(UsersView.class));
