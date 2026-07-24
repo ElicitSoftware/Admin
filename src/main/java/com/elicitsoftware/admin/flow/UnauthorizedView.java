@@ -18,6 +18,7 @@ import com.vaadin.flow.component.html.H1;
 import com.vaadin.flow.component.html.Paragraph;
 import com.vaadin.flow.component.orderedlayout.VerticalLayout;
 import com.vaadin.flow.router.Route;
+import com.vaadin.flow.theme.lumo.LumoUtility;
 import jakarta.annotation.security.PermitAll;
 
 /**
@@ -40,13 +41,13 @@ public class UnauthorizedView extends VerticalLayout {
         setSizeFull();
         
         Div container = new Div();
-        container.addClassNames("lumo-utility-background-color-contrast-5", 
-                               "lumo-utility-border-radius-m",
-                               "lumo-utility-padding-l");
+        container.addClassNames(LumoUtility.Background.CONTRAST_5,
+                               LumoUtility.BorderRadius.MEDIUM,
+                               LumoUtility.Padding.LARGE);
         container.setWidth("400px");
-        
+
         H1 title = new H1("Access Restricted");
-        title.addClassName("lumo-utility-text-color-error");
+        title.addClassName(LumoUtility.TextColor.ERROR);
         
         Paragraph message = new Paragraph(
             "You are authenticated but do not have the required permissions to access this application. " +
@@ -57,7 +58,7 @@ public class UnauthorizedView extends VerticalLayout {
             getUI().ifPresent(ui -> ui.getPage().setLocation("/logout"));
         });
         logoutButton.addThemeVariants(ButtonVariant.LUMO_PRIMARY);
-        logoutButton.getStyle().set("margin-top", "1rem");
+        logoutButton.addClassName(LumoUtility.Margin.Top.MEDIUM);
         
         container.add(title, message, logoutButton);
         add(container);

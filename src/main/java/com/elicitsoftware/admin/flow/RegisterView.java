@@ -42,6 +42,7 @@ import com.vaadin.flow.router.BeforeEnterEvent;
 import com.vaadin.flow.router.BeforeEnterObserver;
 import com.vaadin.flow.router.HasDynamicTitle;
 import com.vaadin.flow.router.Route;
+import com.vaadin.flow.theme.lumo.LumoUtility;
 import io.quarkus.security.identity.SecurityIdentity;
 import jakarta.annotation.PostConstruct;
 import jakarta.annotation.security.RolesAllowed;
@@ -693,7 +694,7 @@ public class RegisterView extends HorizontalLayout implements HasDynamicTitle, B
      */
     private ListItem columnDescription(String label, String description) {
         Span name = new Span(label);
-        name.getElement().getStyle().set("font-weight", "bold");
+        name.addClassName(LumoUtility.FontWeight.BOLD);
         return new ListItem(name, new Span(description));
     }
 
@@ -894,11 +895,11 @@ public class RegisterView extends HorizontalLayout implements HasDynamicTitle, B
         errorDialog.setHeaderTitle(title);
 
         Span errorMessage = new Span(message);
-        errorMessage.getStyle().set("white-space", "pre-wrap");
+        errorMessage.addClassName(LumoUtility.Whitespace.PRE_WRAP);
 
         Button closeButton = new Button("Close", evt -> errorDialog.close());
         closeButton.addThemeVariants(ButtonVariant.LUMO_PRIMARY);
-        closeButton.getStyle().set("margin-top", "20px");
+        closeButton.addClassName(LumoUtility.Margin.Top.MEDIUM);
 
         VerticalLayout dialogLayout = new VerticalLayout(errorMessage, closeButton);
         dialogLayout.setAlignItems(Alignment.CENTER);
@@ -929,12 +930,11 @@ public class RegisterView extends HorizontalLayout implements HasDynamicTitle, B
         successDialog.setHeaderTitle(title);
 
         Span successMessage = new Span(message);
-        successMessage.getStyle().set("white-space", "pre-wrap");
-        successMessage.getStyle().set("color", "green");
+        successMessage.addClassNames(LumoUtility.Whitespace.PRE_WRAP, LumoUtility.TextColor.SUCCESS);
 
         Button closeButton = new Button("Close", evt -> successDialog.close());
         closeButton.addThemeVariants(ButtonVariant.LUMO_PRIMARY);
-        closeButton.getStyle().set("margin-top", "20px");
+        closeButton.addClassName(LumoUtility.Margin.Top.MEDIUM);
 
         VerticalLayout dialogLayout = new VerticalLayout(successMessage, closeButton);
         dialogLayout.setAlignItems(Alignment.CENTER);

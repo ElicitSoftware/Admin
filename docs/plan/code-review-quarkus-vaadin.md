@@ -77,12 +77,25 @@ Ordered by priority. Check off as completed.
 
 ### 🟢 Minor / polish
 
-- [~] **9. Inline styles** — replace `getStyle().set(...)` (margins, colors, `white-space`)
-  with `LumoUtility` classes or CSS, following the `PaginationControls` pattern.
-  *In progress:* converted the reviewed-scope case (`UsersView` info text →
-  `LumoUtility.Margin`/`TextColor`). Remaining occurrences live in views outside
-  the review scope (`DebugView`, `EditMessageTemplatesView`) or use CSS properties
-  without a direct `LumoUtility` equivalent (`flex`, `white-space`, `background`).
+- [x] **9. Inline styles** — replace `getStyle().set(...)` with `LumoUtility` classes or CSS,
+  following the `PaginationControls` pattern. This matters for theming: the app is re-skinned by
+  external brand CSS that overrides `--lumo-*`/`--brand-*` variables, so hardcoded literals
+  (`#f5f5f5`, `green`, `#ddd`, `20px`) defeated the brand.
+  *Done:* every `getStyle().set(...)` in the flow views is now routed through a themeable channel:
+  - `LumoUtility.*` constants where one exists — `UsersView` (info text), `RegisterView` (dialog
+    `Whitespace.PRE_WRAP`, `Margin.Top.MEDIUM`, success `TextColor.SUCCESS`, `FontWeight.BOLD`),
+    `SearchView` (`FontWeight.BOLD`), `UnauthorizedView` (margin + card `Background.CONTRAST_5`/
+    `BorderRadius.MEDIUM`/`Padding.LARGE`/`TextColor.ERROR`). `UnauthorizedView`'s brittle
+    hand-typed `"lumo-utility-*"` string class-names were also replaced with compile-checked
+    constants.
+  - New `components/debug-view.css` (`.debug-info`, using `--lumo-*` tokens) and
+    `components/edit-message-templates.css` (`.template-column`) for properties with no utility
+    (`font-family: monospace`, `overflow-x`, `flex: 1 1 50%`); imported from `styles.css`.
+  - Deliberate theme-consistent substitutions: `20px → Margin.Top.MEDIUM` (16px) and
+    `green → TextColor.SUCCESS`.
+  *Left as-is:* `PaginationControls.java:125` sets a Vaadin component-internal custom property on
+  one `Select` — no `LumoUtility` covers component custom properties; the reference file's own
+  endorsed exception.
 - [x] **10. `System.out.println` auth logging** — `UiSessionLogin.java:124-138`
   Use a proper logger; note it dumps all active usernames to stdout on failed lookup (info leak).
 - [x] **11. No tests** — CLAUDE.md requires tests traceable to `UC-XXX`.
@@ -122,3 +135,5 @@ Ordered by priority. Check off as completed.
 
 **Fix first regardless of sequencing:** #1 (injection) and #2 (thread leak) — both are live
 security/correctness bugs, not style.
+
+**Status:** all 12 findings resolved. Full test suite: 61 passing.

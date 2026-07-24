@@ -145,7 +145,7 @@ public class EditMessageTemplatesView extends VerticalLayout implements BeforeEn
         FormLayout form = new FormLayout();
         form.add(mimeTypeField, departmentField, subjectField, messageField, saveBtn, updateBtn);
         form.setWidthFull();
-        form.getStyle().set("flex", "1 1 50%");
+        form.addClassName("template-column");
         form.setResponsiveSteps(
                 new FormLayout.ResponsiveStep("0", 1) // 1 column at all widths
         );
@@ -153,7 +153,7 @@ public class EditMessageTemplatesView extends VerticalLayout implements BeforeEn
         // Preview column (50%)
         VerticalLayout preview = new VerticalLayout();
         preview.setWidthFull();
-        preview.getStyle().set("flex", "1 1 50%");
+        preview.addClassName("template-column");
         H3 title = new H3("Message Preview");
         content = new Div();
         content.setWidth("100%");

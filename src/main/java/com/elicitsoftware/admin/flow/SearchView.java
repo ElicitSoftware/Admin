@@ -61,6 +61,7 @@ import com.vaadin.flow.router.BeforeEnterObserver;
 import com.vaadin.flow.router.HasDynamicTitle;
 import com.vaadin.flow.router.QueryParameters;
 import com.vaadin.flow.router.Route;
+import com.vaadin.flow.theme.lumo.LumoUtility;
 
 import io.quarkus.panache.common.Sort;
 import io.quarkus.security.identity.SecurityIdentity;
@@ -292,7 +293,7 @@ public class SearchView extends VerticalLayout implements HasDynamicTitle, Befor
             errorDiv.add(new Paragraph("You have successfully logged in to the Open ID connect system."));
 
             Span principal = new Span(identity.getPrincipal().getName());
-            principal.getElement().getStyle().set("font-weight", "bold");
+            principal.addClassName(LumoUtility.FontWeight.BOLD);
             Paragraph missingUser = new Paragraph(new Span("Unfortunately, there is no user named "),
                     principal,
                     new Span(" in the application or it is set to inactive."));

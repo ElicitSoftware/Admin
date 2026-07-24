@@ -115,14 +115,8 @@ public class DebugView extends VerticalLayout implements HasDynamicTitle {
         }
 
         Pre debugInfo = new Pre(sb.toString());
-        debugInfo.getStyle().set("background", "#f5f5f5");
-        debugInfo.getStyle().set("padding", "1em");
-        debugInfo.getStyle().set("border", "1px solid #ddd");
-        debugInfo.getStyle().set("border-radius", "4px");
-        debugInfo.getStyle().set("font-family", "monospace");
-        debugInfo.getStyle().set("white-space", "pre-wrap");
-        debugInfo.getStyle().set("overflow-x", "auto");
-        
+        debugInfo.addClassName("debug-info");
+
         add(debugInfo);
     }
 
