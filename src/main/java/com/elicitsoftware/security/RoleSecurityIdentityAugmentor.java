@@ -11,6 +11,7 @@ package com.elicitsoftware.security;
  * ***LICENSE_END***
  */
 
+import io.quarkus.logging.Log;
 import io.quarkus.security.identity.AuthenticationRequestContext;
 import io.quarkus.security.identity.SecurityIdentity;
 import io.quarkus.security.identity.SecurityIdentityAugmentor;
@@ -51,12 +52,16 @@ public class RoleSecurityIdentityAugmentor implements SecurityIdentityAugmentor 
     @Override
     public Uni<SecurityIdentity> augment(SecurityIdentity identity, AuthenticationRequestContext context) {
         if (identity.isAnonymous()) {
+            Log.debug("Skipping role augmentation for anonymous identity");
             return Uni.createFrom().item(identity);
         }
+        String principalName = identity.getPrincipal().getName();
         boolean hasElicitRole = identity.getRoles().stream().anyMatch(ELICIT_ROLES::contains);
         if (hasElicitRole) {
+            Log.debugf("Principal %s already has an Elicit role from OIDC (roles: %s)", principalName, identity.getRoles());
             return Uni.createFrom().item(withRoleSource(identity, ROLE_SOURCE_OIDC));
         }
+        Log.debugf("Principal %s has no Elicit role from OIDC (roles: %s); checking database", principalName, identity.getRoles());
         return context.runBlocking(() -> userRoleDatabaseLookup.augment(identity));
     }
 
