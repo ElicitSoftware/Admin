@@ -11,6 +11,7 @@ package com.elicitsoftware.security;
  * ***LICENSE_END***
  */
 
+import io.quarkus.logging.Log;
 import io.quarkus.security.identity.SecurityIdentity;
 import io.quarkus.security.runtime.QuarkusSecurityIdentity;
 import jakarta.enterprise.context.ApplicationScoped;
@@ -40,6 +41,7 @@ public class UserRoleDatabaseLookup {
     @SuppressWarnings("unchecked")
     public SecurityIdentity augment(SecurityIdentity identity) {
         String username = identity.getPrincipal().getName();
+        Log.debugf("Looking up survey.user_roles for principal: %s", username);
         List<String> dbRoles = entityManager.createNativeQuery(
                         "SELECT ur.role_name FROM survey.user_roles ur " +
                                 "JOIN survey.users u ON u.id = ur.user_id " +
@@ -47,9 +49,11 @@ public class UserRoleDatabaseLookup {
                 .setParameter("username", username)
                 .getResultList();
         if (dbRoles.isEmpty()) {
+            Log.debugf("No database roles found for principal: %s (no active user match); falling back to OIDC role source", username);
             return RoleSecurityIdentityAugmentor.withRoleSource(identity,
                     RoleSecurityIdentityAugmentor.ROLE_SOURCE_OIDC);
         }
+        Log.debugf("Found database roles %s for principal: %s", dbRoles, username);
         return QuarkusSecurityIdentity.builder(identity)
                 .addRoles(new HashSet<>(dbRoles))
                 .addAttribute(RoleSecurityIdentityAugmentor.ROLE_SOURCE_ATTRIBUTE,
