@@ -21,6 +21,7 @@ import jakarta.persistence.EntityManager;
 
 import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 /**
  * Looks up Elicit roles for a user from {@code survey.user_roles}.
@@ -30,6 +31,11 @@ import java.util.List;
  * invoked through this bean's CDI proxy (e.g. from {@code runBlocking} via an
  * injected reference) -- without it the injected {@link EntityManager} has no
  * active transaction or request context to run in.</p>
+ *
+ * <p>The raw role(s) found are expanded to their full cumulative set via
+ * {@link ElicitRoles#expand} before being granted, matching how OIDC-sourced
+ * roles are expanded in {@link RoleSecurityIdentityAugmentor}. Only the raw
+ * role is ever stored in {@code survey.user_roles}.</p>
  */
 @ApplicationScoped
 public class UserRoleDatabaseLookup {
@@ -53,9 +59,10 @@ public class UserRoleDatabaseLookup {
             return RoleSecurityIdentityAugmentor.withRoleSource(identity,
                     RoleSecurityIdentityAugmentor.ROLE_SOURCE_OIDC);
         }
-        Log.debugf("Found database roles %s for principal: %s", dbRoles, username);
+        Set<String> expandedRoles = ElicitRoles.expand(new HashSet<>(dbRoles));
+        Log.debugf("Found database roles %s (expanded: %s) for principal: %s", dbRoles, expandedRoles, username);
         return QuarkusSecurityIdentity.builder(identity)
-                .addRoles(new HashSet<>(dbRoles))
+                .addRoles(expandedRoles)
                 .addAttribute(RoleSecurityIdentityAugmentor.ROLE_SOURCE_ATTRIBUTE,
                         RoleSecurityIdentityAugmentor.ROLE_SOURCE_DATABASE)
                 .build();

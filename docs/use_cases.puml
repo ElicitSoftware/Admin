@@ -21,6 +21,7 @@ rectangle "Elicit Admin" {
     usecase "UC-006\nManage Departments" as UC006
     usecase "UC-007\nManage Message Templates" as UC007
     usecase "UC-008\nManage Users" as UC008
+    usecase "UC-016\nManage User Role Assignments" as UC016
 
     ' --- Integration and data lifecycle ---
     usecase "UC-010\nRegister Subjects via Integration API" as UC010
@@ -50,6 +51,7 @@ admin --> UC005
 admin --> UC006
 admin --> UC007
 admin --> UC008
+admin --> UC016
 admin --> UC009
 admin --> UC010
 admin --> UC011

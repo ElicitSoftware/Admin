@@ -12,6 +12,7 @@ package com.elicitsoftware.admin.flow;
  */
 
 import com.elicitsoftware.model.User;
+import com.elicitsoftware.security.AuthorizationModeConfig;
 import com.vaadin.flow.component.button.Button;
 import com.vaadin.flow.component.button.ButtonVariant;
 import com.vaadin.flow.component.grid.Grid;
@@ -23,7 +24,9 @@ import com.vaadin.flow.component.orderedlayout.HorizontalLayout;
 import com.vaadin.flow.component.orderedlayout.VerticalLayout;
 import com.vaadin.flow.router.Route;
 import com.vaadin.flow.theme.lumo.LumoUtility;
+import jakarta.annotation.PostConstruct;
 import jakarta.annotation.security.RolesAllowed;
+import jakarta.inject.Inject;
 
 
 import java.util.List;
@@ -54,11 +57,13 @@ import java.util.List;
  * <p>The view is accessible at the "/users" route and requires "elicit_admin" role for access.
  * It includes informational text explaining the relationship between OIDC authentication
  * and department assignments managed through this interface.</p>
- * 
- * <p><strong>Important Note:</strong> This view manages department assignments only.
- * User authentication and role management (Admin/User) must be configured in the
- * OpenID Connect (OIDC) authentication system separately.</p>
- * 
+ *
+ * <p><strong>Important Note:</strong> By default ({@code elicit.authorization.mode=OIDC}),
+ * this view manages department assignments only -- role management (Admin/User/Importer)
+ * must be configured in the OpenID Connect (OIDC) authentication system separately. When
+ * {@code elicit.authorization.mode=DATABASE}, roles are instead assigned directly through
+ * the Edit User screen (see {@link EditUserView}, UC-016).</p>
+ *
  * @author Elicit Software
  * @version 1.0
  * @since 1.0
@@ -72,9 +77,13 @@ public class UsersView extends VerticalLayout {
     /** Grid component for displaying user information in a tabular format. */
     private Grid<User> userGrid = new Grid<>(User.class, false);
 
+    /** Controls whether the informational text describes OIDC-only or database role assignment. */
+    @Inject
+    AuthorizationModeConfig authorizationModeConfig;
+
     /**
      * Constructs a new UsersView.
-     * 
+     *
      * <p>Initializes the complete user management interface by:</p>
      * <ol>
      *   <li>Configuring the data grid with appropriate columns and sorting</li>
@@ -82,35 +91,51 @@ public class UsersView extends VerticalLayout {
      *   <li>Setting up the user grid and footer with action buttons</li>
      *   <li>Loading the initial user data from the database</li>
      * </ol>
-     * 
+     *
      * <p>The layout is organized vertically with the information text at the top,
      * followed by the user grid, and action buttons at the bottom.</p>
      */
     public UsersView() {
         configureGrid();
-        add(createInfoText(), userGrid, createFooter());
+        add(userGrid, createFooter());
         updateGrid();
     }
 
     /**
+     * Adds the mode-aware informational text once injected fields are available.
+     *
+     * <p>{@code @Inject} fields are not populated until after the constructor returns, so
+     * this text (which depends on {@link #authorizationModeConfig}) is built here rather
+     * than in the constructor, and placed at the top of the layout.</p>
+     */
+    @PostConstruct
+    private void initInfoText() {
+        addComponentAsFirst(createInfoText());
+    }
+
+    /**
      * Creates informational text explaining the user management system.
-     * 
+     *
      * <p>This method generates a styled paragraph that explains the relationship
      * between OIDC authentication and department management. The text serves to
      * clarify that:</p>
      * <ul>
      *   <li>User authentication is handled by the OIDC system</li>
-     *   <li>Roles (Admin/User) must be configured in OIDC</li>
+     *   <li>Roles (Admin/User/Importer) must be configured in OIDC, or through the Edit User
+     *       screen when {@code elicit.authorization.mode=DATABASE}</li>
      *   <li>Department assignments are managed through this interface</li>
      * </ul>
-     * 
+     *
      * <p>The paragraph is styled with appropriate margins and secondary text color
      * to distinguish it as informational content.</p>
-     * 
+     *
      * @return a styled Paragraph component containing user management information
      */
     private Paragraph createInfoText() {
-        Paragraph info = new Paragraph("Users must be configured in the OpenID Connect (OIDC) authentication system with the roles \"Admin\" or \"User\". Departments are assigned through this interface.");
+        String text = authorizationModeConfig.isDatabaseMode()
+                ? "Departments are assigned through this interface. Roles (Admin/User/Importer) are also assigned through this interface, on the Edit User screen."
+                : "Users must be configured in the OpenID Connect (OIDC) authentication system with the roles \"Admin\" or \"User\". Departments are assigned through this interface.";
+        Paragraph info = new Paragraph(text);
         info.addClassNames(LumoUtility.Margin.Bottom.MEDIUM, LumoUtility.TextColor.SECONDARY);
         return info;
     }

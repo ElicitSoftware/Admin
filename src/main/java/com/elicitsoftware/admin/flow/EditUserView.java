@@ -13,12 +13,18 @@ package com.elicitsoftware.admin.flow;
 
 import com.elicitsoftware.model.Department;
 import com.elicitsoftware.model.User;
+import com.elicitsoftware.security.AuthorizationModeConfig;
+import com.elicitsoftware.security.ElicitRoles;
+import com.elicitsoftware.service.UserRoleService;
 import com.elicitsoftware.service.UserService;
 import com.vaadin.flow.component.button.Button;
 import com.vaadin.flow.component.button.ButtonVariant;
 import com.vaadin.flow.component.checkbox.Checkbox;
+import com.vaadin.flow.component.combobox.ComboBox;
 import com.vaadin.flow.component.combobox.MultiSelectComboBox;
 import com.vaadin.flow.component.combobox.MultiSelectComboBoxVariant;
+import com.vaadin.flow.component.html.H4;
+import com.vaadin.flow.component.html.Paragraph;
 import com.vaadin.flow.component.notification.Notification;
 import com.vaadin.flow.component.orderedlayout.HorizontalLayout;
 import com.vaadin.flow.component.orderedlayout.VerticalLayout;
@@ -30,9 +36,12 @@ import com.vaadin.flow.data.validator.StringLengthValidator;
 import com.vaadin.flow.router.BeforeEnterEvent;
 import com.vaadin.flow.router.BeforeEnterObserver;
 import com.vaadin.flow.router.Route;
+import com.vaadin.flow.theme.lumo.LumoUtility;
+import jakarta.annotation.PostConstruct;
 import jakarta.annotation.security.RolesAllowed;
 import jakarta.inject.Inject;
 
+import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -69,6 +78,14 @@ public class EditUserView extends VerticalLayout implements BeforeEnterObserver 
     @Inject
     UserService userService;
 
+    /** Service that owns the transactional persistence of database role grants. */
+    @Inject
+    UserRoleService userRoleService;
+
+    /** Controls whether the database role-assignment section is shown. */
+    @Inject
+    AuthorizationModeConfig authorizationModeConfig;
+
     /** The user entity being edited or created. */
     private User user;
 
@@ -86,6 +103,12 @@ public class EditUserView extends VerticalLayout implements BeforeEnterObserver 
 
     /** Multi-select combo box for assigning the user to departments. */
     private MultiSelectComboBox<Department> departmentsBox = new MultiSelectComboBox<>("Departments");
+
+    /** Single-select dropdown for the user's database role grant. */
+    private final ComboBox<String> roleBox = new ComboBox<>("Role");
+
+    /** Wraps the role dropdown with a heading and explanatory text; shown only in DATABASE mode. */
+    private final VerticalLayout roleSection = new VerticalLayout();
 
     /** Data binder for form validation and field binding. */
     private final Binder<User> binder = new Binder<>(User.class);
@@ -120,7 +143,21 @@ public class EditUserView extends VerticalLayout implements BeforeEnterObserver 
         List<Department> allDepartments = Department.findAll().list();
         departmentsBox.setItems(allDepartments);
 
-        add(username, firstName, lastName, activeCheckbox, departmentsBox);
+        roleBox.setItems(new ArrayList<>(ElicitRoles.ALL));
+        roleBox.setClearButtonVisible(true);
+        roleBox.setWidthFull();
+        Paragraph roleSectionInfo = new Paragraph(
+                "Sets this user's database role fallback. Choose the user's highest role; "
+                        + "elicit_admin and elicit_user each imply the roles below them.");
+        roleSectionInfo.addClassNames(LumoUtility.Margin.NONE, LumoUtility.TextColor.SECONDARY);
+        roleSection.add(new H4("Database Role Assignment"), roleSectionInfo, roleBox);
+        roleSection.setPadding(false);
+        roleSection.setSpacing(false);
+        // Visibility is finalized in initRoleSectionVisibility() (@PostConstruct), not here:
+        // @Inject fields (authorizationModeConfig) aren't populated until after this
+        // constructor returns.
+
+        add(username, firstName, lastName, activeCheckbox, departmentsBox, roleSection);
 
         saveBtn.addClickListener(e -> saveUser());
         saveBtn.addThemeVariants(ButtonVariant.LUMO_PRIMARY);
@@ -131,6 +168,21 @@ public class EditUserView extends VerticalLayout implements BeforeEnterObserver 
         add(new HorizontalLayout(saveBtn, cancelBtn));
 
         setupValidation();
+    }
+
+    /**
+     * Finalizes the Database Role Assignment section's visibility once injected fields are
+     * available.
+     *
+     * <p>{@code @Inject} fields are not populated until after the constructor returns, so this
+     * cannot be done there; it must also not depend on {@link #beforeEnter}, which under
+     * {@code @QuarkusTest} is not invoked when a view is attached directly (no route
+     * navigation), so gating visibility only in {@code beforeEnter} would leave the section
+     * visible in tests that build the view via CDI.</p>
+     */
+    @PostConstruct
+    private void initRoleSectionVisibility() {
+        roleSection.setVisible(authorizationModeConfig.isDatabaseMode());
     }
 
     /**
@@ -205,6 +257,9 @@ public class EditUserView extends VerticalLayout implements BeforeEnterObserver 
             if (user.getDepartments() != null) {
                 departmentsBox.setValue(user.getDepartments());
             }
+            if (authorizationModeConfig.isDatabaseMode()) {
+                roleBox.setValue(userRoleService.findRoleName(user.getId()).orElse(null));
+            }
         } else {
             user = new User();
             user.setActive(true); // Default new users to active
@@ -238,10 +293,23 @@ public class EditUserView extends VerticalLayout implements BeforeEnterObserver 
         }
 
         // Departments are managed outside the binder (multi-select), so copy them explicitly.
+        // MultiSelectComboBox.getValue() returns an immutable Set, which Hibernate's merge()
+        // cannot mutate in place on a later save -- copy into a fresh HashSet.
         Set<Department> selectedDepartments = departmentsBox.getValue();
-        user.setDepartments(selectedDepartments != null ? selectedDepartments : new HashSet<>());
+        user.setDepartments(selectedDepartments != null ? new HashSet<>(selectedDepartments) : new HashSet<>());
 
         userService.save(user);
+
+        // The role grant is keyed on the user's id, so it must be saved after userService.save
+        // (a new user has no id until persisted). Skipped entirely in OIDC mode.
+        if (authorizationModeConfig.isDatabaseMode()) {
+            String selectedRole = roleBox.getValue();
+            if (selectedRole != null) {
+                userRoleService.setRole(user.getId(), selectedRole);
+            } else {
+                userRoleService.clearRole(user.getId());
+            }
+        }
 
         Notification.show("User saved");
         getUI().ifPresent(ui -> ui.navigate(UsersView.class));

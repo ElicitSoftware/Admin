@@ -15,6 +15,7 @@ import com.elicitsoftware.test.PostgresTestResource;
 import com.vaadin.browserless.quarkus.QuarkusBrowserlessTest;
 import com.vaadin.flow.component.UI;
 import com.vaadin.flow.component.button.Button;
+import com.vaadin.flow.component.combobox.ComboBox;
 import com.vaadin.flow.component.textfield.TextField;
 import io.quarkus.test.common.QuarkusTestResource;
 import io.quarkus.test.junit.QuarkusTest;
@@ -100,5 +101,17 @@ class EditUserViewTest extends QuarkusBrowserlessTest {
         field("Last Name").setValue("");
         assertFalse(saveButton().isEnabled(),
                 "Save must disable again when a required field is cleared");
+    }
+
+    /**
+     * UC-016: in the default OIDC authorization mode (this class runs without
+     * {@code DatabaseAuthorizationTestProfile}), the Database Role Assignment section --
+     * and its role dropdown -- is not visible in the rendered view.
+     */
+    @Test
+    void roleDropdownHiddenInOidcMode() {
+        boolean visible = find(ComboBox.class, view).all().stream()
+                .anyMatch(box -> "Role".equals(box.getLabel()) && box.isVisible());
+        assertFalse(visible, "Role dropdown must not be visible when elicit.authorization.mode=OIDC");
     }
 }

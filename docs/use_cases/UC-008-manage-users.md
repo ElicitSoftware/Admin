@@ -61,4 +61,4 @@ The departments assigned to a user determine which subjects, message-template de
 
 ## Reference
 
-Derived from `UsersView`, `EditUserView`, `User`, and the `survey.user_departments` / `survey.user_surveys` join tables. Deleting users is not supported; the active flag is the intended way to disable an account.
+Derived from `UsersView`, `EditUserView`, `User`, and the `survey.user_departments` / `survey.user_surveys` join tables. Deleting users is not supported; the active flag is the intended way to disable an account. Role assignment, as distinct from department assignment, is covered separately by UC-016 and is available only when `elicit.authorization.mode=DATABASE`.
