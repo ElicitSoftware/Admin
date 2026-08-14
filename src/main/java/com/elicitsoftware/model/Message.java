@@ -13,6 +13,7 @@ package com.elicitsoftware.model;
 
 import com.elicitsoftware.exception.TokenGenerationError;
 import io.quarkus.hibernate.orm.panache.PanacheEntityBase;
+import io.quarkus.logging.Log;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
@@ -260,24 +261,35 @@ public class Message extends PanacheEntityBase {
      * @see Subject#getRespondent()
      */
     public static ArrayList<Message> createMessagesForSubject(Subject subject) throws TokenGenerationError {
+        Log.debugf("createMessagesForSubject: starting for subjectId=%s, departmentId=%s",
+                subject.getId(), subject.getDepartmentId());
+
         ArrayList<Message> messages = new ArrayList<>();
         Department department = Department.findById(subject.getDepartmentId());
         if (department == null || department.defaultMessageId == null) {
+            Log.warnf("createMessagesForSubject: invalid department for subjectId=%s, departmentId=%s",
+                    subject.getId(), subject.getDepartmentId());
             throw  new TokenGenerationError("invalid departmentid");
         }
 
         // Split comma-separated message template IDs
         String[] templateIds = department.defaultMessageId.split(",");
+        Log.debugf("createMessagesForSubject: %d template id(s) configured for departmentId=%d: %s",
+                templateIds.length, department.id, department.defaultMessageId);
 
         for (String templateIdStr : templateIds) {
             try {
                 Long templateId = Long.parseLong(templateIdStr.trim());
+                Log.debugf("createMessagesForSubject: loading template id=%d", templateId);
                 MessageTemplate template = MessageTemplate.findById(templateId);
 
                 if (template != null) {
+                    String token = subject.getRespondent().token != null ? subject.getRespondent().token : "";
                     // Replace <TOKEN> in the message body with respondent's token
                     String processedMessage = template.message != null ?
-                            template.message.replace("<TOKEN>", subject.getRespondent().token != null ? subject.getRespondent().token : "") : "";
+                            template.message.replace("<TOKEN>", token) : "";
+                    Log.debugf("createMessagesForSubject: template id=%d messageType=%s mimeType=%s tokenPresent=%b bodyLength=%d",
+                            template.id, template.messageType, template.mimeType, !token.isEmpty(), processedMessage.length());
 
                     // Create new message
                     Message message = new Message();
@@ -287,12 +299,19 @@ public class Message extends PanacheEntityBase {
                     message.mimeType = template.mimeType;
                     message.body = processedMessage;
                     messages.add(message);
+                } else {
+                    Log.warnf("createMessagesForSubject: no template found for id=%d, subjectId=%s",
+                            templateId, subject.getId());
                 }
             } catch (NumberFormatException e) {
                 // Log error parsing template ID
+                Log.errorf(e, "createMessagesForSubject: invalid message template id '%s' for subjectId=%s",
+                        templateIdStr, subject.getId());
                 throw  new TokenGenerationError("Invalid message template ID: " + templateIdStr);
             }
         }
+        Log.debugf("createMessagesForSubject: generated %d message(s) for subjectId=%s",
+                messages.size(), subject.getId());
         return messages;
     }
 }

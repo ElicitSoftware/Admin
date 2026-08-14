@@ -15,6 +15,7 @@ import com.elicitsoftware.model.Department;
 import com.elicitsoftware.model.Message;
 import com.elicitsoftware.model.MessageTemplate;
 import com.elicitsoftware.model.Status;
+import io.quarkus.logging.Log;
 import io.quarkus.mailer.Mail;
 import io.quarkus.mailer.reactive.ReactiveMailer;
 import io.quarkus.scheduler.Scheduled;
@@ -108,29 +109,55 @@ public class EmailService {
      * @return true if email was sent successfully, false otherwise
      */
     public boolean sendEmail(Status status) {
-        System.out.println("Sending email for status: " + status.getToken());
+        Log.debugf("sendEmail: starting for token=%s, email=%s, departmentId=%s",
+                status.getToken(), status.getEmail(), status.getDepartmentId());
 
         try {
             Department department = Department.findById(status.getDepartmentId());
+            if (department == null) {
+                Log.warnf("sendEmail: no department found for departmentId=%s, token=%s",
+                        status.getDepartmentId(), status.getToken());
+                return false;
+            }
+            Log.debugf("sendEmail: resolved department id=%d, defaultMessageId=%s",
+                    department.id, department.defaultMessageId);
+
             String[] defaultMessagesIds = department.defaultMessageId.split(",");
+            Log.debugf("sendEmail: %d message template(s) to send for token=%s",
+                    defaultMessagesIds.length, status.getToken());
+
             for (String defaultMessageID : defaultMessagesIds) {
                 try {
+                    Log.debugf("sendEmail: loading message template id=%s", defaultMessageID);
                     MessageTemplate messageTemplate = MessageTemplate.findById(Long.parseLong(defaultMessageID));
+                    if (messageTemplate == null) {
+                        Log.warnf("sendEmail: no message template found for id=%s, token=%s",
+                                defaultMessageID, status.getToken());
+                        continue;
+                    }
                     String subject = messageTemplate.subject;
                     String body = messageTemplate.message.replace("<TOKEN>", status.getToken());
+                    Log.debugf("sendEmail: template id=%s mimeType=%s subject='%s' bodyLength=%d",
+                            messageTemplate.id, messageTemplate.mimeType, subject, body.length());
+
+                    Log.debugf("sendEmail: dispatching to mailer, from=%s, to=%s", fromEmail, status.getEmail());
                     if (messageTemplate.mimeType.equals("text/html")) {
                         mailer.send(Mail.withHtml(status.getEmail(), subject, body).setFrom(fromEmail)).await().indefinitely();
                     } else {
                         mailer.send(Mail.withText(status.getEmail(), subject, body).setFrom(fromEmail)).await().indefinitely();
                     }
+                    Log.debugf("sendEmail: mailer.send() returned for template id=%s, token=%s",
+                            messageTemplate.id, status.getToken());
                 } catch (Exception e) {
-                    e.printStackTrace();
+                    Log.errorf(e, "sendEmail: failed to send template id=%s for token=%s",
+                            defaultMessageID, status.getToken());
                 }
-                System.out.println("Email sent successfully");
+                Log.debug("sendEmail: template send attempt completed");
             }
+            Log.debugf("sendEmail: finished for token=%s", status.getToken());
             return true;
         } catch (Exception ex) {
-            System.out.println("Failed to send email: " + ex.getMessage());
+            Log.errorf(ex, "sendEmail: failed to send email for token=%s", status.getToken());
             return false;
         }
     }
@@ -187,7 +214,7 @@ public class EmailService {
     @Scheduled(every = "5m")
     @Transactional
     public void processUnsentMessages() {
-        System.out.println("Processing unsent messages...");
+        Log.debug("processUnsentMessages: scheduled run starting");
 
         try {
             // Get up to 100 unsent messages
@@ -195,20 +222,25 @@ public class EmailService {
                     .page(0, 100)
                     .list();
 
-            System.out.println("Found " + unsentMessages.size() + " unsent messages");
+            Log.debugf("processUnsentMessages: found %d unsent message(s)", unsentMessages.size());
 
             for (Message message : unsentMessages) {
+                Log.debugf("processUnsentMessages: processing message id=%d, messageType=%s, mimeType=%s",
+                        message.id, message.messageType, message.mimeType);
                 if (sendMessage(message)) {
                     // Mark as sent
                     message.sentDt = new Date();
                     message.persist();
-                    System.out.println("Message " + message.id + " sent successfully");
+                    Log.debugf("processUnsentMessages: message id=%d sent successfully at %s",
+                            message.id, message.sentDt);
                 } else {
-                    System.out.println("Failed to send message " + message.id);
+                    Log.warnf("processUnsentMessages: failed to send message id=%d", message.id);
                 }
             }
+            Log.debugf("processUnsentMessages: scheduled run complete, processed %d message(s)",
+                    unsentMessages.size());
         } catch (Exception e) {
-            System.err.println("Error processing unsent messages: " + e.getMessage());
+            Log.errorf(e, "processUnsentMessages: error processing unsent messages");
         }
     }
 
@@ -266,12 +298,17 @@ public class EmailService {
      * @see Message#mimeType
      */
     private boolean sendMessage(Message message) {
+        Log.debugf("sendMessage: validating message id=%d", message.id);
         try {
             // Validate required fields
             if (message.subject == null || message.subject.getEmail() == null) {
-                System.err.println("Message " + message.id + " has no valid recipient email");
+                Log.warnf("sendMessage: message id=%d has no valid recipient email", message.id);
                 return false;
             }
+
+            Log.debugf("sendMessage: message id=%d to=%s subject='%s' mimeType=%s bodyLength=%d",
+                    message.id, message.subject.getEmail(), message.subjectLine, message.mimeType,
+                    message.body == null ? 0 : message.body.length());
 
             Mail mail;
             if ("text/html".equals(message.mimeType)) {
@@ -288,10 +325,12 @@ public class EmailService {
                 ).setFrom(fromEmail);
             }
 
+            Log.debugf("sendMessage: dispatching message id=%d to mailer, from=%s", message.id, fromEmail);
             mailer.send(mail).await().indefinitely();
+            Log.debugf("sendMessage: mailer.send() returned for message id=%d", message.id);
             return true;
         } catch (Exception ex) {
-            System.err.println("Failed to send message " + message.id + ": " + ex.getMessage());
+            Log.errorf(ex, "sendMessage: failed to send message id=%d", message.id);
             return false;
         }
     }

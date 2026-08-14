@@ -11,6 +11,8 @@ package com.elicitsoftware.service;
  * ***LICENSE_END***
  */
 
+import io.quarkus.logging.Log;
+
 import java.net.URI;
 import java.util.ArrayList;
 
@@ -199,7 +201,7 @@ public class ReportingService {
             UI ui = UI.getCurrent();
             ui.getPage().executeJs("window.open($0, '_blank')", pdfUrl);
         } catch (Exception e) {
-            e.printStackTrace();
+            Log.error("Failed to generate PDF", e);
             Notification.show("Failed to generate PDF: " + e.getMessage(), 3000, Notification.Position.MIDDLE);
         }
     }

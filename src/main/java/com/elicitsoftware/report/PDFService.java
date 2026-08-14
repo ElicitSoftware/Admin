@@ -11,6 +11,8 @@ package com.elicitsoftware.report;
  * ***LICENSE_END***
  */
 
+import io.quarkus.logging.Log;
+
 import java.awt.Rectangle;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
@@ -375,7 +377,7 @@ public class PDFService {
 
                     for (Content content : response.pdf.content) {
                         if (content == null) {
-                            System.out.println("Content is null");
+                            Log.warn("Content is null");
                             continue;
                         }
                         // Close the current content stream if a new page is needed
