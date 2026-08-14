@@ -155,12 +155,12 @@ An application user account, matched to an authenticated identity by username, a
 
 ### USER_ROLE
 
-A role granted to a user, used as the database fallback when the identity provider supplies no application role.
+A role granted to a user. Serves as the database fallback when the identity provider supplies no application role (UC-001), and, when `elicit.authorization.mode=DATABASE`, is directly managed by an administrator through the Edit User admin UI (UC-016).
 
 | Attribute | Description                     | Data Type | Length/Precision | Validation Rules                    |
 |-----------|---------------------------------|-----------|------------------|-------------------------------------|
 | userId    | User the role is granted to     | Long      |                  | Not Null, Foreign Key (users.id)    |
-| roleName  | Granted role name               | String    | 100              | Not Null                            |
+| roleName  | Granted role name               | String    | 100              | Not Null, Check: one of `elicit_admin`, `elicit_user`, `elicit_importer` |
 
 *Primary key is the composite of userId and roleName.*
 
