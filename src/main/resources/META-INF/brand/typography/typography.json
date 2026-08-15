@@ -2,7 +2,7 @@
  * ***LICENSE_START***
  * Elicit Survey
  * %%
- * Copyright (C) 2025 The Regents of the University of Michigan - Rogel Cancer Center
+ * Copyright (C) 2025 - 2026 The Regents of the University of Michigan - Rogel Cancer Center
  * %%
  * PolyForm Noncommercial License 1.0.0
  * <https://polyformproject.org/licenses/noncommercial/1.0.0>
@@ -11,23 +11,23 @@
 
 {
   "brand": {
-    "name": "Elicit Admin Application",
+    "name": "Elicit Default Brand",
     "version": "1.0.0",
-    "description": "Typography configuration for Elicit Admin Application"
+    "description": "Typography configuration for the Elicit default brand"
   },
   "typography": {
     "primary": {
       "name": "System Font Stack",
       "family": "system-ui",
-      "fallback": ["-apple-system", "BlinkMacSystemFont", "Segoe UI", "Roboto", "Oxygen", "Ubuntu", "Cantarell", "sans-serif"],
+      "fallback": ["-apple-system", "BlinkMacSystemFont", "Roboto", "Segoe UI", "Helvetica", "Arial", "sans-serif"],
       "weight": "normal",
       "style": "normal",
       "display": "swap"
     },
-    "secondary": {
-      "name": "System UI",
-      "family": "system-ui",
-      "fallback": ["sans-serif"],
+    "monospace": {
+      "name": "System Monospace Stack",
+      "family": "monospace",
+      "fallback": ["SF Mono", "Monaco", "Inconsolata", "Roboto Mono", "Consolas", "Courier New"],
       "weight": "normal",
       "style": "normal",
       "display": "swap"
@@ -42,10 +42,10 @@
     "heading": {
       "fontFamily": "system-ui",
       "fontSize": "32px",
-      "fontWeight": "400",
+      "fontWeight": "600",
       "textAlign": "start",
       "textTransform": "none",
-      "lineHeight": "1.6em",
+      "lineHeight": "1.25",
       "letterSpacing": "normal",
       "fontStyle": "normal"
     }
