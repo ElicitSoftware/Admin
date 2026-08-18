@@ -591,8 +591,12 @@ public class SearchView extends VerticalLayout implements HasDynamicTitle, Befor
                 if (selectedAction != null) {
                     if ("Send Email".equals(selectedAction)) {
                         try {
-                            emailService.sendEmail(status);
-                            Notification.show("Email sent successfully", 3000, Notification.Position.TOP_CENTER);
+                            boolean sent = emailService.sendEmail(status);
+                            if (sent) {
+                                Notification.show("Email sent successfully", 3000, Notification.Position.TOP_CENTER);
+                            } else {
+                                Notification.show("Failed to send email. Check server logs for details.", 5000, Notification.Position.TOP_CENTER);
+                            }
                         } catch (Exception ex) {
                             Notification.show("Failed to send email: " + ex.getMessage(), 5000, Notification.Position.TOP_CENTER);
                         }
