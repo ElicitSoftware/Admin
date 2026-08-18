@@ -29,10 +29,14 @@ import java.util.Set;
  */
 public final class ElicitRoles {
 
+    /** The administrator role; implies {@link #USER} and {@link #IMPORTER}. */
     public static final String ADMIN = "elicit_admin";
+    /** The standard user role; implies {@link #IMPORTER}. */
     public static final String USER = "elicit_user";
+    /** The importer role; implies only itself. */
     public static final String IMPORTER = "elicit_importer";
 
+    /** All roles Elicit Admin recognizes. */
     public static final Set<String> ALL = Set.of(ADMIN, USER, IMPORTER);
 
     private static final Map<String, Set<String>> IMPLIED = Map.of(
@@ -47,6 +51,9 @@ public final class ElicitRoles {
     /**
      * Expands a set of raw roles to the full set of roles they imply under the
      * admin/user/importer hierarchy. Roles outside {@link #ALL} pass through unchanged.
+     *
+     * @param rawRoles the unexpanded roles, as stored in Keycloak or {@code survey.user_roles}
+     * @return the cumulative set of roles implied by {@code rawRoles}
      */
     public static Set<String> expand(Set<String> rawRoles) {
         Set<String> expanded = new HashSet<>();

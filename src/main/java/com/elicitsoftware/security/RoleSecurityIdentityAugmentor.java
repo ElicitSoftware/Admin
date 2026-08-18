@@ -45,8 +45,11 @@ import java.util.Set;
 @ApplicationScoped
 public class RoleSecurityIdentityAugmentor implements SecurityIdentityAugmentor {
 
+    /** Identity attribute name recording which system supplied the current roles. */
     public static final String ROLE_SOURCE_ATTRIBUTE = "roleSource";
+    /** {@value #ROLE_SOURCE_ATTRIBUTE} value when roles came from OIDC. */
     public static final String ROLE_SOURCE_OIDC = "oidc";
+    /** {@value #ROLE_SOURCE_ATTRIBUTE} value when roles came from {@code survey.user_roles}. */
     public static final String ROLE_SOURCE_DATABASE = "database";
 
     @Inject
@@ -54,6 +57,10 @@ public class RoleSecurityIdentityAugmentor implements SecurityIdentityAugmentor 
 
     @Inject
     AuthorizationModeConfig authorizationModeConfig;
+
+    /** Creates the augmentor; dependencies are populated by CDI injection. */
+    public RoleSecurityIdentityAugmentor() {
+    }
 
     @Override
     public Uni<SecurityIdentity> augment(SecurityIdentity identity, AuthenticationRequestContext context) {

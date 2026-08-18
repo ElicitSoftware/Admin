@@ -36,21 +36,26 @@ public class UserRole extends PanacheEntityBase {
     @EmbeddedId
     private UserRoleId id;
 
+    /** Creates an empty instance for JPA to populate. */
     public UserRole() {
     }
 
+    /** Creates a role grant for the given user and role name. */
     public UserRole(long userId, String roleName) {
         this.id = new UserRoleId(userId, roleName);
     }
 
+    /** Returns the composite key. */
     public UserRoleId getId() {
         return id;
     }
 
+    /** Sets the composite key. */
     public void setId(UserRoleId id) {
         this.id = id;
     }
 
+    /** Composite key for {@link UserRole}: a (userId, roleName) pair. */
     @Embeddable
     public static class UserRoleId implements Serializable {
 
@@ -60,26 +65,32 @@ public class UserRole extends PanacheEntityBase {
         @Column(name = "role_name")
         private String roleName;
 
+        /** Creates an empty instance for JPA to populate. */
         public UserRoleId() {
         }
 
+        /** Creates a key for the given user and role name. */
         public UserRoleId(long userId, String roleName) {
             this.userId = userId;
             this.roleName = roleName;
         }
 
+        /** Returns the user's id. */
         public long getUserId() {
             return userId;
         }
 
+        /** Sets the user's id. */
         public void setUserId(long userId) {
             this.userId = userId;
         }
 
+        /** Returns the role name. */
         public String getRoleName() {
             return roleName;
         }
 
+        /** Sets the role name. */
         public void setRoleName(String roleName) {
             this.roleName = roleName;
         }

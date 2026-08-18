@@ -26,8 +26,10 @@ import jakarta.enterprise.event.Observes;
  */
 public class NavigationControlAccessCheckerInitializer implements VaadinServiceInitListener {
 
+    /** Shared access control instance registered on every Vaadin UI. */
     private final NavigationAccessControl accessControl;
 
+    /** Creates the initializer and its {@link NavigationAccessControl} instance. */
     public NavigationControlAccessCheckerInitializer() {
         accessControl = new NavigationAccessControl();
         accessControl.setLoginView("login");

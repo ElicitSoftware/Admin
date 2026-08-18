@@ -26,6 +26,10 @@ import com.vaadin.flow.router.HasErrorParameter;
 public class AccessDeniedErrorView extends UnauthorizedView
         implements HasErrorParameter<AccessDeniedException> {
 
+    /** Creates the view, delegating to {@link UnauthorizedView}'s default layout. */
+    public AccessDeniedErrorView() {
+    }
+
     @Override
     public int setErrorParameter(BeforeEnterEvent event, ErrorParameter<AccessDeniedException> parameter) {
         return 403;

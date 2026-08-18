@@ -25,18 +25,27 @@ import org.eclipse.microprofile.config.inject.ConfigProperty;
 @ApplicationScoped
 public class AuthorizationModeConfig {
 
+    /** The two supported authorization sources for Elicit roles. */
     public enum AuthorizationMode {
+        /** Elicit roles come only from OIDC (Keycloak); the database fallback is never consulted. */
         OIDC,
+        /** Elicit roles fall back to {@code survey.user_roles} when OIDC supplies none. */
         DATABASE
     }
 
     @ConfigProperty(name = "elicit.authorization.mode", defaultValue = "OIDC")
     AuthorizationMode mode;
 
+    /** Creates the config bean; {@code mode} is populated by CDI config injection. */
+    public AuthorizationModeConfig() {
+    }
+
+    /** Returns the configured authorization mode. */
     public AuthorizationMode getMode() {
         return mode;
     }
 
+    /** Returns {@code true} when the configured mode is {@link AuthorizationMode#DATABASE}. */
     public boolean isDatabaseMode() {
         return mode == AuthorizationMode.DATABASE;
     }

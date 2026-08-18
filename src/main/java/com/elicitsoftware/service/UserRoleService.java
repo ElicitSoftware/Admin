@@ -32,7 +32,16 @@ import java.util.Optional;
 @ApplicationScoped
 public class UserRoleService {
 
-    /** Returns the user's current raw role grant, if any. */
+    /** Creates the service; entity access goes through {@link UserRole}'s Panache methods. */
+    public UserRoleService() {
+    }
+
+    /**
+     * Returns the user's current raw role grant, if any.
+     *
+     * @param userId the user's id
+     * @return the raw role name, or empty if the user has no grant
+     */
     public Optional<String> findRoleName(long userId) {
         List<UserRole> roles = UserRole.list("id.userId", userId);
         return roles.isEmpty() ? Optional.empty() : Optional.of(roles.get(0).getId().getRoleName());
@@ -41,6 +50,8 @@ public class UserRoleService {
     /**
      * Sets the user's role grant to exactly {@code roleName}, replacing any existing grant.
      *
+     * @param userId the user's id
+     * @param roleName the raw role to grant
      * @throws IllegalArgumentException if {@code roleName} is not a recognized Elicit role
      */
     @Transactional
@@ -52,7 +63,11 @@ public class UserRoleService {
         new UserRole(userId, roleName).persist();
     }
 
-    /** Removes the user's role grant entirely. */
+    /**
+     * Removes the user's role grant entirely.
+     *
+     * @param userId the user's id
+     */
     @Transactional
     public void clearRole(long userId) {
         UserRole.delete("id.userId", userId);

@@ -43,6 +43,18 @@ public class UserRoleDatabaseLookup {
     @Inject
     EntityManager entityManager;
 
+    /** Creates the lookup bean; {@code entityManager} is populated by CDI injection. */
+    public UserRoleDatabaseLookup() {
+    }
+
+    /**
+     * Looks up the given identity's principal in {@code survey.user_roles} and, if found,
+     * returns a copy of {@code identity} granted the expanded role set and stamped with the
+     * database role source; otherwise returns a copy stamped with the OIDC role source.
+     *
+     * @param identity the identity to augment
+     * @return the augmented identity
+     */
     @ActivateRequestContext
     @SuppressWarnings("unchecked")
     public SecurityIdentity augment(SecurityIdentity identity) {
