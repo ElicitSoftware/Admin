@@ -126,6 +126,7 @@ public class EmailService {
             Log.debugf("sendEmail: %d message template(s) to send for token=%s",
                     defaultMessagesIds.length, status.getToken());
 
+            boolean allSent = true;
             for (String defaultMessageID : defaultMessagesIds) {
                 try {
                     Log.debugf("sendEmail: loading message template id=%s", defaultMessageID);
@@ -149,13 +150,19 @@ public class EmailService {
                     Log.debugf("sendEmail: mailer.send() returned for template id=%s, token=%s",
                             messageTemplate.id, status.getToken());
                 } catch (Exception e) {
+                    allSent = false;
                     Log.errorf(e, "sendEmail: failed to send template id=%s for token=%s",
                             defaultMessageID, status.getToken());
+                    Throwable cause = e.getCause() != null ? e.getCause() : e;
+                    if (cause instanceof io.vertx.ext.mail.SMTPException) {
+                        Log.errorf("sendEmail: SMTP rejected template id=%s for token=%s: %s",
+                                defaultMessageID, status.getToken(), cause.getMessage());
+                    }
                 }
                 Log.debug("sendEmail: template send attempt completed");
             }
-            Log.debugf("sendEmail: finished for token=%s", status.getToken());
-            return true;
+            Log.debugf("sendEmail: finished for token=%s, allSent=%b", status.getToken(), allSent);
+            return allSent;
         } catch (Exception ex) {
             Log.errorf(ex, "sendEmail: failed to send email for token=%s", status.getToken());
             return false;
@@ -331,6 +338,10 @@ public class EmailService {
             return true;
         } catch (Exception ex) {
             Log.errorf(ex, "sendMessage: failed to send message id=%d", message.id);
+            Throwable cause = ex.getCause() != null ? ex.getCause() : ex;
+            if (cause instanceof io.vertx.ext.mail.SMTPException) {
+                Log.errorf("sendMessage: SMTP rejected message id=%d: %s", message.id, cause.getMessage());
+            }
             return false;
         }
     }
