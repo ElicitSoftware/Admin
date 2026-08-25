@@ -24,8 +24,10 @@ import jakarta.inject.Inject;
 import jakarta.transaction.Transactional;
 import org.eclipse.microprofile.config.inject.ConfigProperty;
 
+import java.time.Duration;
 import java.util.Date;
 import java.util.List;
+import java.util.concurrent.TimeoutException;
 
 /**
  * Service for sending email messages to survey respondents.
@@ -58,6 +60,25 @@ public class EmailService {
      */
     @ConfigProperty(name = "quarkus.mailer.from")
     String fromEmail;
+
+    /**
+     * Maximum time to wait for a single mailer.send() call to complete before
+     * treating it as a failure, so an SMTP connection that hangs (bad DNS,
+     * a firewall silently dropping packets, a stalled TLS handshake) fails
+     * loudly instead of blocking the calling thread forever.
+     */
+    @ConfigProperty(name = "elicit.mailer.send-timeout-seconds", defaultValue = "30")
+    long mailSendTimeoutSeconds;
+
+    /**
+     * SMTP host/port currently configured, surfaced in logs so a hang or
+     * rejection can be diagnosed without cross-referencing application.properties.
+     */
+    @ConfigProperty(name = "quarkus.mailer.host", defaultValue = "localhost")
+    String mailerHost;
+
+    @ConfigProperty(name = "quarkus.mailer.port", defaultValue = "25")
+    int mailerPort;
 
     /**
      * Sends an immediate email notification for a participant status update.
@@ -141,22 +162,30 @@ public class EmailService {
                     Log.debugf("sendEmail: template id=%s mimeType=%s subject='%s' bodyLength=%d",
                             messageTemplate.id, messageTemplate.mimeType, subject, body.length());
 
-                    Log.debugf("sendEmail: dispatching to mailer, from=%s, to=%s", fromEmail, status.getEmail());
+                    Log.debugf("sendEmail: dispatching to mailer, from=%s, to=%s, host=%s, port=%d, timeoutSeconds=%d",
+                            fromEmail, status.getEmail(), mailerHost, mailerPort, mailSendTimeoutSeconds);
+                    long startMs = System.currentTimeMillis();
                     if (messageTemplate.mimeType.equals("text/html")) {
-                        mailer.send(Mail.withHtml(status.getEmail(), subject, body).setFrom(fromEmail)).await().indefinitely();
+                        mailer.send(Mail.withHtml(status.getEmail(), subject, body).setFrom(fromEmail))
+                                .await().atMost(Duration.ofSeconds(mailSendTimeoutSeconds));
                     } else {
-                        mailer.send(Mail.withText(status.getEmail(), subject, body).setFrom(fromEmail)).await().indefinitely();
+                        mailer.send(Mail.withText(status.getEmail(), subject, body).setFrom(fromEmail))
+                                .await().atMost(Duration.ofSeconds(mailSendTimeoutSeconds));
                     }
-                    Log.debugf("sendEmail: mailer.send() returned for template id=%s, token=%s",
-                            messageTemplate.id, status.getToken());
+                    Log.debugf("sendEmail: mailer.send() returned for template id=%s, token=%s, elapsedMs=%d",
+                            messageTemplate.id, status.getToken(), (Object) (System.currentTimeMillis() - startMs));
                 } catch (Exception e) {
                     allSent = false;
-                    Log.errorf(e, "sendEmail: failed to send template id=%s for token=%s",
-                            defaultMessageID, status.getToken());
                     Throwable cause = e.getCause() != null ? e.getCause() : e;
-                    if (cause instanceof io.vertx.ext.mail.SMTPException) {
-                        Log.errorf("sendEmail: SMTP rejected template id=%s for token=%s: %s",
-                                defaultMessageID, status.getToken(), cause.getMessage());
+                    if (cause instanceof TimeoutException) {
+                        Log.errorf("sendEmail: mailer.send() timed out after %ds for template id=%s, token=%s, to=%s, host=%s, port=%d",
+                                mailSendTimeoutSeconds, defaultMessageID, status.getToken(), status.getEmail(), mailerHost, mailerPort);
+                    } else if (cause instanceof io.vertx.ext.mail.SMTPException) {
+                        Log.errorf("sendEmail: SMTP rejected template id=%s for token=%s, host=%s, port=%d: %s",
+                                defaultMessageID, status.getToken(), mailerHost, mailerPort, cause.getMessage());
+                    } else {
+                        Log.errorf(e, "sendEmail: failed to send template id=%s for token=%s, host=%s, port=%d",
+                                defaultMessageID, status.getToken(), mailerHost, mailerPort);
                     }
                 }
                 Log.debug("sendEmail: template send attempt completed");
@@ -332,15 +361,24 @@ public class EmailService {
                 ).setFrom(fromEmail);
             }
 
-            Log.debugf("sendMessage: dispatching message id=%d to mailer, from=%s", message.id, fromEmail);
-            mailer.send(mail).await().indefinitely();
-            Log.debugf("sendMessage: mailer.send() returned for message id=%d", message.id);
+            Log.debugf("sendMessage: dispatching message id=%d to mailer, from=%s, host=%s, port=%d, timeoutSeconds=%d",
+                    message.id, fromEmail, mailerHost, mailerPort, mailSendTimeoutSeconds);
+            long startMs = System.currentTimeMillis();
+            mailer.send(mail).await().atMost(Duration.ofSeconds(mailSendTimeoutSeconds));
+            Log.debugf("sendMessage: mailer.send() returned for message id=%d, elapsedMs=%d",
+                    message.id, (Object) (System.currentTimeMillis() - startMs));
             return true;
         } catch (Exception ex) {
-            Log.errorf(ex, "sendMessage: failed to send message id=%d", message.id);
             Throwable cause = ex.getCause() != null ? ex.getCause() : ex;
-            if (cause instanceof io.vertx.ext.mail.SMTPException) {
-                Log.errorf("sendMessage: SMTP rejected message id=%d: %s", message.id, cause.getMessage());
+            if (cause instanceof TimeoutException) {
+                Log.errorf("sendMessage: mailer.send() timed out after %ds for message id=%d, to=%s, host=%s, port=%d",
+                        mailSendTimeoutSeconds, message.id, message.subject.getEmail(), mailerHost, mailerPort);
+            } else if (cause instanceof io.vertx.ext.mail.SMTPException) {
+                Log.errorf("sendMessage: SMTP rejected message id=%d, host=%s, port=%d: %s",
+                        message.id, mailerHost, mailerPort, cause.getMessage());
+            } else {
+                Log.errorf(ex, "sendMessage: failed to send message id=%d, host=%s, port=%d",
+                        message.id, mailerHost, mailerPort);
             }
             return false;
         }
