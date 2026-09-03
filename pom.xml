@@ -13,10 +13,10 @@
         <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
         <quarkus.platform.artifact-id>quarkus-bom</quarkus.platform.artifact-id>
         <quarkus.platform.group-id>io.quarkus.platform</quarkus.platform.group-id>
-        <quarkus.platform.version>3.37.3</quarkus.platform.version>
+        <quarkus.platform.version>3.39.2</quarkus.platform.version>
         <skipITs>true</skipITs>
         <surefire-plugin.version>3.5.2</surefire-plugin.version>
-        <vaadin.version>25.2.3</vaadin.version>
+        <vaadin.version>25.2.6</vaadin.version>
         <browserless-test.version>1.1.1</browserless-test.version>
         <javadoc-plugin.version>3.12.0</javadoc-plugin.version>
         <site-plugin.version>3.21.0</site-plugin.version>
@@ -256,6 +256,9 @@
             <artifactId>browserless-test-quarkus</artifactId>
             <scope>test</scope>
         </dependency>
+        <!-- Intentionally NOT scoped to test: this extension needs to be present on the
+             main build path for @QuarkusTest coverage collection during `mvn test` (it
+             instruments the application at build/augmentation time, not just at test time). -->
         <dependency>
             <groupId>io.quarkus</groupId>
             <artifactId>quarkus-jacoco</artifactId>
@@ -270,6 +273,9 @@
             <url>https://repo.maven.apache.org/maven2</url>
         </repository>
         <repository>
+            <snapshots>
+                <enabled>false</enabled>
+            </snapshots>
             <id>vaadin-prereleases</id>
             <url>https://maven.vaadin.com/vaadin-prereleases/</url>
         </repository>
@@ -290,6 +296,9 @@
             <url>https://repo.maven.apache.org/maven2</url>
         </pluginRepository>
         <pluginRepository>
+            <snapshots>
+                <enabled>false</enabled>
+            </snapshots>
             <id>vaadin-prereleases</id>
             <url>https://maven.vaadin.com/vaadin-prereleases/</url>
         </pluginRepository>

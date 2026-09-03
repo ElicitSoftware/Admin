@@ -355,4 +355,34 @@ public class ExcludedXid extends PanacheEntityBase {
     public static java.util.List<ExcludedXid> findByXid(String xid) {
         return find("xid", xid).list();
     }
+
+    /**
+     * Compares this exclusion to another based on primary key equality.
+     * <p>
+     * {@code id} is a boxed, nullable {@code Integer} (unset before the entity is
+     * persisted), so comparison and hashing use {@link java.util.Objects} null-safe helpers.
+     *
+     * @param o the object to compare with
+     * @return {@code true} if the other object is an {@code ExcludedXid} with the same id
+     */
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) {
+            return true;
+        }
+        if (!(o instanceof ExcludedXid other)) {
+            return false;
+        }
+        return java.util.Objects.equals(id, other.id);
+    }
+
+    /**
+     * Returns a hash code derived from the primary key, consistent with {@link #equals(Object)}.
+     *
+     * @return the hash code for this exclusion
+     */
+    @Override
+    public int hashCode() {
+        return java.util.Objects.hashCode(id);
+    }
 }

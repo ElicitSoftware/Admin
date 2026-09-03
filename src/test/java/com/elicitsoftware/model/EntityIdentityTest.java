@@ -103,4 +103,87 @@ class EntityIdentityTest {
         assertEquals(2, set.size());
         assertTrue(set.contains(b), "a status with the same id should be found in the set");
     }
+
+    /**
+     * 2026-09 audit finding #11: {@code MessageTemplate} is displayed in a
+     * {@code Grid<MessageTemplate>} ({@code MessageTemplatesView}) but was missing the
+     * same ID-based identity fix already applied to Status/User/Department.
+     */
+    @Test
+    void messageTemplatesWithSameIdDeduplicateInSet() {
+        MessageTemplate a = new MessageTemplate();
+        a.id = 5;
+        MessageTemplate b = new MessageTemplate();
+        b.id = 5;
+        MessageTemplate other = new MessageTemplate();
+        other.id = 6;
+
+        assertEquals(a, b);
+        assertEquals(a.hashCode(), b.hashCode());
+        Set<MessageTemplate> set = Set.of(a, other);
+        assertEquals(2, set.size());
+        assertTrue(set.contains(b));
+    }
+
+    /**
+     * 2026-09 audit finding #17: {@code Survey.reports}/{@code Survey.postSurveyActions} are
+     * JPA-managed {@code Set}-typed collections, so {@code Survey}, {@code ReportDefinition},
+     * and {@code PostSurveyAction} need null-safe, boxed-{@code Integer}-aware identity.
+     */
+    @Test
+    void surveysWithSameIdAreEqual() {
+        Survey a = new Survey();
+        a.id = 3;
+        Survey b = new Survey();
+        b.id = 3;
+        Survey other = new Survey();
+        other.id = 4;
+
+        assertEquals(a, b);
+        assertEquals(a.hashCode(), b.hashCode());
+        assertNotEquals(a, other);
+    }
+
+    /** #17: a not-yet-persisted Survey (null id) does not throw and is not equal to a persisted one. */
+    @Test
+    void surveysWithNullIdDoNotThrow() {
+        Survey unsaved = new Survey();
+        Survey persisted = new Survey();
+        persisted.id = 1;
+
+        assertNotEquals(unsaved, persisted);
+        assertEquals(unsaved.hashCode(), unsaved.hashCode());
+    }
+
+    /** #17: ReportDefinitions with the same id are equal and de-duplicate in a Set. */
+    @Test
+    void reportDefinitionsWithSameIdDeduplicateInSet() {
+        ReportDefinition a = new ReportDefinition();
+        a.id = 10;
+        ReportDefinition b = new ReportDefinition();
+        b.id = 10;
+        ReportDefinition other = new ReportDefinition();
+        other.id = 11;
+
+        assertEquals(a, b);
+        Set<ReportDefinition> set = Set.of(a, other);
+        assertEquals(2, set.size());
+        assertTrue(set.contains(b));
+    }
+
+    /** #17: PostSurveyActions with the same id are equal and de-duplicate in a Set. */
+    @Test
+    void postSurveyActionsWithSameIdDeduplicateInSet() {
+        PostSurveyAction a = new PostSurveyAction();
+        a.id = 20;
+        PostSurveyAction b = new PostSurveyAction();
+        b.id = 20;
+        PostSurveyAction other = new PostSurveyAction();
+        other.id = 21;
+
+        assertEquals(a, b);
+        Set<PostSurveyAction> set = Set.of(a, other);
+        assertEquals(2, set.size());
+        assertTrue(set.contains(b));
+    }
 }

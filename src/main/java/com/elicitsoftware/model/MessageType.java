@@ -166,4 +166,31 @@ public class MessageType extends PanacheEntityBase {
     public void setName(String name) {
         this.name = name;
     }
+
+    /**
+     * Compares this message type to another based on primary key equality.
+     *
+     * @param o the object to compare with
+     * @return {@code true} if the other object is a {@code MessageType} with the same id
+     */
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) {
+            return true;
+        }
+        if (!(o instanceof MessageType other)) {
+            return false;
+        }
+        return id == other.id;
+    }
+
+    /**
+     * Returns a hash code derived from the primary key, consistent with {@link #equals(Object)}.
+     *
+     * @return the hash code for this message type
+     */
+    @Override
+    public int hashCode() {
+        return Long.hashCode(id);
+    }
 }

@@ -110,9 +110,8 @@ public class LoginView extends VerticalLayout implements BeforeEnterObserver  {
             Log.debug("Redirecting to " + origView);
             event.forwardTo(origView.toString());
         } else {
-            // This should never happen :-)
-            // But happens if you manually enter login while already
-            // logged in.
+            // No stored redirect - a normal, expected case when a user manually
+            // navigates to /login while already logged in.
             Log.debug("Redirecting to /");
             event.forwardTo("/");
         }

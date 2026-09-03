@@ -348,5 +348,35 @@ public class Respondent extends PanacheEntityBase {
         }
         return "Not calculated";
     }
+
+    /**
+     * Compares this respondent to another based on primary key equality.
+     * <p>
+     * {@code id} is a boxed, nullable {@code Integer} (unset before the entity is
+     * persisted), so comparison and hashing use {@link java.util.Objects} null-safe helpers.
+     *
+     * @param o the object to compare with
+     * @return {@code true} if the other object is a {@code Respondent} with the same id
+     */
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) {
+            return true;
+        }
+        if (!(o instanceof Respondent other)) {
+            return false;
+        }
+        return java.util.Objects.equals(id, other.id);
+    }
+
+    /**
+     * Returns a hash code derived from the primary key, consistent with {@link #equals(Object)}.
+     *
+     * @return the hash code for this respondent
+     */
+    @Override
+    public int hashCode() {
+        return java.util.Objects.hashCode(id);
+    }
 }
 

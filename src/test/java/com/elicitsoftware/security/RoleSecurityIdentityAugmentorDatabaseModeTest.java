@@ -13,55 +13,75 @@ package com.elicitsoftware.security;
 
 import com.elicitsoftware.test.DatabaseAuthorizationTestProfile;
 import com.elicitsoftware.test.PostgresTestResource;
+import io.quarkus.security.identity.AuthenticationRequestContext;
+import io.quarkus.security.identity.SecurityIdentity;
+import io.quarkus.security.runtime.QuarkusPrincipal;
+import io.quarkus.security.runtime.QuarkusSecurityIdentity;
 import io.quarkus.test.common.QuarkusTestResource;
 import io.quarkus.test.junit.QuarkusTest;
 import io.quarkus.test.junit.TestProfile;
-import io.quarkus.test.security.TestSecurity;
+import io.smallrye.mutiny.Uni;
+import jakarta.inject.Inject;
 import org.junit.jupiter.api.Test;
 
-import static io.restassured.RestAssured.given;
-import static org.hamcrest.Matchers.containsString;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * Confirms {@link RoleSecurityIdentityAugmentor}'s database fallback runs, and expands the
  * raw grant to its full cumulative set (UC-001 BR-006), when
  * {@code elicit.authorization.mode=DATABASE}.
  *
- * <p>Traceability: UC-001 A3/BR-005/BR-006. The seeded {@code admin} user (V0.0.3) has a raw
- * {@code elicit_admin} grant in {@code survey.user_roles} (V0.0.11); with no OIDC-supplied role
- * and database mode active, the effective identity should carry all three roles.</p>
+ * <p>Traceability: UC-001 A3/BR-005/BR-006. The seeded {@code admin}/{@code user} users
+ * (V0.0.3) have raw grants in {@code survey.user_roles} (V0.0.11); with no OIDC-supplied role
+ * and database mode active, the effective identity should carry the full expanded role set.</p>
  *
- * <p>{@code @TestSecurity} does not apply any {@code SecurityIdentityAugmentor} by default --
- * {@link RoleSecurityIdentityAugmentor} must be listed explicitly via {@code augmentors} for
- * these tests to exercise it.</p>
+ * <p><strong>2026-09 audit finding #6:</strong> this test previously exercised the augmentor
+ * indirectly through the (formerly public) {@code GET /api/secured/roles} diagnostic endpoint.
+ * That endpoint is now restricted to {@code elicit_admin}; a plain {@code elicit_user} grant
+ * (as in {@link #userGrantExpandsToUserAndImporterOnly()}) correctly gets 403 at the HTTP layer
+ * before the augmented-roles check the original assertions relied on. The augmentor is invoked
+ * directly here instead - a cleaner test that doesn't couple identity augmentation to an
+ * unrelated REST resource's authorization policy.</p>
  */
 @QuarkusTest
 @TestProfile(DatabaseAuthorizationTestProfile.class)
 @QuarkusTestResource(PostgresTestResource.class)
 class RoleSecurityIdentityAugmentorDatabaseModeTest {
 
+    /** Runs the supplier synchronously and wraps the result, mirroring how the real
+     * {@code AuthenticationRequestContext} would execute the blocking database lookup. */
+    private static final AuthenticationRequestContext SYNC_CONTEXT =
+            supplier -> Uni.createFrom().item(supplier.get());
+
+    @Inject
+    RoleSecurityIdentityAugmentor augmentor;
+
     /** UC-001/A3/BR-006: a raw elicit_admin database grant expands to all three roles. */
     @Test
-    @TestSecurity(user = "admin", roles = {}, augmentors = RoleSecurityIdentityAugmentor.class)
     void databaseGrantExpandsToFullRoleSet() {
-        given()
-            .when().get("/api/secured/roles")
-            .then()
-            .statusCode(200)
-            .body(containsString("elicit_admin"))
-            .body(containsString("elicit_user"))
-            .body(containsString("elicit_importer"));
+        SecurityIdentity noRoleIdentity = QuarkusSecurityIdentity.builder()
+                .setPrincipal(new QuarkusPrincipal("admin"))
+                .build();
+
+        SecurityIdentity augmented = augmentor.augment(noRoleIdentity, SYNC_CONTEXT)
+                .await().indefinitely();
+
+        assertTrue(augmented.getRoles().contains("elicit_admin"));
+        assertTrue(augmented.getRoles().contains("elicit_user"));
+        assertTrue(augmented.getRoles().contains("elicit_importer"));
     }
 
     /** UC-001/A3/BR-006: a raw elicit_user database grant expands to user + importer only. */
     @Test
-    @TestSecurity(user = "user", roles = {}, augmentors = RoleSecurityIdentityAugmentor.class)
     void userGrantExpandsToUserAndImporterOnly() {
-        given()
-            .when().get("/api/secured/roles")
-            .then()
-            .statusCode(200)
-            .body(containsString("elicit_user"))
-            .body(containsString("elicit_importer"));
+        SecurityIdentity noRoleIdentity = QuarkusSecurityIdentity.builder()
+                .setPrincipal(new QuarkusPrincipal("user"))
+                .build();
+
+        SecurityIdentity augmented = augmentor.augment(noRoleIdentity, SYNC_CONTEXT)
+                .await().indefinitely();
+
+        assertTrue(augmented.getRoles().contains("elicit_user"));
+        assertTrue(augmented.getRoles().contains("elicit_importer"));
     }
 }

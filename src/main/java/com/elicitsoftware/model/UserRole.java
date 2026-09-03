@@ -55,6 +55,34 @@ public class UserRole extends PanacheEntityBase {
         this.id = id;
     }
 
+    /**
+     * Compares this role grant to another based on the composite key ({@link UserRoleId}
+     * already implements value equality).
+     *
+     * @param o the object to compare with
+     * @return {@code true} if the other object is a {@code UserRole} with an equal composite key
+     */
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) {
+            return true;
+        }
+        if (!(o instanceof UserRole other)) {
+            return false;
+        }
+        return Objects.equals(id, other.id);
+    }
+
+    /**
+     * Returns a hash code derived from the composite key, consistent with {@link #equals(Object)}.
+     *
+     * @return the hash code for this role grant
+     */
+    @Override
+    public int hashCode() {
+        return Objects.hashCode(id);
+    }
+
     /** Composite key for {@link UserRole}: a (userId, roleName) pair. */
     @Embeddable
     public static class UserRoleId implements Serializable {

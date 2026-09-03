@@ -94,8 +94,8 @@ public class MessageTemplate extends PanacheEntityBase {
      * identifies each message template within the system.</p>
      */
     @Id
-    @SequenceGenerator(name = "MESSAGE_TEMPLATES_ID_GENERATOR", schema = "survey", sequenceName = "MESSAGE_TEMPLATES_SEQ", allocationSize = 1)
-    @GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "MESSAGE_TEMPLATES_ID_GENERATOR")
+    @SequenceGenerator(name = "message_templates_id_generator", schema = "survey", sequenceName = "message_templates_seq", allocationSize = 1)
+    @GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "message_templates_id_generator")
     @Column(unique = true, nullable = false, precision = 20)
     public long id;
 
@@ -221,5 +221,51 @@ public class MessageTemplate extends PanacheEntityBase {
      */
     public MessageTemplate() {
         // Default constructor for JPA
+    }
+
+    /**
+     * Lists all message templates with their {@link #department} eagerly joined in a single
+     * query. {@code department} defaults to JPA's implicit {@code FetchType.EAGER} for
+     * {@code @ManyToOne}, which Hibernate otherwise satisfies with one additional
+     * {@code SELECT} per row rather than a join - an N+1 when listing many templates
+     * (e.g. {@code MessageTemplatesView}'s grid, which reads {@code template.department.name}
+     * per row).
+     *
+     * @return all message templates, each with its department already loaded
+     */
+    public static java.util.List<MessageTemplate> listAllWithDepartment() {
+        return find("select t from MessageTemplate t join fetch t.department").list();
+    }
+
+    /**
+     * Compares this message template to another based on primary key equality.
+     * <p>
+     * ID-based identity is required for correct {@code Grid} selection tracking and
+     * {@code refreshItem} behaviour in the Vaadin data-provider layer (see the
+     * {@code data-providers} skill) - {@code MessageTemplatesView} displays these in a
+     * {@code Grid<MessageTemplate>}.
+     *
+     * @param o the object to compare with
+     * @return {@code true} if the other object is a {@code MessageTemplate} with the same id
+     */
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) {
+            return true;
+        }
+        if (!(o instanceof MessageTemplate other)) {
+            return false;
+        }
+        return id == other.id;
+    }
+
+    /**
+     * Returns a hash code derived from the primary key, consistent with {@link #equals(Object)}.
+     *
+     * @return the hash code for this message template
+     */
+    @Override
+    public int hashCode() {
+        return Long.hashCode(id);
     }
 }

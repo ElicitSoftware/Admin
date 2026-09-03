@@ -12,6 +12,7 @@ package com.elicitsoftware.service;
  */
 
 import com.elicitsoftware.admin.upload.MultipartBody;
+import io.quarkus.logging.Log;
 import jakarta.annotation.security.RolesAllowed;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
@@ -21,6 +22,8 @@ import jakarta.ws.rs.Path;
 import jakarta.ws.rs.Produces;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
+
+import java.util.UUID;
 
 /**
  * REST endpoint that imports respondent data from Elicit export files.
@@ -81,7 +84,13 @@ public class RespondentImportResource {
             }
 
         } catch (Exception e) {
-            ImportResponse response = new ImportResponse(false, 0, "Import failed: " + e.getMessage(), null);
+            // Unexpected (non-validation) failure - log the real cause server-side and
+            // return a generic, correlation-id-bearing message rather than leaking
+            // internal driver/JPA error text (constraint names, SQL fragments) to the client.
+            String correlationId = UUID.randomUUID().toString();
+            Log.errorf(e, "Respondent import failed [correlationId=%s]", correlationId);
+            ImportResponse response = new ImportResponse(false, 0,
+                    "Import failed due to an unexpected error. Reference: " + correlationId, null);
             return Response.status(Response.Status.INTERNAL_SERVER_ERROR)
                     .entity(response)
                     .build();

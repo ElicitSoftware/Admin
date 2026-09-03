@@ -540,6 +540,20 @@ public class PDFService {
      * @throws IOException if an error occurs during SVG processing or PDF writing
      * @see Content
      */
+    /**
+     * Rejects SVG/XML content containing a DOCTYPE or ENTITY declaration, guarding against
+     * XXE (local file disclosure) or SSRF via external entity resolution.
+     *
+     * @param svg the raw SVG markup to check
+     * @throws IOException if the content contains a DOCTYPE or ENTITY declaration
+     */
+    static void rejectXxePayload(String svg) throws IOException {
+        if (svg != null
+                && (svg.toUpperCase().contains("<!DOCTYPE") || svg.toUpperCase().contains("<!ENTITY"))) {
+            throw new IOException("Rejected SVG content containing a DOCTYPE/ENTITY declaration");
+        }
+    }
+
     void addSVG(Content content) throws IOException {
         PDRectangle landscape = new PDRectangle(PDRectangle.LETTER.getHeight(), PDRectangle.LETTER.getWidth());
 
@@ -555,6 +569,13 @@ public class PDFService {
         try {
             PdfBoxGraphics2D graphics2D = new PdfBoxGraphics2D(document, (int) pageWidth, (int) pageHeight);
             graphics2D.setFontTextDrawer(new PdfBoxGraphics2DFontTextDrawer());
+
+            // Reject any DOCTYPE/ENTITY declaration before parsing. content.svg comes from
+            // an admin-configured, DB-stored, arbitrary report-service URL (ReportDefinition.url);
+            // Batik's SAXSVGDocumentFactory does not disable external-entity/DOCTYPE resolution
+            // by default, so a malicious or compromised report service could otherwise use it
+            // for XXE (local file disclosure) or SSRF.
+            rejectXxePayload(content.svg);
 
             // Parse the SVG
             String parser = XMLResourceDescriptor.getXMLParserClassName();

@@ -24,13 +24,16 @@ import jakarta.annotation.PostConstruct;
 import jakarta.annotation.security.RolesAllowed;
 import jakarta.enterprise.inject.Instance;
 import jakarta.inject.Inject;
+import org.eclipse.microprofile.config.inject.ConfigProperty;
 import org.eclipse.microprofile.jwt.JsonWebToken;
 
 /**
  * Debug view for displaying authentication and security information.
  * <p>
  * This view provides detailed information about the current user's authentication
- * status, roles, and tokens for debugging purposes.
+ * status, roles, and tokens for debugging purposes. Restricted to {@code elicit_admin}
+ * since it can reveal token material; raw tokens are masked unless
+ * {@code elicit.debug.reveal-tokens} is explicitly enabled (e.g. in {@code %dev}).
  * </p>
  *
  * @author Elicit Software
@@ -38,7 +41,7 @@ import org.eclipse.microprofile.jwt.JsonWebToken;
  * @since 1.0
  */
 @Route(value = "debug", layout = MainLayout.class)
-@RolesAllowed({"elicit_admin", "elicit_user"})
+@RolesAllowed("elicit_admin")
 public class DebugView extends VerticalLayout implements HasDynamicTitle {
 
     /**
@@ -72,14 +75,22 @@ public class DebugView extends VerticalLayout implements HasDynamicTitle {
     Instance<AccessTokenCredential> accessTokenInstance;
 
     /**
+     * Whether raw token values should be rendered in full. Defaults to {@code false}
+     * so tokens are masked everywhere except environments (e.g. {@code %dev}) that
+     * explicitly opt in via {@code ELICIT_DEBUG_REVEAL_TOKENS}.
+     */
+    @ConfigProperty(name = "elicit.debug.reveal-tokens", defaultValue = "false")
+    boolean revealTokens;
+
+    /**
      * Initializes the debug view with authentication information.
      */
     @PostConstruct
     public void init() {
         add(new H1("Debug Information"));
-        
+
         StringBuilder sb = new StringBuilder();
-        
+
         // Basic identity information
         sb.append("User: ").append(identity.getPrincipal().getName()).append("\n");
         sb.append("Is Anonymous: ").append(identity.isAnonymous()).append("\n");
@@ -94,7 +105,7 @@ public class DebugView extends VerticalLayout implements HasDynamicTitle {
         try {
             if (idTokenInstance.isResolvable()) {
                 JsonWebToken idToken = idTokenInstance.get();
-                sb.append("ID Token: ").append(idToken.getRawToken()).append("\n\n");
+                sb.append("ID Token: ").append(maskToken(idToken.getRawToken(), revealTokens)).append("\n\n");
             } else {
                 sb.append("ID Token: Not available or resolvable\n\n");
             }
@@ -106,7 +117,7 @@ public class DebugView extends VerticalLayout implements HasDynamicTitle {
         try {
             if (accessTokenInstance.isResolvable()) {
                 AccessTokenCredential accessToken = accessTokenInstance.get();
-                sb.append("Access Token: ").append(accessToken.getToken()).append("\n\n");
+                sb.append("Access Token: ").append(maskToken(accessToken.getToken(), revealTokens)).append("\n\n");
             } else {
                 sb.append("Access Token: Not available or resolvable\n\n");
             }
@@ -118,6 +129,21 @@ public class DebugView extends VerticalLayout implements HasDynamicTitle {
         debugInfo.addClassName("debug-info");
 
         add(debugInfo);
+    }
+
+    /**
+     * Masks a raw token to its last 4 characters unless {@code reveal} is {@code true}.
+     *
+     * @param rawToken the raw token value
+     * @param reveal whether to return the token unmasked
+     * @return the full token if {@code reveal} is {@code true}, otherwise a masked form
+     */
+    static String maskToken(String rawToken, boolean reveal) {
+        if (reveal || rawToken == null) {
+            return rawToken;
+        }
+        int visible = Math.min(4, rawToken.length());
+        return "*".repeat(Math.max(0, rawToken.length() - visible)) + rawToken.substring(rawToken.length() - visible);
     }
 
     @Override

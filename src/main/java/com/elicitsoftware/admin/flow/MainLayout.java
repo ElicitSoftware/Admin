@@ -231,7 +231,6 @@ public class MainLayout extends AppLayout implements AfterNavigationListener {
                 VaadinIcon.USERS.create());
         nav.addItem(searchLink, registerLink);
         // Message Templates Button (Admin only)
-        // TODO this is a hack! Restore the if statement after the OIDC is fixed.
         if (identity.hasRole("elicit_admin")) {
             SideNavItem adminSection = new SideNavItem("Admin");
             adminSection.setPrefixComponent(VaadinIcon.COG.create());
