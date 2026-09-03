@@ -121,7 +121,26 @@ CREATE TABLE IF NOT EXISTS survey.post_survey_actions
 );
 
 -- -----------------------------------------------------------------------------
--- 6. Remaining cross-module GRANT targets. These are never queried by the Admin
+-- 6. survey.excluded_xids — owned by the Survey module (V006__CREATE_EXCLUDE_XIDS.sql
+--    there), not Admin. Admin only reads/writes it via ExcludedXid/TokenService, so
+--    it needs the real columns here. Matches Survey's V006 exactly (no department
+--    FK — Survey's version doesn't have one either).
+-- -----------------------------------------------------------------------------
+CREATE SEQUENCE IF NOT EXISTS survey.excluded_xids_seq START WITH 1 INCREMENT BY 1;
+CREATE TABLE IF NOT EXISTS survey.excluded_xids
+(
+    id         integer NOT NULL,
+    xid        character varying(255) NOT NULL,
+    department integer NOT NULL,
+    reason     character varying(500),
+    created_dt timestamptz NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    created_by character varying(100),
+    CONSTRAINT excluded_xids_pk PRIMARY KEY (id),
+    CONSTRAINT excluded_xids_xid_dept_un UNIQUE (xid, department)
+);
+
+-- -----------------------------------------------------------------------------
+-- 7. Remaining cross-module GRANT targets. These are never queried by the Admin
 --    app; they exist only so the GRANT statements in V0.0.2/V0.0.6/V0.0.8 apply.
 --    Each needs a stub table AND a stub sequence (GRANT ... ON SEQUENCE).
 -- -----------------------------------------------------------------------------
@@ -155,19 +174,19 @@ CREATE SEQUENCE IF NOT EXISTS survey.steps_sections_seq;
 CREATE TABLE IF NOT EXISTS survey.steps_sections (id bigint);
 
 -- -----------------------------------------------------------------------------
--- 7. surveyreport.fact_respondents — GRANT target only (V0.0.6/V0.0.8).
+-- 8. surveyreport.fact_respondents — GRANT target only (V0.0.6/V0.0.8).
 -- -----------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS surveyreport.fact_respondents (respondent_id bigint);
 
 -- -----------------------------------------------------------------------------
--- 8. Let the application roles use the schemas (postgres owns every object here,
+-- 9. Let the application roles use the schemas (postgres owns every object here,
 --    so the later per-object GRANTs succeed regardless).
 -- -----------------------------------------------------------------------------
 GRANT USAGE ON SCHEMA survey TO surveyadmin_user, survey_user;
 GRANT USAGE ON SCHEMA surveyreport TO surveyadmin_user, surveyreport_user;
 
 -- -----------------------------------------------------------------------------
--- 9. Seed survey.surveys(id=1). V0.0.3 dev-data (which runs in test because it
+-- 10. Seed survey.surveys(id=1). V0.0.3 dev-data (which runs in test because it
 --    lives under db/migration) inserts user_surveys(survey_id=1); without this
 --    row that FK fails and every @QuarkusTest fails at boot.
 -- -----------------------------------------------------------------------------
