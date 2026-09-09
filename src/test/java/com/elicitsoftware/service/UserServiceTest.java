@@ -26,7 +26,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 /**
  * Booted persistence tests for {@link UserService}.
  *
- * <p>Traceability: UC-009 (Manage Users). Code-review finding #7 moved the transactional
+ * <p>Traceability: UC-008 (Manage Users). Code-review finding #7 moved the transactional
  * persistence out of {@code EditUserView} into this service; these tests exercise that seam
  * directly — insert-on-create ({@code id == 0}) and merge-on-update ({@code id != 0}) — against
  * the real schema on the shared PostgreSQL container.</p>
@@ -41,12 +41,12 @@ class UserServiceTest {
     @Inject
     UserService userService;
 
-    /** UC-009: saving a user with id 0 inserts a new row with a generated id. */
+    /** UC-008: saving a user with id 0 inserts a new row with a generated id. */
     @Test
     @TestTransaction
     void savePersistsNewUser() {
         User user = new User();
-        user.setUsername("uc009.new@example.org");
+        user.setUsername("uc008.new@example.org");
         user.setFirstName("New");
         user.setLastName("User");
         user.setActive(true);
@@ -56,16 +56,16 @@ class UserServiceTest {
         assertTrue(saved.getId() > 0, "a new user should receive a generated id");
         User reloaded = User.findById(saved.getId());
         assertNotNull(reloaded, "the new user should be persisted and findable");
-        assertEquals("uc009.new@example.org", reloaded.getUsername());
+        assertEquals("uc008.new@example.org", reloaded.getUsername());
         assertTrue(reloaded.isActive());
     }
 
-    /** UC-009: saving a user with a non-zero id merges changes into the existing row. */
+    /** UC-008: saving a user with a non-zero id merges changes into the existing row. */
     @Test
     @TestTransaction
     void saveMergesExistingUser() {
         User user = new User();
-        user.setUsername("uc009.edit@example.org");
+        user.setUsername("uc008.edit@example.org");
         user.setFirstName("Before");
         user.setLastName("Edit");
         user.setActive(true);
@@ -81,7 +81,7 @@ class UserServiceTest {
         assertNotNull(reloaded);
         assertEquals("After", reloaded.getFirstName());
         assertEquals(false, reloaded.isActive());
-        assertEquals(1, User.count("username = ?1", "uc009.edit@example.org"),
+        assertEquals(1, User.count("username = ?1", "uc008.edit@example.org"),
                 "update must not create a duplicate row");
     }
 }
