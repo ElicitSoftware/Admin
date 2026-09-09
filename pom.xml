@@ -16,7 +16,7 @@
         <quarkus.platform.version>3.39.2</quarkus.platform.version>
         <skipITs>true</skipITs>
         <surefire-plugin.version>3.5.2</surefire-plugin.version>
-        <vaadin.version>25.2.6</vaadin.version>
+        <vaadin.version>25.2.7</vaadin.version>
         <browserless-test.version>1.1.1</browserless-test.version>
         <javadoc-plugin.version>3.12.0</javadoc-plugin.version>
         <site-plugin.version>3.21.0</site-plugin.version>
@@ -404,17 +404,22 @@
                 <executions>
                     <execution>
                         <!--
-                            Instrument plain (non-@QuarkusTest) unit tests. The
-                            quarkus-jacoco extension only covers @QuarkusTest runs,
-                            so without this agent the JUnit unit tests execute
-                            un-instrumented and produce no coverage data.
+                            Instrument plain (non-@QuarkusTest) unit tests, appending into the
+                            same jacoco-quarkus.exec the quarkus-jacoco extension writes for
+                            @QuarkusTest runs. exclClassLoaders is required: without it this
+                            agent also tries to instrument QuarkusClassLoader-loaded classes,
+                            which fights the extension's own instrumentation and left it unable
+                            to ever write its data file (see the Quarkus JaCoCo guide's
+                            "Coverage for tests not using @QuarkusTest" section).
                         -->
                         <id>jacoco-prepare-agent</id>
                         <goals>
                             <goal>prepare-agent</goal>
                         </goals>
                         <configuration>
-                            <destFile>${project.build.directory}/jacoco.exec</destFile>
+                            <destFile>${project.build.directory}/jacoco-quarkus.exec</destFile>
+                            <append>true</append>
+                            <exclClassLoaders>*QuarkusClassLoader</exclClassLoaders>
                         </configuration>
                     </execution>
                     <execution>
@@ -424,7 +429,7 @@
                             <goal>report</goal>
                         </goals>
                         <configuration>
-                            <dataFile>${project.build.directory}/jacoco.exec</dataFile>
+                            <dataFile>${project.build.directory}/jacoco-quarkus.exec</dataFile>
                             <outputDirectory>${project.reporting.outputDirectory}/jacoco</outputDirectory>
                         </configuration>
                     </execution>
@@ -435,7 +440,7 @@
                             <goal>check</goal>
                         </goals>
                         <configuration>
-                            <dataFile>${project.build.directory}/jacoco.exec</dataFile>
+                            <dataFile>${project.build.directory}/jacoco-quarkus.exec</dataFile>
                             <rules>
                                 <rule>
                                     <element>BUNDLE</element>
