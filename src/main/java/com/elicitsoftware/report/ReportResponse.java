@@ -106,7 +106,7 @@ public class ReportResponse {
      * or when PDF generation is not required.
      * 
      * @see PDFDocument
-     * @see com.elicitsoftware.report.PDFService#generatePDF(java.util.ArrayList)
+     * @see com.elicitsoftware.report.PDFService#generatePDF(java.util.ArrayList, String)
      */
     public PDFDocument pdf;
 

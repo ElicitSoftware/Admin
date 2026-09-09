@@ -1,4 +1,4 @@
-package com.elicitsoftware.service;
+package com.elicitsoftware.rest;
 
 /*-
  * ***LICENSE_START***
@@ -11,6 +11,7 @@ package com.elicitsoftware.service;
  * ***LICENSE_END***
  */
 
+import com.elicitsoftware.service.RespondentExportService;
 import jakarta.annotation.security.RolesAllowed;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
@@ -22,36 +23,36 @@ import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
 
 /**
- * REST endpoint that exports a complete survey definition as a safe import file.
+ * REST endpoint that exports respondent data as a safe import file.
  */
-@Path("/secured/survey/export")
+@Path("/secured/respondent/export")
 @ApplicationScoped
-public class SurveyDefinitionExportResource {
+public class RespondentExportResource {
 
     /**
      * Default constructor for CDI.
      */
-    public SurveyDefinitionExportResource() {
+    public RespondentExportResource() {
         // CDI managed bean
     }
 
     @Inject
-    SurveyDefinitionExportService surveyDefinitionExportService;
+    RespondentExportService respondentExportService;
 
     /**
-     * Export a survey definition as a custom-format file. All survey definition tables
-     * (surveys, select_groups, select_items, steps, sections, steps_sections, questions,
-     * sections_questions, relationships, reports, post_survey_actions, ontology, metadata)
-     * are included.
+     * Export respondent data as a custom format file. Preferred query parameter is "id".
      *
-     * @param id the survey id to export
-     * @return export file as a downloadable attachment
+     * @param id respondent id
+     * @param respondentIdAlias optional alias query parameter: respondent_id
+     * @return Export file as a downloadable text file
      */
     @GET
     @RolesAllowed("elicit_admin")
     @Produces(MediaType.APPLICATION_OCTET_STREAM)
-    public Response exportSurvey(@QueryParam("id") Integer id) {
-        if (id == null) {
+    public Response exportRespondent(@QueryParam("id") Integer id,
+                                     @QueryParam("respondent_id") Integer respondentIdAlias) {
+        Integer respondentId = id != null ? id : respondentIdAlias;
+        if (respondentId == null) {
             return Response.status(Response.Status.BAD_REQUEST)
                     .entity("Missing required query parameter: id")
                     .type(MediaType.TEXT_PLAIN)
@@ -59,9 +60,9 @@ public class SurveyDefinitionExportResource {
         }
 
         try {
-            String exportData = surveyDefinitionExportService.exportSurvey(id);
+            String exportData = respondentExportService.exportRespondent(respondentId);
             return Response.ok(exportData.getBytes(java.nio.charset.StandardCharsets.UTF_8))
-                    .header("Content-Disposition", "attachment; filename=\"survey_" + id + "_definition.elicit\"")
+                    .header("Content-Disposition", "attachment; filename=\"respondent_" + respondentId + "_export.elicit\"")
                     .type(MediaType.APPLICATION_OCTET_STREAM)
                     .build();
         } catch (IllegalArgumentException e) {

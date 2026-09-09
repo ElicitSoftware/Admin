@@ -1,4 +1,4 @@
-package com.elicitsoftware.service;
+package com.elicitsoftware.rest;
 
 /*-
  * ***LICENSE_START***

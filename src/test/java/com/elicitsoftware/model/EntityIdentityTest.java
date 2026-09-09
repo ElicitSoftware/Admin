@@ -43,6 +43,21 @@ class EntityIdentityTest {
 
         assertEquals(a, b, "same id should mean equal");
         assertEquals(a.hashCode(), b.hashCode(), "equal objects must share a hash code");
+        assertEquals(a, a, "a Department is equal to itself");
+        assertNotEquals(a, "not a department", "a Department is never equal to a different type");
+    }
+
+    /** Department's code/fromEmail/notificationEmails accessors round-trip the field values. */
+    @Test
+    void departmentSecondaryFieldAccessorsRoundTrip() {
+        Department department = new Department();
+        department.setCode("CARD");
+        department.setFromEmail("noreply@example.org");
+        department.setNotificationEmails("a@example.org,b@example.org");
+
+        assertEquals("CARD", department.getCode());
+        assertEquals("noreply@example.org", department.getFromEmail());
+        assertEquals("a@example.org,b@example.org", department.getNotificationEmails());
     }
 
     /** #3: Departments with different ids are not equal. */
@@ -99,6 +114,9 @@ class EntityIdentityTest {
         other.setId(101);
 
         assertEquals(a, b);
+        assertEquals(a.hashCode(), b.hashCode());
+        assertEquals(a, a, "a Status is equal to itself");
+        assertNotEquals(a, "not a status", "a Status is never equal to a different type");
         Set<Status> set = Set.of(a, other);
         assertEquals(2, set.size());
         assertTrue(set.contains(b), "a status with the same id should be found in the set");
@@ -120,6 +138,8 @@ class EntityIdentityTest {
 
         assertEquals(a, b);
         assertEquals(a.hashCode(), b.hashCode());
+        assertEquals(a, a, "a MessageTemplate is equal to itself");
+        assertNotEquals(a, "not a message template", "a MessageTemplate is never equal to a different type");
         Set<MessageTemplate> set = Set.of(a, other);
         assertEquals(2, set.size());
         assertTrue(set.contains(b));
@@ -142,6 +162,7 @@ class EntityIdentityTest {
         assertEquals(a, b);
         assertEquals(a.hashCode(), b.hashCode());
         assertNotEquals(a, other);
+        assertNotEquals(a, "not a survey", "a Survey is never equal to a different type");
     }
 
     /** #17: a not-yet-persisted Survey (null id) does not throw and is not equal to a persisted one. */
@@ -153,6 +174,7 @@ class EntityIdentityTest {
 
         assertNotEquals(unsaved, persisted);
         assertEquals(unsaved.hashCode(), unsaved.hashCode());
+        assertEquals(unsaved, unsaved, "a Survey is equal to itself");
     }
 
     /** #17: ReportDefinitions with the same id are equal and de-duplicate in a Set. */
@@ -166,6 +188,9 @@ class EntityIdentityTest {
         other.id = 11;
 
         assertEquals(a, b);
+        assertEquals(a.hashCode(), b.hashCode());
+        assertEquals(a, a, "a ReportDefinition is equal to itself");
+        assertNotEquals(a, "not a report definition", "a ReportDefinition is never equal to a different type");
         Set<ReportDefinition> set = Set.of(a, other);
         assertEquals(2, set.size());
         assertTrue(set.contains(b));
@@ -182,6 +207,9 @@ class EntityIdentityTest {
         other.id = 21;
 
         assertEquals(a, b);
+        assertEquals(a.hashCode(), b.hashCode());
+        assertEquals(a, a, "a PostSurveyAction is equal to itself");
+        assertNotEquals(a, "not a post-survey action", "a PostSurveyAction is never equal to a different type");
         Set<PostSurveyAction> set = Set.of(a, other);
         assertEquals(2, set.size());
         assertTrue(set.contains(b));

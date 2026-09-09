@@ -13,6 +13,7 @@ package com.elicitsoftware.service;
 
 import com.elicitsoftware.request.AddRequest;
 import com.elicitsoftware.response.AddResponse;
+import com.elicitsoftware.rest.TokenService;
 import io.quarkus.logging.Log;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.transaction.Transactional;

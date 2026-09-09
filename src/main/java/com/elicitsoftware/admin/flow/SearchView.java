@@ -345,29 +345,36 @@ public class SearchView extends VerticalLayout implements HasDynamicTitle, Befor
 
         // Use class fields
         departmentComboBox = getDepartmentComboBox();
+        departmentComboBox.setId("department-filter");
         searchBar.add(departmentComboBox);
 
         tokenField = new TextField("Token");
+        tokenField.setId("token-filter");
         tokenField.addThemeVariants(TextFieldVariant.LUMO_SMALL);
         searchBar.add(tokenField);
 
         firstNameField = new TextField("First name");
+        firstNameField.setId("first-name-filter");
         firstNameField.addThemeVariants(TextFieldVariant.LUMO_SMALL);
         searchBar.add(firstNameField);
 
         lastNameField = new TextField("Last name");
+        lastNameField.setId("last-name-filter");
         lastNameField.addThemeVariants(TextFieldVariant.LUMO_SMALL);
         searchBar.add(lastNameField);
 
         emailField = new TextField("Email");
+        emailField.setId("email-filter");
         emailField.addThemeVariants(TextFieldVariant.LUMO_SMALL);
         searchBar.add(emailField);
 
         phoneField = new TextField("Phone");
+        phoneField.setId("phone-filter");
         phoneField.addThemeVariants(TextFieldVariant.LUMO_SMALL);
         searchBar.add(phoneField);
 
         Button searchButton = new Button("Search");
+        searchButton.setId("search-button");
         searchButton.addThemeVariants(ButtonVariant.LUMO_PRIMARY);
         searchButton.addClickListener(e -> {
             paginationControls.resetToFirstPage();
@@ -502,6 +509,7 @@ public class SearchView extends VerticalLayout implements HasDynamicTitle, Befor
      */
     private void getSubjectGrid(VerticalLayout respondentsLayout) {
         subjectGrid = new Grid<>(Status.class, false);
+        subjectGrid.setId("subject-grid");
         subjectGrid.setSizeFull();
         subjectGrid.addColumn(Status::getToken).setHeader("Token").setSortable(true).setSortProperty(Status.PROP_TOKEN).setWidth("150px").setFlexGrow(0);
         subjectGrid.addColumn(Status::getDepartmentName).setHeader("Department").setSortable(true).setSortProperty(Status.PROP_DEPARTMENT_NAME);

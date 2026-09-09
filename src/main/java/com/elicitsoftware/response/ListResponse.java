@@ -1,4 +1,4 @@
-package com.elicitsoftware.model;
+package com.elicitsoftware.response;
 
 /*-
  * ***LICENSE_START***
@@ -10,6 +10,8 @@ package com.elicitsoftware.model;
  * <https://polyformproject.org/licenses/noncommercial/1.0.0>
  * ***LICENSE_END***
  */
+
+import com.elicitsoftware.model.Subject;
 
 import java.util.List;
 

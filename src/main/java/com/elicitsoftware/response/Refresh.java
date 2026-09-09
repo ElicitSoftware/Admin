@@ -1,4 +1,4 @@
-package com.elicitsoftware.model;
+package com.elicitsoftware.response;
 
 /*-
  * ***LICENSE_START***
