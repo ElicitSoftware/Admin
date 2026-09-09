@@ -47,8 +47,6 @@ import com.elicitsoftware.report.pdfbox.TableBuilder;
 import de.rototor.pdfbox.graphics2d.PdfBoxGraphics2D;
 import de.rototor.pdfbox.graphics2d.PdfBoxGraphics2DFontTextDrawer;
 import jakarta.enterprise.context.RequestScoped;
-import jakarta.inject.Inject;
-import jakarta.servlet.http.HttpServletRequest;
 
 /**
  * PDFService is a request-scoped service responsible for generating PDF documents from report data.
@@ -78,7 +76,7 @@ import jakarta.servlet.http.HttpServletRequest;
  * PDFService pdfService;
  *
  * ArrayList<ReportResponse> responses = getReportData();
- * DownloadHandler pdfResource = pdfService.generatePDF(responses);
+ * DownloadHandler pdfResource = pdfService.generatePDF(responses, baseUrl);
  * }
  * </pre>
  *
@@ -156,12 +154,6 @@ public class PDFService {
      * Width of the current page, in points.
      */
     float pageWidth;
-
-    /**
-     * Injected HTTP servlet request for context information.
-     */
-    @Inject
-    HttpServletRequest request;
 
     /**
      * Generates a PDF document from a list of report responses and returns it as a StreamResource.
@@ -346,9 +338,12 @@ public class PDFService {
      * Generates a PDF document from the provided report responses.
      *
      * @param reportResponses the list of report responses to include in the PDF
-    * @return the generated PDF bytes
+     * @param baseUrl the application's base URL (scheme, host, port, and context path), printed
+     *                in the footer of every page; the caller derives it from its own HTTP request
+     *                since {@code PDFService} does not have one of its own
+     * @return the generated PDF bytes
      */
-    public byte[] generatePDF(ArrayList<ReportResponse> reportResponses) {
+    public byte[] generatePDF(ArrayList<ReportResponse> reportResponses, String baseUrl) {
         try {
             // Create a new document
             document = new PDDocument();
@@ -402,7 +397,7 @@ public class PDFService {
                 }
             }
 
-            addHeadersAndFooters();
+            addHeadersAndFooters(baseUrl);
 
             if (contentStream != null) {
                 contentStream.close();
@@ -540,6 +535,20 @@ public class PDFService {
      * @throws IOException if an error occurs during SVG processing or PDF writing
      * @see Content
      */
+    /**
+     * Rejects SVG/XML content containing a DOCTYPE or ENTITY declaration, guarding against
+     * XXE (local file disclosure) or SSRF via external entity resolution.
+     *
+     * @param svg the raw SVG markup to check
+     * @throws IOException if the content contains a DOCTYPE or ENTITY declaration
+     */
+    static void rejectXxePayload(String svg) throws IOException {
+        if (svg != null
+                && (svg.toUpperCase().contains("<!DOCTYPE") || svg.toUpperCase().contains("<!ENTITY"))) {
+            throw new IOException("Rejected SVG content containing a DOCTYPE/ENTITY declaration");
+        }
+    }
+
     void addSVG(Content content) throws IOException {
         PDRectangle landscape = new PDRectangle(PDRectangle.LETTER.getHeight(), PDRectangle.LETTER.getWidth());
 
@@ -555,6 +564,13 @@ public class PDFService {
         try {
             PdfBoxGraphics2D graphics2D = new PdfBoxGraphics2D(document, (int) pageWidth, (int) pageHeight);
             graphics2D.setFontTextDrawer(new PdfBoxGraphics2DFontTextDrawer());
+
+            // Reject any DOCTYPE/ENTITY declaration before parsing. content.svg comes from
+            // an admin-configured, DB-stored, arbitrary report-service URL (ReportDefinition.url);
+            // Batik's SAXSVGDocumentFactory does not disable external-entity/DOCTYPE resolution
+            // by default, so a malicious or compromised report service could otherwise use it
+            // for XXE (local file disclosure) or SSRF.
+            rejectXxePayload(content.svg);
 
             // Parse the SVG
             String parser = XMLResourceDescriptor.getXMLParserClassName();
@@ -618,13 +634,11 @@ public class PDFService {
      * <p>
      * This method iterates through all pages in the document and adds:
      * - Current date in the top left corner
-     * - Base URL (constructed from HTTP request) centered at the bottom
+     * - Base URL (supplied by the caller) centered at the bottom
      * - Page numbers in the bottom right corner
      * <p>
      * The header and footer content is consistently positioned using standard
-     * margins and font settings. The base URL is dynamically constructed from
-     * the current HTTP request context including scheme, server name, port,
-     * and context path.
+     * margins and font settings.
      * <p>
      * Layout:
      * - Header: Current date (top left)
@@ -632,9 +646,10 @@ public class PDFService {
      * <p>
      * All text uses the standard font and 10-point size for consistency.
      *
+     * @param baseUrl the application's base URL to print in the footer of every page
      * @throws RuntimeException if an IOException occurs during content stream operations
      */
-    void addHeadersAndFooters() {
+    void addHeadersAndFooters(String baseUrl) {
         // Step 2: Add header and footer to each page
         int totalPages = document.getNumberOfPages();
         for (int i = 0; i < totalPages; i++) {
@@ -675,10 +690,7 @@ public class PDFService {
                 contentStream.showText(currentDate);
                 contentStream.endText();
 
-                // Base URL (center) - constructed from request
-                String baseUrl = request.getScheme() + "://" + request.getServerName() +
-                        (request.getServerPort() != 80 && request.getServerPort() != 443 ?
-                                ":" + request.getServerPort() : "") + request.getContextPath();
+                // Base URL (center) - supplied by the caller
                 float baseUrlWidth = TEXT_FONT.getStringWidth(baseUrl) / 1000 * 10;
                 float centerX = (mediaBox.getWidth() - baseUrlWidth) / 2;
                 contentStream.beginText();

@@ -102,7 +102,8 @@ public class LogoutView extends VerticalLayout implements BeforeEnterObserver {
     @Override
     public void beforeEnter(BeforeEnterEvent event) {
         VaadinSession.getCurrent().close();
+        // setLocation already triggers a full browser navigation away from this view,
+        // so no event.forwardTo(...) is needed (or reachable) afterward.
         com.vaadin.flow.component.UI.getCurrent().getPage().setLocation("/logout");
-        event.forwardTo("/");
     }
 }

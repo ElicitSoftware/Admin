@@ -162,7 +162,7 @@ public class ReportingService {
      * @param status The completion status containing survey and participant information
      * @throws RuntimeException implicitly through PDF generation or service calls
      * @see #callReport(ReportDefinition, int)
-     * @see PDFService#generatePDF(ArrayList)
+     * @see PDFService#generatePDF(ArrayList, String)
      * @see Survey#reports
      */
 
@@ -194,7 +194,10 @@ public class ReportingService {
                 reportResponse = callReport(rpt, respondent_id);
                 reportResponses.add(reportResponse);
             }
-            byte[] pdfContent = pdfService.generatePDF(this.reportResponses);
+            String baseUrl = httpRequest.getScheme() + "://" + httpRequest.getServerName() +
+                    (httpRequest.getServerPort() != 80 && httpRequest.getServerPort() != 443 ?
+                            ":" + httpRequest.getServerPort() : "") + httpRequest.getContextPath();
+            byte[] pdfContent = pdfService.generatePDF(this.reportResponses, baseUrl);
             String pdfKey = PDFDownloadResource.cachePDF(pdfContent);
             String pdfUrl = httpRequest.getContextPath() + "/api/pdf/download?key=" + pdfKey;
 

@@ -13,6 +13,7 @@ package com.elicitsoftware.model;
 
 import io.quarkus.hibernate.orm.panache.PanacheEntityBase;
 import jakarta.persistence.*;
+import org.hibernate.annotations.Immutable;
 
 import java.text.SimpleDateFormat;
 import java.util.Date;
@@ -59,6 +60,12 @@ import java.util.Date;
  *   <li><strong>Date Tracking:</strong> Comprehensive audit trail with creation and finalization timestamps</li>
  * </ul>
  *
+ * <p><strong>Read-only view:</strong> {@code survey.status} is a SQL {@code VIEW} (joining
+ * respondents, subjects, and departments - see {@code V0.0.1__CREATE_ADMIN_SCHEMA.sql}
+ * and {@code V0.0.7__Convert_Timestamps_To_Timestamptz.sql}), not a table. Instances of
+ * this entity must never be {@code .persist()}-ed or {@code .update()}-ed; {@link Immutable}
+ * makes Hibernate itself reject writes rather than relying on convention.</p>
+ *
  * @author Elicit Software
  * @version 1.0
  * @since 1.0
@@ -67,6 +74,7 @@ import java.util.Date;
  * @see jakarta.persistence.Table
  */
 @Entity
+@Immutable
 @Table(name = "status", schema = "survey")
 public class Status extends PanacheEntityBase {
 
@@ -75,7 +83,7 @@ public class Status extends PanacheEntityBase {
     /** Sortable entity attribute name for the department name. */
     public static final String PROP_DEPARTMENT_NAME = "departmentName";
     /** Filterable entity attribute name for the numeric department id. */
-    public static final String PROP_DEPARTMENT_ID = "department_id";
+    public static final String PROP_DEPARTMENT_ID = "departmentId";
     /** Sortable/filterable entity attribute name for the first name. */
     public static final String PROP_FIRST_NAME = "firstName";
     /** Sortable entity attribute name for the middle name. */
@@ -123,7 +131,7 @@ public class Status extends PanacheEntityBase {
      * The XID serves as a correlation key for data synchronization
      * and integration with other survey or participant management systems.</p>
      */
-    @Column(name = "XID")
+    @Column(name = "xid")
     private String xid;
 
     /**
@@ -212,7 +220,7 @@ public class Status extends PanacheEntityBase {
      * conjunction with departmentName for organizational tracking.</p>
      */
     @Column(name = "department_id")
-    private long department_id;
+    private long departmentId;
 
     /**
      * Unique access token for survey participation.
@@ -241,7 +249,7 @@ public class Status extends PanacheEntityBase {
      * record is instantiated. This marks when the participant was
      * first registered or invited to participate in the survey.</p>
      */
-    @Column(name = "CREATED_DT")
+    @Column(name = "created_dt")
     public Date createdDt = new Date();
 
     /**
@@ -278,7 +286,7 @@ public class Status extends PanacheEntityBase {
      * @return the matching Status, or null if not found
      */
     public static Status findByXidAndDepartmentId(String xid, int departmentId) {
-        return find("xid = ?1 and department_id = ?2", xid, departmentId).firstResult();
+        return find("xid = ?1 and departmentId = ?2", xid, departmentId).firstResult();
     }
 
     /**
@@ -527,7 +535,7 @@ public class Status extends PanacheEntityBase {
      * @see #getDepartmentName()
      */
     public long getDepartmentId() {
-        return department_id;
+        return departmentId;
     }
 
     /**
@@ -538,7 +546,7 @@ public class Status extends PanacheEntityBase {
      * @see #setDepartmentName(String)
      */
     public void setDepartmentId(long departmentId) {
-        this.department_id = departmentId;
+        this.departmentId = departmentId;
     }
 
     /**

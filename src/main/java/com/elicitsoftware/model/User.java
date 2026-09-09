@@ -101,8 +101,8 @@ public class User extends PanacheEntityBase {
      * relationships with departments and surveys.</p>
      */
     @Id
-    @SequenceGenerator(name = "USERS_ID_GENERATOR", schema = "survey", sequenceName = "USERS_SEQ", allocationSize = 1)
-    @GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "USERS_ID_GENERATOR")
+    @SequenceGenerator(name = "users_id_generator", schema = "survey", sequenceName = "users_seq", allocationSize = 1)
+    @GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "users_id_generator")
     @Column(unique = true, nullable = false, precision = 20)
     private long id;
 

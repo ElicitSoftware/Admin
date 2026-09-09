@@ -13,6 +13,8 @@ package com.elicitsoftware.service;
 
 import com.elicitsoftware.request.AddRequest;
 import com.elicitsoftware.response.AddResponse;
+import com.elicitsoftware.rest.TokenService;
+import io.quarkus.logging.Log;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.transaction.Transactional;
 
@@ -194,13 +196,23 @@ public class CsvImportService {
                 }
 
                 try {
+                    // parseCsvLine only ever throws user-actionable validation messages
+                    // (missing/invalid field values), which are safe to surface as-is.
                     AddRequest request = parseCsvLine(line);
-                    AddResponse subjectResponse = tokenService.putSubject(request);
+                    try {
+                        AddResponse subjectResponse = tokenService.putSubject(request);
 
-                    if (subjectResponse.getErrors().size() > 0 ) {
-                        response.setError(subjectResponse.getErrors().get(0));
-                    } else {
-                        response.addStatus(subjectResponse.getSubjects().getFirst());
+                        if (subjectResponse.getErrors().size() > 0) {
+                            response.setError(subjectResponse.getErrors().get(0));
+                        } else {
+                            response.addStatus(subjectResponse.getSubjects().getFirst());
+                        }
+                    } catch (Exception e) {
+                        // Unlike parseCsvLine, putSubject can propagate an unexpected
+                        // infra/persistence failure - log it and keep the client-facing
+                        // message generic rather than leaking driver/JPA error text.
+                        Log.errorf(e, "CSV import: unexpected error processing line %d", lineNumber);
+                        errors.add("Line " + lineNumber + ": failed to process this record due to an unexpected error");
                     }
                 } catch (Exception e) {
                     errors.add("Line " + lineNumber + ": " + e.getMessage());

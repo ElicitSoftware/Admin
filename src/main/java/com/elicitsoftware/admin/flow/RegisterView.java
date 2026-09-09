@@ -15,7 +15,7 @@ import com.elicitsoftware.exception.TokenGenerationError;
 import com.elicitsoftware.model.*;
 import com.elicitsoftware.response.AddResponse;
 import com.elicitsoftware.service.CsvImportService;
-import com.elicitsoftware.service.TokenService;
+import com.elicitsoftware.rest.TokenService;
 import com.vaadin.flow.component.button.Button;
 import com.vaadin.flow.component.button.ButtonVariant;
 import com.vaadin.flow.component.combobox.ComboBox;
@@ -219,24 +219,32 @@ public class RegisterView extends HorizontalLayout implements HasDynamicTitle, B
         );
         formLayout.setWidth("100%");
         ComboBox<Department> departmentComboBox = getDepartmentComboBox();
+        departmentComboBox.setId("register-department");
         if (user.getDepartments().size() == 1) {
             departmentComboBox.setValue(user.getDepartments().iterator().next());
             subject.setDepartmentId(user.getDepartments().iterator().next().id);
         }
 
         TextField firstName = new TextField("First Name");
+        firstName.setId("register-first-name");
         firstName.addThemeVariants(TextFieldVariant.LUMO_SMALL);
         TextField lastName = new TextField("Last Name");
+        lastName.setId("register-last-name");
         lastName.addThemeVariants(TextFieldVariant.LUMO_SMALL);
         TextField middleName = new TextField("Middle Name");
+        middleName.setId("register-middle-name");
         middleName.addThemeVariants(TextFieldVariant.LUMO_SMALL);
         DatePicker dob = new DatePicker("Date of Birth");
+        dob.setId("register-dob");
         dob.addThemeVariants(DatePickerVariant.LUMO_SMALL);
         EmailField email = new EmailField("Email");
+        email.setId("register-email");
         TextField phone = new TextField("Phone");
+        phone.setId("register-phone");
         phone.setPlaceholder("123-456-7890");
         phone.addThemeVariants(TextFieldVariant.LUMO_SMALL);
         TextField xid = new TextField("external ID");
+        xid.setId("register-xid");
         xid.addThemeVariants(TextFieldVariant.LUMO_SMALL);
 
         formLayout.add(departmentComboBox, firstName, lastName, middleName, dob, email, phone, xid);
@@ -309,6 +317,7 @@ public class RegisterView extends HorizontalLayout implements HasDynamicTitle, B
                 subject = new Subject();
             }
         });
+        saveButton.setId("register-save-button");
         saveButton.addThemeVariants(ButtonVariant.LUMO_PRIMARY);
 
         updateButton = new Button("Update Subject", event -> {
@@ -320,6 +329,7 @@ public class RegisterView extends HorizontalLayout implements HasDynamicTitle, B
                 showErrorDialog("Database Error", "Database error: " + e.getMessage());
             }
         });
+        updateButton.setId("register-update-button");
         updateButton.addThemeVariants(ButtonVariant.LUMO_PRIMARY);
 
         // By default, show only saveButton
@@ -334,6 +344,7 @@ public class RegisterView extends HorizontalLayout implements HasDynamicTitle, B
 
         // Create CSV upload button using modern UploadHandler API
         Upload csvUpload = new Upload();
+        csvUpload.setId("register-csv-upload");
         csvUpload.setAcceptedFileTypes(".csv");
         csvUpload.setMaxFiles(1);
         csvUpload.setMaxFileSize(5 * 1024 * 1024); // 5MB limit

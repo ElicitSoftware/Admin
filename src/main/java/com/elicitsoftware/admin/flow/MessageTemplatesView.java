@@ -91,7 +91,7 @@ public class MessageTemplatesView extends VerticalLayout {
     public MessageTemplatesView() {
         setSizeFull();
 
-        List<MessageTemplate> templates = MessageTemplate.listAll();
+        List<MessageTemplate> templates = MessageTemplate.listAllWithDepartment();
 
         grid.setItems(templates);
         grid.removeAllColumns();

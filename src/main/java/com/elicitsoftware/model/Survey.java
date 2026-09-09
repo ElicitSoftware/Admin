@@ -209,4 +209,36 @@ public class Survey extends PanacheEntityBase {
         // Default constructor for JPA
     }
 
+    /**
+     * Compares this survey to another based on primary key equality.
+     * <p>
+     * {@code id} is a boxed, nullable {@code Integer} (unset before the entity is
+     * persisted), so comparison and hashing use {@link java.util.Objects} null-safe
+     * helpers rather than primitive equality. Consistent {@code equals}/{@code hashCode}
+     * matters here because {@link #reports} and {@link #postSurveyActions} are
+     * JPA-managed {@code Set}-typed collections.
+     *
+     * @param o the object to compare with
+     * @return {@code true} if the other object is a {@code Survey} with the same id
+     */
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) {
+            return true;
+        }
+        if (!(o instanceof Survey other)) {
+            return false;
+        }
+        return java.util.Objects.equals(id, other.id);
+    }
+
+    /**
+     * Returns a hash code derived from the primary key, consistent with {@link #equals(Object)}.
+     *
+     * @return the hash code for this survey
+     */
+    @Override
+    public int hashCode() {
+        return java.util.Objects.hashCode(id);
+    }
 }

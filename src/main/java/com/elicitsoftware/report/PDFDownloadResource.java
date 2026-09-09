@@ -11,6 +11,8 @@ package com.elicitsoftware.report;
  * ***LICENSE_END***
  */
 
+import java.security.SecureRandom;
+import java.util.Base64;
 import java.util.concurrent.ConcurrentHashMap;
 
 import jakarta.ws.rs.GET;
@@ -21,13 +23,17 @@ import jakarta.ws.rs.core.Response;
 
 /**
  * REST resource for serving generated PDFs from a stable application URL.
- * 
- * PDFs are cached with unique keys and served via the /api/pdf/download endpoint with a query parameter.
- * Cache entries expire after 10 minutes.
+ * <p>
+ * PDFs are cached under a 256-bit random key and served via the /api/pdf/download endpoint
+ * with a query parameter. The endpoint is intentionally left unauthenticated
+ * ({@code application.properties} permits {@code /api/pdf/*}) so the browser can open the
+ * report in a new tab without triggering an OIDC redirect; the key's entropy plus single-use
+ * removal are what keep an unguessed/leaked link from being replayed. Cache entries expire
+ * after 10 minutes.
  */
 @Path("/pdf/download")
 public class PDFDownloadResource {
-    
+
     /**
      * Default constructor.
      */
@@ -36,6 +42,7 @@ public class PDFDownloadResource {
 
     private static final ConcurrentHashMap<String, PDFCacheEntry> PDF_CACHE = new ConcurrentHashMap<>();
     private static final long CACHE_EXPIRY_MS = 10 * 60 * 1000;
+    private static final SecureRandom SECURE_RANDOM = new SecureRandom();
 
     private static class PDFCacheEntry {
         byte[] content;
@@ -58,7 +65,9 @@ public class PDFDownloadResource {
      * @return a unique key for the cached PDF
      */
     public static String cachePDF(byte[] pdfContent) {
-        String key = "pdf_" + System.currentTimeMillis() + "_" + System.nanoTime();
+        byte[] randomBytes = new byte[32];
+        SECURE_RANDOM.nextBytes(randomBytes);
+        String key = "pdf_" + Base64.getUrlEncoder().withoutPadding().encodeToString(randomBytes);
         PDF_CACHE.put(key, new PDFCacheEntry(pdfContent));
         return key;
     }
@@ -78,9 +87,8 @@ public class PDFDownloadResource {
                     .build();
         }
 
-        PDFCacheEntry entry = PDF_CACHE.get(key);
+        PDFCacheEntry entry = PDF_CACHE.remove(key);
         if (entry == null || entry.isExpired()) {
-            PDF_CACHE.remove(key);
             return Response.status(Response.Status.NOT_FOUND)
                     .entity("PDF not found or expired")
                     .build();

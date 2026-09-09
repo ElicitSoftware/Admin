@@ -486,4 +486,31 @@ public class Subject extends PanacheEntityBase {
         // Implement DB lookup here, e.g. using JPA or Panache
         return Subject.find("respondent.token", token).firstResult();
     }
+
+    /**
+     * Compares this subject to another based on primary key equality.
+     *
+     * @param o the object to compare with
+     * @return {@code true} if the other object is a {@code Subject} with the same id
+     */
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) {
+            return true;
+        }
+        if (!(o instanceof Subject other)) {
+            return false;
+        }
+        return id == other.id;
+    }
+
+    /**
+     * Returns a hash code derived from the primary key, consistent with {@link #equals(Object)}.
+     *
+     * @return the hash code for this subject
+     */
+    @Override
+    public int hashCode() {
+        return Long.hashCode(id);
+    }
 }

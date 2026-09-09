@@ -26,7 +26,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 /**
  * Booted persistence tests for {@link DepartmentService}.
  *
- * <p>Traceability: UC-010 (Manage Departments). Code-review finding #7 moved the transactional
+ * <p>Traceability: UC-006 (Manage Departments). Code-review finding #7 moved the transactional
  * persistence out of {@code EditDepartmentView} into this service; these tests exercise that
  * seam directly — insert-on-create ({@code id == 0}) and merge-on-update ({@code id != 0}) —
  * against the real schema on the shared PostgreSQL container.</p>
@@ -43,14 +43,14 @@ class DepartmentServiceTest {
 
     private Department newDepartment(String suffix) {
         Department department = new Department();
-        department.name = "UC010 Dept " + suffix;
-        department.code = "UC010-" + suffix;
+        department.name = "UC006 Dept " + suffix;
+        department.code = "UC006-" + suffix;
         department.defaultMessageId = "1";
-        department.fromEmail = "uc010@example.org";
+        department.fromEmail = "uc006@example.org";
         return department;
     }
 
-    /** UC-010: saving a department with id 0 inserts a new row with a generated id. */
+    /** UC-006: saving a department with id 0 inserts a new row with a generated id. */
     @Test
     @TestTransaction
     void savePersistsNewDepartment() {
@@ -59,23 +59,23 @@ class DepartmentServiceTest {
         assertTrue(saved.id > 0, "a new department should receive a generated id");
         Department reloaded = Department.findById(saved.id);
         assertNotNull(reloaded, "the new department should be persisted and findable");
-        assertEquals("UC010 Dept new", reloaded.name);
+        assertEquals("UC006 Dept new", reloaded.name);
     }
 
-    /** UC-010: saving a department with a non-zero id merges changes into the existing row. */
+    /** UC-006: saving a department with a non-zero id merges changes into the existing row. */
     @Test
     @TestTransaction
     void saveMergesExistingDepartment() {
         Department saved = departmentService.save(newDepartment("edit"));
         long id = saved.id;
 
-        saved.name = "UC010 Dept edited";
+        saved.name = "UC006 Dept edited";
         departmentService.save(saved);
 
         Department reloaded = Department.findById(id);
         assertNotNull(reloaded);
-        assertEquals("UC010 Dept edited", reloaded.name);
-        assertEquals(1, Department.count("code = ?1", "UC010-edit"),
+        assertEquals("UC006 Dept edited", reloaded.name);
+        assertEquals(1, Department.count("code = ?1", "UC006-edit"),
                 "update must not create a duplicate row");
     }
 }

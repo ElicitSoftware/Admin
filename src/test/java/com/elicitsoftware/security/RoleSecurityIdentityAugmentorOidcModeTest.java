@@ -12,14 +12,17 @@ package com.elicitsoftware.security;
  */
 
 import com.elicitsoftware.test.PostgresTestResource;
+import io.quarkus.security.identity.AuthenticationRequestContext;
+import io.quarkus.security.identity.SecurityIdentity;
+import io.quarkus.security.runtime.QuarkusPrincipal;
+import io.quarkus.security.runtime.QuarkusSecurityIdentity;
 import io.quarkus.test.common.QuarkusTestResource;
 import io.quarkus.test.junit.QuarkusTest;
-import io.quarkus.test.security.TestSecurity;
+import io.smallrye.mutiny.Uni;
+import jakarta.inject.Inject;
 import org.junit.jupiter.api.Test;
 
-import static io.restassured.RestAssured.given;
-import static org.hamcrest.Matchers.containsString;
-import static org.hamcrest.Matchers.not;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 
 /**
  * Confirms {@link RoleSecurityIdentityAugmentor}'s database fallback is skipped in the
@@ -31,24 +34,37 @@ import static org.hamcrest.Matchers.not;
  * role and OIDC mode active, no database consultation should occur and no role should be
  * granted.</p>
  *
- * <p>{@code @TestSecurity} does not apply any {@code SecurityIdentityAugmentor} by default --
- * {@link RoleSecurityIdentityAugmentor} must be listed explicitly via {@code augmentors} for
- * these tests to exercise it.</p>
+ * <p><strong>2026-09 audit finding #6:</strong> this test previously exercised the augmentor
+ * indirectly through the (formerly public) {@code GET /api/secured/roles} diagnostic endpoint.
+ * That endpoint is now restricted to {@code elicit_admin}, so a role-less identity correctly
+ * gets 403 before ever reaching the augmented-roles check the original assertions relied on.
+ * The augmentor is invoked directly here instead - a cleaner test that doesn't couple identity
+ * augmentation to an unrelated REST resource's authorization policy.</p>
  */
 @QuarkusTest
 @QuarkusTestResource(PostgresTestResource.class)
 class RoleSecurityIdentityAugmentorOidcModeTest {
 
+    /** Runs the supplier synchronously and wraps the result - {@code context.runBlocking()} is
+     * only exercised in DATABASE mode, but a real implementation is still supplied for clarity. */
+    private static final AuthenticationRequestContext SYNC_CONTEXT =
+            supplier -> Uni.createFrom().item(supplier.get());
+
+    @Inject
+    RoleSecurityIdentityAugmentor augmentor;
+
     /** UC-001/BR-005: no OIDC role + OIDC mode = no role granted, even with a matching DB grant. */
     @Test
-    @TestSecurity(user = "admin", roles = {}, augmentors = RoleSecurityIdentityAugmentor.class)
     void noOidcRoleAndOidcModeGrantsNoRole() {
-        given()
-            .when().get("/api/secured/roles")
-            .then()
-            .statusCode(200)
-            .body(not(containsString("elicit_admin")))
-            .body(not(containsString("elicit_user")))
-            .body(not(containsString("elicit_importer")));
+        SecurityIdentity noRoleIdentity = QuarkusSecurityIdentity.builder()
+                .setPrincipal(new QuarkusPrincipal("admin"))
+                .build();
+
+        SecurityIdentity augmented = augmentor.augment(noRoleIdentity, SYNC_CONTEXT)
+                .await().indefinitely();
+
+        assertFalse(augmented.getRoles().contains("elicit_admin"));
+        assertFalse(augmented.getRoles().contains("elicit_user"));
+        assertFalse(augmented.getRoles().contains("elicit_importer"));
     }
 }

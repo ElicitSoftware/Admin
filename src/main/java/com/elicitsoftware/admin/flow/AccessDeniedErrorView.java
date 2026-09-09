@@ -15,6 +15,7 @@ import com.vaadin.flow.router.AccessDeniedException;
 import com.vaadin.flow.router.BeforeEnterEvent;
 import com.vaadin.flow.router.ErrorParameter;
 import com.vaadin.flow.router.HasErrorParameter;
+import jakarta.annotation.security.PermitAll;
 
 /**
  * Overrides Vaadin's built-in {@code RouteAccessDeniedError} so that when
@@ -22,7 +23,13 @@ import com.vaadin.flow.router.HasErrorParameter;
  * authenticated user access to a {@code @RolesAllowed}-guarded view, the
  * user sees the existing "Access Restricted" UI (from {@link UnauthorizedView})
  * instead of Vaadin's default reroute to a generic 404 page.
+ * <p>
+ * {@code @PermitAll} is declared explicitly here rather than relying on Vaadin's
+ * {@code AccessAnnotationChecker} walking up to the inherited annotation on
+ * {@link UnauthorizedView} - correct either way today, but an explicit annotation keeps
+ * this view reachable even if {@code UnauthorizedView}'s own annotation ever changes.
  */
+@PermitAll
 public class AccessDeniedErrorView extends UnauthorizedView
         implements HasErrorParameter<AccessDeniedException> {
 

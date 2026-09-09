@@ -15,6 +15,7 @@ import com.elicitsoftware.model.Department;
 import com.elicitsoftware.model.Message;
 import com.elicitsoftware.model.MessageTemplate;
 import com.elicitsoftware.model.Status;
+import com.elicitsoftware.util.LogMasking;
 import io.quarkus.logging.Log;
 import io.quarkus.mailer.Mail;
 import io.quarkus.mailer.reactive.ReactiveMailer;
@@ -131,13 +132,13 @@ public class EmailService {
      */
     public boolean sendEmail(Status status) {
         Log.debugf("sendEmail: starting for token=%s, email=%s, departmentId=%s",
-                status.getToken(), status.getEmail(), status.getDepartmentId());
+                LogMasking.maskToken(status.getToken()), LogMasking.maskEmail(status.getEmail()), status.getDepartmentId());
 
         try {
             Department department = Department.findById(status.getDepartmentId());
             if (department == null) {
                 Log.warnf("sendEmail: no department found for departmentId=%s, token=%s",
-                        status.getDepartmentId(), status.getToken());
+                        status.getDepartmentId(), LogMasking.maskToken(status.getToken()));
                 return false;
             }
             Log.debugf("sendEmail: resolved department id=%d, defaultMessageId=%s",
@@ -145,7 +146,7 @@ public class EmailService {
 
             String[] defaultMessagesIds = department.defaultMessageId.split(",");
             Log.debugf("sendEmail: %d message template(s) to send for token=%s",
-                    defaultMessagesIds.length, status.getToken());
+                    defaultMessagesIds.length, LogMasking.maskToken(status.getToken()));
 
             boolean allSent = true;
             for (String defaultMessageID : defaultMessagesIds) {
@@ -154,7 +155,7 @@ public class EmailService {
                     MessageTemplate messageTemplate = MessageTemplate.findById(Long.parseLong(defaultMessageID));
                     if (messageTemplate == null) {
                         Log.warnf("sendEmail: no message template found for id=%s, token=%s",
-                                defaultMessageID, status.getToken());
+                                defaultMessageID, LogMasking.maskToken(status.getToken()));
                         continue;
                     }
                     String subject = messageTemplate.subject;
@@ -163,7 +164,7 @@ public class EmailService {
                             messageTemplate.id, messageTemplate.mimeType, subject, body.length());
 
                     Log.debugf("sendEmail: dispatching to mailer, from=%s, to=%s, host=%s, port=%d, timeoutSeconds=%d",
-                            fromEmail, status.getEmail(), mailerHost, mailerPort, mailSendTimeoutSeconds);
+                            fromEmail, LogMasking.maskEmail(status.getEmail()), mailerHost, mailerPort, mailSendTimeoutSeconds);
                     long startMs = System.currentTimeMillis();
                     if (messageTemplate.mimeType.equals("text/html")) {
                         mailer.send(Mail.withHtml(status.getEmail(), subject, body).setFrom(fromEmail))
@@ -173,27 +174,27 @@ public class EmailService {
                                 .await().atMost(Duration.ofSeconds(mailSendTimeoutSeconds));
                     }
                     Log.debugf("sendEmail: mailer.send() returned for template id=%s, token=%s, elapsedMs=%d",
-                            messageTemplate.id, status.getToken(), (Object) (System.currentTimeMillis() - startMs));
+                            messageTemplate.id, LogMasking.maskToken(status.getToken()), (Object) (System.currentTimeMillis() - startMs));
                 } catch (Exception e) {
                     allSent = false;
                     Throwable cause = e.getCause() != null ? e.getCause() : e;
                     if (cause instanceof TimeoutException) {
                         Log.errorf("sendEmail: mailer.send() timed out after %ds for template id=%s, token=%s, to=%s, host=%s, port=%d",
-                                mailSendTimeoutSeconds, defaultMessageID, status.getToken(), status.getEmail(), mailerHost, mailerPort);
+                                mailSendTimeoutSeconds, defaultMessageID, LogMasking.maskToken(status.getToken()), LogMasking.maskEmail(status.getEmail()), mailerHost, mailerPort);
                     } else if (cause instanceof io.vertx.ext.mail.SMTPException) {
                         Log.errorf("sendEmail: SMTP rejected template id=%s for token=%s, host=%s, port=%d: %s",
-                                defaultMessageID, status.getToken(), mailerHost, mailerPort, cause.getMessage());
+                                defaultMessageID, LogMasking.maskToken(status.getToken()), mailerHost, mailerPort, cause.getMessage());
                     } else {
                         Log.errorf(e, "sendEmail: failed to send template id=%s for token=%s, host=%s, port=%d",
-                                defaultMessageID, status.getToken(), mailerHost, mailerPort);
+                                defaultMessageID, LogMasking.maskToken(status.getToken()), mailerHost, mailerPort);
                     }
                 }
                 Log.debug("sendEmail: template send attempt completed");
             }
-            Log.debugf("sendEmail: finished for token=%s, allSent=%b", status.getToken(), allSent);
+            Log.debugf("sendEmail: finished for token=%s, allSent=%b", LogMasking.maskToken(status.getToken()), allSent);
             return allSent;
         } catch (Exception ex) {
-            Log.errorf(ex, "sendEmail: failed to send email for token=%s", status.getToken());
+            Log.errorf(ex, "sendEmail: failed to send email for token=%s", LogMasking.maskToken(status.getToken()));
             return false;
         }
     }
@@ -343,7 +344,7 @@ public class EmailService {
             }
 
             Log.debugf("sendMessage: message id=%d to=%s subject='%s' mimeType=%s bodyLength=%d",
-                    message.id, message.subject.getEmail(), message.subjectLine, message.mimeType,
+                    message.id, LogMasking.maskEmail(message.subject.getEmail()), message.subjectLine, message.mimeType,
                     message.body == null ? 0 : message.body.length());
 
             Mail mail;
@@ -372,7 +373,7 @@ public class EmailService {
             Throwable cause = ex.getCause() != null ? ex.getCause() : ex;
             if (cause instanceof TimeoutException) {
                 Log.errorf("sendMessage: mailer.send() timed out after %ds for message id=%d, to=%s, host=%s, port=%d",
-                        mailSendTimeoutSeconds, message.id, message.subject.getEmail(), mailerHost, mailerPort);
+                        mailSendTimeoutSeconds, message.id, LogMasking.maskEmail(message.subject.getEmail()), mailerHost, mailerPort);
             } else if (cause instanceof io.vertx.ext.mail.SMTPException) {
                 Log.errorf("sendMessage: SMTP rejected message id=%d, host=%s, port=%d: %s",
                         message.id, mailerHost, mailerPort, cause.getMessage());

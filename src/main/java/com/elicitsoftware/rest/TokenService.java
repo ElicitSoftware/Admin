@@ -1,4 +1,4 @@
-package com.elicitsoftware.service;
+package com.elicitsoftware.rest;
 
 /*-
  * ***LICENSE_START***
@@ -20,6 +20,7 @@ import com.elicitsoftware.response.AddResponseStatus;
 import com.elicitsoftware.service.CsvImportService;
 import com.elicitsoftware.util.RandomString;
 import io.quarkus.logging.Log;
+import io.quarkus.narayana.jta.QuarkusTransaction;
 import io.quarkus.security.Authenticated;
 import io.quarkus.security.identity.SecurityIdentity;
 import jakarta.annotation.security.PermitAll;
@@ -172,57 +173,77 @@ public class TokenService {
     @RolesAllowed({"elicit_importer", "elicit_admin", "elicit_user"})
     @Consumes(MediaType.APPLICATION_JSON)
     @Produces(MediaType.APPLICATION_JSON)
-    @Transactional
     public AddResponse putSubjects(List<AddRequest> requests) {
         AddResponse response = new AddResponse();
 
-        // Process each subject request individually
+        // Each request gets its own transaction (requiringNew()) rather than sharing one
+        // @Transactional boundary across the whole batch. A persistence failure on request N
+        // used to be able to mark the shared transaction rollback-only, silently discarding
+        // already-"successful" requests N+1..end at commit time even though the response
+        // reported them as saved. With per-item transactions, a failure on request N is
+        // isolated to request N's own commit; request N+1 still gets a fresh transaction.
         for (AddRequest request : requests) {
             AddResponseStatus addStatus;
             try {
-                // Check if this xid and department should be excluded
-                boolean isExcluded = ExcludedXid.isExcluded(request.xid, request.departmentId);
-                if (isExcluded) {
-                    Status status = new Status();
-                    addStatus = new AddResponseStatus(status, "Excluded Subject: " + request.xid);
-                } else {
-                    // Check if they are an existing respondent
-                    Status status = Status.findByXidAndDepartmentId(request.xid, request.departmentId);
-                    if (status == null) {
-                        // Create new subject
-                        Respondent respondent = getToken(request.surveyId);
-                        Subject subject = new Subject(request.xid, request.surveyId, request.departmentId,
-                                                    request.firstName, request.lastName, request.middleName,
-                                                    request.dob, request.email, request.phone);
-                        subject.setRespondent(respondent);
-                        subject.persistAndFlush();
-
-                        // Create messages for the new subject
-                        ArrayList<Message> messages = Message.createMessagesForSubject(subject);
-                        for (Message message : messages) {
-                            message.persistAndFlush();
-                        }
-
-                        status = Status.findByXidAndDepartmentId(request.xid, request.departmentId);
-                        addStatus = new AddResponseStatus(status, "New Subject: " + request.xid);
-                    } else {
-                        addStatus = new AddResponseStatus(status, "Existing Subject: " + request.xid);
-                    }
-                }
-            } catch (TokenGenerationError e) {
-                // Create error status for this individual subject
-                Status errorStatus = new Status();
-                addStatus = new AddResponseStatus(errorStatus, "Error processing " + request.xid + ": " + e.getMessage());
+                addStatus = QuarkusTransaction.requiringNew().call(() -> processSubjectRequest(request));
             } catch (Exception e) {
-                // Handle any other unexpected errors for this subject
+                // The per-item transaction failed to commit (e.g. a constraint violation
+                // surfaced only at flush/commit time). Isolated to this item only.
                 Status errorStatus = new Status();
                 addStatus = new AddResponseStatus(errorStatus, "Unexpected error processing " + request.xid + ": " + e.getMessage());
             }
-
             response.addStatus(addStatus);
         }
 
         return response;
+    }
+
+    /**
+     * Processes a single subject registration request within the caller's transaction.
+     * <p>
+     * Known/expected failure modes ({@link TokenGenerationError}) are handled here and
+     * turned into an error status. Any other, unexpected exception (e.g. a persistence
+     * failure) is intentionally left to propagate so the per-item transaction boundary
+     * in {@link #putSubjects(List)} rolls back exactly this request.
+     *
+     * @param request the subject registration request
+     * @return the status for this single request
+     */
+    private AddResponseStatus processSubjectRequest(AddRequest request) {
+        try {
+            // Check if this xid and department should be excluded
+            boolean isExcluded = ExcludedXid.isExcluded(request.xid, request.departmentId);
+            if (isExcluded) {
+                Status status = new Status();
+                return new AddResponseStatus(status, "Excluded Subject: " + request.xid);
+            }
+
+            // Check if they are an existing respondent
+            Status status = Status.findByXidAndDepartmentId(request.xid, request.departmentId);
+            if (status == null) {
+                // Create new subject
+                Respondent respondent = getToken(request.surveyId);
+                Subject subject = new Subject(request.xid, request.surveyId, request.departmentId,
+                                            request.firstName, request.lastName, request.middleName,
+                                            request.dob, request.email, request.phone);
+                subject.setRespondent(respondent);
+                subject.persistAndFlush();
+
+                // Create messages for the new subject
+                ArrayList<Message> messages = Message.createMessagesForSubject(subject);
+                for (Message message : messages) {
+                    message.persistAndFlush();
+                }
+
+                status = Status.findByXidAndDepartmentId(request.xid, request.departmentId);
+                return new AddResponseStatus(status, "New Subject: " + request.xid);
+            } else {
+                return new AddResponseStatus(status, "Existing Subject: " + request.xid);
+            }
+        } catch (TokenGenerationError e) {
+            Status errorStatus = new Status();
+            return new AddResponseStatus(errorStatus, "Error processing " + request.xid + ": " + e.getMessage());
+        }
     }
 
     /**
@@ -384,7 +405,7 @@ public class TokenService {
      */
     @Path("/roles")
     @GET
-    @PermitAll
+    @RolesAllowed("elicit_admin")
     public String roles() {
         StringBuilder sb = new StringBuilder();
         
