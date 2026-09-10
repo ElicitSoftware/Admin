@@ -105,7 +105,15 @@ public class Table {
      * 2D array containing the table content data.
      */
     private String[][] content;
-    
+
+    /**
+     * Actual rendered height of each body row, in the same order as {@link #content}.
+     * <p>
+     * A row's height may exceed {@link #rowHeight} (the single-line unit) when one of
+     * its cells wraps onto multiple lines.
+     */
+    private float[] rowHeights;
+
     /**
      * Margin within each table cell in points.
      */
@@ -325,6 +333,24 @@ public class Table {
      */
     public void setContent(String[][] content) {
         this.content = content;
+    }
+
+    /**
+     * Returns the actual rendered height of each body row.
+     *
+     * @return array of per-row heights, in the same order as {@link #getContent()}
+     */
+    public float[] getRowHeights() {
+        return rowHeights;
+    }
+
+    /**
+     * Sets the actual rendered height of each body row.
+     *
+     * @param rowHeights array of per-row heights, in the same order as {@link #getContent()}
+     */
+    public void setRowHeights(float[] rowHeights) {
+        this.rowHeights = rowHeights;
     }
 
     /**

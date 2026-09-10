@@ -139,6 +139,17 @@ public class TableBuilder {
     }
 
     /**
+     * Sets the actual rendered height of each body row.
+     *
+     * @param rowHeights array of per-row heights, in the same order as the content
+     * @return this builder for chaining
+     */
+    public TableBuilder setRowHeights(float[] rowHeights) {
+        table.setRowHeights(rowHeights);
+        return this;
+    }
+
+    /**
      * Sets the columns configuration for the table.
      * <p>
      * This method allows defining the properties of the table columns, such as
