@@ -543,15 +543,11 @@ public class SearchView extends VerticalLayout implements HasDynamicTitle, Befor
             actionLayout.setAlignItems(Alignment.CENTER);
 
             ComboBox<String> actionComboBox = new ComboBox<>();
-            actionComboBox.setItems("Send Email", "Print Reports");
             actionComboBox.setPlaceholder("Select action");
             actionComboBox.setWidth("120px");
             actionComboBox.addThemeVariants(ComboBoxVariant.LUMO_SMALL);
 
-            // Enable/disable "Print Reports" based on status
-            if (!"Finished".equals(status.getStatus())) {
-                actionComboBox.setItems("Send Email");
-            }
+            actionComboBox.setItems(buildActionOptions(status));
 
             String token = status.getToken();
             // Set value only if this is the active row
@@ -615,6 +611,9 @@ public class SearchView extends VerticalLayout implements HasDynamicTitle, Befor
                         } catch (Exception ex) {
                             Notification.show("Failed to generate reports: " + ex.getMessage(), 5000, Notification.Position.TOP_CENTER);
                         }
+                    } else if ("Export".equals(selectedAction)) {
+                        UI.getCurrent().getPage().executeJs("window.open($0, '_blank')", buildExportUrl(status));
+                        Notification.show("Export downloading...", 3000, Notification.Position.TOP_CENTER);
                     }
                     // Clear selection and remove submit button after action
                     actionComboBox.clear();
@@ -652,6 +651,38 @@ public class SearchView extends VerticalLayout implements HasDynamicTitle, Befor
         gridWithPaginationLayout.setSizeFull();
         respondentsLayout.add(gridWithPaginationLayout);
         respondentsLayout.setFlexGrow(1, gridWithPaginationLayout);
+    }
+
+    /**
+     * Builds the list of actions offered for a subject's row in the Action column.
+     * "Print Reports" only appears once the survey is finished, and "Export" (for moving this
+     * respondent's data to another Elicit instance, see {@code RespondentExportResource}) only
+     * appears for {@code elicit_admin}.
+     *
+     * @param status the row's status record
+     * @return the action names to offer, in display order
+     */
+    List<String> buildActionOptions(Status status) {
+        List<String> actionOptions = new ArrayList<>();
+        actionOptions.add("Send Email");
+        if ("Finished".equals(status.getStatus())) {
+            actionOptions.add("Print Reports");
+        }
+        if (identity.hasRole("elicit_admin")) {
+            actionOptions.add("Export");
+        }
+        return actionOptions;
+    }
+
+    /**
+     * Builds the URL that downloads a respondent's export file, matching the id
+     * {@code RespondentExportResource} expects.
+     *
+     * @param status the row's status record
+     * @return the export URL for {@code status}'s respondent
+     */
+    String buildExportUrl(Status status) {
+        return "/api/secured/respondent/export?id=" + status.getRespondentId();
     }
 
     /**
