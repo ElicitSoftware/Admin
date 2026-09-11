@@ -33,6 +33,7 @@ import java.util.Set;
 import java.util.stream.Collectors;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
@@ -128,5 +129,46 @@ class SearchViewTest extends QuarkusBrowserlessTest {
                 .filter(Status.PROP_TOKEN::equals)
                 .count();
         assertEquals(1, tokenMappings, "exactly one column should sort by the token property");
+    }
+
+    /** UC-011 (Export Respondent Data): elicit_admin is offered "Export" alongside the other actions. */
+    @Test
+    @TestSecurity(user = "search.admin", roles = {"elicit_admin"})
+    void exportActionOfferedToAdminOnly() {
+        Status finished = new Status();
+        finished.setStatus("Finished");
+
+        assertEquals(List.of("Send Email", "Print Reports", "Export"), view.buildActionOptions(finished));
+    }
+
+    /** UC-011: a non-admin never sees the Export action, regardless of survey status. */
+    @Test
+    @TestSecurity(user = "search.tester", roles = {"elicit_user"})
+    void exportActionHiddenFromNonAdmin() {
+        Status finished = new Status();
+        finished.setStatus("Finished");
+
+        assertFalse(view.buildActionOptions(finished).contains("Export"),
+                "a non-admin must not be offered Export");
+    }
+
+    /** UC-002: "Print Reports" is only offered once the survey is Finished. */
+    @Test
+    @TestSecurity(user = "search.tester", roles = {"elicit_user"})
+    void printReportsOnlyOfferedWhenFinished() {
+        Status inProgress = new Status();
+        inProgress.setStatus("In Progress");
+
+        assertEquals(List.of("Send Email"), view.buildActionOptions(inProgress));
+    }
+
+    /** UC-011: the export URL is keyed by the respondent id that RespondentExportResource expects. */
+    @Test
+    @TestSecurity(user = "search.tester", roles = {"elicit_user"})
+    void exportUrlUsesRespondentId() {
+        Status status = new Status();
+        status.setRespondentId(42L);
+
+        assertEquals("/api/secured/respondent/export?id=42", view.buildExportUrl(status));
     }
 }

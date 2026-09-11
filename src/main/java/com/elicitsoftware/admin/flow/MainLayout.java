@@ -208,6 +208,7 @@ public class MainLayout extends AppLayout implements AfterNavigationListener {
      *   <li><strong>Departments:</strong> Manage department information</li>
      *   <li><strong>Message Templates:</strong> Manage communication templates</li>
      *   <li><strong>Users:</strong> Manage user accounts and permissions</li>
+     *   <li><strong>Import Respondent:</strong> Import a respondent data file exported from another instance</li>
      * </ul>
      *
      * <h4>System Actions (all users):</h4>
@@ -240,6 +241,8 @@ public class MainLayout extends AppLayout implements AfterNavigationListener {
                     VaadinIcon.ENVELOPE.create()));
             adminSection.addItem(new SideNavItem("Users", UsersView.class,
                     VaadinIcon.GROUP.create()));
+            adminSection.addItem(new SideNavItem("Import Respondent", RespondentImportView.class,
+                    VaadinIcon.UPLOAD.create()));
             nav.addItem(adminSection);
         }
         SideNavItem logoutLink = new SideNavItem("Logout", LogoutView.class,
