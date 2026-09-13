@@ -1,14 +1,14 @@
 # Kimball Type 2 Impact on Admin
 
-> **Status (2026-09-03):** Not yet implemented on either side. Survey's structural
-> tables (`src/main/resources/db/migration/V001__Create_Survey_Schema.sql` etc., in the
-> `Survey` repo) do not yet have the durable-key/`version`/`effective_from`/`effective_to`/
-> `is_draft` columns described below — the design lives in Survey's own
-> `research/Kimball_type_2.md` and a `com.elicitsoftware.scd` package of `@Disabled`
-> executable specs awaiting that migration. Admin's export/import code is still on
-> `ELICIT_SURVEY_EXPORT_V1` (`SurveyDefinitionExportService.FORMAT_VERSION`), with none of
-> the Type 2 columns wired in. This document is the plan to execute once Survey ships its
-> Kimball Type 2 migration.
+> **Status (2026-09-12):** Implemented. Survey shipped its Kimball Type 2 migration
+> (`V001__Create_Survey_Schema.sql` / `migration-v3/V010__Kimball_Type2_SCD.sql`), and
+> Admin's side described below is now done: `SurveyDefinitionExportService`/
+> `SurveyDefinitionImportService` are on `ELICIT_SURVEY_EXPORT_V2` (durable keys, Type 2
+> columns, no V1 backward compatibility), `RespondentExportService`/
+> `RespondentImportService` carry `question_version` on `ELICIT_EXPORT_V2`, and
+> `V0.0.12__Add_Kimball_Durable_Seq_Grants.sql` grants `surveyadmin_user` access to the
+> new durable sequences. Section 6 (Admin UI version-history surfacing) remains out of
+> scope per the 2026-09-11 scope note below.
 
 ## Overview
 
@@ -235,16 +235,18 @@ durableMap.put(sourceId, newDurableId);
 Then, when inserting `steps_sections`, resolve the durable step/section ids from the
 durable map rather than the surrogate map.
 
-### Backward compatibility with V1 exports
+### No backward compatibility with V1 exports — decision reversed (2026-09-11)
 
-When importing a `V1` export (generated before Kimball Type 2):
+**Decision**: `SurveyDefinitionImportService` will **not** support importing pre-Kimball
+(`V1`) export files at all. There is no surrogate-to-durable translation path. On
+detecting a format-version header that is not `V2_KIMBALL_TYPE2`, the importer must
+reject the file immediately with a clear error message (e.g. "This export was generated
+before the Kimball Type 2 migration and cannot be imported into this database version —
+re-export the source survey with a current Admin build") and perform no inserts.
 
-- Insert with `version = 0`, `effective_from = '1970-01-01 00:00:00+00'`,
-  `effective_to = '9999-12-31 23:59:59+00'`, `is_draft = false`.
-- Allocate a new durable id from the durable sequence.
-- FK columns in join tables (`steps_sections.step_id`, etc.) are still surrogate values
-  in V1 exports; translate them via the surrogate map, then look up the durable id using
-  the surrogate-to-durable mapping maintained during the import.
+This removes the dual surrogate/durable mapping logic that a backward-compatibility path
+would otherwise require, at the cost of no longer being able to import archived V1
+export files without first re-exporting them from a pre-Kimball Admin build.
 
 ---
 
@@ -270,8 +272,9 @@ answers: respondent_id|question_id|section_question_id|display_key|text_value|de
 "  (:respondent_id, :survey_id, :question_id, :section_question_id, :display_key, :text_value, :deleted, :question_version)"
 ```
 
-For V1 exports that do not include `question_version`, default the value to `0` at
-import time.
+Consistent with the decision above, `RespondentImportService` does not support V1
+(pre-Kimball) exports either — an import file missing `question_version` is a V1 export
+and must be rejected with a clear error rather than defaulted to `0`.
 
 ---
 
@@ -284,6 +287,12 @@ changes) and `survey.surveys` (Type 1 only). No changes needed.
 ---
 
 ## 6. Admin UI — Surfacing Version History (optional enhancement)
+
+> **Scope note (2026-09-11)**: This section, and any other Author/Admin Tool UI work
+> (draft editing screens, publish-workflow controls, version-history views), is
+> intentionally **out of scope** for this implementation pass. It will be designed and
+> built in a separate, later effort. The service-layer/export-import work in Sections
+> 1–4 does not depend on it.
 
 Although not strictly required for the Kimball Type 2 implementation itself, the Admin
 Tool is the natural place to surface version history to administrators:
@@ -314,11 +323,16 @@ to the shared database:
 | 2 | Bump export format version to `ELICIT_SURVEY_EXPORT_V2`; update the `FORMAT_VERSION` constant | `src/main/java/com/elicitsoftware/service/SurveyDefinitionExportService.java` |
 | 3 | Update all `get*()` export queries to select durable key columns, Type 2 columns, and renamed metadata columns; filter on `effective_from <= NOW() AND effective_to > NOW()` | `src/main/java/com/elicitsoftware/service/SurveyDefinitionExportService.java` |
 | 4 | Add durable-key maps to the importer; update all `INSERT` statements to populate durable key and Type 2 columns; consume `RETURNING id, {entity}_id` | `src/main/java/com/elicitsoftware/service/SurveyDefinitionImportService.java` |
-| 5 | Add backward-compat path in the importer for V1 exports (allocate durable id, default Type 2 columns) | `src/main/java/com/elicitsoftware/service/SurveyDefinitionImportService.java` |
+| 5 | Add explicit rejection of pre-Kimball (`V1`) export files: detect the format-version header and fail fast with a clear error message — no surrogate/durable translation path is built | `src/main/java/com/elicitsoftware/service/SurveyDefinitionImportService.java` |
 | 6 | Add `question_version` to the respondent export format; update the export query | `src/main/java/com/elicitsoftware/service/RespondentExportService.java` |
-| 7 | Add `question_version` to the respondent import INSERT; default to `0` for V1 exports | `src/main/java/com/elicitsoftware/service/RespondentImportService.java` |
+| 7 | Add `question_version` to the respondent import INSERT; reject V1 respondent exports (missing `question_version`) with a clear error rather than defaulting | `src/main/java/com/elicitsoftware/service/RespondentImportService.java` |
 | 8 | Regression test: export a known survey from a Kimball-migrated DB; re-import into a fresh DB; verify row counts and FK integrity | QA / test environment |
 | 9 | Regression test: export respondents (including answers) and re-import; verify `question_version` round-trips correctly | QA / test environment |
+| 10 | Regression test: attempt to import a pre-Kimball (`V1`) export file and confirm it is rejected with a clear error, not partially imported | QA / test environment |
+
+**Rollback strategy**: no Flyway down-migration will be authored for `V0.0.12` or any
+other Kimball-related Admin migration. Recovery from a bad rollout is an operational
+pre-upgrade database backup/restore.
 
 ---
 
@@ -328,6 +342,6 @@ to the shared database:
 |---|---|
 | `src/main/resources/db/migration/V0.0.12__Add_Kimball_Durable_Seq_Grants.sql` | **New file** — grants eight new durable sequences to `${surveyadmin_user}` |
 | `src/main/java/com/elicitsoftware/service/SurveyDefinitionExportService.java` | Updated export queries (durable keys, Type 2 columns, renamed metadata columns), new format version |
-| `src/main/java/com/elicitsoftware/service/SurveyDefinitionImportService.java` | Updated INSERT statements (durable key allocation, Type 2 defaults), dual surrogate+durable id maps, V1 backward compat |
+| `src/main/java/com/elicitsoftware/service/SurveyDefinitionImportService.java` | Updated INSERT statements (durable key allocation, Type 2 defaults); rejects pre-Kimball (`V1`) export files instead of translating them |
 | `src/main/java/com/elicitsoftware/service/RespondentExportService.java` | Add `question_version` to answers export |
-| `src/main/java/com/elicitsoftware/service/RespondentImportService.java` | Add `question_version` to answers import INSERT |
+| `src/main/java/com/elicitsoftware/service/RespondentImportService.java` | Add `question_version` to answers import INSERT; rejects V1 (pre-Kimball) respondent exports |

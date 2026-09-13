@@ -87,12 +87,12 @@ class SurveyDefinitionImportServiceTest {
                         + "VALUES (?1, ?2, ?3, 'seeded', 'Text')")
                 .setParameter(1, id).setParameter(2, surveyId).setParameter(3, name)
                 .executeUpdate();
-        return id;
+        return queryLong("SELECT select_group_id FROM survey.select_groups WHERE id = ?1", id);
     }
 
     private void insertSelectItem(int surveyId, long groupId, String displayText, int displayOrder) {
         long id = nextVal("survey.select_items_seq");
-        em.createNativeQuery("INSERT INTO survey.select_items (id, survey_id, group_id, display_text, display_order, coded_value) "
+        em.createNativeQuery("INSERT INTO survey.select_items (id, survey_id, select_group_id, display_text, display_order, coded_value) "
                         + "VALUES (?1, ?2, ?3, ?4, ?5, 'CODE')")
                 .setParameter(1, id).setParameter(2, surveyId).setParameter(3, groupId)
                 .setParameter(4, displayText).setParameter(5, displayOrder)
@@ -105,7 +105,7 @@ class SurveyDefinitionImportServiceTest {
                         + "VALUES (?1, ?2, ?3, ?4, 'D')")
                 .setParameter(1, id).setParameter(2, surveyId).setParameter(3, displayOrder).setParameter(4, name)
                 .executeUpdate();
-        return id;
+        return queryLong("SELECT step_id FROM survey.steps WHERE id = ?1", id);
     }
 
     private long insertSection(int surveyId, int displayOrder, String name) {
@@ -114,7 +114,7 @@ class SurveyDefinitionImportServiceTest {
                         + "VALUES (?1, ?2, ?3, ?4, 'D')")
                 .setParameter(1, id).setParameter(2, surveyId).setParameter(3, displayOrder).setParameter(4, name)
                 .executeUpdate();
-        return id;
+        return queryLong("SELECT section_id FROM survey.sections WHERE id = ?1", id);
     }
 
     private long insertStepsSection(int surveyId, long stepId, long sectionId, String displayKey) {
@@ -125,7 +125,7 @@ class SurveyDefinitionImportServiceTest {
                 .setParameter(1, id).setParameter(2, surveyId).setParameter(3, stepId)
                 .setParameter(4, sectionId).setParameter(5, displayKey)
                 .executeUpdate();
-        return id;
+        return queryLong("SELECT steps_sections_id FROM survey.steps_sections WHERE id = ?1", id);
     }
 
     private long insertQuestion(int surveyId, long selectGroupId, String text) {
@@ -134,7 +134,7 @@ class SurveyDefinitionImportServiceTest {
                         + "VALUES (?1, ?2, 1, ?3, ?4)")
                 .setParameter(1, id).setParameter(2, surveyId).setParameter(3, text).setParameter(4, selectGroupId)
                 .executeUpdate();
-        return id;
+        return queryLong("SELECT question_id FROM survey.questions WHERE id = ?1", id);
     }
 
     private long insertSectionsQuestion(int surveyId, long questionId, long sectionId) {
@@ -143,7 +143,7 @@ class SurveyDefinitionImportServiceTest {
                         + "VALUES (?1, ?2, ?3, ?4, 1)")
                 .setParameter(1, id).setParameter(2, surveyId).setParameter(3, questionId).setParameter(4, sectionId)
                 .executeUpdate();
-        return id;
+        return queryLong("SELECT sections_question_id FROM survey.sections_questions WHERE id = ?1", id);
     }
 
     /** Minimal relationship: only the required upstream_sq_id/operator/action - downstream_* left
@@ -176,7 +176,7 @@ class SurveyDefinitionImportServiceTest {
 
     private void insertMetadata(int surveyId, long stepsSectionId, long ontologyId, String value) {
         long id = nextVal("survey.metadata_seq");
-        em.createNativeQuery("INSERT INTO survey.metadata (id, survey_id, step_section_id, ontology_id, value) "
+        em.createNativeQuery("INSERT INTO survey.metadata (id, survey_id, steps_sections_id, ontology_id, value) "
                         + "VALUES (?1, ?2, ?3, ?4, ?5)")
                 .setParameter(1, id).setParameter(2, surveyId).setParameter(3, stepsSectionId)
                 .setParameter(4, ontologyId).setParameter(5, value)
@@ -248,7 +248,7 @@ class SurveyDefinitionImportServiceTest {
         SurveyDefinitionFixture fixture = persistSurveyDefinitionTree("SDT1");
 
         String exported = surveyDefinitionExportService.exportSurvey(fixture.sourceSurveyId());
-        assertTrue(exported.contains("# ELICIT_SURVEY_EXPORT_V1"));
+        assertTrue(exported.contains("# ELICIT_SURVEY_EXPORT_V2"));
 
         SurveyDefinitionImportService.ImportResult result = surveyDefinitionImportService.importFromFile(toStream(exported));
 
@@ -319,7 +319,7 @@ class SurveyDefinitionImportServiceTest {
     @Test
     @TestTransaction
     void malformedHeaderReturnsFailedResultWithoutThrowing() {
-        String content = "surveys: 1|Name|1|Title|||\n";
+        String content = "surveys: 1|Name|1|Title|||||\n";
 
         SurveyDefinitionImportService.ImportResult result = surveyDefinitionImportService.importFromFile(toStream(content));
 
@@ -331,7 +331,7 @@ class SurveyDefinitionImportServiceTest {
     @Test
     @TestTransaction
     void unknownTableNameIsCollectedAsErrorWithoutThrowing() {
-        String content = "# ELICIT_SURVEY_EXPORT_V1\n\nfoobar: 1|2\n";
+        String content = "# ELICIT_SURVEY_EXPORT_V2\n\nfoobar: 1|2\n";
 
         SurveyDefinitionImportService.ImportResult result = surveyDefinitionImportService.importFromFile(toStream(content));
 
@@ -346,9 +346,9 @@ class SurveyDefinitionImportServiceTest {
     @Test
     @TestTransaction
     void danglingForeignKeyReferenceThrowsRuntimeException() {
-        String content = "# ELICIT_SURVEY_EXPORT_V1\n\n"
-                + "surveys: 1|Name|1|Title|||\n\n"
-                + "select_items: 1|999|Text|1|CODE\n";
+        String content = "# ELICIT_SURVEY_EXPORT_V2\n\n"
+                + "surveys: 1|Name|1|Title|||||\n\n"
+                + "select_items: 1|999|Text|1|CODE||||||\n";
 
         RuntimeException ex = assertThrows(RuntimeException.class,
                 () -> surveyDefinitionImportService.importFromFile(toStream(content)));

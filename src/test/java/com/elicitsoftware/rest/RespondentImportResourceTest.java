@@ -114,7 +114,7 @@ class RespondentImportResourceTest {
     @Test
     @TestSecurity(user = "admin", roles = {"elicit_admin"})
     void wellFormedRespondentOnlyFileImportsSuccessfully() {
-        String content = "# ELICIT_EXPORT_V1\n\nrespondents: 1|REST-IMPORT-TOK|0|2026-01-01T00:00:00-05:00|\n";
+        String content = "# ELICIT_EXPORT_V2\n\nrespondents: 1|REST-IMPORT-TOK|0|2026-01-01T00:00:00-05:00|\n";
 
         given()
                 .multiPart("file", "export.elicit", bytes(content), "application/octet-stream")

@@ -71,4 +71,4 @@ The entire survey import runs as a single transaction; any failure rolls back th
 
 ## Reference
 
-Derived from `SurveyDefinitionImportResource` and `SurveyDefinitionImportService` (`ELICIT_SURVEY_EXPORT_V1` format). Writes the shared survey-definition tables.
+Derived from `SurveyDefinitionImportResource` and `SurveyDefinitionImportService` (`ELICIT_SURVEY_EXPORT_V2` format). Writes the shared survey-definition tables.

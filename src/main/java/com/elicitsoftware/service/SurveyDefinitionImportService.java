@@ -33,32 +33,47 @@ import java.util.Map;
  * This service parses the custom Elicit Survey export format and uses parameterized queries
  * to safely insert data, preventing SQL injection attacks.
  * <p>
- * <strong>Format: ELICIT_SURVEY_EXPORT_V1</strong>
+ * <strong>Format: ELICIT_SURVEY_EXPORT_V2</strong>
  * <ul>
  *   <li>Lines starting with # are comments/metadata</li>
  *   <li>Data lines: tablename: source_id|field1|field2|...</li>
  *   <li>Fields are pipe-delimited with escape sequences: \| \\ \n \r</li>
- *   <li>The source_id (first field) is the original ID from the exporting system, used
- *       to resolve FK references; new IDs are allocated from sequences in this system.</li>
+ *   <li>The source_id (first field) is the original ID from the exporting system — the
+ *       durable Kimball Type 2 key for every table that has one, or the plain surrogate id
+ *       for tables that aren't Type 2 versioned (surveys, reports, post_survey_actions,
+ *       dimensions, ontology, metadata). It is used to resolve FK references; new IDs are
+ *       allocated from sequences in this system.</li>
+ *   <li>Every Type 2 table's trailing {@code version|effective_from|effective_to|
+ *       published_by|published_comment|is_draft} fields are parsed (so field-count
+ *       validation and escaping still work) but their values are discarded — every imported
+ *       row is created fresh as the current, non-draft, version 0 row via each column's own
+ *       schema default, never from the file. A file with an outdated
+ *       {@code ELICIT_SURVEY_EXPORT_V1} header (pre-Kimball, no durable keys or Type 2
+ *       columns) is rejected outright by the format-version check below — there is no
+ *       surrogate-to-durable translation path.</li>
  * </ul>
  * <p>
  * <strong>ID generation strategy:</strong>
  * <ul>
- *   <li>surveys — explicit {@code nextval('survey.surveys_seq')}, captured as {@code newSurveyId}</li>
- *   <li>select_groups — explicit nextval, old→new stored in {@code selectGroupIdMap}</li>
- *   <li>select_items — inline nextval; group_id resolved via selectGroupIdMap</li>
- *   <li>steps — explicit nextval, old→new stored in {@code stepIdMap}</li>
- *   <li>sections — explicit nextval, old→new stored in {@code sectionIdMap}</li>
- *   <li>steps_sections — explicit nextval, old→new stored in {@code stepsSectionIdMap}</li>
- *   <li>questions — explicit nextval, old→new stored in {@code questionIdMap}</li>
- *   <li>sections_questions — explicit nextval, old→new stored in {@code sectionsQuestionIdMap}</li>
- *   <li>relationships — inline nextval; all FK refs resolved via maps</li>
+ *   <li>surveys — explicit {@code nextval('survey.surveys_seq')}, captured as {@code newSurveyId}; {@code published_by}/{@code published_comment} left {@code NULL}</li>
+ *   <li>select_groups — explicit nextval + durable id read back after insert, old→new durable stored in {@code selectGroupIdMap}</li>
+ *   <li>select_items — inline nextval; select_group_id resolved via selectGroupIdMap (durable)</li>
+ *   <li>steps — explicit nextval + durable id read back after insert, old→new durable stored in {@code stepIdMap}</li>
+ *   <li>sections — explicit nextval + durable id read back after insert, old→new durable stored in {@code sectionIdMap}</li>
+ *   <li>steps_sections — explicit nextval + durable id read back after insert, old→new durable stored in {@code stepsSectionIdMap}</li>
+ *   <li>questions — explicit nextval + durable id read back after insert, old→new durable stored in {@code questionIdMap}</li>
+ *   <li>sections_questions — explicit nextval + durable id read back after insert, old→new durable stored in {@code sectionsQuestionIdMap}</li>
+ *   <li>relationships — inline nextval; all FK refs resolved via the (durable) maps above</li>
  *   <li>reports — inline nextval</li>
  *   <li>post_survey_actions — inline nextval</li>
  *   <li>dimensions — explicit nextval or reuse existing row by name; stored in {@code dimensionIdMap}</li>
  *   <li>ontology — explicit nextval or reuse existing row by (name, tag); dimension resolved via dimensionIdMap; stored in {@code ontologyIdMap}</li>
- *   <li>metadata — inline nextval; FK refs resolved via maps</li>
+ *   <li>metadata — inline nextval (metadata itself is not Type 2 versioned); its 3 FK-ish columns resolved via the (durable) maps above</li>
  * </ul>
+ * <p>
+ * Every map above is old-durable-id → new-durable-id (not surrogate id) — nothing downstream
+ * of any insert ever needs the freshly-allocated surrogate {@code id}, since every
+ * cross-table FK in the post-Kimball schema targets a durable id.
  * <p>
  * Static lookup table references (type_id, operator_id, action_id) are imported
  * verbatim — they must exist in the target system with the same IDs.
@@ -384,14 +399,16 @@ public class SurveyDefinitionImportService {
 
     /**
      * Inserts a new survey row using a fresh sequence ID.
-     * Fields: source_id|name|display_order|title|description|initial_display_key|post_survey_url
+     * Fields: source_id|name|display_order|title|description|initial_display_key|post_survey_url|published_by|published_comment
      * <p>
      * Note: display_order is computed as MAX(display_order) + 1 to avoid conflicts,
-     * rather than using the value from the export file.
+     * rather than using the value from the export file. published_by/published_comment are
+     * parsed for field-count validation but not inserted — left {@code NULL} (the survey is
+     * being installed, not authored).
      */
     private Long insertSurvey(String[] fields) {
-        if (fields.length < 7) {
-            throw new IllegalArgumentException("surveys requires 7 fields, got " + fields.length);
+        if (fields.length < 9) {
+            throw new IllegalArgumentException("surveys requires 9 fields, got " + fields.length);
         }
         Query seqQuery = em.createNativeQuery("SELECT nextval('survey.surveys_seq')");
         Long newId = ((Number) seqQuery.getSingleResult()).longValue();
@@ -418,12 +435,16 @@ public class SurveyDefinitionImportService {
     }
 
     /**
-     * Inserts a new select_group row.
-     * Fields: source_id|name|description|data_type
+     * Inserts a new select_group row. Type 2 columns (version/effective_from/effective_to/
+     * is_draft/durable id) are left to their schema defaults; published_by/published_comment
+     * are parsed but not inserted (left {@code NULL}).
+     * Fields: source_id|name|description|data_type|version|effective_from|effective_to|published_by|published_comment|is_draft
+     *
+     * @return the new row's durable {@code select_group_id}
      */
     private Long insertSelectGroup(String[] fields, Long surveyId) {
-        if (fields.length < 4) {
-            throw new IllegalArgumentException("select_groups requires 4 fields, got " + fields.length);
+        if (fields.length < 10) {
+            throw new IllegalArgumentException("select_groups requires 10 fields, got " + fields.length);
         }
         Query seqQuery = em.createNativeQuery("SELECT nextval('survey.select_groups_seq')");
         Long newId = ((Number) seqQuery.getSingleResult()).longValue();
@@ -440,23 +461,23 @@ public class SurveyDefinitionImportService {
         query.setParameter(4, nullIfEmpty(fields[2]));
         query.setParameter(5, dataType != null ? dataType : "Text");
         query.executeUpdate();
-        return newId;
+        return getDurableId("select_group_id", "survey.select_groups", newId);
     }
 
     /**
-     * Inserts a new select_item row; group_id resolved via selectGroupIdMap.
-     * Fields: source_id|group_id|display_text|display_order|coded_value
+     * Inserts a new select_item row; select_group_id (durable) resolved via selectGroupIdMap.
+     * Fields: source_id|select_group_id|display_text|display_order|coded_value|version|effective_from|effective_to|published_by|published_comment|is_draft
      */
     private void insertSelectItem(String[] fields, Long surveyId, Map<Long, Long> selectGroupIdMap) {
-        if (fields.length < 5) {
-            throw new IllegalArgumentException("select_items requires 5 fields, got " + fields.length);
+        if (fields.length < 11) {
+            throw new IllegalArgumentException("select_items requires 11 fields, got " + fields.length);
         }
         Long oldGroupId = parseLongOrNull(fields[1]);
         Long newGroupId = resolveRequired(oldGroupId, selectGroupIdMap, "select_group (for select_item)");
 
         Query query = em.createNativeQuery("""
                 INSERT INTO survey.select_items
-                    (id, survey_id, group_id, display_text, display_order, coded_value)
+                    (id, survey_id, select_group_id, display_text, display_order, coded_value)
                 VALUES (nextval('survey.select_items_seq'), ?1, ?2, ?3, ?4, ?5)
                 """);
         query.setParameter(1, surveyId);
@@ -469,11 +490,13 @@ public class SurveyDefinitionImportService {
 
     /**
      * Inserts a new step row.
-     * Fields: source_id|display_order|name|dimension_name|description
+     * Fields: source_id|display_order|name|dimension_name|description|version|effective_from|effective_to|published_by|published_comment|is_draft
+     *
+     * @return the new row's durable {@code step_id}
      */
     private Long insertStep(String[] fields, Long surveyId) {
-        if (fields.length < 5) {
-            throw new IllegalArgumentException("steps requires 5 fields, got " + fields.length);
+        if (fields.length < 11) {
+            throw new IllegalArgumentException("steps requires 11 fields, got " + fields.length);
         }
         Query seqQuery = em.createNativeQuery("SELECT nextval('survey.steps_seq')");
         Long newId = ((Number) seqQuery.getSingleResult()).longValue();
@@ -490,18 +513,20 @@ public class SurveyDefinitionImportService {
         query.setParameter(5, nullIfEmpty(fields[3]));
         query.setParameter(6, nullIfEmpty(fields[4]));
         query.executeUpdate();
-        return newId;
+        return getDurableId("step_id", "survey.steps", newId);
     }
 
     /**
      * Inserts a new section row.
-     * Fields: source_id|display_order|name|dimension_name|description
+     * Fields: source_id|display_order|name|dimension_name|description|version|effective_from|effective_to|published_by|published_comment|is_draft
      * <p>
      * Note: If dimension_name is empty, it defaults to the section name to satisfy NOT NULL constraint.
+     *
+     * @return the new row's durable {@code section_id}
      */
     private Long insertSection(String[] fields, Long surveyId) {
-        if (fields.length < 5) {
-            throw new IllegalArgumentException("sections requires 5 fields, got " + fields.length);
+        if (fields.length < 11) {
+            throw new IllegalArgumentException("sections requires 11 fields, got " + fields.length);
         }
         Query seqQuery = em.createNativeQuery("SELECT nextval('survey.sections_seq')");
         Long newId = ((Number) seqQuery.getSingleResult()).longValue();
@@ -525,17 +550,19 @@ public class SurveyDefinitionImportService {
         query.setParameter(5, dimensionName);
         query.setParameter(6, nullIfEmpty(fields[4]));
         query.executeUpdate();
-        return newId;
+        return getDurableId("section_id", "survey.sections", newId);
     }
 
     /**
-     * Inserts a new steps_sections row; step_id and section_id resolved via maps.
-     * Fields: source_id|step_id|step_display_order|section_id|section_display_order|display_key
+     * Inserts a new steps_sections row; step_id and section_id (durable) resolved via maps.
+     * Fields: source_id|step_id|step_display_order|section_id|section_display_order|display_key|version|effective_from|effective_to|published_by|published_comment|is_draft
+     *
+     * @return the new row's durable {@code steps_sections_id}
      */
     private Long insertStepsSection(String[] fields, Long surveyId,
             Map<Long, Long> stepIdMap, Map<Long, Long> sectionIdMap) {
-        if (fields.length < 6) {
-            throw new IllegalArgumentException("steps_sections requires 6 fields, got " + fields.length);
+        if (fields.length < 12) {
+            throw new IllegalArgumentException("steps_sections requires 12 fields, got " + fields.length);
         }
         Long newStepId = resolveRequired(parseLongOrNull(fields[1]), stepIdMap, "step (for steps_sections)");
         Long newSectionId = resolveRequired(parseLongOrNull(fields[3]), sectionIdMap, "section (for steps_sections)");
@@ -556,17 +583,20 @@ public class SurveyDefinitionImportService {
         query.setParameter(6, parseIntOrNull(fields[4]));
         query.setParameter(7, nullIfEmpty(fields[5]));
         query.executeUpdate();
-        return newId;
+        return getDurableId("steps_sections_id", "survey.steps_sections", newId);
     }
 
     /**
-     * Inserts a new question row; select_group_id resolved via selectGroupIdMap (nullable).
+     * Inserts a new question row; select_group_id (durable) resolved via selectGroupIdMap (nullable).
      * Fields: source_id|type_id|text|short_text|tool_tip|required|min_value|max_value|
-     *         validation_text|select_group_id|mask|placeholder|default_value|variant
+     *         validation_text|select_group_id|mask|placeholder|default_value|variant|
+     *         version|effective_from|effective_to|published_by|published_comment|is_draft
+     *
+     * @return the new row's durable {@code question_id}
      */
     private Long insertQuestion(String[] fields, Long surveyId, Map<Long, Long> selectGroupIdMap) {
-        if (fields.length < 14) {
-            throw new IllegalArgumentException("questions requires 14 fields, got " + fields.length);
+        if (fields.length < 20) {
+            throw new IllegalArgumentException("questions requires 20 fields, got " + fields.length);
         }
         Long oldSelectGroupId = parseLongOrNull(fields[9]);
         Long newSelectGroupId = null;
@@ -600,17 +630,19 @@ public class SurveyDefinitionImportService {
         query.setParameter(14, nullIfEmpty(fields[12]));                // default_value
         query.setParameter(15, nullIfEmpty(fields[13]));                // variant
         query.executeUpdate();
-        return newId;
+        return getDurableId("question_id", "survey.questions", newId);
     }
 
     /**
-     * Inserts a new sections_questions row; question_id and section_id resolved via maps.
-     * Fields: source_id|question_id|section_id|display_order
+     * Inserts a new sections_questions row; question_id and section_id (durable) resolved via maps.
+     * Fields: source_id|question_id|section_id|display_order|version|effective_from|effective_to|published_by|published_comment|is_draft
+     *
+     * @return the new row's durable {@code sections_question_id}
      */
     private Long insertSectionsQuestion(String[] fields, Long surveyId,
             Map<Long, Long> questionIdMap, Map<Long, Long> sectionIdMap) {
-        if (fields.length < 4) {
-            throw new IllegalArgumentException("sections_questions requires 4 fields, got " + fields.length);
+        if (fields.length < 10) {
+            throw new IllegalArgumentException("sections_questions requires 10 fields, got " + fields.length);
         }
         Long newQuestionId = resolveRequired(parseLongOrNull(fields[1]), questionIdMap, "question (for sections_questions)");
         Long newSectionId = resolveRequired(parseLongOrNull(fields[2]), sectionIdMap, "section (for sections_questions)");
@@ -629,32 +661,33 @@ public class SurveyDefinitionImportService {
         query.setParameter(4, newSectionId);
         query.setParameter(5, parseIntOrNull(fields[3]));
         query.executeUpdate();
-        return newId;
+        return getDurableId("sections_question_id", "survey.sections_questions", newId);
     }
 
     /**
-     * Inserts a new relationship row; all FK refs resolved via maps. Nullable FKs become null
-     * when the source field was empty.
-     * Fields: source_id|upstream_step_id|upstream_sq_id|downstream_step_id|downstream_s_id|
+     * Inserts a new relationship row; all FK refs (durable) resolved via maps. Nullable FKs
+     * become null when the source field was empty.
+     * Fields: source_id|upstream_step_id|upstream_sq_id|downstream_step_id|downstream_ss_id|
      *         downstream_sq_id|operator_id|action_id|description|token|reference_value|
-     *         default_upstream_value|override_upstream_value
+     *         default_upstream_value|override_upstream_value|version|effective_from|
+     *         effective_to|published_by|published_comment|is_draft
      */
     private void insertRelationship(String[] fields, Long surveyId,
             Map<Long, Long> stepIdMap, Map<Long, Long> sectionsQuestionIdMap,
             Map<Long, Long> stepsSectionIdMap) {
-        if (fields.length < 13) {
-            throw new IllegalArgumentException("relationships requires 13 fields, got " + fields.length);
+        if (fields.length < 19) {
+            throw new IllegalArgumentException("relationships requires 19 fields, got " + fields.length);
         }
         Long newUpstreamStepId = resolveNullable(parseLongOrNull(fields[1]), stepIdMap, "step (upstream)");
         Long newUpstreamSqId = resolveRequired(parseLongOrNull(fields[2]), sectionsQuestionIdMap, "sections_question (upstream_sq)");
         Long newDownstreamStepId = resolveNullable(parseLongOrNull(fields[3]), stepIdMap, "step (downstream)");
-        Long newDownstreamSId = resolveNullable(parseLongOrNull(fields[4]), stepsSectionIdMap, "steps_section (downstream)");
+        Long newDownstreamSsId = resolveNullable(parseLongOrNull(fields[4]), stepsSectionIdMap, "steps_section (downstream_ss)");
         Long newDownstreamSqId = resolveNullable(parseLongOrNull(fields[5]), sectionsQuestionIdMap, "sections_question (downstream_sq)");
 
         Query query = em.createNativeQuery("""
                 INSERT INTO survey.relationships
                     (id, survey_id, upstream_step_id, upstream_sq_id, downstream_step_id,
-                     downstream_s_id, downstream_sq_id, operator_id, action_id, description,
+                     downstream_ss_id, downstream_sq_id, operator_id, action_id, description,
                      token, reference_value, default_upstream_value, override_upstream_value)
                 VALUES (nextval('survey.relationships_seq'), ?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13)
                 """);
@@ -662,7 +695,7 @@ public class SurveyDefinitionImportService {
         query.setParameter(2, newUpstreamStepId);
         query.setParameter(3, newUpstreamSqId);
         query.setParameter(4, newDownstreamStepId);
-        query.setParameter(5, newDownstreamSId);
+        query.setParameter(5, newDownstreamSsId);
         query.setParameter(6, newDownstreamSqId);
         query.setParameter(7, parseIntOrNull(fields[6]));               // operator_id (static)
         query.setParameter(8, parseIntOrNull(fields[7]));               // action_id (static)
@@ -795,8 +828,9 @@ public class SurveyDefinitionImportService {
     }
 
     /**
-     * Inserts a new metadata row; all FK refs resolved via maps.
-     * Fields: source_id|step_section_id|question_id|section_question_id|ontology_id|value
+     * Inserts a new metadata row; the 3 FK-ish columns (durable) resolved via maps. metadata
+     * itself is not Type 2 versioned — its own {@code id} is a plain nextval, no map needed.
+     * Fields: source_id|steps_sections_id|question_id|sections_question_id|ontology_id|value
      */
     private void insertMetadata(String[] fields, Long surveyId,
             Map<Long, Long> stepsSectionIdMap, Map<Long, Long> questionIdMap,
@@ -804,20 +838,20 @@ public class SurveyDefinitionImportService {
         if (fields.length < 6) {
             throw new IllegalArgumentException("metadata requires 6 fields, got " + fields.length);
         }
-        Long newStepSectionId = resolveNullable(parseLongOrNull(fields[1]), stepsSectionIdMap, "steps_section (metadata)");
+        Long newStepsSectionsId = resolveNullable(parseLongOrNull(fields[1]), stepsSectionIdMap, "steps_section (metadata)");
         Long newQuestionId = resolveNullable(parseLongOrNull(fields[2]), questionIdMap, "question (metadata)");
-        Long newSectionQuestionId = resolveNullable(parseLongOrNull(fields[3]), sectionsQuestionIdMap, "sections_question (metadata)");
+        Long newSectionsQuestionId = resolveNullable(parseLongOrNull(fields[3]), sectionsQuestionIdMap, "sections_question (metadata)");
         Long newOntologyId = resolveRequired(parseLongOrNull(fields[4]), ontologyIdMap, "ontology (metadata)");
 
         Query query = em.createNativeQuery("""
                 INSERT INTO survey.metadata
-                    (id, survey_id, step_section_id, question_id, section_question_id, ontology_id, value)
+                    (id, survey_id, steps_sections_id, question_id, sections_question_id, ontology_id, value)
                 VALUES (nextval('survey.metadata_seq'), ?1, ?2, ?3, ?4, ?5, ?6)
                 """);
         query.setParameter(1, surveyId);
-        query.setParameter(2, newStepSectionId);
+        query.setParameter(2, newStepsSectionsId);
         query.setParameter(3, newQuestionId);
-        query.setParameter(4, newSectionQuestionId);
+        query.setParameter(4, newSectionsQuestionId);
         query.setParameter(5, newOntologyId);
         query.setParameter(6, nullIfEmpty(fields[5]));
         query.executeUpdate();
@@ -952,6 +986,22 @@ public class SurveyDefinitionImportService {
             return false;
         }
         return Boolean.parseBoolean(value) || "t".equalsIgnoreCase(value);
+    }
+
+    /**
+     * Reads back the durable Kimball Type 2 id a table's own {@code DEFAULT nextval(...)}
+     * assigned to the row just inserted, keyed by that row's surrogate {@code id}.
+     *
+     * @param durableColumn the table's durable id column (e.g. {@code step_id})
+     * @param table the fully-qualified table name (e.g. {@code survey.steps})
+     * @param surrogateId the surrogate {@code id} just inserted
+     * @return the row's durable id
+     */
+    private Long getDurableId(String durableColumn, String table, Long surrogateId) {
+        Query query = em.createNativeQuery(
+                "SELECT " + durableColumn + " FROM " + table + " WHERE id = ?1");
+        query.setParameter(1, surrogateId);
+        return ((Number) query.getSingleResult()).longValue();
     }
 
     /**

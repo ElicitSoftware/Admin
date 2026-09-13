@@ -35,7 +35,7 @@ import jakarta.transaction.Transactional;
  * This service parses the custom Elicit export format and uses parameterized queries
  * to safely insert data, preventing SQL injection attacks.
  * <p>
- * <strong>Format: ELICIT_EXPORT_V1</strong>
+ * <strong>Format: ELICIT_EXPORT_V2</strong>
  * <ul>
  *   <li>Lines starting with # are comments/metadata</li>
  *   <li>Data lines: tablename: field1|field2|field3|...</li>
@@ -57,7 +57,7 @@ public class RespondentImportService {
         // CDI managed bean
     }
 
-    private static final String FORMAT_VERSION = "ELICIT_EXPORT_V1";
+    private static final String FORMAT_VERSION = "ELICIT_EXPORT_V2";
 
     @Inject
     EntityManager em;
@@ -324,16 +324,16 @@ public class RespondentImportService {
     private void insertAnswer(String[] fields, Long respondentId) {
         // Fields: survey_id, step, step_instance, section, section_instance, question_display_order,
         //         question_instance, section_question_id, question_id, display_key, display_text,
-        //         text_value, deleted, created_dt, saved_dt
-        if (fields.length < 15) {
-            throw new IllegalArgumentException("Answer requires 15 fields, got " + fields.length);
+        //         text_value, deleted, created_dt, saved_dt, question_version
+        if (fields.length < 16) {
+            throw new IllegalArgumentException("Answer requires 16 fields, got " + fields.length);
         }
 
         Query query = em.createNativeQuery("""
             INSERT INTO survey.answers (id, survey_id, respondent_id, step, step_instance, section, section_instance,
                 question_display_order, question_instance, section_question_id, question_id,
-                display_key, display_text, text_value, deleted, created_dt, saved_dt)
-            VALUES (nextval('survey.answers_seq'), ?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15, ?16)
+                display_key, display_text, text_value, deleted, created_dt, saved_dt, question_version)
+            VALUES (nextval('survey.answers_seq'), ?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15, ?16, ?17)
             """);
         query.setParameter(1, parseIntOrNull(fields[0]));
         query.setParameter(2, respondentId);
@@ -351,6 +351,7 @@ public class RespondentImportService {
         query.setParameter(14, parseBooleanOrNull(fields[12]));
         query.setParameter(15, parseTimestamp(fields[13]));
         query.setParameter(16, parseTimestamp(fields[14]));
+        query.setParameter(17, parseIntOrNull(fields[15]));
         query.executeUpdate();
     }
 

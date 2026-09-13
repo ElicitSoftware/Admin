@@ -87,7 +87,7 @@ class RespondentImportServiceTest {
                         + "VALUES (?1, ?2, ?3, ?4, 'D')")
                 .setParameter(1, id).setParameter(2, surveyId).setParameter(3, displayOrder).setParameter(4, name)
                 .executeUpdate();
-        return id;
+        return queryLong("SELECT step_id FROM survey.steps WHERE id = ?1", id);
     }
 
     private long insertSection(int surveyId, int displayOrder, String name) {
@@ -96,7 +96,7 @@ class RespondentImportServiceTest {
                         + "VALUES (?1, ?2, ?3, ?4, 'D')")
                 .setParameter(1, id).setParameter(2, surveyId).setParameter(3, displayOrder).setParameter(4, name)
                 .executeUpdate();
-        return id;
+        return queryLong("SELECT section_id FROM survey.sections WHERE id = ?1", id);
     }
 
     private long insertQuestion(int surveyId, String text) {
@@ -104,7 +104,7 @@ class RespondentImportServiceTest {
         em.createNativeQuery("INSERT INTO survey.questions (id, survey_id, type_id, text) VALUES (?1, ?2, 1, ?3)")
                 .setParameter(1, id).setParameter(2, surveyId).setParameter(3, text)
                 .executeUpdate();
-        return id;
+        return queryLong("SELECT question_id FROM survey.questions WHERE id = ?1", id);
     }
 
     private long insertSectionQuestion(int surveyId, long questionId, long sectionId, int displayOrder) {
@@ -114,7 +114,7 @@ class RespondentImportServiceTest {
                 .setParameter(1, id).setParameter(2, surveyId).setParameter(3, questionId)
                 .setParameter(4, sectionId).setParameter(5, displayOrder)
                 .executeUpdate();
-        return id;
+        return queryLong("SELECT sections_question_id FROM survey.sections_questions WHERE id = ?1", id);
     }
 
     /** Minimal relationship: only the required upstream_sq_id/operator/action - downstream_* left
@@ -243,7 +243,7 @@ class RespondentImportServiceTest {
         RespondentFixture fixture = persistRespondentTree("RT1");
 
         String exported = respondentExportService.exportRespondent(fixture.respondentId());
-        assertTrue(exported.contains("# ELICIT_EXPORT_V1"));
+        assertTrue(exported.contains("# ELICIT_EXPORT_V2"));
         assertTrue(exported.contains("respondents: "));
         assertTrue(exported.contains("answers: "));
         assertTrue(exported.contains("dependents: "));
@@ -321,7 +321,7 @@ class RespondentImportServiceTest {
     @Test
     @TestTransaction
     void unknownTableNameIsCollectedAsErrorWithoutThrowing() {
-        String content = "# ELICIT_EXPORT_V1\n\nfoobar: 1|2|3\n";
+        String content = "# ELICIT_EXPORT_V2\n\nfoobar: 1|2|3\n";
 
         RespondentImportService.ImportResult result = respondentImportService.importFromFile(toStream(content));
 
@@ -333,7 +333,7 @@ class RespondentImportServiceTest {
     @Test
     @TestTransaction
     void shortFieldCountThrowsRuntimeException() {
-        String content = "# ELICIT_EXPORT_V1\n\nrespondents: 1|tok\n";
+        String content = "# ELICIT_EXPORT_V2\n\nrespondents: 1|tok\n";
 
         RuntimeException ex = assertThrows(RuntimeException.class,
                 () -> respondentImportService.importFromFile(toStream(content)));
@@ -345,7 +345,7 @@ class RespondentImportServiceTest {
     @Test
     @TestTransaction
     void answerBeforeRespondentIsSkippedWithErrorNotThrown() {
-        String content = "# ELICIT_EXPORT_V1\n\nanswers: 1|2|3\n";
+        String content = "# ELICIT_EXPORT_V2\n\nanswers: 1|2|3\n";
 
         RespondentImportService.ImportResult result = respondentImportService.importFromFile(toStream(content));
 

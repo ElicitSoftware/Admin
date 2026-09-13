@@ -66,6 +66,9 @@ CREATE TABLE IF NOT EXISTS survey.surveys
     description         character varying(2000),
     initial_display_key character varying(255),
     post_survey_url     character varying(2000),
+    -- Kimball Type 2 (SCD Type 1 for surveys — in-place change tracking only).
+    published_by        text,
+    published_comment   text,
     CONSTRAINT surveys_pk PRIMARY KEY (id)
 );
 
@@ -192,32 +195,76 @@ INSERT INTO survey.action_types (id, name, description)
 VALUES (1, 'Show', 'Seeded by test bootstrap')
 ON CONFLICT (id) DO NOTHING;
 
+-- Kimball Type 2 durable-key sequences (one per structural table gaining a durable id).
+CREATE SEQUENCE IF NOT EXISTS survey.select_groups_durable_seq START WITH 1 INCREMENT BY 1;
+CREATE SEQUENCE IF NOT EXISTS survey.select_items_durable_seq START WITH 1 INCREMENT BY 1;
+CREATE SEQUENCE IF NOT EXISTS survey.steps_durable_seq START WITH 1 INCREMENT BY 1;
+CREATE SEQUENCE IF NOT EXISTS survey.sections_durable_seq START WITH 1 INCREMENT BY 1;
+CREATE SEQUENCE IF NOT EXISTS survey.steps_sections_durable_seq START WITH 1 INCREMENT BY 1;
+CREATE SEQUENCE IF NOT EXISTS survey.questions_durable_seq START WITH 1 INCREMENT BY 1;
+CREATE SEQUENCE IF NOT EXISTS survey.sections_questions_durable_seq START WITH 1 INCREMENT BY 1;
+CREATE SEQUENCE IF NOT EXISTS survey.relationships_durable_seq START WITH 1 INCREMENT BY 1;
+
 CREATE SEQUENCE IF NOT EXISTS survey.select_groups_seq START WITH 1 INCREMENT BY 1;
 CREATE TABLE IF NOT EXISTS survey.select_groups
 (
-    id          integer NOT NULL,
-    survey_id   integer NOT NULL,
-    name        character varying(255),
-    description character varying(255),
-    data_type   character varying(50) NOT NULL DEFAULT 'Text',
+    id                 integer NOT NULL,
+    survey_id          integer NOT NULL,
+    name               character varying(255),
+    description        character varying(255),
+    data_type          character varying(50) NOT NULL DEFAULT 'Text',
+    select_group_id    integer NOT NULL DEFAULT nextval('survey.select_groups_durable_seq'),
+    version            integer NOT NULL DEFAULT 0,
+    effective_from     timestamptz DEFAULT '1970-01-01 00:00:00+00',
+    effective_to       timestamptz DEFAULT '9999-12-31 23:59:59+00',
+    is_draft           boolean NOT NULL DEFAULT false,
+    published_by       text,
+    published_comment  text,
     CONSTRAINT select_groups_pk PRIMARY KEY (id),
-    CONSTRAINT select_groups_name_un UNIQUE (survey_id, name)
+    CONSTRAINT select_groups_id_version_un UNIQUE (select_group_id, version)
 );
+CREATE UNIQUE INDEX select_groups_name_un
+    ON survey.select_groups (survey_id, name)
+    WHERE effective_to = '9999-12-31 23:59:59+00';
+CREATE UNIQUE INDEX select_groups_one_current_un
+    ON survey.select_groups (select_group_id)
+    WHERE effective_to = '9999-12-31 23:59:59+00';
+CREATE UNIQUE INDEX select_groups_one_draft_un
+    ON survey.select_groups (select_group_id)
+    WHERE is_draft = true;
 
 CREATE SEQUENCE IF NOT EXISTS survey.select_items_seq START WITH 1 INCREMENT BY 1;
 CREATE TABLE IF NOT EXISTS survey.select_items
 (
-    id            integer NOT NULL,
-    survey_id     integer NOT NULL,
-    group_id      integer NOT NULL,
-    display_text  character varying(255),
-    display_order integer NOT NULL,
-    coded_value   character varying(255),
+    id                    integer NOT NULL,
+    survey_id             integer NOT NULL,
+    select_group_id       integer NOT NULL,
+    select_group_version  integer NOT NULL DEFAULT 0,
+    display_text          character varying(255),
+    display_order         integer NOT NULL,
+    coded_value            character varying(255),
+    select_item_id         integer NOT NULL DEFAULT nextval('survey.select_items_durable_seq'),
+    version                integer NOT NULL DEFAULT 0,
+    effective_from         timestamptz DEFAULT '1970-01-01 00:00:00+00',
+    effective_to           timestamptz DEFAULT '9999-12-31 23:59:59+00',
+    is_draft               boolean NOT NULL DEFAULT false,
+    published_by           text,
+    published_comment      text,
     CONSTRAINT select_items_pk PRIMARY KEY (id),
-    CONSTRAINT select_items_display_text_un UNIQUE (group_id, display_text),
-    CONSTRAINT select_items_group_fk FOREIGN KEY (group_id)
-        REFERENCES survey.select_groups (id)
+    CONSTRAINT select_items_id_version_un UNIQUE (select_item_id, version),
+    CONSTRAINT select_items_select_group_version_ck CHECK (select_group_version = 0),
+    CONSTRAINT select_items_group_fk FOREIGN KEY (select_group_id, select_group_version)
+        REFERENCES survey.select_groups (select_group_id, version)
 );
+CREATE UNIQUE INDEX select_items_display_text_un
+    ON survey.select_items (select_group_id, display_text)
+    WHERE effective_to = '9999-12-31 23:59:59+00';
+CREATE UNIQUE INDEX select_items_one_current_un
+    ON survey.select_items (select_item_id)
+    WHERE effective_to = '9999-12-31 23:59:59+00';
+CREATE UNIQUE INDEX select_items_one_draft_un
+    ON survey.select_items (select_item_id)
+    WHERE is_draft = true;
 
 CREATE SEQUENCE IF NOT EXISTS survey.steps_seq START WITH 1 INCREMENT BY 1;
 CREATE TABLE IF NOT EXISTS survey.steps
@@ -228,10 +275,28 @@ CREATE TABLE IF NOT EXISTS survey.steps
     name           character varying(255),
     dimension_name character varying(50) NOT NULL,
     description    character varying(255),
+    step_id            integer NOT NULL DEFAULT nextval('survey.steps_durable_seq'),
+    version            integer NOT NULL DEFAULT 0,
+    effective_from     timestamptz DEFAULT '1970-01-01 00:00:00+00',
+    effective_to       timestamptz DEFAULT '9999-12-31 23:59:59+00',
+    is_draft           boolean NOT NULL DEFAULT false,
+    published_by       text,
+    published_comment  text,
     CONSTRAINT steps_pk PRIMARY KEY (id),
-    CONSTRAINT steps_survey_name_un UNIQUE (survey_id, name),
-    CONSTRAINT steps_survey_display_order UNIQUE (survey_id, display_order)
+    CONSTRAINT steps_id_version_un UNIQUE (step_id, version)
 );
+CREATE UNIQUE INDEX steps_survey_name_un
+    ON survey.steps (survey_id, name)
+    WHERE effective_to = '9999-12-31 23:59:59+00';
+CREATE UNIQUE INDEX steps_survey_display_order
+    ON survey.steps (survey_id, display_order)
+    WHERE effective_to = '9999-12-31 23:59:59+00';
+CREATE UNIQUE INDEX steps_one_current_un
+    ON survey.steps (step_id)
+    WHERE effective_to = '9999-12-31 23:59:59+00';
+CREATE UNIQUE INDEX steps_one_draft_un
+    ON survey.steps (step_id)
+    WHERE is_draft = true;
 
 CREATE SEQUENCE IF NOT EXISTS survey.sections_seq START WITH 1 INCREMENT BY 1;
 CREATE TABLE IF NOT EXISTS survey.sections
@@ -242,9 +307,25 @@ CREATE TABLE IF NOT EXISTS survey.sections
     name           character varying(255),
     dimension_name character varying(50) NOT NULL,
     description    character varying(255),
+    section_id         integer NOT NULL DEFAULT nextval('survey.sections_durable_seq'),
+    version            integer NOT NULL DEFAULT 0,
+    effective_from     timestamptz DEFAULT '1970-01-01 00:00:00+00',
+    effective_to       timestamptz DEFAULT '9999-12-31 23:59:59+00',
+    is_draft           boolean NOT NULL DEFAULT false,
+    published_by       text,
+    published_comment  text,
     CONSTRAINT sections_pk PRIMARY KEY (id),
-    CONSTRAINT sections_survey_order_un UNIQUE (survey_id, display_order)
+    CONSTRAINT sections_id_version_un UNIQUE (section_id, version)
 );
+CREATE UNIQUE INDEX sections_survey_order_un
+    ON survey.sections (survey_id, display_order)
+    WHERE effective_to = '9999-12-31 23:59:59+00';
+CREATE UNIQUE INDEX sections_one_current_un
+    ON survey.sections (section_id)
+    WHERE effective_to = '9999-12-31 23:59:59+00';
+CREATE UNIQUE INDEX sections_one_draft_un
+    ON survey.sections (section_id)
+    WHERE is_draft = true;
 
 CREATE SEQUENCE IF NOT EXISTS survey.steps_sections_seq START WITH 1 INCREMENT BY 1;
 CREATE TABLE IF NOT EXISTS survey.steps_sections
@@ -252,19 +333,36 @@ CREATE TABLE IF NOT EXISTS survey.steps_sections
     id                    integer               NOT NULL,
     survey_id             integer               NOT NULL,
     step_id               integer               NOT NULL,
+    step_version          integer               NOT NULL DEFAULT 0,
     step_display_order    integer               NOT NULL,
     section_id            integer               NOT NULL,
+    section_version       integer               NOT NULL DEFAULT 0,
     section_display_order integer               NOT NULL,
     display_key           character varying(34) NOT NULL,
+    steps_sections_id      integer NOT NULL DEFAULT nextval('survey.steps_sections_durable_seq'),
+    version                integer NOT NULL DEFAULT 0,
+    effective_from         timestamptz DEFAULT '1970-01-01 00:00:00+00',
+    effective_to           timestamptz DEFAULT '9999-12-31 23:59:59+00',
+    is_draft               boolean NOT NULL DEFAULT false,
+    published_by           text,
+    published_comment      text,
     CONSTRAINT steps_sections_pk PRIMARY KEY (id),
+    CONSTRAINT steps_sections_id_version_un UNIQUE (steps_sections_id, version),
+    CONSTRAINT steps_sections_ref_versions_ck CHECK (step_version = 0 AND section_version = 0),
     CONSTRAINT steps_sections_un UNIQUE (survey_id, display_key),
-    CONSTRAINT steps_sections_fk FOREIGN KEY (section_id)
-        REFERENCES survey.sections (id),
-    CONSTRAINT steps_sections_steps_fk FOREIGN KEY (step_id)
-        REFERENCES survey.steps (id),
+    CONSTRAINT steps_sections_fk FOREIGN KEY (section_id, section_version)
+        REFERENCES survey.sections (section_id, version),
+    CONSTRAINT steps_sections_steps_fk FOREIGN KEY (step_id, step_version)
+        REFERENCES survey.steps (step_id, version),
     CONSTRAINT steps_sections_survey_fk FOREIGN KEY (survey_id)
         REFERENCES survey.surveys (id)
 );
+CREATE UNIQUE INDEX steps_sections_one_current_un
+    ON survey.steps_sections (steps_sections_id)
+    WHERE effective_to = '9999-12-31 23:59:59+00';
+CREATE UNIQUE INDEX steps_sections_one_draft_un
+    ON survey.steps_sections (steps_sections_id)
+    WHERE is_draft = true;
 
 CREATE SEQUENCE IF NOT EXISTS survey.questions_seq START WITH 1 INCREMENT BY 1;
 CREATE TABLE IF NOT EXISTS survey.questions
@@ -280,16 +378,32 @@ CREATE TABLE IF NOT EXISTS survey.questions
     max_value       integer,
     validation_text character varying(255),
     select_group_id integer,
+    select_group_version  integer NOT NULL DEFAULT 0,
     mask            character varying(255),
     placeholder     character varying(255),
     default_value   character varying(255),
     variant         character varying(255),
+    question_id           integer NOT NULL DEFAULT nextval('survey.questions_durable_seq'),
+    version               integer NOT NULL DEFAULT 0,
+    effective_from        timestamptz DEFAULT '1970-01-01 00:00:00+00',
+    effective_to          timestamptz DEFAULT '9999-12-31 23:59:59+00',
+    is_draft              boolean NOT NULL DEFAULT false,
+    published_by          text,
+    published_comment     text,
     CONSTRAINT questions_pk PRIMARY KEY (id),
-    CONSTRAINT select_groups_fk FOREIGN KEY (select_group_id)
-        REFERENCES survey.select_groups (id),
+    CONSTRAINT questions_id_version_un UNIQUE (question_id, version),
+    CONSTRAINT questions_select_group_version_ck CHECK (select_group_version = 0),
+    CONSTRAINT select_groups_fk FOREIGN KEY (select_group_id, select_group_version)
+        REFERENCES survey.select_groups (select_group_id, version),
     CONSTRAINT type_fk FOREIGN KEY (type_id)
         REFERENCES survey.question_types (id)
 );
+CREATE UNIQUE INDEX questions_one_current_un
+    ON survey.questions (question_id)
+    WHERE effective_to = '9999-12-31 23:59:59+00';
+CREATE UNIQUE INDEX questions_one_draft_un
+    ON survey.questions (question_id)
+    WHERE is_draft = true;
 
 CREATE SEQUENCE IF NOT EXISTS survey.sections_questions_seq START WITH 1 INCREMENT BY 1;
 CREATE TABLE IF NOT EXISTS survey.sections_questions
@@ -297,17 +411,34 @@ CREATE TABLE IF NOT EXISTS survey.sections_questions
     id            integer NOT NULL,
     survey_id     integer NOT NULL,
     question_id   integer NOT NULL,
+    question_version      integer NOT NULL DEFAULT 0,
     section_id    integer NOT NULL,
+    section_version       integer NOT NULL DEFAULT 0,
     display_order integer NOT NULL,
+    sections_question_id   integer NOT NULL DEFAULT nextval('survey.sections_questions_durable_seq'),
+    version                integer NOT NULL DEFAULT 0,
+    effective_from         timestamptz DEFAULT '1970-01-01 00:00:00+00',
+    effective_to           timestamptz DEFAULT '9999-12-31 23:59:59+00',
+    is_draft               boolean NOT NULL DEFAULT false,
+    published_by           text,
+    published_comment      text,
     CONSTRAINT sections_questions_pk PRIMARY KEY (id),
+    CONSTRAINT sections_questions_id_version_un UNIQUE (sections_question_id, version),
+    CONSTRAINT sections_questions_ref_versions_ck CHECK (question_version = 0 AND section_version = 0),
     CONSTRAINT sections_questions_un UNIQUE (survey_id, question_id, section_id, display_order),
-    CONSTRAINT sections_questions_question_fk FOREIGN KEY (question_id)
-        REFERENCES survey.questions (id),
-    CONSTRAINT sections_questions_sections_fk FOREIGN KEY (section_id)
-        REFERENCES survey.sections (id),
+    CONSTRAINT sections_questions_question_fk FOREIGN KEY (question_id, question_version)
+        REFERENCES survey.questions (question_id, version),
+    CONSTRAINT sections_questions_sections_fk FOREIGN KEY (section_id, section_version)
+        REFERENCES survey.sections (section_id, version),
     CONSTRAINT sections_questions_survey_fk FOREIGN KEY (survey_id)
         REFERENCES survey.surveys (id)
 );
+CREATE UNIQUE INDEX sections_questions_one_current_un
+    ON survey.sections_questions (sections_question_id)
+    WHERE effective_to = '9999-12-31 23:59:59+00';
+CREATE UNIQUE INDEX sections_questions_one_draft_un
+    ON survey.sections_questions (sections_question_id)
+    WHERE is_draft = true;
 
 CREATE SEQUENCE IF NOT EXISTS survey.relationships_seq START WITH 1 INCREMENT BY 1;
 CREATE TABLE IF NOT EXISTS survey.relationships
@@ -315,10 +446,15 @@ CREATE TABLE IF NOT EXISTS survey.relationships
     id                       integer NOT NULL,
     survey_id                integer NOT NULL,
     upstream_step_id         integer,
+    upstream_step_version    integer NOT NULL DEFAULT 0,
     upstream_sq_id           integer NOT NULL,
+    upstream_sq_version      integer NOT NULL DEFAULT 0,
     downstream_step_id       integer,
-    downstream_s_id          integer,
+    downstream_step_version  integer NOT NULL DEFAULT 0,
+    downstream_ss_id         integer,
+    downstream_ss_version    integer NOT NULL DEFAULT 0,
     downstream_sq_id         integer,
+    downstream_sq_version    integer NOT NULL DEFAULT 0,
     operator_id              integer NOT NULL,
     action_id                integer NOT NULL,
     description              character varying(255),
@@ -326,25 +462,46 @@ CREATE TABLE IF NOT EXISTS survey.relationships
     reference_value          character varying(255),
     default_upstream_value   character varying(255),
     override_upstream_value  character varying(255),
+    relationship_id          integer NOT NULL DEFAULT nextval('survey.relationships_durable_seq'),
+    version                  integer NOT NULL DEFAULT 0,
+    effective_from           timestamptz DEFAULT '1970-01-01 00:00:00+00',
+    effective_to             timestamptz DEFAULT '9999-12-31 23:59:59+00',
+    is_draft                 boolean NOT NULL DEFAULT false,
+    published_by             text,
+    published_comment        text,
     CONSTRAINT relationships_pk PRIMARY KEY (id),
+    CONSTRAINT relationships_id_version_un UNIQUE (relationship_id, version),
+    CONSTRAINT relationships_ref_versions_ck CHECK (
+        upstream_step_version   = 0 AND
+        upstream_sq_version     = 0 AND
+        downstream_step_version = 0 AND
+        downstream_ss_version   = 0 AND
+        downstream_sq_version   = 0
+    ),
     CONSTRAINT action_fk FOREIGN KEY (action_id)
         REFERENCES survey.action_types (id),
-    CONSTRAINT downstream_s_fk FOREIGN KEY (downstream_s_id)
-        REFERENCES survey.steps_sections (id),
-    CONSTRAINT downstream_sq_fk FOREIGN KEY (downstream_sq_id)
-        REFERENCES survey.sections_questions (id),
-    CONSTRAINT downstream_step_fk FOREIGN KEY (downstream_step_id)
-        REFERENCES survey.steps (id),
+    CONSTRAINT downstream_s_fk FOREIGN KEY (downstream_ss_id, downstream_ss_version)
+        REFERENCES survey.steps_sections (steps_sections_id, version),
+    CONSTRAINT downstream_sq_fk FOREIGN KEY (downstream_sq_id, downstream_sq_version)
+        REFERENCES survey.sections_questions (sections_question_id, version),
+    CONSTRAINT downstream_step_fk FOREIGN KEY (downstream_step_id, downstream_step_version)
+        REFERENCES survey.steps (step_id, version),
     CONSTRAINT operator_fk FOREIGN KEY (operator_id)
         REFERENCES survey.operator_types (id),
     CONSTRAINT relationships_survey_fk FOREIGN KEY (survey_id)
         REFERENCES survey.surveys (id),
-    CONSTRAINT upstream_sq_fk FOREIGN KEY (upstream_sq_id)
-        REFERENCES survey.sections_questions (id),
-    CONSTRAINT upstream_step_fk FOREIGN KEY (upstream_step_id)
-        REFERENCES survey.steps (id),
-    CONSTRAINT downstream_ck CHECK ((downstream_step_id + downstream_sq_id + downstream_s_id) > 0)
+    CONSTRAINT upstream_sq_fk FOREIGN KEY (upstream_sq_id, upstream_sq_version)
+        REFERENCES survey.sections_questions (sections_question_id, version),
+    CONSTRAINT upstream_step_fk FOREIGN KEY (upstream_step_id, upstream_step_version)
+        REFERENCES survey.steps (step_id, version),
+    CONSTRAINT downstream_ck CHECK ((downstream_step_id + downstream_sq_id + downstream_ss_id) > 0)
 );
+CREATE UNIQUE INDEX relationships_one_current_un
+    ON survey.relationships (relationship_id)
+    WHERE effective_to = '9999-12-31 23:59:59+00';
+CREATE UNIQUE INDEX relationships_one_draft_un
+    ON survey.relationships (relationship_id)
+    WHERE is_draft = true;
 
 CREATE SEQUENCE IF NOT EXISTS survey.answers_seq START WITH 1 INCREMENT BY 1;
 CREATE TABLE IF NOT EXISTS survey.answers
@@ -366,6 +523,7 @@ CREATE TABLE IF NOT EXISTS survey.answers
     deleted                boolean                  NOT NULL DEFAULT false,
     created_dt             timestamptz              NOT NULL DEFAULT CURRENT_TIMESTAMP,
     saved_dt               timestamptz,
+    question_version       integer                  NOT NULL DEFAULT 0,
     CONSTRAINT answers_pk PRIMARY KEY (id),
     CONSTRAINT answers_un UNIQUE (respondent_id, display_key),
     CONSTRAINT answers_questions_fk FOREIGN KEY (question_id)
@@ -428,26 +586,20 @@ CREATE TABLE IF NOT EXISTS survey.ontology
 CREATE SEQUENCE IF NOT EXISTS survey.metadata_seq START WITH 1 INCREMENT BY 1;
 CREATE TABLE IF NOT EXISTS survey.metadata
 (
-    id                   integer NOT NULL,
-    survey_id            integer NOT NULL,
-    step_section_id      integer,
-    question_id          integer,
-    section_question_id  integer,
-    ontology_id          integer NOT NULL,
-    value                character varying(255),
+    id                    integer NOT NULL,
+    survey_id             integer NOT NULL,
+    steps_sections_id     integer,
+    question_id           integer,
+    sections_question_id  integer,
+    ontology_id           integer NOT NULL,
+    value                 character varying(255),
     CONSTRAINT metadata_pk PRIMARY KEY (id),
-    CONSTRAINT metadata_un UNIQUE (step_section_id, question_id, section_question_id, ontology_id, value),
+    CONSTRAINT metadata_un UNIQUE (steps_sections_id, question_id, sections_question_id, ontology_id, value),
     CONSTRAINT metadata_ontology_fk FOREIGN KEY (ontology_id)
         REFERENCES survey.ontology (id),
-    CONSTRAINT metadata_question_fk FOREIGN KEY (question_id)
-        REFERENCES survey.questions (id),
-    CONSTRAINT metadata_sect_quest_fk FOREIGN KEY (section_question_id)
-        REFERENCES survey.sections_questions (id),
-    CONSTRAINT metadata_section_fk FOREIGN KEY (step_section_id)
-        REFERENCES survey.steps_sections (id),
     CONSTRAINT metadata_survey_fk FOREIGN KEY (survey_id)
         REFERENCES survey.surveys (id),
-    CONSTRAINT metadata_element_ck CHECK ((step_section_id + question_id + section_question_id) > 0)
+    CONSTRAINT metadata_element_ck CHECK ((steps_sections_id + question_id + sections_question_id) > 0)
 );
 
 CREATE SEQUENCE IF NOT EXISTS survey.respondent_psa_seq START WITH 1 INCREMENT BY 1;

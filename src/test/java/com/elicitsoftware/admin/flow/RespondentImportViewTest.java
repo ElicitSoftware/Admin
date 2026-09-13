@@ -82,7 +82,7 @@ class RespondentImportViewTest extends QuarkusBrowserlessTest {
     @TestSecurity(user = "import.admin", roles = {"elicit_admin"})
     @TestTransaction
     void wellFormedFileShowsSuccessDialog() {
-        String content = "# ELICIT_EXPORT_V1\n\n"
+        String content = "# ELICIT_EXPORT_V2\n\n"
                 + "respondents: 1|import-view-test-token|0|2026-01-01T00:00:00-05:00|\n";
 
         view.handleUpload(content.getBytes(StandardCharsets.UTF_8));

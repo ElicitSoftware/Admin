@@ -31,12 +31,12 @@ import jakarta.transaction.Transactional;
  * <p>
  * The export format is a custom text format designed for safe import via parameterized queries:
  * <pre>
- * # ELICIT_EXPORT_V1
+ * # ELICIT_EXPORT_V2
  * # respondent_id: 123
  * # timezone: America/Detroit
  * # generated: 2026-03-13T20:50:38.106350589-04:00
  * respondents: survey_id|token|logins|created_dt|first_access_dt
- * answers: survey_id|step|step_instance|...|created_dt|saved_dt
+ * answers: survey_id|step|step_instance|...|created_dt|saved_dt|question_version
  * dependents: upstream_display_key|downstream_display_key|relationship_id|deleted
  * subjects: subject_index|xid|firstname|lastname|...|created_dt
  * messages: subject_index|message_type|mime_type|...|created_dt|sent_dt
@@ -61,7 +61,7 @@ public class RespondentExportService {
         // CDI managed bean
     }
 
-    private static final String FORMAT_VERSION = "ELICIT_EXPORT_V1";
+    private static final String FORMAT_VERSION = "ELICIT_EXPORT_V2";
     private static final String FIELD_DELIMITER = "|";
 
     @Inject
@@ -129,7 +129,7 @@ public class RespondentExportService {
         // Answer records
         // Fields: survey_id, step, step_instance, section, section_instance, question_display_order,
         //         question_instance, section_question_id, question_id, display_key, display_text,
-        //         text_value, deleted, created_dt, saved_dt
+        //         text_value, deleted, created_dt, saved_dt, question_version
         for (Object[] answer : answers) {
             out.append("answers: ");
             out.append(escapeField(answer[1]));  // survey_id
@@ -147,6 +147,7 @@ public class RespondentExportService {
             out.append(FIELD_DELIMITER).append(escapeField(answer[13]));  // deleted
             out.append(FIELD_DELIMITER).append(formatTimestamp(answer[14], zoneId));  // created_dt
             out.append(FIELD_DELIMITER).append(formatTimestamp(answer[15], zoneId));  // saved_dt
+            out.append(FIELD_DELIMITER).append(escapeField(answer[16]));  // question_version
             out.append("\n");
         }
 
@@ -250,7 +251,8 @@ public class RespondentExportService {
         String querySql = """
                 SELECT id, survey_id, step, step_instance, section, section_instance,
                        question_display_order, question_instance, section_question_id, question_id,
-                       display_key, display_text, text_value, deleted, created_dt, saved_dt
+                       display_key, display_text, text_value, deleted, created_dt, saved_dt,
+                       question_version
                 FROM survey.answers
                 WHERE respondent_id = :respondentId
                 ORDER BY id
