@@ -40,7 +40,7 @@ import jakarta.transaction.Transactional;
  * dependents: upstream_display_key|downstream_display_key|relationship_id|deleted
  * subjects: subject_index|xid|firstname|lastname|...|created_dt
  * messages: subject_index|message_type|mime_type|...|created_dt|sent_dt
- * respondent_psa: post_survey_action_id|tries|status|error_msg|created_dt|uploaded_dt
+ * respondent_psa: post_survey_action_name|tries|status|error_msg|created_dt|uploaded_dt
  * </pre>
  * <p>
  * All timestamps are exported in ISO-8601 format with the database's local timezone offset
@@ -201,10 +201,10 @@ public class RespondentExportService {
         }
 
         // Respondent PSA records
-        // Fields: post_survey_action_id, tries, status, error_msg, created_dt, uploaded_dt
+        // Fields: post_survey_action_name, tries, status, error_msg, created_dt, uploaded_dt
         for (Object[] psa : respondentPsa) {
             out.append("respondent_psa: ");
-            out.append(escapeField(psa[2]));  // post_survey_action_id
+            out.append(escapeField(psa[2]));  // post_survey_action_name
             out.append(FIELD_DELIMITER).append(escapeField(psa[3]));  // tries
             out.append(FIELD_DELIMITER).append(escapeField(psa[4]));  // status
             out.append(FIELD_DELIMITER).append(escapeField(psa[5]));  // error_msg
@@ -314,12 +314,16 @@ public class RespondentExportService {
     }
 
     private List<Object[]> getRespondentPsa(Integer respondentId) {
+        // post_survey_action_id is a surrogate key that is not guaranteed to be the same
+        // across databases, so the export carries the action's natural key (survey_id, name)
+        // instead - RespondentImportService resolves it back to an id in the target database.
         String querySql = """
-                SELECT id, respondent_id, post_survey_action_id, tries,
-                       status, error_msg, created_dt, uploaded_dt
-                FROM survey.respondent_psa
-                WHERE respondent_id = :respondentId
-                ORDER BY id
+                SELECT rp.id, rp.respondent_id, pa.name, rp.tries,
+                       rp.status, rp.error_msg, rp.created_dt, rp.uploaded_dt
+                FROM survey.respondent_psa rp
+                JOIN survey.post_survey_actions pa ON pa.id = rp.post_survey_action_id
+                WHERE rp.respondent_id = :respondentId
+                ORDER BY rp.id
                 """;
         Query query = em.createNativeQuery(querySql);
         query.setParameter("respondentId", respondentId);

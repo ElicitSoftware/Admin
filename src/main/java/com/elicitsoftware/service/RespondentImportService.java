@@ -440,16 +440,34 @@ public class RespondentImportService {
     }
 
     private void insertRespondentPsa(String[] fields, Long respondentId) {
-        // Fields: post_survey_action_id, tries, status, error_msg, created_dt, uploaded_dt
+        // Fields: post_survey_action_name, tries, status, error_msg, created_dt, uploaded_dt
         if (fields.length < 6) {
             throw new IllegalArgumentException("Respondent PSA requires 6 fields, got " + fields.length);
+        }
+
+        // The export carries the action's name rather than its source-database id - a
+        // post_survey_actions.id is a surrogate key with no guarantee of matching this
+        // database, same as respondent_id is never trusted from the export either. Resolve
+        // it to this database's id via the (survey_id, name) natural key instead.
+        String postSurveyActionName = nullIfEmpty(fields[0]);
+        Query lookupQuery = em.createNativeQuery("""
+            SELECT pa.id FROM survey.post_survey_actions pa
+            JOIN survey.respondents r ON r.survey_id = pa.survey_id
+            WHERE r.id = ?1 AND pa.name = ?2
+            """);
+        lookupQuery.setParameter(1, respondentId);
+        lookupQuery.setParameter(2, postSurveyActionName);
+        Long postSurveyActionId = getLongResult(lookupQuery);
+        if (postSurveyActionId == null) {
+            throw new IllegalArgumentException(
+                    "No post_survey_action named '" + postSurveyActionName + "' found for this respondent's survey");
         }
 
         Query query = em.createNativeQuery("""
             INSERT INTO survey.respondent_psa (id, respondent_id, post_survey_action_id, tries, status, error_msg, created_dt, uploaded_dt)
             VALUES (nextval('survey.respondent_psa_seq'), currval('survey.respondents_seq'), ?1, ?2, ?3, ?4, ?5, ?6)
             """);
-        query.setParameter(1, parseLongOrNull(fields[0]));
+        query.setParameter(1, postSurveyActionId);
         query.setParameter(2, parseIntOrNull(fields[1]));
         query.setParameter(3, nullIfEmpty(fields[2]));
         query.setParameter(4, nullIfEmpty(fields[3]));
