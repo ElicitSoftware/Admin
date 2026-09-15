@@ -30,6 +30,7 @@ rectangle "Elicit Admin" {
     usecase "UC-013\nExport Survey Definition" as UC013
     usecase "UC-014\nImport Survey Definition" as UC014
     usecase "UC-017\nUpdate Survey Definition" as UC017
+    usecase "UC-018\nApply Survey Definition" as UC018
 
     ' --- Shared subflow ---
     usecase "UC-015\nGenerate Survey Access Token" as UC015
@@ -60,6 +61,7 @@ admin --> UC012
 admin --> UC013
 admin --> UC014
 admin --> UC017
+admin --> UC018
 
 ' Integration Client
 importer --> UC010
@@ -73,5 +75,8 @@ reportsvc --> UC005
 UC003 ..> UC015 : <<include>>
 UC010 ..> UC015 : <<include>>
 UC013 ..> UC017 : <<supplies file>>
+UC013 ..> UC018 : <<supplies file>>
+UC018 ..> UC014 : <<include>>
+UC018 ..> UC017 : <<include>>
 
 @enduml

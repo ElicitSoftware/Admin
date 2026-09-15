@@ -22,6 +22,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
+import java.time.OffsetDateTime;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -209,6 +210,10 @@ public class SurveyDefinitionImportService {
         Map<Long, Long> ontologyIdMap = new HashMap<>();
 
         int lineNumber = 0;
+        // Parsed from the "# survey_revision:" header, before any data line. Held in a
+        // single-element array so logAttempt() can read whatever was parsed at the point a
+        // failure occurred, including from inside the catch blocks below.
+        OffsetDateTime[] fileRevision = new OffsetDateTime[1];
 
         try (BufferedReader reader = new BufferedReader(
                 new InputStreamReader(inputStream, StandardCharsets.UTF_8))) {
@@ -227,13 +232,23 @@ public class SurveyDefinitionImportService {
                     if (line.contains(FORMAT_VERSION)) {
                         versionValidated = true;
                     }
+                    try {
+                        OffsetDateTime parsed = SurveyDefinitionFileFields.parseRevisionHeader(line);
+                        if (parsed != null) {
+                            fileRevision[0] = parsed;
+                        }
+                    } catch (IllegalArgumentException e) {
+                        errors.add("Line " + lineNumber + ": " + e.getMessage());
+                        logAttempt(surveyInsert[0], fileName, false, errors, counts, fileRevision[0]);
+                        return new ImportResult(false, 0, errors, counts);
+                    }
                     continue;
                 }
 
                 if (!versionValidated) {
                     errors.add("Line " + lineNumber + ": File does not start with valid format header (expected # "
                             + FORMAT_VERSION + ")");
-                    logAttempt(surveyInsert[0], fileName, false, errors, counts);
+                    logAttempt(surveyInsert[0], fileName, false, errors, counts, fileRevision[0]);
                     return new ImportResult(false, 0, errors, counts);
                 }
 
@@ -395,24 +410,24 @@ public class SurveyDefinitionImportService {
                     }
                 } catch (Exception e) {
                     errors.add("Line " + lineNumber + ": " + e.getMessage());
-                    logAttempt(surveyInsert[0], fileName, false, errors, counts);
+                    logAttempt(surveyInsert[0], fileName, false, errors, counts, fileRevision[0]);
                     throw new RuntimeException("Import failed at line " + lineNumber + ": " + e.getMessage(), e);
                 }
             }
 
             if (!versionValidated) {
                 errors.add("File does not contain valid format header");
-                logAttempt(surveyInsert[0], fileName, false, errors, counts);
+                logAttempt(surveyInsert[0], fileName, false, errors, counts, fileRevision[0]);
                 return new ImportResult(false, 0, errors, counts);
             }
 
             int total = counts.values().stream().mapToInt(Integer::intValue).sum();
-            logAttempt(surveyInsert[0], fileName, errors.isEmpty(), errors, counts);
+            logAttempt(surveyInsert[0], fileName, errors.isEmpty(), errors, counts, fileRevision[0]);
             return new ImportResult(errors.isEmpty(), total, errors, counts);
 
         } catch (IOException e) {
             errors.add("Failed to read file: " + e.getMessage());
-            logAttempt(surveyInsert[0], fileName, false, errors, counts);
+            logAttempt(surveyInsert[0], fileName, false, errors, counts, fileRevision[0]);
             return new ImportResult(false, 0, errors, counts);
         }
     }
@@ -434,12 +449,12 @@ public class SurveyDefinitionImportService {
      * @param counts per-table counts (used to build the success summary)
      */
     private void logAttempt(SurveyInsertResult surveyInsert, String fileName, boolean success,
-            List<String> errors, Map<String, Integer> counts) {
+            List<String> errors, Map<String, Integer> counts, OffsetDateTime revision) {
         UUID surveyKey = surveyInsert == null ? null : surveyInsert.surveyKey();
         if (success && surveyInsert != null) {
-            surveyLogService.logSuccess(surveyInsert.id(), surveyKey, "IMPORT", fileName, counts.toString());
+            surveyLogService.logSuccess(surveyInsert.id(), surveyKey, "IMPORT", fileName, counts.toString(), revision);
         } else {
-            surveyLogService.logFailure(null, surveyKey, "IMPORT", fileName, String.join("; ", errors));
+            surveyLogService.logFailure(null, surveyKey, "IMPORT", fileName, String.join("; ", errors), revision);
         }
     }
 

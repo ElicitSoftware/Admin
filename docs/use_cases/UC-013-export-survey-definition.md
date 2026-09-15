@@ -56,6 +56,12 @@ A survey export contains only the survey's structural definition, never responde
 
 Each exported record retains its original identifier so that references between records can be re-mapped when the definition is imported elsewhere.
 
+### BR-072: Every export is stamped with a revision
+
+An export records the moment it was produced as the file's revision. This is the only identifier in the format comparable across deployments — the version numbers on the Type 2 structural tables are derived locally by each receiving instance, so a deployment that adopted a survey late carries lower version numbers than its peers for identical content. "Which revision of this instrument is this deployment running?" is answered by the revision of the last file applied there, recorded in the survey log.
+
+Each export produces a fresh revision, including a re-export of a survey that was itself imported. "Same revision" therefore means "same file", so a multi-deployment rollout should distribute one exported file to every site rather than re-exporting per site.
+
 ### BR-046: Referenced lookups must pre-exist on import
 
 Static lookup references (such as question type, operator, and action) are exported as-is and must already exist in the target system.

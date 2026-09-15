@@ -18,6 +18,9 @@ import jakarta.persistence.EntityManager;
 import jakarta.persistence.Query;
 import jakarta.transaction.Transactional;
 
+import java.time.Instant;
+import java.time.OffsetDateTime;
+import java.time.ZoneOffset;
 import java.util.UUID;
 
 /**
@@ -63,10 +66,14 @@ public class SurveyLogService {
      * @param action {@code "IMPORT"} or {@code "UPDATE"}
      * @param fileName the uploaded file's name, or {@code null} if not available
      * @param summary a short human-readable summary (e.g. per-table counts)
+     * @param revision the applied file's {@code survey_revision} header, or {@code null} if the
+     *     file predates that header. The most recent non-null value for a {@code survey_key} is
+     *     what answers "which revision of this instrument is this site running?"
      */
     @Transactional
-    public void logSuccess(Long surveyId, UUID surveyKey, String action, String fileName, String summary) {
-        insert(surveyId, surveyKey, action, true, fileName, summary, null);
+    public void logSuccess(Long surveyId, UUID surveyKey, String action, String fileName, String summary,
+            OffsetDateTime revision) {
+        insert(surveyId, surveyKey, action, true, fileName, summary, null, revision);
     }
 
     /**
@@ -80,21 +87,59 @@ public class SurveyLogService {
      * @param action {@code "IMPORT"} or {@code "UPDATE"}
      * @param fileName the uploaded file's name, or {@code null} if not available
      * @param errorMessage the failure reason
+     * @param revision the rejected file's {@code survey_revision} header, or {@code null} if the
+     *     file predates that header or failed before the header was read
      */
     @Transactional(Transactional.TxType.REQUIRES_NEW)
-    public void logFailure(Long surveyId, UUID surveyKey, String action, String fileName, String errorMessage) {
-        insert(surveyId, surveyKey, action, false, fileName, null, errorMessage);
+    public void logFailure(Long surveyId, UUID surveyKey, String action, String fileName, String errorMessage,
+            OffsetDateTime revision) {
+        insert(surveyId, surveyKey, action, false, fileName, null, errorMessage, revision);
+    }
+
+    /**
+     * Returns the revision of the most recent file successfully applied to {@code surveyKey} in
+     * this instance, or {@code null} if none is recorded — either nothing has been applied here
+     * yet, or every file applied so far predates the {@code survey_revision} header.
+     * <p>
+     * This is the baseline {@link SurveyDefinitionUpdateService} compares an incoming file
+     * against to refuse a regression.
+     *
+     * @param surveyKey the survey's cross-deployment stable key
+     * @return the latest applied revision, or {@code null} if unknown
+     */
+    public OffsetDateTime findLatestAppliedRevision(UUID surveyKey) {
+        if (surveyKey == null) {
+            return null;
+        }
+        Query query = em.createNativeQuery("""
+                SELECT MAX(revision) FROM survey.survey_log
+                 WHERE survey_key = ?1 AND outcome = 'SUCCESS' AND revision IS NOT NULL
+                """);
+        query.setParameter(1, surveyKey);
+        Object result = query.getSingleResult();
+        // A native query over timestamptz hands back Instant, OffsetDateTime, or
+        // java.sql.Timestamp depending on driver/dialect; normalise to UTC in every case, since
+        // callers only ever compare instants. Unknown types throw rather than silently
+        // returning null, which would quietly disable the regression check.
+        return switch (result) {
+            case null -> null;
+            case Instant instant -> instant.atOffset(ZoneOffset.UTC);
+            case OffsetDateTime odt -> odt.withOffsetSameInstant(ZoneOffset.UTC);
+            case java.sql.Timestamp ts -> ts.toInstant().atOffset(ZoneOffset.UTC);
+            default -> throw new IllegalStateException(
+                    "Unexpected revision column type: " + result.getClass().getName());
+        };
     }
 
     private void insert(Long surveyId, UUID surveyKey, String action, boolean success,
-            String fileName, String summary, String errorMessage) {
+            String fileName, String summary, String errorMessage, OffsetDateTime revision) {
         Query seqQuery = em.createNativeQuery("SELECT nextval('survey.survey_log_seq')");
         Long newId = ((Number) seqQuery.getSingleResult()).longValue();
 
         Query query = em.createNativeQuery("""
                 INSERT INTO survey.survey_log
-                    (id, survey_id, survey_key, action, outcome, performed_by, file_name, summary, error_message)
-                VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9)
+                    (id, survey_id, survey_key, action, outcome, performed_by, file_name, summary, error_message, revision)
+                VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10)
                 """);
         query.setParameter(1, newId);
         query.setParameter(2, surveyId);
@@ -105,6 +150,7 @@ public class SurveyLogService {
         query.setParameter(7, fileName);
         query.setParameter(8, summary);
         query.setParameter(9, errorMessage);
+        query.setParameter(10, revision);
         query.executeUpdate();
     }
 }

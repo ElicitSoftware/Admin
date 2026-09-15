@@ -14,6 +14,8 @@ package com.elicitsoftware.service;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.Query;
 
+import java.time.OffsetDateTime;
+import java.time.format.DateTimeParseException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -27,6 +29,44 @@ import java.util.Map;
 final class SurveyDefinitionFileFields {
 
     private SurveyDefinitionFileFields() {
+    }
+
+    /**
+     * Header line carrying the file's revision identifier — the exporting system's timestamp at
+     * the moment the file was written (see {@link SurveyDefinitionExportService}).
+     */
+    static final String REVISION_HEADER = "# survey_revision:";
+
+    /**
+     * Extracts the revision from a header line, or returns {@code null} if the line is not the
+     * revision header.
+     * <p>
+     * A file written before this header existed simply has no such line, and every consumer
+     * treats a {@code null} revision as "unknown" rather than an error — the header is additive
+     * to {@code ELICIT_SURVEY_EXPORT_V1}, not a new format version, since both parsers already
+     * skip every {@code #} line they don't recognise.
+     *
+     * @param line one trimmed line from the file
+     * @return the parsed revision, or {@code null} if this line is not the revision header
+     * @throws IllegalArgumentException if the line IS the revision header but its value is not a
+     *     parseable ISO-8601 offset date-time — a corrupt revision is not silently downgraded to
+     *     "unknown", because that would quietly disable the regression check in
+     *     {@link SurveyDefinitionUpdateService}
+     */
+    static OffsetDateTime parseRevisionHeader(String line) {
+        if (!line.startsWith(REVISION_HEADER)) {
+            return null;
+        }
+        String value = line.substring(REVISION_HEADER.length()).trim();
+        if (value.isEmpty()) {
+            throw new IllegalArgumentException("File carries an empty \"" + REVISION_HEADER + "\" header");
+        }
+        try {
+            return OffsetDateTime.parse(value);
+        } catch (DateTimeParseException e) {
+            throw new IllegalArgumentException(
+                    "Unparseable \"" + REVISION_HEADER + "\" header value: " + value, e);
+        }
     }
 
     /**

@@ -35,6 +35,7 @@ import java.util.List;
  * # survey_id: 5
  * # survey_key: 3fa85f64-5717-4562-b3fc-2c963f66afa6
  * # survey_name: My Survey
+ * # survey_revision: 2026-09-15T14:32:07.412-04:00
  * surveys: source_id|survey_key|name|display_order|title|description|initial_display_key|post_survey_url|published_by|published_comment
  * select_groups: source_id|element_key|name|description|data_type|version|effective_from|effective_to|published_by|published_comment|is_draft
  * select_items: source_id|element_key|select_group_id|display_text|display_order|coded_value|version|effective_from|effective_to|published_by|published_comment|is_draft
@@ -68,6 +69,22 @@ import java.util.List;
  * {@code SurveyDefinitionUpdateService}). Answers, respondents, subjects, and the audit log are not
  * part of the survey definition and are out of scope for this format entirely. Every other durable
  * key in this file is reallocated fresh per import and has no meaning across separate databases.
+ * <p>
+ * {@code survey_revision} (a header field, not a per-row one) is this file's revision identifier:
+ * the exporting system's timestamp at the moment the file was written. It is the only identifier
+ * in the format that is comparable <em>across</em> deployments. The {@code version} column on each
+ * Type 2 table is not — those are derived locally by each target instance
+ * ({@link SurveyDefinitionUpdateService} inserts {@code targetCurrentVersion + 1}, ignoring
+ * whatever the file says), so a site that joined a multi-site study late sits at a lower
+ * {@code version} than its peers for byte-identical content. "Which revision of this instrument is
+ * this site running?" is answered by {@code survey.survey_log.revision}, which records the
+ * revision of every file applied here.
+ * <p>
+ * Each export mints a fresh revision, including a re-export of a survey that was itself imported.
+ * That makes "same revision" mean "same file", so a multi-site study should distribute one
+ * exported file to every site rather than re-exporting per site. {@link
+ * SurveyDefinitionUpdateService} refuses a file whose revision predates the one already applied
+ * at the target, so an out-of-order distribution is caught rather than silently regressing a site.
  * <p>
  * The trailing {@code version|effective_from|effective_to|published_by|published_comment|is_draft}
  * fields on every Type 2 table are exported for informational/audit purposes only — on import,
@@ -153,7 +170,9 @@ public class SurveyDefinitionExportService {
         out.append("# dimensions: ").append(dimensions.size()).append("\n");
         out.append("# ontology: ").append(ontology.size()).append("\n");
         out.append("# metadata: ").append(metadata.size()).append("\n");
-        out.append("# generated: ").append(OffsetDateTime.now()).append("\n");
+        OffsetDateTime exportedAt = OffsetDateTime.now();
+        out.append("# generated: ").append(exportedAt).append("\n");
+        out.append("# survey_revision: ").append(exportedAt).append("\n");
         out.append("\n");
 
         // surveys: source_id|survey_key|name|display_order|title|description|initial_display_key|post_survey_url|published_by|published_comment

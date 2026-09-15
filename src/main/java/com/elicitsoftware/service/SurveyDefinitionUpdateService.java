@@ -23,6 +23,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
+import java.time.OffsetDateTime;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
@@ -168,6 +169,16 @@ public class SurveyDefinitionUpdateService {
      * Data lines must appear in dependency order as written by the exporter — the same order
      * {@link SurveyDefinitionImportService} expects.
      *
+     * <h2>Revision regression</h2>
+     * A file whose {@code survey_revision} header predates the newest revision already applied
+     * to this survey here is rejected before any row is touched (see
+     * {@link #checkRevisionRegression}), with no override. Applying an older file would not
+     * "roll back" anything — it would close the current versions and open <em>newer</em> ones
+     * carrying older content, which is both a silent content regression and indistinguishable,
+     * afterwards, from a deliberate edit. Reverting a deployment is an operational procedure
+     * (restore the prior database from backup, redeploy the prior image), not something this
+     * write path can express — the same reason the Kimball migration ships no down-migration.
+     *
      * @param inputStream the input stream containing the export file
      * @param fileName the uploaded file's original name, for the {@code survey_log} audit row
      * @param targetSurveyId the existing survey this file is being applied to
@@ -186,7 +197,8 @@ public class SurveyDefinitionUpdateService {
         Survey target = Survey.findById(targetSurveyId);
         if (target == null) {
             errors.add("Target survey not found: " + targetSurveyId);
-            surveyLogService.logFailure(null, null, "UPDATE", fileName, String.join("; ", errors));
+            // No revision: the target could not be resolved, so the file was never opened.
+            surveyLogService.logFailure(null, null, "UPDATE", fileName, String.join("; ", errors), null);
             return new UpdateResult(false, errors, null);
         }
 
@@ -202,6 +214,11 @@ public class SurveyDefinitionUpdateService {
 
         int lineNumber = 0;
         boolean surveyLineSeen = false;
+        // Parsed from the "# survey_revision:" header, which always precedes the data lines.
+        // The regression check itself is deferred until the surveys: line has confirmed this
+        // file actually belongs to the target — otherwise a file for an entirely different
+        // survey would be reported as a regression rather than as the key mismatch it is.
+        OffsetDateTime fileRevision = null;
 
         try (BufferedReader reader = new BufferedReader(
                 new InputStreamReader(inputStream, StandardCharsets.UTF_8))) {
@@ -220,13 +237,23 @@ public class SurveyDefinitionUpdateService {
                     if (line.contains(FORMAT_VERSION)) {
                         versionValidated = true;
                     }
+                    try {
+                        OffsetDateTime parsed = SurveyDefinitionFileFields.parseRevisionHeader(line);
+                        if (parsed != null) {
+                            fileRevision = parsed;
+                        }
+                    } catch (IllegalArgumentException e) {
+                        errors.add("Line " + lineNumber + ": " + e.getMessage());
+                        logAttempt(target, fileName, false, errors, null, null);
+                        return new UpdateResult(false, errors, null);
+                    }
                     continue;
                 }
 
                 if (!versionValidated) {
                     errors.add("Line " + lineNumber + ": File does not start with valid format header (expected # "
                             + FORMAT_VERSION + ")");
-                    logAttempt(target, fileName, false, errors, null);
+                    logAttempt(target, fileName, false, errors, null, fileRevision);
                     return new UpdateResult(false, errors, null);
                 }
 
@@ -255,7 +282,16 @@ public class SurveyDefinitionUpdateService {
                             String keyError = matchSurveyKey(fields, target);
                             if (keyError != null) {
                                 errors.add("Line " + lineNumber + ": " + keyError);
-                                logAttempt(target, fileName, false, errors, null);
+                                logAttempt(target, fileName, false, errors, null, fileRevision);
+                                return new UpdateResult(false, errors, null);
+                            }
+                            // Only now is this file known to belong to the target, so only now
+                            // does comparing its revision against the target's history mean
+                            // anything. Nothing has been written yet at this point.
+                            String regressionError = checkRevisionRegression(fileRevision, target.surveyKey);
+                            if (regressionError != null) {
+                                errors.add(regressionError);
+                                logAttempt(target, fileName, false, errors, null, fileRevision);
                                 return new UpdateResult(false, errors, null);
                             }
                             counts.get("surveys").record(applySurveyAttributes(fields, target));
@@ -340,30 +376,30 @@ public class SurveyDefinitionUpdateService {
                     }
                 } catch (Exception e) {
                     errors.add("Line " + lineNumber + ": " + e.getMessage());
-                    logAttempt(target, fileName, false, errors, null);
+                    logAttempt(target, fileName, false, errors, null, fileRevision);
                     throw new RuntimeException("Update failed at line " + lineNumber + ": " + e.getMessage(), e);
                 }
             }
 
             if (!versionValidated) {
                 errors.add("File does not contain valid format header");
-                logAttempt(target, fileName, false, errors, null);
+                logAttempt(target, fileName, false, errors, null, fileRevision);
                 return new UpdateResult(false, errors, null);
             }
             if (!surveyLineSeen) {
                 errors.add("File does not contain a surveys record");
-                logAttempt(target, fileName, false, errors, null);
+                logAttempt(target, fileName, false, errors, null, fileRevision);
                 return new UpdateResult(false, errors, null);
             }
 
             Map<String, TableUpdateCounts> immutableCounts = new LinkedHashMap<>();
             counts.forEach((table, c) -> immutableCounts.put(table, c.toImmutable()));
-            logAttempt(target, fileName, errors.isEmpty(), errors, immutableCounts);
+            logAttempt(target, fileName, errors.isEmpty(), errors, immutableCounts, fileRevision);
             return new UpdateResult(errors.isEmpty(), errors, immutableCounts);
 
         } catch (IOException e) {
             errors.add("Failed to read file: " + e.getMessage());
-            logAttempt(target, fileName, false, errors, null);
+            logAttempt(target, fileName, false, errors, null, fileRevision);
             return new UpdateResult(false, errors, null);
         }
     }
@@ -375,12 +411,43 @@ public class SurveyDefinitionUpdateService {
      * {@link SurveyLogService}.
      */
     private void logAttempt(Survey target, String fileName, boolean success,
-            List<String> errors, Map<String, TableUpdateCounts> counts) {
+            List<String> errors, Map<String, TableUpdateCounts> counts, OffsetDateTime revision) {
         if (success) {
-            surveyLogService.logSuccess(target.id.longValue(), target.surveyKey, "UPDATE", fileName, String.valueOf(counts));
+            surveyLogService.logSuccess(target.id.longValue(), target.surveyKey, "UPDATE", fileName,
+                    String.valueOf(counts), revision);
         } else {
-            surveyLogService.logFailure(target.id.longValue(), target.surveyKey, "UPDATE", fileName, String.join("; ", errors));
+            surveyLogService.logFailure(target.id.longValue(), target.surveyKey, "UPDATE", fileName,
+                    String.join("; ", errors), revision);
         }
+    }
+
+    /**
+     * Refuses a file that would regress this survey to an earlier authored revision.
+     * <p>
+     * Both "unknowns" deliberately pass rather than block, because neither is evidence of a
+     * regression: a file with no {@code survey_revision} header predates the header entirely, and
+     * a target with no recorded revision has either never had a file applied here or only ever
+     * had pre-header ones. Blocking on those would make the first post-upgrade update impossible.
+     * An equal revision also passes — re-applying the identical file is how an operator retries
+     * after a partial-looking failure, and every row in it will simply reconcile as UNCHANGED.
+     *
+     * @param fileRevision the incoming file's revision, or {@code null} if it carries none
+     * @param surveyKey the target's cross-deployment stable key
+     * @return an error message describing the regression, or {@code null} if the file may proceed
+     */
+    private String checkRevisionRegression(OffsetDateTime fileRevision, UUID surveyKey) {
+        if (fileRevision == null) {
+            return null;
+        }
+        OffsetDateTime applied = surveyLogService.findLatestAppliedRevision(surveyKey);
+        if (applied == null || !fileRevision.isBefore(applied)) {
+            return null;
+        }
+        return "This file's revision (" + fileRevision + ") predates the newest revision already "
+                + "applied to this survey here (" + applied + "). Applying it would open new "
+                + "versions carrying older content rather than reverting anything. Apply the "
+                + "newer file instead; reverting this deployment to the earlier revision is an "
+                + "operational restore (prior database backup plus the prior image), not an update.";
     }
 
     // -------------------------------------------------------------------------

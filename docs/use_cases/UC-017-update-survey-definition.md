@@ -19,11 +19,12 @@
 1. The administrator selects an existing survey in this instance to update and uploads a survey definition file.
 2. The system validates the file's format header.
 3. The system compares the file's stable survey key to the selected target survey's stable key.
-4. On a match, the system updates the target survey's own attributes in place. Every other table in the survey definition is part of this update too — matching each file record to the target's record by its stable element key, never by content or by the file's local identifiers:
+4. On a match, the system compares the file's revision to the newest revision already applied to this survey in this instance, and proceeds only if the file is not older.
+5. On a match, the system updates the target survey's own attributes in place. Every other table in the survey definition is part of this update too — matching each file record to the target's record by its stable element key, never by content or by the file's local identifiers:
    - For the eight Type 2 tables (select groups/items, steps, sections, steps-sections, questions, sections-questions, relationships): a matched record with identical content is left as-is; a matched record with different content has its current effective-dated version closed and a new version inserted effective now, under the same durable identifier; an element key with no match in the target is inserted as a brand-new record.
    - For the remaining tables that are part of the survey definition but not Type 2 versioned (reports, post-survey actions, dimensions, ontology, metadata): a matched record with different content is updated in place (no version history); an element key with no match is inserted as a brand-new record. Dimensions, being a shared lookup, are also matched by name.
    - A target record whose element key no longer appears anywhere in the file is left untouched; this use case never deletes.
-5. The system reports success with per-table counts of records created, versioned (or updated in place), or left unchanged.
+6. The system reports success with per-table counts of records created, versioned (or updated in place), or left unchanged.
 
 ## Alternative Flows
 
@@ -57,10 +58,25 @@
 
 ### A5: Unresolved reference or malformed record
 
-**Trigger:** A required reference cannot be mapped, or a record has the wrong shape (step 4).
+**Trigger:** A required reference cannot be mapped, or a record has the wrong shape (step 5).
 **Flow:**
 
 1. The system aborts the update, rolls back everything, and reports the failure.
+
+### A6: File revision predates the installed revision
+
+**Trigger:** The file's revision is older than the newest revision already applied to this survey here (step 4).
+**Flow:**
+
+1. The system aborts the update before any record is touched and reports that the file would regress the survey.
+2. The administrator applies the newer file instead. There is no override: reverting a deployment to an earlier revision is an operational restore (the prior database from backup, plus the prior application image), not an update.
+
+### A7: Unparseable revision
+
+**Trigger:** The file carries a revision header whose value is not a valid timestamp (step 2).
+**Flow:**
+
+1. The system rejects the file and applies no changes. A corrupt revision is not treated as "no revision", because that would silently disable the regression check.
 
 ## Postconditions
 
@@ -99,8 +115,22 @@ Every table in the survey definition carries a stable element key (the survey's 
 
 A target record whose element key is absent from the file is left completely untouched. This use case has no mechanism for removing a record that was deleted from the authored copy; that is out of scope.
 
+### BR-069: An older revision is always refused
+
+A file whose revision predates the newest revision already applied to the target in this instance is rejected before any record is written, with no override. Applying it would not revert the survey — it would close the current versions and open *newer* ones carrying older content, which is both a silent content regression and, afterwards, indistinguishable from a deliberate edit.
+
+Reverting a deployment to an earlier revision is deliberately outside this use case: it is an operational procedure (restore the prior database from backup, redeploy the prior image), for the same reason the Kimball Type 2 migration ships no down-migration. Expressing a revert as an update would leave the database in a state no backup corresponds to.
+
+### BR-070: An absent or equal revision is not a regression
+
+A file carrying no revision, or a target with no recorded revision, passes the check — neither is evidence of a regression, and blocking on them would make the first update after the revision header's introduction impossible. An equal revision also passes, since re-applying the identical file is how an administrator retries, and every record in it reconciles as unchanged.
+
+### BR-071: The key match is evaluated before the revision
+
+A file for a different survey is reported as a key mismatch (BR-063), not as a revision regression. Comparing revisions is only meaningful once the file is known to belong to the target.
+
 ---
 
 ## Reference
 
-Implemented by `SurveyDefinitionUpdateResource` / `SurveyDefinitionUpdateService`, alongside `SurveyDefinitionImportService` / `SurveyDefinitionExportService` (shared `ELICIT_SURVEY_EXPORT_V1` format and field-parsing helpers, `SurveyDefinitionFileFields`) — operates on the same shared survey-definition tables as UC-013/UC-014, applying the Type 2 versioning already introduced for select groups/items, steps, sections, steps-sections, questions, sections-questions, and relationships (`docs/research/Kimball_type2.md`). The stable survey key and every table's element key are attributes on tables owned by the sibling Authoring module — adding them required cross-module schema coordination (C-008). Every import/update attempt, success or failure, is audited to `survey.survey_log` (`SurveyLogService`).
+Implemented by `SurveyDefinitionUpdateResource` / `SurveyDefinitionUpdateService`, alongside `SurveyDefinitionImportService` / `SurveyDefinitionExportService` (shared `ELICIT_SURVEY_EXPORT_V1` format and field-parsing helpers, `SurveyDefinitionFileFields`) — operates on the same shared survey-definition tables as UC-013/UC-014, applying the Type 2 versioning already introduced for select groups/items, steps, sections, steps-sections, questions, sections-questions, and relationships (`docs/research/Kimball_type2.md`). The stable survey key and every table's element key are attributes on tables owned by the sibling Authoring module — adding them required cross-module schema coordination (C-008). Every import/update attempt, success or failure, is audited to `survey.survey_log` (`SurveyLogService`), including the revision of the file it applied — that column is what BR-069's regression check compares against, and what reports which revision this deployment is running. UC-018 wraps this use case and UC-014 behind a single entry point that picks between them by survey key.

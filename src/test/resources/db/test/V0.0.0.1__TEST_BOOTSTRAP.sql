@@ -547,10 +547,16 @@ CREATE TABLE IF NOT EXISTS survey.answers
         REFERENCES survey.questions (id),
     CONSTRAINT answers_respondent_fk FOREIGN KEY (respondent_id)
         REFERENCES survey.respondents (id),
-    CONSTRAINT answers_section_fk FOREIGN KEY (section)
-        REFERENCES survey.sections (id),
-    CONSTRAINT answers_step_fk FOREIGN KEY (step)
-        REFERENCES survey.steps (id),
+    -- NOTE: answers.step and answers.section are display-order VALUES, not foreign keys —
+    -- see Survey's V001__Create_Survey_Schema.sql, where both are NUMERIC with no FK at all.
+    -- This bootstrap previously declared answers_step_fk/answers_section_fk against
+    -- steps(id)/sections(id), constraining the test database more tightly than production.
+    -- That only ever held because the surrogate (steps_seq) and durable (steps_durable_seq)
+    -- sequences ran in lockstep on a fresh database, so the Nth step had id = step_id = N.
+    -- Versioning a step breaks that lockstep by design — a new version inserts a new surrogate
+    -- row under the EXISTING durable id — after which a durable id no longer names a valid
+    -- surrogate id and these FKs started rejecting valid fixture data. Removed to match the
+    -- real schema.
     CONSTRAINT answers_survey_fk FOREIGN KEY (survey_id)
         REFERENCES survey.surveys (id),
     CONSTRAINT section_question_id_fk FOREIGN KEY (section_question_id)

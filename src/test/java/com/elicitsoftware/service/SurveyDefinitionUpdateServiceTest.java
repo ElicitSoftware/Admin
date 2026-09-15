@@ -27,10 +27,14 @@ import org.junit.jupiter.api.Test;
 import java.io.ByteArrayInputStream;
 import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
+import java.time.Instant;
+import java.time.OffsetDateTime;
 import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -480,5 +484,202 @@ class SurveyDefinitionUpdateServiceTest {
         assertEquals(1L, queryLong("SELECT count(*) FROM survey.dimensions WHERE name = 'SharedDim'"),
                 "the existing dimension must be reused by name, not duplicated");
         assertEquals("NewTag", queryOne("SELECT tag FROM survey.ontology WHERE id = ?1", ontId));
+    }
+
+    // -------------------------------------------------------------------------
+    // Revision identifier and regression detection
+    // -------------------------------------------------------------------------
+
+    /** Rewrites a file's "# survey_revision:" header to a specific instant. */
+    private String withRevision(String content, OffsetDateTime revision) {
+        StringBuilder out = new StringBuilder();
+        boolean replaced = false;
+        for (String line : content.split("\n", -1)) {
+            if (line.trim().startsWith(SurveyDefinitionFileFields.REVISION_HEADER)) {
+                out.append(SurveyDefinitionFileFields.REVISION_HEADER).append(' ').append(revision);
+                replaced = true;
+            } else {
+                out.append(line);
+            }
+            out.append('\n');
+        }
+        if (!replaced) {
+            throw new IllegalStateException("export carried no revision header to rewrite");
+        }
+        return out.toString();
+    }
+
+    /** Strips the revision header entirely, simulating a file written before it existed. */
+    private String withoutRevision(String content) {
+        StringBuilder out = new StringBuilder();
+        for (String line : content.split("\n", -1)) {
+            if (!line.trim().startsWith(SurveyDefinitionFileFields.REVISION_HEADER)) {
+                out.append(line).append('\n');
+            }
+        }
+        return out.toString();
+    }
+
+    /** Reads back the logged revision, normalising whatever temporal type the driver returns. */
+    private Instant loggedRevision(UUID surveyKey) {
+        Object value = em.createNativeQuery(
+                        "SELECT MAX(revision) FROM survey.survey_log WHERE survey_key = ?1 AND outcome = 'SUCCESS'")
+                .setParameter(1, surveyKey)
+                .getSingleResult();
+        return switch (value) {
+            case null -> null;
+            case Instant instant -> instant;
+            case OffsetDateTime odt -> odt.toInstant();
+            case java.sql.Timestamp ts -> ts.toInstant();
+            default -> throw new IllegalStateException("Unexpected revision type: " + value.getClass());
+        };
+    }
+
+    /**
+     * UC-017: every export carries a survey_revision header, and a successful update records it
+     * against the survey so the site can report which authored revision it is running.
+     */
+    @Test
+    @TestTransaction
+    void successfulUpdateRecordsTheFilesRevision() {
+        Survey survey = newSurvey("UpdRev");
+        insertStep(survey.id, 1, "Step A");
+
+        String exported = surveyDefinitionExportService.exportSurvey(survey.id);
+        assertTrue(exported.contains(SurveyDefinitionFileFields.REVISION_HEADER),
+                "export should carry a revision header");
+
+        OffsetDateTime revision = OffsetDateTime.parse("2026-09-15T12:00:00Z");
+        SurveyDefinitionUpdateService.UpdateResult result = surveyDefinitionUpdateService.updateFromFile(
+                toStream(withRevision(exported, revision)), "rev.elicit", survey.id);
+
+        assertTrue(result.isSuccess(), () -> "update errors: " + result.getErrors());
+        assertEquals(revision.toInstant(), loggedRevision(survey.surveyKey),
+                "the applied file's revision should be recorded against the survey");
+    }
+
+    /**
+     * UC-017: a file whose revision predates the newest one already applied here is refused, and
+     * refused before anything is written — applying it would open NEW versions carrying OLDER
+     * content rather than reverting the survey.
+     */
+    @Test
+    @TestTransaction
+    void updateWithOlderRevisionIsRejectedAndChangesNothing() {
+        Survey survey = newSurvey("UpdRegress");
+        long stepId = insertStep(survey.id, 1, "Step A");
+
+        String exported = surveyDefinitionExportService.exportSurvey(survey.id);
+        OffsetDateTime newer = OffsetDateTime.parse("2026-09-15T12:00:00Z");
+        assertTrue(surveyDefinitionUpdateService.updateFromFile(
+                toStream(withRevision(exported, newer)), "newer.elicit", survey.id).isSuccess());
+
+        String older = withRevision(exported.replace("Step A", "Step A renamed"),
+                OffsetDateTime.parse("2026-09-01T12:00:00Z"));
+        SurveyDefinitionUpdateService.UpdateResult result =
+                surveyDefinitionUpdateService.updateFromFile(toStream(older), "older.elicit", survey.id);
+
+        assertFalse(result.isSuccess(), "an older revision should be refused");
+        assertTrue(String.join("; ", result.getErrors()).contains("predates the newest revision"),
+                () -> "unexpected errors: " + result.getErrors());
+        assertEquals("Step A", queryOne("SELECT name FROM survey.steps WHERE id = ?1", stepId),
+                "the rejected file must not have changed anything");
+        assertEquals(1L, queryLong("SELECT count(*) FROM survey.steps WHERE survey_id = ?1", survey.id),
+                "the rejected file must not have opened a new version");
+    }
+
+    /**
+     * UC-017: re-applying the identical file is how an operator retries, so an equal revision is
+     * not a regression.
+     */
+    @Test
+    @TestTransaction
+    void updateWithSameRevisionIsAllowed() {
+        Survey survey = newSurvey("UpdSameRev");
+        insertStep(survey.id, 1, "Step A");
+
+        String exported = withRevision(surveyDefinitionExportService.exportSurvey(survey.id),
+                OffsetDateTime.parse("2026-09-15T12:00:00Z"));
+        assertTrue(surveyDefinitionUpdateService.updateFromFile(
+                toStream(exported), "first.elicit", survey.id).isSuccess());
+
+        SurveyDefinitionUpdateService.UpdateResult result = surveyDefinitionUpdateService.updateFromFile(
+                toStream(exported), "again.elicit", survey.id);
+
+        assertTrue(result.isSuccess(), () -> "re-applying the same revision should be allowed: "
+                + result.getErrors());
+        assertEquals(0, result.getCounts().get("steps").versioned(), "a replay should change nothing");
+    }
+
+    /**
+     * UC-017: a file predating the revision header carries no revision to compare, so it is
+     * applied rather than blocked — otherwise the first update after this upgrade would be
+     * impossible.
+     */
+    @Test
+    @TestTransaction
+    void updateWithNoRevisionHeaderIsAllowedAndLogsNoRevision() {
+        Survey survey = newSurvey("UpdNoRev");
+        insertStep(survey.id, 1, "Step A");
+
+        String exported = surveyDefinitionExportService.exportSurvey(survey.id);
+        assertTrue(surveyDefinitionUpdateService.updateFromFile(
+                toStream(withRevision(exported, OffsetDateTime.parse("2026-09-15T12:00:00Z"))),
+                "newer.elicit", survey.id).isSuccess());
+
+        SurveyDefinitionUpdateService.UpdateResult result = surveyDefinitionUpdateService.updateFromFile(
+                toStream(withoutRevision(exported)), "legacy.elicit", survey.id);
+
+        assertTrue(result.isSuccess(), () -> "a pre-revision file should still apply: " + result.getErrors());
+    }
+
+    /**
+     * UC-017: a revision header that is present but unparseable is a rejection, not a silent
+     * fallback to "unknown" — silently ignoring it would disable the regression check.
+     */
+    @Test
+    @TestTransaction
+    void updateWithCorruptRevisionHeaderIsRejected() {
+        Survey survey = newSurvey("UpdBadRev");
+        insertStep(survey.id, 1, "Step A");
+
+        String exported = surveyDefinitionExportService.exportSurvey(survey.id);
+        String corrupt = exported.replaceAll("(?m)^" + SurveyDefinitionFileFields.REVISION_HEADER + ".*$",
+                SurveyDefinitionFileFields.REVISION_HEADER + " not-a-timestamp");
+
+        SurveyDefinitionUpdateService.UpdateResult result =
+                surveyDefinitionUpdateService.updateFromFile(toStream(corrupt), "corrupt.elicit", survey.id);
+
+        assertFalse(result.isSuccess(), "a corrupt revision header should be refused");
+        assertTrue(String.join("; ", result.getErrors()).contains("Unparseable"),
+                () -> "unexpected errors: " + result.getErrors());
+    }
+
+    /**
+     * UC-017 A3: a file for a different survey is reported as the key mismatch it is, not as a
+     * revision regression — the revision check is deliberately deferred until after the key
+     * match confirms the file belongs to this target.
+     */
+    @Test
+    @TestTransaction
+    void keyMismatchIsReportedAheadOfRevisionRegression() {
+        Survey target = newSurvey("UpdKeyFirst");
+        insertStep(target.id, 1, "Step A");
+        Survey other = newSurvey("UpdKeyOther");
+        insertStep(other.id, 1, "Other Step");
+
+        assertTrue(surveyDefinitionUpdateService.updateFromFile(
+                toStream(withRevision(surveyDefinitionExportService.exportSurvey(target.id),
+                        OffsetDateTime.parse("2026-09-15T12:00:00Z"))),
+                "newer.elicit", target.id).isSuccess());
+
+        String foreign = withRevision(surveyDefinitionExportService.exportSurvey(other.id),
+                OffsetDateTime.parse("2026-09-01T12:00:00Z"));
+        SurveyDefinitionUpdateService.UpdateResult result =
+                surveyDefinitionUpdateService.updateFromFile(toStream(foreign), "foreign.elicit", target.id);
+
+        assertFalse(result.isSuccess());
+        assertTrue(String.join("; ", result.getErrors()).contains("does not match the selected survey's key"),
+                () -> "should report the key mismatch, not a regression: " + result.getErrors());
     }
 }
