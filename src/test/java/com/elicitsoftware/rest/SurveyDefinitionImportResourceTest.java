@@ -111,7 +111,7 @@ class SurveyDefinitionImportResourceTest {
     @Test
     @TestSecurity(user = "admin", roles = {"elicit_admin"})
     void wellFormedSurveyOnlyFileImportsSuccessfully() {
-        String content = "# ELICIT_SURVEY_EXPORT_V2\n\nsurveys: 1|REST Import Survey|1|Title|||||\n";
+        String content = "# ELICIT_SURVEY_EXPORT_V2\n\nsurveys: 1||REST Import Survey|1|Title|||||\n";
 
         given()
                 .multiPart("file", "survey.elicit", bytes(content), "application/octet-stream")

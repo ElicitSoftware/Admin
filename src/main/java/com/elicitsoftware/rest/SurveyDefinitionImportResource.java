@@ -69,7 +69,7 @@ public class SurveyDefinitionImportResource {
 
         try {
             SurveyDefinitionImportService.ImportResult result =
-                    surveyDefinitionImportService.importFromFile(multipartBody.file);
+                    surveyDefinitionImportService.importFromFile(multipartBody.file, multipartBody.fileName);
 
             ImportResponse response = new ImportResponse(
                     result.isSuccess(),

@@ -17,7 +17,7 @@
 
 1. The administrator requests an export for a survey identifier.
 2. The system loads the survey and all of its definition data in dependency order.
-3. The system serializes the definition into the portable survey export format, preserving each record's original identifier so references can be re-mapped on import.
+3. The system serializes the definition into the portable survey export format, preserving each record's original identifier so references can be re-mapped on import, and includes the survey's stable, cross-instance key.
 4. The system returns a downloadable definition file.
 
 ## Alternative Flows
@@ -60,8 +60,12 @@ Each exported record retains its original identifier so that references between 
 
 Static lookup references (such as question type, operator, and action) are exported as-is and must already exist in the target system.
 
+### BR-060: Export carries the stable survey key
+
+Every export includes the survey's stable, cross-instance-portable key (assigned once and never reassigned) alongside preserved source identifiers, so the same authored survey can be recognized across separate deployments (e.g., different institutions) and matched for an update (UC-017) or for respondent data consolidation.
+
 ---
 
 ## Reference
 
-Derived from `SurveyDefinitionExportResource` and `SurveyDefinitionExportService` (`ELICIT_SURVEY_EXPORT_V2` format). Reads the shared survey-definition tables (surveys, select groups/items, steps, sections, questions, relationships, reports, post-survey actions, dimensions, ontology, metadata).
+Derived from `SurveyDefinitionExportResource` and `SurveyDefinitionExportService` (`ELICIT_SURVEY_EXPORT_V2` format). Reads the shared survey-definition tables (surveys, select groups/items, steps, sections, questions, relationships, reports, post-survey actions, dimensions, ontology, metadata). See UC-017 for the update flow this key enables.

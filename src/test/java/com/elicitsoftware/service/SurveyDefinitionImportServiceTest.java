@@ -59,8 +59,8 @@ class SurveyDefinitionImportServiceTest {
     EntityManager em;
 
     /** Holds the seeded values a round trip needs to assert against post-import. */
-    private record SurveyDefinitionFixture(int sourceSurveyId, String surveyName, String stepName,
-                                            String sectionName, String displayKey, String questionText,
+    private record SurveyDefinitionFixture(int sourceSurveyId, java.util.UUID surveyKey, String surveyName,
+                                            String stepName, String sectionName, String displayKey, String questionText,
                                             String reportName, String psaName, String ontologyName,
                                             String ontologyTag, String metadataValue) {
     }
@@ -231,7 +231,7 @@ class SurveyDefinitionImportServiceTest {
         String metadataValue = "Meta-" + token;
         insertMetadata(surveyId, stepsSectionId, ontologyId, metadataValue);
 
-        return new SurveyDefinitionFixture(surveyId, survey.name, stepName, sectionName, displayKey,
+        return new SurveyDefinitionFixture(surveyId, survey.surveyKey, survey.name, stepName, sectionName, displayKey,
                 questionText, "Report " + token, "PSA " + token, ontologyName, ontologyTag, metadataValue);
     }
 
@@ -250,7 +250,15 @@ class SurveyDefinitionImportServiceTest {
         String exported = surveyDefinitionExportService.exportSurvey(fixture.sourceSurveyId());
         assertTrue(exported.contains("# ELICIT_SURVEY_EXPORT_V2"));
 
-        SurveyDefinitionImportService.ImportResult result = surveyDefinitionImportService.importFromFile(toStream(exported));
+        // BR-062 correctly refuses to re-import a survey_key that already exists in this
+        // instance — which the source survey's own key always does, since we never delete it.
+        // Blanking the key here simulates importing into a genuinely different instance that
+        // has never seen this survey before (the file-predates-key-assignment path, BR-061);
+        // the duplicate-key rejection itself is covered by importingDuplicateSurveyKeyIsRejected.
+        String simulatedFreshInstanceExport = exported.replace(fixture.surveyKey().toString(), "");
+
+        SurveyDefinitionImportService.ImportResult result =
+                surveyDefinitionImportService.importFromFile(toStream(simulatedFreshInstanceExport), "test.elicit");
 
         assertTrue(result.isSuccess(), () -> "import errors: " + result.getErrors());
         assertEquals(1, result.getCounts().get("surveys"));
@@ -315,13 +323,32 @@ class SurveyDefinitionImportServiceTest {
         assertThrows(IllegalArgumentException.class, () -> surveyDefinitionExportService.exportSurvey(999999));
     }
 
+    /**
+     * BR-062/A4: importing a file whose survey_key already exists in this instance is rejected
+     * as a duplicate deployment, directing the administrator to UC-017 (Update) instead. No rows
+     * from the file are inserted.
+     */
+    @Test
+    @TestTransaction
+    void importingDuplicateSurveyKeyIsRejected() {
+        SurveyDefinitionFixture fixture = persistSurveyDefinitionTree("SDT2");
+        String exported = surveyDefinitionExportService.exportSurvey(fixture.sourceSurveyId());
+
+        RuntimeException ex = assertThrows(RuntimeException.class,
+                () -> surveyDefinitionImportService.importFromFile(toStream(exported), "duplicate.elicit"));
+
+        assertTrue(ex.getMessage().contains("use Update instead"), ex.getMessage());
+        assertEquals(1L, queryLong("SELECT count(*) FROM survey.surveys WHERE survey_key = ?1", fixture.surveyKey()),
+                "the duplicate-key import must not create a second survey row");
+    }
+
     /** UC-014: a file missing the format-version header returns a failed result, not an exception. */
     @Test
     @TestTransaction
     void malformedHeaderReturnsFailedResultWithoutThrowing() {
         String content = "surveys: 1|Name|1|Title|||||\n";
 
-        SurveyDefinitionImportService.ImportResult result = surveyDefinitionImportService.importFromFile(toStream(content));
+        SurveyDefinitionImportService.ImportResult result = surveyDefinitionImportService.importFromFile(toStream(content), "test.elicit");
 
         assertFalse(result.isSuccess());
         assertTrue(result.getErrors().get(0).contains("valid format header"), result.getErrors().toString());
@@ -333,7 +360,7 @@ class SurveyDefinitionImportServiceTest {
     void unknownTableNameIsCollectedAsErrorWithoutThrowing() {
         String content = "# ELICIT_SURVEY_EXPORT_V2\n\nfoobar: 1|2\n";
 
-        SurveyDefinitionImportService.ImportResult result = surveyDefinitionImportService.importFromFile(toStream(content));
+        SurveyDefinitionImportService.ImportResult result = surveyDefinitionImportService.importFromFile(toStream(content), "test.elicit");
 
         assertFalse(result.isSuccess());
         assertTrue(result.getErrors().get(0).contains("Unknown table: foobar"), result.getErrors().toString());
@@ -347,11 +374,11 @@ class SurveyDefinitionImportServiceTest {
     @TestTransaction
     void danglingForeignKeyReferenceThrowsRuntimeException() {
         String content = "# ELICIT_SURVEY_EXPORT_V2\n\n"
-                + "surveys: 1|Name|1|Title|||||\n\n"
-                + "select_items: 1|999|Text|1|CODE||||||\n";
+                + "surveys: 1|11111111-1111-1111-1111-111111111111|Name|1|Title|||||\n\n"
+                + "select_items: 1|22222222-2222-2222-2222-222222222222|999|Text|1|CODE||||||\n";
 
         RuntimeException ex = assertThrows(RuntimeException.class,
-                () -> surveyDefinitionImportService.importFromFile(toStream(content)));
+                () -> surveyDefinitionImportService.importFromFile(toStream(content), "test.elicit"));
 
         assertTrue(ex.getMessage().contains("No ID mapping found"), ex.getMessage());
     }

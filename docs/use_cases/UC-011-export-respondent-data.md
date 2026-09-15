@@ -17,7 +17,7 @@
 
 1. The administrator requests an export for a respondent identifier.
 2. The system loads the respondent and all related data: answers, dependents, subjects, messages, and post-survey-action records.
-3. The system serializes the data into the portable respondent export format, recording the export timezone and linking messages to their subjects.
+3. The system serializes the data into the portable respondent export format, recording the export timezone, the respondent's survey by its stable cross-instance key, and linking messages to their subjects.
 4. The system returns a downloadable export file.
 
 ## Alternative Flows
@@ -59,6 +59,10 @@ The export uses a versioned, escaped, delimited format whose header records coun
 ### BR-040: Orphaned messages skipped
 
 A message whose subject is not part of the export set is omitted.
+
+### BR-058: Survey identified by stable key
+
+A respondent export identifies the respondent's survey by its stable, cross-instance key, not merely the source database's numeric survey identifier, so the file can be attributed to the correct survey after import into another instance.
 
 ---
 

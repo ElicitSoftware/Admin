@@ -15,6 +15,7 @@ import io.quarkus.hibernate.orm.panache.PanacheEntityBase;
 import jakarta.persistence.*;
 
 import java.util.Set;
+import java.util.UUID;
 
 /**
  * JPA entity representing surveys in the Elicit survey management system.
@@ -93,6 +94,19 @@ public class Survey extends PanacheEntityBase {
     @SequenceGenerator(name = "SURVEY_ID_GENERATOR", schema = "survey", sequenceName = "surveys_seq", allocationSize = 1)
     @Column(name = "id", unique = true, nullable = false)
     public Integer id;
+
+    /**
+     * Stable, cross-instance-portable identity for this authored survey.
+     *
+     * <p>Unlike {@link #id} (a per-database surrogate key), this value is preserved
+     * verbatim when a survey definition is imported into another instance (see
+     * {@code SurveyDefinitionImportService}), so two independent deployments of the same
+     * authored survey (e.g. two institutions) can recognize themselves as "the same
+     * survey" for a later update. Auto-generated at persist time if not already set —
+     * see {@link #ensureSurveyKey()}.</p>
+     */
+    @Column(name = "survey_key", nullable = false, unique = true)
+    public UUID surveyKey;
 
     /**
      * Display order for presenting surveys in user interfaces.
@@ -207,6 +221,20 @@ public class Survey extends PanacheEntityBase {
      */
     public Survey() {
         // Default constructor for JPA
+    }
+
+    /**
+     * Assigns a fresh {@link #surveyKey} if one hasn't already been set — covers every
+     * code path that creates a survey directly through this entity (rather than through
+     * {@code SurveyDefinitionImportService}, which resolves the key from an import file
+     * itself), so {@code survey_key}'s {@code NOT NULL} constraint is never at risk of
+     * being violated by a plain {@code new Survey(); ...; persist()}.
+     */
+    @PrePersist
+    void ensureSurveyKey() {
+        if (surveyKey == null) {
+            surveyKey = UUID.randomUUID();
+        }
     }
 
     /**

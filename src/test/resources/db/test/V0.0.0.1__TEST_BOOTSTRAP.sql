@@ -60,6 +60,8 @@ CREATE SEQUENCE IF NOT EXISTS survey.surveys_seq START WITH 1 INCREMENT BY 1;
 CREATE TABLE IF NOT EXISTS survey.surveys
 (
     id                  bigint NOT NULL,
+    -- Stable, cross-instance-portable identity — see Survey.java's surveyKey field.
+    survey_key          uuid NOT NULL,
     display_order       integer,
     name                character varying(255),
     title               character varying(255),
@@ -69,7 +71,8 @@ CREATE TABLE IF NOT EXISTS survey.surveys
     -- Kimball Type 2 (SCD Type 1 for surveys — in-place change tracking only).
     published_by        text,
     published_comment   text,
-    CONSTRAINT surveys_pk PRIMARY KEY (id)
+    CONSTRAINT surveys_pk PRIMARY KEY (id),
+    CONSTRAINT surveys_survey_key_un UNIQUE (survey_key)
 );
 
 -- -----------------------------------------------------------------------------
@@ -102,6 +105,8 @@ CREATE TABLE IF NOT EXISTS survey.reports
 (
     id            bigint NOT NULL,
     survey_id     bigint NOT NULL,
+    -- Cross-instance-portable identity — see survey_key on surveys above (UC-017).
+    report_key    uuid NOT NULL DEFAULT (md5(random()::text || clock_timestamp()::text))::uuid,
     name          character varying(255),
     description   character varying(2000),
     url           character varying(2000),
@@ -113,12 +118,13 @@ CREATE TABLE IF NOT EXISTS survey.reports
 CREATE SEQUENCE IF NOT EXISTS survey.post_survey_actions_seq START WITH 1 INCREMENT BY 1;
 CREATE TABLE IF NOT EXISTS survey.post_survey_actions
 (
-    id              bigint NOT NULL,
-    survey_id       bigint NOT NULL,
-    name            character varying(255),
-    description     character varying(2000),
-    url             character varying(2000),
-    execution_order integer,
+    id                     bigint NOT NULL,
+    survey_id              bigint NOT NULL,
+    post_survey_action_key uuid NOT NULL DEFAULT (md5(random()::text || clock_timestamp()::text))::uuid,
+    name                   character varying(255),
+    description            character varying(2000),
+    url                    character varying(2000),
+    execution_order        integer,
     CONSTRAINT post_survey_actions_pk PRIMARY KEY (id),
     CONSTRAINT psa_surveys_fk FOREIGN KEY (survey_id) REFERENCES survey.surveys (id)
 );
@@ -214,6 +220,10 @@ CREATE TABLE IF NOT EXISTS survey.select_groups
     description        character varying(255),
     data_type          character varying(50) NOT NULL DEFAULT 'Text',
     select_group_id    integer NOT NULL DEFAULT nextval('survey.select_groups_durable_seq'),
+    -- Cross-instance-portable identity — see survey_key on surveys above. Given a
+    -- DEFAULT here (unlike production) so existing raw-SQL test helpers that don't
+    -- mention this column keep working unmodified.
+    select_group_key   uuid NOT NULL DEFAULT (md5(random()::text || clock_timestamp()::text))::uuid,
     version            integer NOT NULL DEFAULT 0,
     effective_from     timestamptz DEFAULT '1970-01-01 00:00:00+00',
     effective_to       timestamptz DEFAULT '9999-12-31 23:59:59+00',
@@ -244,6 +254,7 @@ CREATE TABLE IF NOT EXISTS survey.select_items
     display_order         integer NOT NULL,
     coded_value            character varying(255),
     select_item_id         integer NOT NULL DEFAULT nextval('survey.select_items_durable_seq'),
+    select_item_key        uuid NOT NULL DEFAULT (md5(random()::text || clock_timestamp()::text))::uuid,
     version                integer NOT NULL DEFAULT 0,
     effective_from         timestamptz DEFAULT '1970-01-01 00:00:00+00',
     effective_to           timestamptz DEFAULT '9999-12-31 23:59:59+00',
@@ -276,6 +287,7 @@ CREATE TABLE IF NOT EXISTS survey.steps
     dimension_name character varying(50) NOT NULL,
     description    character varying(255),
     step_id            integer NOT NULL DEFAULT nextval('survey.steps_durable_seq'),
+    step_key           uuid NOT NULL DEFAULT (md5(random()::text || clock_timestamp()::text))::uuid,
     version            integer NOT NULL DEFAULT 0,
     effective_from     timestamptz DEFAULT '1970-01-01 00:00:00+00',
     effective_to       timestamptz DEFAULT '9999-12-31 23:59:59+00',
@@ -308,6 +320,7 @@ CREATE TABLE IF NOT EXISTS survey.sections
     dimension_name character varying(50) NOT NULL,
     description    character varying(255),
     section_id         integer NOT NULL DEFAULT nextval('survey.sections_durable_seq'),
+    section_key        uuid NOT NULL DEFAULT (md5(random()::text || clock_timestamp()::text))::uuid,
     version            integer NOT NULL DEFAULT 0,
     effective_from     timestamptz DEFAULT '1970-01-01 00:00:00+00',
     effective_to       timestamptz DEFAULT '9999-12-31 23:59:59+00',
@@ -340,6 +353,7 @@ CREATE TABLE IF NOT EXISTS survey.steps_sections
     section_display_order integer               NOT NULL,
     display_key           character varying(34) NOT NULL,
     steps_sections_id      integer NOT NULL DEFAULT nextval('survey.steps_sections_durable_seq'),
+    steps_sections_key     uuid NOT NULL DEFAULT (md5(random()::text || clock_timestamp()::text))::uuid,
     version                integer NOT NULL DEFAULT 0,
     effective_from         timestamptz DEFAULT '1970-01-01 00:00:00+00',
     effective_to           timestamptz DEFAULT '9999-12-31 23:59:59+00',
@@ -384,6 +398,7 @@ CREATE TABLE IF NOT EXISTS survey.questions
     default_value   character varying(255),
     variant         character varying(255),
     question_id           integer NOT NULL DEFAULT nextval('survey.questions_durable_seq'),
+    question_key          uuid NOT NULL DEFAULT (md5(random()::text || clock_timestamp()::text))::uuid,
     version               integer NOT NULL DEFAULT 0,
     effective_from        timestamptz DEFAULT '1970-01-01 00:00:00+00',
     effective_to          timestamptz DEFAULT '9999-12-31 23:59:59+00',
@@ -416,6 +431,7 @@ CREATE TABLE IF NOT EXISTS survey.sections_questions
     section_version       integer NOT NULL DEFAULT 0,
     display_order integer NOT NULL,
     sections_question_id   integer NOT NULL DEFAULT nextval('survey.sections_questions_durable_seq'),
+    sections_question_key  uuid NOT NULL DEFAULT (md5(random()::text || clock_timestamp()::text))::uuid,
     version                integer NOT NULL DEFAULT 0,
     effective_from         timestamptz DEFAULT '1970-01-01 00:00:00+00',
     effective_to           timestamptz DEFAULT '9999-12-31 23:59:59+00',
@@ -463,6 +479,7 @@ CREATE TABLE IF NOT EXISTS survey.relationships
     default_upstream_value   character varying(255),
     override_upstream_value  character varying(255),
     relationship_id          integer NOT NULL DEFAULT nextval('survey.relationships_durable_seq'),
+    relationship_key         uuid NOT NULL DEFAULT (md5(random()::text || clock_timestamp()::text))::uuid,
     version                  integer NOT NULL DEFAULT 0,
     effective_from           timestamptz DEFAULT '1970-01-01 00:00:00+00',
     effective_to             timestamptz DEFAULT '9999-12-31 23:59:59+00',
@@ -564,7 +581,11 @@ CREATE TABLE IF NOT EXISTS survey.dependents
 CREATE SEQUENCE IF NOT EXISTS survey.dimensions_seq START WITH 1 INCREMENT BY 1;
 CREATE TABLE IF NOT EXISTS survey.dimensions
 (
-    id   integer NOT NULL DEFAULT NEXTVAL('survey.dimensions_seq'),
+    id            integer NOT NULL DEFAULT NEXTVAL('survey.dimensions_seq'),
+    -- Global (not survey-scoped) — a dimension reused by name across surveys still
+    -- carries one stable cross-instance key, consistent with the reuse-by-name
+    -- semantics import/update already apply to this table.
+    dimension_key uuid NOT NULL DEFAULT (md5(random()::text || clock_timestamp()::text))::uuid,
     name character varying(50),
     CONSTRAINT dimensions_pk PRIMARY KEY (id),
     CONSTRAINT dimensions_un UNIQUE (name)
@@ -573,11 +594,12 @@ CREATE TABLE IF NOT EXISTS survey.dimensions
 CREATE SEQUENCE IF NOT EXISTS survey.ontology_seq START WITH 1 INCREMENT BY 1;
 CREATE TABLE IF NOT EXISTS survey.ontology
 (
-    id        integer                NOT NULL,
-    survey_id integer                NOT NULL,
-    name      character varying(255) NOT NULL,
-    tag       character varying(255) NOT NULL,
-    dimension integer,
+    id           integer                NOT NULL,
+    survey_id    integer                NOT NULL,
+    ontology_key uuid NOT NULL DEFAULT (md5(random()::text || clock_timestamp()::text))::uuid,
+    name         character varying(255) NOT NULL,
+    tag          character varying(255) NOT NULL,
+    dimension    integer,
     CONSTRAINT ontology_pk PRIMARY KEY (id),
     CONSTRAINT ontology_dimensions_fk FOREIGN KEY (dimension) REFERENCES survey.dimensions (id),
     CONSTRAINT ontology_un UNIQUE (name, tag)
@@ -588,6 +610,7 @@ CREATE TABLE IF NOT EXISTS survey.metadata
 (
     id                    integer NOT NULL,
     survey_id             integer NOT NULL,
+    metadata_key          uuid NOT NULL DEFAULT (md5(random()::text || clock_timestamp()::text))::uuid,
     steps_sections_id     integer,
     question_id           integer,
     sections_question_id  integer,
@@ -636,7 +659,7 @@ GRANT USAGE ON SCHEMA surveyreport TO surveyadmin_user, surveyreport_user;
 --    lives under db/migration) inserts user_surveys(survey_id=1); without this
 --    row that FK fails and every @QuarkusTest fails at boot.
 -- -----------------------------------------------------------------------------
-INSERT INTO survey.surveys (id, display_order, name, title, description)
-VALUES (1, 1, 'Test Survey', 'Test Survey', 'Seeded by test bootstrap')
+INSERT INTO survey.surveys (id, survey_key, display_order, name, title, description)
+VALUES (1, '00000000-0000-0000-0000-000000000001', 1, 'Test Survey', 'Test Survey', 'Seeded by test bootstrap')
 ON CONFLICT (id) DO NOTHING;
 ALTER SEQUENCE survey.surveys_seq RESTART WITH 2;

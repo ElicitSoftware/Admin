@@ -92,17 +92,20 @@ A person registered to take a survey, associated with a department and linked to
 
 ### SURVEY
 
-*Owned by the Authoring module.* A survey definition subjects are registered against; parent of its report definitions and post-survey actions.
+*Owned by the Authoring module.* A survey definition subjects are registered against; parent of its report definitions and post-survey actions. `publishedBy`/`publishedComment` are the survey's own Kimball Type 1 columns (`docs/research/Kimball_type2.md`); its structural children (select groups/items, steps, sections, questions, relationships) carry full Type 2 versioning instead. `surveyKey` gives the survey itself a stable identity across separate deployments (UC-017); every other survey-definition table (Type 2 or not — including reports, post-survey actions, dimensions, ontology, and metadata) carries its own analogous `element_key` for the same reason. Adding these required cross-module coordination with Authoring (C-008).
 
 | Attribute         | Description                                    | Data Type | Length/Precision | Validation Rules      |
 |-------------------|------------------------------------------------|-----------|------------------|-----------------------|
 | id                | Unique identifier                              | Long      |                  | Primary Key, Sequence |
+| surveyKey         | Stable identifier for this authored survey, portable and identical across every instance it is deployed to (e.g., separate institutions); assigned once and never reassigned | String (UUID) | 36               | Not Null, Unique, Immutable |
 | displayOrder      | Ordering position among surveys                | Integer   | 3                | Not Null              |
 | name              | Internal survey name                           | String    |                  | Optional              |
 | title             | Display title                                  | String    |                  | Optional              |
 | description       | Description                                    | String    |                  | Optional              |
 | initialDisplayKey | Key of the first item to display               | String    |                  | Optional              |
 | postSurveyURL     | URL to redirect to after completion            | String    |                  | Optional              |
+| publishedBy       | Who last published/updated the survey shell   | String    |                  | Optional              |
+| publishedComment  | Comment recorded with the last publish/update  | String    |                  | Optional              |
 
 ### MESSAGE
 

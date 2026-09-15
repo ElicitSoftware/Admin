@@ -5,7 +5,7 @@
 **Use Case ID:** UC-014
 **Use Case Name:** Import Survey Definition
 **Primary Actor:** Survey Administrator
-**Goal:** Import a survey definition file into this system as a brand-new survey with fresh identifiers.
+**Goal:** Import a survey definition file into this system as a brand-new survey with fresh identifiers. To alter an existing survey in place instead, see UC-017.
 **Status:** Implemented
 
 ## Preconditions
@@ -17,7 +17,7 @@
 
 1. The administrator uploads a survey definition file.
 2. The system validates the file's format header.
-3. The system inserts the survey with a fresh identifier and a recomputed display order, then each dependent record, rewriting all references from source identifiers to the newly assigned ones.
+3. The system inserts the survey with a fresh identifier and a recomputed display order, then each dependent record, rewriting all references from source identifiers to the newly assigned ones. The survey's stable, cross-instance key is carried over from the file if present, or freshly assigned if the file predates key assignment.
 4. The system reports success with per-table counts of the records imported.
 
 ## Alternative Flows
@@ -43,6 +43,13 @@
 
 1. The system aborts the import, rolls back everything, and reports the failure.
 
+### A4: Stable key already present in this instance
+
+**Trigger:** A survey with the file's stable key already exists in this instance (step 3).
+**Flow:**
+
+1. The system rejects the import as a duplicate deployment and directs the administrator to UC-017 to update that survey instead.
+
 ## Postconditions
 
 ### Success Postconditions
@@ -66,6 +73,14 @@ Dimensions and ontology entries that already exist (matched by name, and by name
 ### BR-049: All-or-nothing import
 
 The entire survey import runs as a single transaction; any failure rolls back the whole survey.
+
+### BR-061: Preserve or assign a stable key on create
+
+A created survey retains the stable key from the source file if present, establishing it as another deployment of the same authored survey; if the file predates key assignment, the system assigns a fresh key at import time.
+
+### BR-062: No duplicate deployments
+
+A create-import is rejected if a survey with the file's stable key already exists in the destination instance; altering that survey requires UC-017.
 
 ---
 
