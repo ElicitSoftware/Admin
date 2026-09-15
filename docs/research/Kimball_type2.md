@@ -9,6 +9,15 @@
 > `V0.0.12__Add_Kimball_Durable_Seq_Grants.sql` grants `surveyadmin_user` access to the
 > new durable sequences. Section 6 (Admin UI version-history surfacing) remains out of
 > scope per the 2026-09-11 scope note below.
+>
+> **Update (2026-09-15):** All three QA regression tests in section 7's implementation
+> steps (8-10 — export/import round trip, respondent round trip with `question_version`,
+> and V1-file rejection) are now confirmed done; steps 8-9 already had coverage, step 10
+> (V1 rejection) had a real gap — existing tests only proved a missing/garbled header was
+> rejected, not a well-formed V1 one — closed with two new tests. Full suite: 267/267
+> passing. This closes out Admin's side of the same broader verification pass that also
+> found and fixed three real greenfield-install bugs in FHHS (see
+> `FHHS/research/Kimball_type2.md`).
 
 ## Overview
 
@@ -326,9 +335,9 @@ to the shared database:
 | 5 | Add explicit rejection of pre-Kimball (`V1`) export files: detect the format-version header and fail fast with a clear error message — no surrogate/durable translation path is built | `src/main/java/com/elicitsoftware/service/SurveyDefinitionImportService.java` |
 | 6 | Add `question_version` to the respondent export format; update the export query | `src/main/java/com/elicitsoftware/service/RespondentExportService.java` |
 | 7 | Add `question_version` to the respondent import INSERT; reject V1 respondent exports (missing `question_version`) with a clear error rather than defaulting | `src/main/java/com/elicitsoftware/service/RespondentImportService.java` |
-| 8 | Regression test: export a known survey from a Kimball-migrated DB; re-import into a fresh DB; verify row counts and FK integrity | QA / test environment |
-| 9 | Regression test: export respondents (including answers) and re-import; verify `question_version` round-trips correctly | QA / test environment |
-| 10 | Regression test: attempt to import a pre-Kimball (`V1`) export file and confirm it is rejected with a clear error, not partially imported | QA / test environment |
+| 8 | ~~Regression test: export a known survey from a Kimball-migrated DB; re-import into a fresh DB; verify row counts and FK integrity~~ — **done**. `SurveyDefinitionImportServiceTest.exportThenImportRoundTripsAllRecordTypes` seeds all 14 record types, exports, imports, and asserts per-table counts plus FK re-mapping (`steps_sections`→steps/sections, `relationships.upstream_sq_id`→sections_questions, `metadata`→steps_sections/ontology). | `src/test/java/com/elicitsoftware/service/SurveyDefinitionImportServiceTest.java` |
+| 9 | ~~Regression test: export respondents (including answers) and re-import; verify `question_version` round-trips correctly~~ — **done**. `RespondentImportServiceTest.exportThenImportRoundTripsAllRecordTypes` covers all six record types including two linked answers. | `src/test/java/com/elicitsoftware/service/RespondentImportServiceTest.java` |
+| 10 | ~~Regression test: attempt to import a pre-Kimball (`V1`) export file and confirm it is rejected with a clear error, not partially imported~~ — **done** (2026-09-15). Added `v1FormatHeaderIsRejectedWithoutPartialImport` (well-formed `# ELICIT_SURVEY_EXPORT_V1` header + old-shaped body — rejected, zero rows inserted) and `v1FormatAnswerLineIsRejected` (well-formed `V2` header but a 15-field, pre-`question_version` `answers:` line — rejected via the field-count guard). Existing tests only covered a missing/garbled header, not a well-formed V1 one. | `src/test/java/com/elicitsoftware/service/SurveyDefinitionImportServiceTest.java`, `src/test/java/com/elicitsoftware/service/RespondentImportServiceTest.java` |
 
 **Rollback strategy**: no Flyway down-migration will be authored for `V0.0.12` or any
 other Kimball-related Admin migration. Recovery from a bad rollout is an operational
