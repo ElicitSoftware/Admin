@@ -31,7 +31,7 @@ import java.util.List;
  * <p>
  * The export format is a custom text format designed for safe import via parameterized queries:
  * <pre>
- * # ELICIT_SURVEY_EXPORT_V2
+ * # ELICIT_SURVEY_EXPORT_V1
  * # survey_id: 5
  * # survey_key: 3fa85f64-5717-4562-b3fc-2c963f66afa6
  * # survey_name: My Survey
@@ -93,7 +93,7 @@ public class SurveyDefinitionExportService {
         // CDI managed bean
     }
 
-    static final String FORMAT_VERSION = "ELICIT_SURVEY_EXPORT_V2";
+    static final String FORMAT_VERSION = "ELICIT_SURVEY_EXPORT_V1";
     private static final String FIELD_DELIMITER = "|";
 
     @Inject

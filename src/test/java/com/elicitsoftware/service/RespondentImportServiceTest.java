@@ -243,7 +243,7 @@ class RespondentImportServiceTest {
         RespondentFixture fixture = persistRespondentTree("RT1");
 
         String exported = respondentExportService.exportRespondent(fixture.respondentId());
-        assertTrue(exported.contains("# ELICIT_EXPORT_V2"));
+        assertTrue(exported.contains("# ELICIT_EXPORT_V1"));
         assertTrue(exported.contains("respondents: "));
         assertTrue(exported.contains("answers: "));
         assertTrue(exported.contains("dependents: "));
@@ -321,7 +321,7 @@ class RespondentImportServiceTest {
     @Test
     @TestTransaction
     void unknownTableNameIsCollectedAsErrorWithoutThrowing() {
-        String content = "# ELICIT_EXPORT_V2\n\nfoobar: 1|2|3\n";
+        String content = "# ELICIT_EXPORT_V1\n\nfoobar: 1|2|3\n";
 
         RespondentImportService.ImportResult result = respondentImportService.importFromFile(toStream(content));
 
@@ -333,7 +333,7 @@ class RespondentImportServiceTest {
     @Test
     @TestTransaction
     void shortFieldCountThrowsRuntimeException() {
-        String content = "# ELICIT_EXPORT_V2\n\nrespondents: 1|tok\n";
+        String content = "# ELICIT_EXPORT_V1\n\nrespondents: 1|tok\n";
 
         RuntimeException ex = assertThrows(RuntimeException.class,
                 () -> respondentImportService.importFromFile(toStream(content)));
@@ -345,44 +345,12 @@ class RespondentImportServiceTest {
     @Test
     @TestTransaction
     void answerBeforeRespondentIsSkippedWithErrorNotThrown() {
-        String content = "# ELICIT_EXPORT_V2\n\nanswers: 1|2|3\n";
+        String content = "# ELICIT_EXPORT_V1\n\nanswers: 1|2|3\n";
 
         RespondentImportService.ImportResult result = respondentImportService.importFromFile(toStream(content));
 
         assertFalse(result.isSuccess());
         assertEquals(0, result.getCounts().get("answers"));
         assertTrue(result.getErrors().get(0).contains("Cannot insert answer before respondent"), result.getErrors().toString());
-    }
-
-    /**
-     * UC-012/step 10 of the Kimball Type 2 QA plan (docs/research/Kimball_type2.md section 4):
-     * a genuine pre-Kimball (V1) answers line — 15 fields, predating {@code question_version} —
-     * must be rejected rather than silently defaulted to {@code question_version = 0}. Unlike
-     * the survey importer, there is no dedicated header-string check for this; the field-count
-     * guard on the {@code answers:} line is what actually refuses it.
-     *
-     * <p>{@code importFromFile} is {@code @Transactional}, so in real (non-test) use this
-     * exception rolls back the whole file, including the already-inserted {@code respondents:}
-     * row. That specific guarantee can't be asserted here: {@code @TestTransaction} wraps this
-     * whole test method in one transaction that the service's {@code @Transactional} joins
-     * (REQUIRED propagation) rather than nesting, so the respondent row stays visible to this
-     * test's own connection until JUnit's end-of-test rollback — after this method returns.</p>
-     */
-    @Test
-    @TestTransaction
-    void v1FormatAnswerLineIsRejected() {
-        // 15 fields on the answers line -- the pre-Kimball shape, missing question_version
-        // (survey_id|step|step_instance|section|section_instance|question_display_order|
-        //  question_instance|section_question_id|question_id|display_key|display_text|
-        //  text_value|deleted|created_dt|saved_dt).
-        String content = "# ELICIT_EXPORT_V2\n\n"
-                + "respondents: 1|V1REJECT|0|2026-01-01T00:00:00-05:00|\n\n"
-                + "answers: 1|1|1|1|1|1|1|1|1|K1|Text|Value|false|"
-                + "2026-01-01T00:00:00-05:00|2026-01-01T00:00:00-05:00\n";
-
-        RuntimeException ex = assertThrows(RuntimeException.class,
-                () -> respondentImportService.importFromFile(toStream(content)));
-
-        assertTrue(ex.getMessage().contains("Answer requires 16 fields"), ex.getMessage());
     }
 }

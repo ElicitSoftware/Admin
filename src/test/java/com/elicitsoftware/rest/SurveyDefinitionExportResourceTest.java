@@ -106,6 +106,6 @@ class SurveyDefinitionExportResourceTest {
                 .then()
                 .statusCode(200)
                 .header("Content-Disposition", containsString("survey_1_definition.elicit"))
-                .body(containsString("# ELICIT_SURVEY_EXPORT_V2"));
+                .body(containsString("# ELICIT_SURVEY_EXPORT_V1"));
     }
 }

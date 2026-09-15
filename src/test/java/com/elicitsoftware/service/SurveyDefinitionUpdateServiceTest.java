@@ -299,7 +299,7 @@ class SurveyDefinitionUpdateServiceTest {
         UUID reportKey = queryOne("SELECT report_key FROM survey.reports WHERE id = ?1", reportId);
 
         UUID newStepKey = UUID.randomUUID();
-        String content = "# ELICIT_SURVEY_EXPORT_V2\n\n"
+        String content = "# ELICIT_SURVEY_EXPORT_V1\n\n"
                 + "surveys: " + survey.id + "|" + survey.surveyKey + "|" + survey.name + "|1|New Title|||||\n"
                 // existing step, changed name -> VERSIONED
                 + "steps: 100|" + stepKey + "|1|Renamed Step|D|||||||\n"
@@ -347,7 +347,7 @@ class SurveyDefinitionUpdateServiceTest {
     void mismatchedSurveyKeyAbortsWithNoChanges() {
         Survey target = newSurvey("UpdMismatchTarget");
         String otherKey = UUID.randomUUID().toString();
-        String content = "# ELICIT_SURVEY_EXPORT_V2\n\n"
+        String content = "# ELICIT_SURVEY_EXPORT_V1\n\n"
                 + "surveys: 1|" + otherKey + "|SomeOtherSurvey|1|Title|||||\n";
 
         SurveyDefinitionUpdateService.UpdateResult result =
@@ -367,7 +367,7 @@ class SurveyDefinitionUpdateServiceTest {
     @TestTransaction
     void missingSurveyKeyInFileIsRejected() {
         Survey target = newSurvey("UpdNoKeyTarget");
-        String content = "# ELICIT_SURVEY_EXPORT_V2\n\n"
+        String content = "# ELICIT_SURVEY_EXPORT_V1\n\n"
                 + "surveys: 1||NoKeySurvey|1|Title|||||\n";
 
         SurveyDefinitionUpdateService.UpdateResult result =
@@ -395,7 +395,7 @@ class SurveyDefinitionUpdateServiceTest {
     @Test
     @TestTransaction
     void unknownTargetSurveyIsRejected() {
-        String content = "# ELICIT_SURVEY_EXPORT_V2\n\nsurveys: 1|" + UUID.randomUUID() + "|Name|1|Title|||||\n";
+        String content = "# ELICIT_SURVEY_EXPORT_V1\n\nsurveys: 1|" + UUID.randomUUID() + "|Name|1|Title|||||\n";
 
         SurveyDefinitionUpdateService.UpdateResult result =
                 surveyDefinitionUpdateService.updateFromFile(toStream(content), "notfound.elicit", 987654321);
@@ -412,7 +412,7 @@ class SurveyDefinitionUpdateServiceTest {
     @TestTransaction
     void danglingForeignKeyReferenceThrowsRuntimeException() {
         Survey target = newSurvey("UpdDanglingTarget");
-        String content = "# ELICIT_SURVEY_EXPORT_V2\n\n"
+        String content = "# ELICIT_SURVEY_EXPORT_V1\n\n"
                 + "surveys: 1|" + target.surveyKey + "|" + target.name + "|1|Title|||||\n"
                 + "select_items: 1|" + UUID.randomUUID() + "|999|Text|1|CODE||||||\n";
 
@@ -430,7 +430,7 @@ class SurveyDefinitionUpdateServiceTest {
     @TestTransaction
     void structuralRowWithoutElementKeyThrows() {
         Survey target = newSurvey("UpdNoElementKeyTarget");
-        String content = "# ELICIT_SURVEY_EXPORT_V2\n\n"
+        String content = "# ELICIT_SURVEY_EXPORT_V1\n\n"
                 + "surveys: 1|" + target.surveyKey + "|" + target.name + "|1|Title|||||\n"
                 + "steps: 1||1|Step With No Key|D|||||||\n";
 
@@ -465,7 +465,7 @@ class SurveyDefinitionUpdateServiceTest {
         });
         UUID ontologyKey = queryOne("SELECT ontology_key FROM survey.ontology WHERE id = ?1", ontId);
 
-        String content = "# ELICIT_SURVEY_EXPORT_V2\n\n"
+        String content = "# ELICIT_SURVEY_EXPORT_V1\n\n"
                 + "surveys: 1|" + survey.surveyKey + "|" + survey.name + "|1|Title|||||\n"
                 + "dimensions: 5|" + UUID.randomUUID() + "|SharedDim\n"
                 + "ontology: 6|" + ontologyKey + "|OntName|NewTag|5\n";

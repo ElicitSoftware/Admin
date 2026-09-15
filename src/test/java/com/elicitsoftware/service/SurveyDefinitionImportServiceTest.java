@@ -248,7 +248,7 @@ class SurveyDefinitionImportServiceTest {
         SurveyDefinitionFixture fixture = persistSurveyDefinitionTree("SDT1");
 
         String exported = surveyDefinitionExportService.exportSurvey(fixture.sourceSurveyId());
-        assertTrue(exported.contains("# ELICIT_SURVEY_EXPORT_V2"));
+        assertTrue(exported.contains("# ELICIT_SURVEY_EXPORT_V1"));
 
         // BR-062 correctly refuses to re-import a survey_key that already exists in this
         // instance — which the source survey's own key always does, since we never delete it.
@@ -358,7 +358,7 @@ class SurveyDefinitionImportServiceTest {
     @Test
     @TestTransaction
     void unknownTableNameIsCollectedAsErrorWithoutThrowing() {
-        String content = "# ELICIT_SURVEY_EXPORT_V2\n\nfoobar: 1|2\n";
+        String content = "# ELICIT_SURVEY_EXPORT_V1\n\nfoobar: 1|2\n";
 
         SurveyDefinitionImportService.ImportResult result = surveyDefinitionImportService.importFromFile(toStream(content), "test.elicit");
 
@@ -373,7 +373,7 @@ class SurveyDefinitionImportServiceTest {
     @Test
     @TestTransaction
     void danglingForeignKeyReferenceThrowsRuntimeException() {
-        String content = "# ELICIT_SURVEY_EXPORT_V2\n\n"
+        String content = "# ELICIT_SURVEY_EXPORT_V1\n\n"
                 + "surveys: 1|11111111-1111-1111-1111-111111111111|Name|1|Title|||||\n\n"
                 + "select_items: 1|22222222-2222-2222-2222-222222222222|999|Text|1|CODE||||||\n";
 
@@ -381,30 +381,5 @@ class SurveyDefinitionImportServiceTest {
                 () -> surveyDefinitionImportService.importFromFile(toStream(content), "test.elicit"));
 
         assertTrue(ex.getMessage().contains("No ID mapping found"), ex.getMessage());
-    }
-
-    /**
-     * UC-014/step 10 of the Kimball Type 2 QA plan (docs/research/Kimball_type2.md section 7):
-     * a genuine pre-Kimball (V1) export file — a well-formed header naming the old format, not
-     * a missing/garbled one — must be rejected the same way {@code malformedHeaderReturnsFailedResultWithoutThrowing}
-     * covers for a header-less file, and must not partially import the old-shaped body that
-     * follows it. There is no surrogate-to-durable translation path; V1 files are refused
-     * outright (see the class's own "no backward compatibility" decision).
-     */
-    @Test
-    @TestTransaction
-    void v1FormatHeaderIsRejectedWithoutPartialImport() {
-        // Plausible pre-Kimball body: old surrogate source_id, no survey_key/published_by/
-        // published_comment (those three fields were added by the V2 format).
-        String content = "# ELICIT_SURVEY_EXPORT_V1\n\n"
-                + "surveys: 1|Pre-Kimball Survey|1|Old Title|Old Description||\n";
-
-        SurveyDefinitionImportService.ImportResult result =
-                surveyDefinitionImportService.importFromFile(toStream(content), "legacy-v1.elicit");
-
-        assertFalse(result.isSuccess());
-        assertTrue(result.getErrors().get(0).contains("valid format header"), result.getErrors().toString());
-        assertEquals(0L, queryLong("SELECT count(*) FROM survey.surveys WHERE name = ?1", "Pre-Kimball Survey"),
-                "a rejected V1 file must not partially import any rows from its body");
     }
 }

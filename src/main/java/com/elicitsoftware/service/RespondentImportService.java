@@ -35,7 +35,7 @@ import jakarta.transaction.Transactional;
  * This service parses the custom Elicit export format and uses parameterized queries
  * to safely insert data, preventing SQL injection attacks.
  * <p>
- * <strong>Format: ELICIT_EXPORT_V2</strong>
+ * <strong>Format: ELICIT_EXPORT_V1</strong>
  * <ul>
  *   <li>Lines starting with # are comments/metadata</li>
  *   <li>Data lines: tablename: field1|field2|field3|...</li>
@@ -57,7 +57,7 @@ public class RespondentImportService {
         // CDI managed bean
     }
 
-    private static final String FORMAT_VERSION = "ELICIT_EXPORT_V2";
+    private static final String FORMAT_VERSION = "ELICIT_EXPORT_V1";
 
     @Inject
     EntityManager em;

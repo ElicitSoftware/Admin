@@ -31,7 +31,7 @@ import jakarta.transaction.Transactional;
  * <p>
  * The export format is a custom text format designed for safe import via parameterized queries:
  * <pre>
- * # ELICIT_EXPORT_V2
+ * # ELICIT_EXPORT_V1
  * # respondent_id: 123
  * # timezone: America/Detroit
  * # generated: 2026-03-13T20:50:38.106350589-04:00
@@ -61,7 +61,7 @@ public class RespondentExportService {
         // CDI managed bean
     }
 
-    private static final String FORMAT_VERSION = "ELICIT_EXPORT_V2";
+    private static final String FORMAT_VERSION = "ELICIT_EXPORT_V1";
     private static final String FIELD_DELIMITER = "|";
 
     @Inject

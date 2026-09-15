@@ -36,7 +36,7 @@ import java.util.UUID;
  * Survey Definition), the counterpart to {@link SurveyDefinitionImportService} (UC-014, which
  * always creates a brand-new survey).
  * <p>
- * Every table in the {@code ELICIT_SURVEY_EXPORT_V2} format is part of the survey definition and
+ * Every table in the {@code ELICIT_SURVEY_EXPORT_V1} format is part of the survey definition and
  * is updatable here: {@code surveys} itself (Kimball Type 1 — attributes changed in place), the
  * eight Type 2 structural tables ({@code select_groups}, {@code select_items}, {@code steps},
  * {@code sections}, {@code steps_sections}, {@code questions}, {@code sections_questions},

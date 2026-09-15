@@ -3,21 +3,25 @@
 > **Status (2026-09-12):** Implemented. Survey shipped its Kimball Type 2 migration
 > (`V001__Create_Survey_Schema.sql` / `migration-v3/V010__Kimball_Type2_SCD.sql`), and
 > Admin's side described below is now done: `SurveyDefinitionExportService`/
-> `SurveyDefinitionImportService` are on `ELICIT_SURVEY_EXPORT_V2` (durable keys, Type 2
-> columns, no V1 backward compatibility), `RespondentExportService`/
-> `RespondentImportService` carry `question_version` on `ELICIT_EXPORT_V2`, and
-> `V0.0.12__Add_Kimball_Durable_Seq_Grants.sql` grants `surveyadmin_user` access to the
-> new durable sequences. Section 6 (Admin UI version-history surfacing) remains out of
-> scope per the 2026-09-11 scope note below.
+> `SurveyDefinitionImportService` are on `ELICIT_SURVEY_EXPORT_V1` (durable keys, Type 2
+> columns), `RespondentExportService`/`RespondentImportService` carry `question_version`
+> on `ELICIT_EXPORT_V1`, and `V0.0.12__Add_Kimball_Durable_Seq_Grants.sql` grants
+> `surveyadmin_user` access to the new durable sequences. Section 6 (Admin UI
+> version-history surfacing) remains out of scope per the 2026-09-11 scope note below.
 >
-> **Update (2026-09-15):** All three QA regression tests in section 7's implementation
-> steps (8-10 — export/import round trip, respondent round trip with `question_version`,
-> and V1-file rejection) are now confirmed done; steps 8-9 already had coverage, step 10
-> (V1 rejection) had a real gap — existing tests only proved a missing/garbled header was
-> rejected, not a well-formed V1 one — closed with two new tests. Full suite: 267/267
-> passing. This closes out Admin's side of the same broader verification pass that also
-> found and fixed three real greenfield-install bugs in FHHS (see
-> `FHHS/research/Kimball_type2.md`).
+> **Update (2026-09-15):** Steps 8-9 of section 7's implementation table (export/import
+> round trip, respondent round trip with `question_version`) are confirmed done with
+> existing test coverage. Full suite: 267/267 passing.
+>
+> **Correction (2026-09-15):** Section 3 below and step 5/7/10 of the implementation table
+> previously described a decision to reject a "V1" (pre-Kimball) export format outright.
+> That was based on a false premise: v2.2.0 was never actually released, so no real V1
+> export file has ever existed or ever will. There is no legacy format to be compatible
+> with, or to reject — `ELICIT_SURVEY_EXPORT_V1`/`ELICIT_EXPORT_V1` (renamed from the
+> `..._V2` this document originally specified) is simply the first and only export format.
+> The header string is still validated (a sanity check against any garbled or wrong-type
+> file, covered by `malformedHeaderReturnsFailedResultWithoutThrowing` in both import test
+> classes), but there is no dedicated "reject V1" code path, and none is needed.
 
 ## Overview
 
@@ -77,7 +81,7 @@ The export currently serialises each table's content rows using surrogate `id` v
 cross-table references (`source_id`). After Kimball Type 2, the canonical cross-table
 reference for structural tables is the **durable integer key** (`question_id`,
 `section_id`, etc.), not the surrogate `id`. The file format version must be bumped to
-`ELICIT_SURVEY_EXPORT_V2`.
+`ELICIT_SURVEY_EXPORT_V1`.
 
 ### File format header addition
 
@@ -184,8 +188,8 @@ Export query must reference the new column names:
 
 The importer must:
 
-1. Detect the format version (`V1` vs `V2`). For `V2`, use durable-key-aware insert
-   queries and grant the new durable key sequences.
+1. Validate the format-version header, then use durable-key-aware insert queries and
+   grant the new durable key sequences.
 2. Allocate new surrogate `id` values from the existing sequences AND allocate new
    durable key values from the new `{entity}_durable_seq` sequences.
 3. Set `version = 0`, `effective_from = '1970-01-01 00:00:00+00'`,
@@ -244,18 +248,17 @@ durableMap.put(sourceId, newDurableId);
 Then, when inserting `steps_sections`, resolve the durable step/section ids from the
 durable map rather than the surrogate map.
 
-### No backward compatibility with V1 exports — decision reversed (2026-09-11)
+### Format-version validation
 
-**Decision**: `SurveyDefinitionImportService` will **not** support importing pre-Kimball
-(`V1`) export files at all. There is no surrogate-to-durable translation path. On
-detecting a format-version header that is not `V2_KIMBALL_TYPE2`, the importer must
-reject the file immediately with a clear error message (e.g. "This export was generated
-before the Kimball Type 2 migration and cannot be imported into this database version —
-re-export the source survey with a current Admin build") and perform no inserts.
-
-This removes the dual surrogate/durable mapping logic that a backward-compatibility path
-would otherwise require, at the cost of no longer being able to import archived V1
-export files without first re-exporting them from a pre-Kimball Admin build.
+`SurveyDefinitionImportService` checks the file's header for the expected
+`ELICIT_SURVEY_EXPORT_V1` marker before parsing any data lines, and returns a failed
+`ImportResult` (no inserts performed) if it's missing or doesn't match — the same basic
+sanity check any file-import feature needs against a garbled or wrong-type upload. There
+is no legacy export format to be compatible with or reject: v2.2.0 was never actually
+released, so no pre-Kimball export file has ever existed in practice, and none is
+expected. Consequently there's no surrogate-to-durable translation path to build, and no
+dedicated "reject an older format" behavior beyond the header check every import already
+needs.
 
 ---
 
@@ -281,9 +284,11 @@ answers: respondent_id|question_id|section_question_id|display_key|text_value|de
 "  (:respondent_id, :survey_id, :question_id, :section_question_id, :display_key, :text_value, :deleted, :question_version)"
 ```
 
-Consistent with the decision above, `RespondentImportService` does not support V1
-(pre-Kimball) exports either — an import file missing `question_version` is a V1 export
-and must be rejected with a clear error rather than defaulted to `0`.
+The `answers:` line's field-count guard requires all 16 fields, including
+`question_version` — a line with fewer fields is rejected with a clear error rather than
+defaulting the missing value to `0`. As with the survey importer, this is basic
+malformed-input validation, not compatibility handling for an older export format that
+has never actually existed (see the format-version validation note above).
 
 ---
 
@@ -329,15 +334,14 @@ to the shared database:
 | Step | Action | File(s) to change |
 |---|---|---|
 | 1 | Add Flyway migration `V0.0.12__Add_Kimball_Durable_Seq_Grants.sql` granting `${surveyadmin_user}` access to all eight new durable sequences | `src/main/resources/db/migration/` |
-| 2 | Bump export format version to `ELICIT_SURVEY_EXPORT_V2`; update the `FORMAT_VERSION` constant | `src/main/java/com/elicitsoftware/service/SurveyDefinitionExportService.java` |
+| 2 | Bump export format version to `ELICIT_SURVEY_EXPORT_V1`; update the `FORMAT_VERSION` constant | `src/main/java/com/elicitsoftware/service/SurveyDefinitionExportService.java` |
 | 3 | Update all `get*()` export queries to select durable key columns, Type 2 columns, and renamed metadata columns; filter on `effective_from <= NOW() AND effective_to > NOW()` | `src/main/java/com/elicitsoftware/service/SurveyDefinitionExportService.java` |
 | 4 | Add durable-key maps to the importer; update all `INSERT` statements to populate durable key and Type 2 columns; consume `RETURNING id, {entity}_id` | `src/main/java/com/elicitsoftware/service/SurveyDefinitionImportService.java` |
-| 5 | Add explicit rejection of pre-Kimball (`V1`) export files: detect the format-version header and fail fast with a clear error message — no surrogate/durable translation path is built | `src/main/java/com/elicitsoftware/service/SurveyDefinitionImportService.java` |
+| 5 | Validate the format-version header and fail fast with a clear error message if it doesn't match — basic malformed-input handling, not legacy-format rejection (see the format-version validation note above) | `src/main/java/com/elicitsoftware/service/SurveyDefinitionImportService.java` |
 | 6 | Add `question_version` to the respondent export format; update the export query | `src/main/java/com/elicitsoftware/service/RespondentExportService.java` |
-| 7 | Add `question_version` to the respondent import INSERT; reject V1 respondent exports (missing `question_version`) with a clear error rather than defaulting | `src/main/java/com/elicitsoftware/service/RespondentImportService.java` |
+| 7 | Add `question_version` to the respondent import INSERT; the field-count guard already rejects a data line missing it, rather than defaulting to `0` | `src/main/java/com/elicitsoftware/service/RespondentImportService.java` |
 | 8 | ~~Regression test: export a known survey from a Kimball-migrated DB; re-import into a fresh DB; verify row counts and FK integrity~~ — **done**. `SurveyDefinitionImportServiceTest.exportThenImportRoundTripsAllRecordTypes` seeds all 14 record types, exports, imports, and asserts per-table counts plus FK re-mapping (`steps_sections`→steps/sections, `relationships.upstream_sq_id`→sections_questions, `metadata`→steps_sections/ontology). | `src/test/java/com/elicitsoftware/service/SurveyDefinitionImportServiceTest.java` |
 | 9 | ~~Regression test: export respondents (including answers) and re-import; verify `question_version` round-trips correctly~~ — **done**. `RespondentImportServiceTest.exportThenImportRoundTripsAllRecordTypes` covers all six record types including two linked answers. | `src/test/java/com/elicitsoftware/service/RespondentImportServiceTest.java` |
-| 10 | ~~Regression test: attempt to import a pre-Kimball (`V1`) export file and confirm it is rejected with a clear error, not partially imported~~ — **done** (2026-09-15). Added `v1FormatHeaderIsRejectedWithoutPartialImport` (well-formed `# ELICIT_SURVEY_EXPORT_V1` header + old-shaped body — rejected, zero rows inserted) and `v1FormatAnswerLineIsRejected` (well-formed `V2` header but a 15-field, pre-`question_version` `answers:` line — rejected via the field-count guard). Existing tests only covered a missing/garbled header, not a well-formed V1 one. | `src/test/java/com/elicitsoftware/service/SurveyDefinitionImportServiceTest.java`, `src/test/java/com/elicitsoftware/service/RespondentImportServiceTest.java` |
 
 **Rollback strategy**: no Flyway down-migration will be authored for `V0.0.12` or any
 other Kimball-related Admin migration. Recovery from a bad rollout is an operational
@@ -351,6 +355,6 @@ pre-upgrade database backup/restore.
 |---|---|
 | `src/main/resources/db/migration/V0.0.12__Add_Kimball_Durable_Seq_Grants.sql` | **New file** — grants eight new durable sequences to `${surveyadmin_user}` |
 | `src/main/java/com/elicitsoftware/service/SurveyDefinitionExportService.java` | Updated export queries (durable keys, Type 2 columns, renamed metadata columns), new format version |
-| `src/main/java/com/elicitsoftware/service/SurveyDefinitionImportService.java` | Updated INSERT statements (durable key allocation, Type 2 defaults); rejects pre-Kimball (`V1`) export files instead of translating them |
+| `src/main/java/com/elicitsoftware/service/SurveyDefinitionImportService.java` | Updated INSERT statements (durable key allocation, Type 2 defaults); validates the format-version header |
 | `src/main/java/com/elicitsoftware/service/RespondentExportService.java` | Add `question_version` to answers export |
-| `src/main/java/com/elicitsoftware/service/RespondentImportService.java` | Add `question_version` to answers import INSERT; rejects V1 (pre-Kimball) respondent exports |
+| `src/main/java/com/elicitsoftware/service/RespondentImportService.java` | Add `question_version` to answers import INSERT; field-count guard rejects a line missing it |

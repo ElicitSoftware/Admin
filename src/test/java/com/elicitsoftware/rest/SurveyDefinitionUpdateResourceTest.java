@@ -61,7 +61,7 @@ class SurveyDefinitionUpdateResourceTest {
      * this helper makes.
      */
     private long createTargetSurveyViaImport(String uniqueName) {
-        String content = "# ELICIT_SURVEY_EXPORT_V2\n\nsurveys: 1||" + uniqueName + "|1|Title|||||\n";
+        String content = "# ELICIT_SURVEY_EXPORT_V1\n\nsurveys: 1||" + uniqueName + "|1|Title|||||\n";
         given()
                 .multiPart("file", "survey.elicit", bytes(content), "application/octet-stream")
                 .when().post(IMPORT_PATH)
@@ -151,7 +151,7 @@ class SurveyDefinitionUpdateResourceTest {
     @Test
     @TestSecurity(user = "admin", roles = {"elicit_admin"})
     void unknownTargetSurveyReturnsNotFound() {
-        String content = "# ELICIT_SURVEY_EXPORT_V2\n\nsurveys: 1|" + java.util.UUID.randomUUID() + "|Name|1|Title|||||\n";
+        String content = "# ELICIT_SURVEY_EXPORT_V1\n\nsurveys: 1|" + java.util.UUID.randomUUID() + "|Name|1|Title|||||\n";
 
         given()
                 .multiPart("file", "survey.elicit", bytes(content), "application/octet-stream")
@@ -187,7 +187,7 @@ class SurveyDefinitionUpdateResourceTest {
         long targetId = createTargetSurveyViaImport("UpdRest-Ok-" + System.nanoTime());
         String key = surveyKeyOf(targetId);
 
-        String content = "# ELICIT_SURVEY_EXPORT_V2\n\nsurveys: 1|" + key + "|Renamed|1|New Title|||||\n";
+        String content = "# ELICIT_SURVEY_EXPORT_V1\n\nsurveys: 1|" + key + "|Renamed|1|New Title|||||\n";
 
         given()
                 .multiPart("file", "survey.elicit", bytes(content), "application/octet-stream")
@@ -204,7 +204,7 @@ class SurveyDefinitionUpdateResourceTest {
     @TestSecurity(user = "admin", roles = {"elicit_admin"})
     void mismatchedSurveyKeyReturnsBadRequest() {
         long targetId = createTargetSurveyViaImport("UpdRest-Mismatch-" + System.nanoTime());
-        String content = "# ELICIT_SURVEY_EXPORT_V2\n\nsurveys: 1|" + java.util.UUID.randomUUID() + "|Other|1|Title|||||\n";
+        String content = "# ELICIT_SURVEY_EXPORT_V1\n\nsurveys: 1|" + java.util.UUID.randomUUID() + "|Other|1|Title|||||\n";
 
         given()
                 .multiPart("file", "survey.elicit", bytes(content), "application/octet-stream")

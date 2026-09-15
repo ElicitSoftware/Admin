@@ -20,7 +20,7 @@ import java.util.Map;
 
 /**
  * Field-parsing and ID-resolution helpers shared by {@link SurveyDefinitionImportService} and
- * {@link SurveyDefinitionUpdateService} — both consume the same {@code ELICIT_SURVEY_EXPORT_V2}
+ * {@link SurveyDefinitionUpdateService} — both consume the same {@code ELICIT_SURVEY_EXPORT_V1}
  * pipe-delimited line format (see {@link SurveyDefinitionExportService}), they just differ in
  * what they do with each parsed row (always-create vs. match-and-version).
  */

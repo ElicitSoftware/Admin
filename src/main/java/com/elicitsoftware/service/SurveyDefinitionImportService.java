@@ -34,7 +34,7 @@ import java.util.UUID;
  * This service parses the custom Elicit Survey export format and uses parameterized queries
  * to safely insert data, preventing SQL injection attacks.
  * <p>
- * <strong>Format: ELICIT_SURVEY_EXPORT_V2</strong>
+ * <strong>Format: ELICIT_SURVEY_EXPORT_V1</strong>
  * <ul>
  *   <li>Lines starting with # are comments/metadata</li>
  *   <li>Data lines: tablename: source_id|field1|field2|...</li>

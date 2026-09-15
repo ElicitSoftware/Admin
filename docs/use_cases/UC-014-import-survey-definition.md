@@ -86,4 +86,4 @@ A create-import is rejected if a survey with the file's stable key already exist
 
 ## Reference
 
-Derived from `SurveyDefinitionImportResource` and `SurveyDefinitionImportService` (`ELICIT_SURVEY_EXPORT_V2` format). Writes the shared survey-definition tables.
+Derived from `SurveyDefinitionImportResource` and `SurveyDefinitionImportService` (`ELICIT_SURVEY_EXPORT_V1` format). Writes the shared survey-definition tables.

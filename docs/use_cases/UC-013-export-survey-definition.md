@@ -68,4 +68,4 @@ Every export includes the survey's stable, cross-instance-portable key (assigned
 
 ## Reference
 
-Derived from `SurveyDefinitionExportResource` and `SurveyDefinitionExportService` (`ELICIT_SURVEY_EXPORT_V2` format). Reads the shared survey-definition tables (surveys, select groups/items, steps, sections, questions, relationships, reports, post-survey actions, dimensions, ontology, metadata). See UC-017 for the update flow this key enables.
+Derived from `SurveyDefinitionExportResource` and `SurveyDefinitionExportService` (`ELICIT_SURVEY_EXPORT_V1` format). Reads the shared survey-definition tables (surveys, select groups/items, steps, sections, questions, relationships, reports, post-survey actions, dimensions, ontology, metadata). See UC-017 for the update flow this key enables.
