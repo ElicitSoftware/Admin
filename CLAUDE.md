@@ -8,8 +8,8 @@ around them.
 
 ## Stack
 
-- Java 21, Quarkus 3.37.x, Maven build
-- Vaadin 25.2.x (Flow, server-side UI)
+- Java 25, Quarkus 3.39.2, Maven build
+- Vaadin 25.2.7 (Flow, server-side UI)
 - Hibernate ORM with Panache (JPA) — **not jOOQ**
 - PostgreSQL (Flyway migrations under `src/main/resources/db/migration`)
 - Docker for deployment
