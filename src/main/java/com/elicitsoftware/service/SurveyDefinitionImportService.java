@@ -511,7 +511,9 @@ public class SurveyDefinitionImportService {
         query.setParameter(4, nextDisplayOrder);
         query.setParameter(5, nullIfEmpty(fields[4]));
         query.setParameter(6, nullIfEmpty(fields[5]));
-        query.setParameter(7, nullIfEmpty(fields[6]));
+        // Rebased onto newId: the file carries the exporting deployment's survey id, which is
+        // not the one allocated here. See SurveyDefinitionFileFields#rebaseDisplayKey.
+        query.setParameter(7, SurveyDefinitionFileFields.rebaseDisplayKey(fields[6], newId));
         query.setParameter(8, nullIfEmpty(fields[7]));
         query.executeUpdate();
         return new SurveyInsertResult(newId, surveyKey);
@@ -717,7 +719,8 @@ public class SurveyDefinitionImportService {
         query.setParameter(5, parseIntOrNull(fields[3]));
         query.setParameter(6, newSectionId);
         query.setParameter(7, parseIntOrNull(fields[5]));
-        query.setParameter(8, nullIfEmpty(fields[6]));
+        // Rebased onto this deployment's surveyId — see SurveyDefinitionFileFields#rebaseDisplayKey.
+        query.setParameter(8, SurveyDefinitionFileFields.rebaseDisplayKey(fields[6], surveyId));
         query.executeUpdate();
         return getDurableId("steps_sections_id", "survey.steps_sections", newId);
     }

@@ -202,7 +202,9 @@ class SurveyDefinitionImportServiceTest {
         String sectionName = "Section " + token;
         long stepId = insertStep(surveyId, 1, stepName);
         long sectionId = insertSection(surveyId, 1, sectionName);
-        String displayKey = "SK-" + token;
+        // A realistically shaped display key carrying the SOURCE survey's id in its leading
+        // component, so the round-trip below exercises the rebase the importer performs.
+        String displayKey = String.format("%04d", surveyId) + "-0001-0000-0001-0000-0000-0000";
         long stepsSectionId = insertStepsSection(surveyId, stepId, sectionId, displayKey);
 
         String questionText = "Question " + token + "?";
@@ -285,9 +287,18 @@ class SurveyDefinitionImportServiceTest {
                 "SELECT count(*) FROM survey.steps WHERE survey_id = ?1 AND name = ?2", newSurveyId, fixture.stepName()));
         assertEquals(1L, queryLong(
                 "SELECT count(*) FROM survey.sections WHERE survey_id = ?1 AND name = ?2", newSurveyId, fixture.sectionName()));
+        // The display key must be rebased onto the id THIS deployment allocated, not carried over
+        // verbatim: the Survey engine parses the leading component back out and binds it as the
+        // surveyId when resolving navigation, so a stale prefix would point at another survey.
+        String rebasedDisplayKey = String.format("%04d", newSurveyId) + "-0001-0000-0001-0000-0000-0000";
         assertEquals(1L, queryLong(
                 "SELECT count(*) FROM survey.steps_sections WHERE survey_id = ?1 AND display_key = ?2",
-                newSurveyId, fixture.displayKey()));
+                newSurveyId, rebasedDisplayKey),
+                "steps_sections.display_key must be rebased onto the newly allocated survey id");
+        assertEquals(0L, queryLong(
+                "SELECT count(*) FROM survey.steps_sections WHERE survey_id = ?1 AND display_key = ?2",
+                newSurveyId, fixture.displayKey()),
+                "the source deployment's display_key must not survive the import");
         assertEquals(1L, queryLong(
                 "SELECT count(*) FROM survey.questions WHERE survey_id = ?1 AND text = ?2", newSurveyId, fixture.questionText()));
 

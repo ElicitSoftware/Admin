@@ -170,7 +170,12 @@ class SurveyDefinitionUpdateServiceTest {
                             + "(id, survey_id, step_id, step_display_order, section_id, section_display_order, display_key) "
                             + "VALUES (?1, ?2, ?3, 1, ?4, 1, ?5)")
                     .setParameter(1, stepsSectionId).setParameter(2, surveyId).setParameter(3, stepDurableId)
-                    .setParameter(4, sectionDurableId).setParameter(5, "SK-" + token)
+                    // A realistically shaped display key already carrying THIS survey's id. The
+                    // importer/updater rebases the leading component onto the target survey, so a
+                    // self-update must find it identical and report unchanged rather than
+                    // re-versioning the row on every apply.
+                    .setParameter(4, sectionDurableId)
+                    .setParameter(5, String.format("%04d", surveyId) + "-0001-0000-0001-0000-0000-0000")
                     .executeUpdate();
             long stepsSectionDurableId = queryLong("SELECT steps_sections_id FROM survey.steps_sections WHERE id = ?1", stepsSectionId);
 

@@ -110,6 +110,42 @@ final class SurveyDefinitionFileFields {
     }
 
     /**
+     * Rebases a display key's leading survey component onto the survey id this deployment
+     * actually allocated.
+     * <p>
+     * A display key is {@code survey-step-stepInstance-section-sectionInstance-question-questionInstance}
+     * (see {@code com.elicitsoftware.DisplayKey} in the Survey module), and its first component is
+     * load-bearing at runtime: the Survey engine parses it back out and binds it as the
+     * {@code surveyId} query parameter when resolving steps, sections and relationships. The
+     * exporting deployment writes <em>its own</em> survey id into that position, but the importing
+     * deployment allocates a fresh id from {@code survey.surveys_seq}. Carried over verbatim, every
+     * key would point at whatever survey happens to hold the source id here — usually nothing at
+     * all — and the imported survey would not navigate.
+     * <p>
+     * This is why the same authored file can be handed to several deployments: it lands on a
+     * different id at each site, and each site rewrites the keys to match. Only the first component
+     * is touched; step/section/question positions are properties of the definition, not of the
+     * deployment, and are preserved exactly.
+     *
+     * @param displayKey the key as written in the file, possibly {@code null} or empty
+     * @param surveyId the survey id allocated by this deployment
+     * @return the key with its survey component replaced, or {@code null} if there was no key
+     */
+    static String rebaseDisplayKey(String displayKey, Number surveyId) {
+        String value = nullIfEmpty(displayKey);
+        if (value == null || surveyId == null) {
+            return value;
+        }
+        int firstSeparator = value.indexOf('-');
+        if (firstSeparator < 0) {
+            // Not a structured display key. Leave it exactly as the file had it rather than
+            // guess at a format this code does not recognise.
+            return value;
+        }
+        return String.format("%04d", surveyId.longValue()) + value.substring(firstSeparator);
+    }
+
+    /**
      * Parses an integer field, returning {@code null} for empty or invalid input.
      */
     static Integer parseIntOrNull(String value) {

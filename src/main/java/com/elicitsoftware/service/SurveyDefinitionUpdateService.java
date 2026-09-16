@@ -497,7 +497,10 @@ public class SurveyDefinitionUpdateService {
         String name = SurveyDefinitionFileFields.nullIfEmpty(fields[2]);
         String title = SurveyDefinitionFileFields.nullIfEmpty(fields[4]);
         String description = SurveyDefinitionFileFields.nullIfEmpty(fields[5]);
-        String initialDisplayKey = SurveyDefinitionFileFields.nullIfEmpty(fields[6]);
+        // Rebased before the comparison below, not after: the stored key already carries this
+        // deployment's survey id, so comparing it against the file's raw key would report a
+        // difference on every update and re-version the survey each time.
+        String initialDisplayKey = SurveyDefinitionFileFields.rebaseDisplayKey(fields[6], target.id);
         String postSurveyUrl = SurveyDefinitionFileFields.nullIfEmpty(fields[7]);
         String publishedBy = SurveyDefinitionFileFields.nullIfEmpty(fields[8]);
         String publishedComment = SurveyDefinitionFileFields.nullIfEmpty(fields[9]);
@@ -758,7 +761,9 @@ public class SurveyDefinitionUpdateService {
         Long newSectionId = SurveyDefinitionFileFields.resolveRequired(
                 SurveyDefinitionFileFields.parseLongOrNull(fields[4]), sectionIdMap, "section (for steps_sections)");
         Integer sectionDisplayOrder = SurveyDefinitionFileFields.parseIntOrNull(fields[5]);
-        String displayKey = SurveyDefinitionFileFields.nullIfEmpty(fields[6]);
+        // Rebased before the unchanged-comparison below, for the same reason as the survey's
+        // initial_display_key — see SurveyDefinitionFileFields#rebaseDisplayKey.
+        String displayKey = SurveyDefinitionFileFields.rebaseDisplayKey(fields[6], surveyId);
 
         Object[] current = findCurrentRow("survey.steps_sections", "steps_sections_key", elementKey, surveyId,
                 "id, steps_sections_id, version, step_id, step_display_order, section_id, section_display_order, display_key");
