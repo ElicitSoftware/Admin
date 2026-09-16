@@ -169,7 +169,7 @@ public class SurveyDefinitionUpdateService {
      * Data lines must appear in dependency order as written by the exporter — the same order
      * {@link SurveyDefinitionImportService} expects.
      *
-     * <h2>Revision regression</h2>
+     * <h4>Revision regression</h4>
      * A file whose {@code survey_revision} header predates the newest revision already applied
      * to this survey here is rejected before any row is touched (see
      * {@link #checkRevisionRegression}), with no override. Applying an older file would not
