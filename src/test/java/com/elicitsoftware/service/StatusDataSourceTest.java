@@ -57,25 +57,25 @@ class StatusDataSourceTest {
      * Persists a department + respondent + subject graph and returns the department id, so the
      * caller can build a {@link StatusQuery} scoped to it.
      */
-    private long persistSubjectGraph(String token, String firstName, String email) {
+    private long persistSubjectGraph(String accessCode, String firstName, String email) {
         Survey survey = Survey.findById(1L);
         assertNotNull(survey, "test bootstrap should have seeded survey id=1");
 
         Department department = new Department();
-        department.name = "DS Dept " + token;
-        department.code = "DS-" + token;
+        department.name = "DS Dept " + accessCode;
+        department.code = "DS-" + accessCode;
         department.defaultMessageId = "1";
         department.fromEmail = "ds@example.org";
         department.persist();
 
         Respondent respondent = new Respondent();
         respondent.survey = survey;
-        respondent.token = token;
+        respondent.accessCode = accessCode;
         respondent.active = true;
         respondent.persist();
 
         Subject subject = new Subject(
-                "XID-" + token,
+                "XID-" + accessCode,
                 survey.id.longValue(),
                 department.id,
                 firstName,
@@ -98,11 +98,11 @@ class StatusDataSourceTest {
         StatusQuery query = new StatusQuery(
                 Status.PROP_DEPARTMENT_ID + " in :departments",
                 Map.of("departments", List.of(deptId)),
-                Sort.by(Status.PROP_TOKEN));
+                Sort.by(Status.PROP_ACCESS_CODE));
 
         List<Status> rows = dataSource.fetch(query, 0, 10);
         assertEquals(1, rows.size());
-        assertEquals("DS-TOK-1", rows.get(0).getToken());
+        assertEquals("DS-TOK-1", rows.get(0).getAccessCode());
         assertEquals(1, dataSource.count(query));
     }
 
@@ -159,7 +159,7 @@ class StatusDataSourceTest {
         Survey survey = Survey.findById(1L);
         Respondent respondent = new Respondent();
         respondent.survey = survey;
-        respondent.token = "DS-PAGE-B";
+        respondent.accessCode = "DS-PAGE-B";
         respondent.active = true;
         respondent.persist();
         Subject second = new Subject("XID-DS-PAGE-B", survey.id.longValue(), deptId,
@@ -170,7 +170,7 @@ class StatusDataSourceTest {
         StatusQuery query = new StatusQuery(
                 Status.PROP_DEPARTMENT_ID + " in :departments",
                 Map.of("departments", List.of(deptId)),
-                Sort.by(Status.PROP_TOKEN));
+                Sort.by(Status.PROP_ACCESS_CODE));
 
         assertEquals(2, dataSource.count(query));
 
@@ -180,7 +180,7 @@ class StatusDataSourceTest {
         List<Status> secondPage = dataSource.fetch(query, 1, 1);
         assertEquals(1, secondPage.size());
 
-        assertFalse(firstPage.get(0).getToken().equals(secondPage.get(0).getToken()),
+        assertFalse(firstPage.get(0).getAccessCode().equals(secondPage.get(0).getAccessCode()),
                 "consecutive pages should return distinct rows");
     }
 }

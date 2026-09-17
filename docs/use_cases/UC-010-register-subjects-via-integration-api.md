@@ -5,7 +5,7 @@
 **Use Case ID:** UC-010
 **Use Case Name:** Register Subjects via Integration API
 **Primary Actor:** Integration Client
-**Goal:** Register one or many subjects programmatically (single request, batch request, or CSV upload) so each receives an access token and invitation messages.
+**Goal:** Register one or many subjects programmatically (single request, batch request, or CSV upload) so each receives an access code and invitation messages.
 **Status:** Implemented
 
 ## Preconditions
@@ -19,7 +19,7 @@
 1. The client submits one or more subject records (as a single object, an array, or a CSV file).
 2. For each record, the system confirms the external ID is not excluded for the department.
 3. The system confirms no subject with that external ID already exists in the department.
-4. The system generates a unique access token and creates a respondent (UC-015).
+4. The system generates a unique access code and creates a respondent (UC-015).
 5. The system stores the subject and generates the department's default messages for it.
 6. The system returns a per-record outcome: newly registered, already existing, or excluded.
 
@@ -41,7 +41,7 @@
 
 ### A3: Per-record failure in a batch
 
-**Trigger:** Token generation fails, or a record is otherwise invalid, during a batch or CSV import (step 4).
+**Trigger:** Access code generation fails, or a record is otherwise invalid, during a batch or CSV import (step 4).
 **Flow:**
 
 1. The system records an error for that record only and continues processing the remaining records.
@@ -64,7 +64,7 @@
 
 ### Success Postconditions
 
-- Each successfully processed record has a subject, a respondent, an access token, and queued messages.
+- Each successfully processed record has a subject, a respondent, an access code, and queued messages.
 - The caller receives a per-record status list.
 
 ### Failure Postconditions
@@ -95,4 +95,4 @@ The exclusion (BR-013), duplicate (BR-012), required-field (BR-009), and message
 
 ## Reference
 
-Derived from `TokenService` (`/secured/add/subject`, `/add/subjects`, `/add/csv`), `CsvImportService`, `AddRequest`, `AddResponse`, `ExcludedXid`, `Subject`, `Respondent`, and `Message`. Note: the CSV path currently registers all rows against survey ID 1.
+Derived from `AccessCodeService` (`/secured/add/subject`, `/add/subjects`, `/add/csv`), `CsvImportService`, `AddRequest`, `AddResponse`, `ExcludedXid`, `Subject`, `Respondent`, and `Message`. Note: the CSV path currently registers all rows against survey ID 1.

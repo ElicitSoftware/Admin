@@ -18,7 +18,7 @@
 1. The user opens the console home (search) view.
 2. The system loads the user's account and the departments they are affiliated with.
 3. The system defaults the department filter to "All Departments" (scoped to the user's own departments) and displays a paginated, sortable list of subjects with their status (Not Started, In Progress, Finished).
-4. The user optionally narrows the results by department, token, first name, last name, email, or phone and submits the search.
+4. The user optionally narrows the results by department, access code, first name, last name, email, or phone and submits the search.
 5. The system resets to the first page and displays the matching subjects.
 6. The user pages through and sorts the results.
 7. The system automatically refreshes the list periodically so progress stays current.
@@ -74,7 +74,7 @@ Only one subject row may have an action selected at a time; selecting an action 
 
 ### BR-008: Text filter matching
 
-Token, first name, last name, and email filters match case-insensitively as partial matches; a blank filter is ignored.
+Access code, first name, last name, and email filters match case-insensitively as partial matches; a blank filter is ignored.
 
 ---
 

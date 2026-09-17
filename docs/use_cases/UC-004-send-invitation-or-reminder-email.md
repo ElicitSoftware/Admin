@@ -19,7 +19,7 @@
 
 1. The user selects a subject and chooses to send an email.
 2. The system looks up the department's default message templates.
-3. The system builds each message, substituting the subject's access token into the message body.
+3. The system builds each message, substituting the subject's access code into the message body.
 4. The system sends the message to the subject's email address from the department's configured sender address.
 5. The system confirms the email was sent.
 
@@ -60,9 +60,9 @@
 
 ## Business Rules
 
-### BR-015: Token embedded in message body
+### BR-015: Access code embedded in message body
 
-Each message body has the subject's survey access token substituted in before sending.
+Each message body has the subject's survey access code substituted for the `<ACCESS_CODE>` placeholder before sending. A missing access code is substituted as empty text. The former `<TOKEN>` placeholder is no longer recognized and is left in the body as literal text.
 
 ### BR-016: Scheduled send batch limit
 

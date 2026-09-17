@@ -11,7 +11,7 @@ package com.elicitsoftware.model;
  * ***LICENSE_END***
  */
 
-import com.elicitsoftware.exception.TokenGenerationError;
+import com.elicitsoftware.exception.AccessCodeGenerationError;
 import io.quarkus.hibernate.orm.panache.PanacheEntityBase;
 import io.quarkus.logging.Log;
 import jakarta.persistence.*;
@@ -37,7 +37,7 @@ import java.util.Date;
  *   <li><strong>messageType:</strong> The type/category of message (e.g., invitation, reminder)</li>
  *   <li><strong>mimeType:</strong> Content type (e.g., text/html)</li>
  *   <li><strong>subjectLine:</strong> Email subject line</li>
- *   <li><strong>body:</strong> Email/message body (may contain tokens replaced at creation)</li>
+ *   <li><strong>body:</strong> Email/message body (may contain placeholders replaced at creation)</li>
  *   <li><strong>createdDt:</strong> When the message was created</li>
  *   <li><strong>sentDt:</strong> When the message was sent (null if unsent)</li>
  * </ul>
@@ -46,7 +46,7 @@ import java.util.Date;
  * <ul>
  *   <li>Created when a new respondent is added or when a survey event triggers a message</li>
  *   <li>Processed and sent by the EmailService</li>
- *   <li>Supports token replacement (e.g., &amp;lt;TOKEN&amp;gt; for personalized links)</li>
+ *   <li>Supports placeholder replacement (e.g., &amp;lt;ACCESS_CODE&amp;gt; for personalized links)</li>
  * </ul>
  *
  * @author Elicit Software
@@ -85,7 +85,7 @@ public class Message extends PanacheEntityBase {
      *
      * <p>Establishes the relationship between the message and the specific survey
      * instance. Through this relationship, the system can access respondent details
-     * such as email address, name, and personalization tokens.</p>
+     * such as email address, name, and personalization placeholders.</p>
      *
      * @see Subject
      */
@@ -147,8 +147,8 @@ public class Message extends PanacheEntityBase {
      * The main content/body of the message.
      *
      * <p>Contains the actual message content that will be sent to the respondent.
-     * This content is generated from message templates with token replacement
-     * (e.g., &lt;TOKEN&gt; replaced with actual survey URLs or personalization data).
+     * This content is generated from message templates with placeholder replacement
+     * (e.g., &lt;ACCESS_CODE&gt; replaced with actual survey URLs or personalization data).
      * Supports both HTML and plain text formats based on the {@link #mimeType}.</p>
      *
      * <p><strong>Constraints:</strong></p>
@@ -157,10 +157,10 @@ public class Message extends PanacheEntityBase {
      *   <li><strong>Required:</strong> Cannot be blank</li>
      * </ul>
      *
-     * <p><strong>Token Replacement:</strong></p>
+     * <p><strong>Placeholder Replacement:</strong></p>
      * <ul>
-     *   <li>{@code <TOKEN>} - Replaced with respondent's unique survey token</li>
-     *   <li>Other tokens may be supported based on template configuration</li>
+     *   <li>{@code <ACCESS_CODE>} - Replaced with respondent's unique survey access code</li>
+     *   <li>Other placeholders may be supported based on template configuration</li>
      * </ul>
      */
     @Column(name = "body", nullable = false, length = 6000)
@@ -234,33 +234,33 @@ public class Message extends PanacheEntityBase {
      *
      * <p>This method generates one or more messages for a survey subject by processing
      * the default message templates configured for the subject's department. It handles
-     * comma-separated template IDs, performs token replacement, and creates ready-to-send
+     * comma-separated template IDs, performs placeholder replacement, and creates ready-to-send
      * message instances.</p>
      *
      * <p><strong>Process:</strong></p>
      * <ol>
      *   <li>Retrieves the subject's department and default message template IDs</li>
      *   <li>Splits comma-separated template IDs into individual templates</li>
-     *   <li>For each template, creates a message with token replacement</li>
-     *   <li>Replaces &lt;TOKEN&gt; placeholders with the respondent's actual token</li>
+     *   <li>For each template, creates a message with placeholder replacement</li>
+     *   <li>Replaces &lt;ACCESS_CODE&gt; placeholders with the respondent's actual access code</li>
      *   <li>Returns a list of message instances ready for persistence</li>
      * </ol>
      *
-     * <p><strong>Token Replacement:</strong></p>
+     * <p><strong>Placeholder Replacement:</strong></p>
      * <ul>
-     *   <li>{@code <TOKEN>} is replaced with the respondent's unique survey token</li>
-     *   <li>If the respondent's token is null, an empty string is used</li>
+     *   <li>{@code <ACCESS_CODE>} is replaced with the respondent's unique survey access code</li>
+     *   <li>If the respondent's access code is null, an empty string is used</li>
      * </ul>
      *
      * @param subject the survey subject to create messages for
      * @return ArrayList of Message instances created from department templates
-     * @throws TokenGenerationError if the department is invalid or template IDs are malformed
+     * @throws AccessCodeGenerationError if the department is invalid or template IDs are malformed
      *
      * @see Department#defaultMessageId
      * @see MessageTemplate
      * @see Subject#getRespondent()
      */
-    public static ArrayList<Message> createMessagesForSubject(Subject subject) throws TokenGenerationError {
+    public static ArrayList<Message> createMessagesForSubject(Subject subject) throws AccessCodeGenerationError {
         Log.debugf("createMessagesForSubject: starting for subjectId=%s, departmentId=%s",
                 subject.getId(), subject.getDepartmentId());
 
@@ -269,7 +269,7 @@ public class Message extends PanacheEntityBase {
         if (department == null || department.defaultMessageId == null) {
             Log.warnf("createMessagesForSubject: invalid department for subjectId=%s, departmentId=%s",
                     subject.getId(), subject.getDepartmentId());
-            throw  new TokenGenerationError("invalid departmentid");
+            throw  new AccessCodeGenerationError("invalid departmentid");
         }
 
         // Split comma-separated message template IDs
@@ -284,12 +284,12 @@ public class Message extends PanacheEntityBase {
                 MessageTemplate template = MessageTemplate.findById(templateId);
 
                 if (template != null) {
-                    String token = subject.getRespondent().token != null ? subject.getRespondent().token : "";
-                    // Replace <TOKEN> in the message body with respondent's token
+                    String accessCode = subject.getRespondent().accessCode != null ? subject.getRespondent().accessCode : "";
+                    // Replace <ACCESS_CODE> in the message body with respondent's access code
                     String processedMessage = template.message != null ?
-                            template.message.replace("<TOKEN>", token) : "";
-                    Log.debugf("createMessagesForSubject: template id=%d messageType=%s mimeType=%s tokenPresent=%b bodyLength=%d",
-                            template.id, template.messageType, template.mimeType, !token.isEmpty(), processedMessage.length());
+                            template.message.replace("<ACCESS_CODE>", accessCode) : "";
+                    Log.debugf("createMessagesForSubject: template id=%d messageType=%s mimeType=%s accessCodePresent=%b bodyLength=%d",
+                            template.id, template.messageType, template.mimeType, !accessCode.isEmpty(), processedMessage.length());
 
                     // Create new message
                     Message message = new Message();
@@ -307,7 +307,7 @@ public class Message extends PanacheEntityBase {
                 // Log error parsing template ID
                 Log.errorf(e, "createMessagesForSubject: invalid message template id '%s' for subjectId=%s",
                         templateIdStr, subject.getId());
-                throw  new TokenGenerationError("Invalid message template ID: " + templateIdStr);
+                throw  new AccessCodeGenerationError("Invalid message template ID: " + templateIdStr);
             }
         }
         Log.debugf("createMessagesForSubject: generated %d message(s) for subjectId=%s",

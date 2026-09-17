@@ -42,7 +42,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * documentation still renders — as a component tree, not injected markup — with one list item
  * per documented CSV column, so the untrusted-markup regression cannot silently return.</p>
  *
- * <p>{@code RegisterView} injects {@code UiSessionLogin}/{@code TokenService}/{@code
+ * <p>{@code RegisterView} injects {@code UiSessionLogin}/{@code AccessCodeService}/{@code
  * SecurityIdentity} and reads the authenticated user from the Vaadin session, so the test seeds
  * a transient {@link User} (with one department) into the session and obtains the view through
  * CDI, then attaches it to the test {@link UI}. Route navigation is unavailable under

@@ -16,17 +16,17 @@ import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 /**
- * Unit test for {@link TokenGenerationError}.
+ * Unit test for {@link AccessCodeGenerationError}.
  *
  * <p>Traceability: UC-004 (Send Invitation or Reminder Email) — thrown by
  * {@code Message.createMessagesForSubject} when a department's message-template
  * configuration is invalid.</p>
  */
-class TokenGenerationErrorTest {
+class AccessCodeGenerationErrorTest {
 
     @Test
     void constructorSetsMessage() {
-        TokenGenerationError error = new TokenGenerationError("invalid departmentid");
+        AccessCodeGenerationError error = new AccessCodeGenerationError("invalid departmentid");
         assertEquals("invalid departmentid", error.getMessage());
     }
 }

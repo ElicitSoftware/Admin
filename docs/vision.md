@@ -7,7 +7,7 @@
 
 Elicit Admin is the administrative module of the
 [Elicit Software](https://github.com/ElicitSoftware/) platform. It lets staff
-administer surveys end-to-end: upload subjects, generate tokenized invitations,
+administer surveys end-to-end: upload subjects, generate invitations carrying each subject's access code,
 monitor respondent progress, send reminder emails, and view results. It is the
 operational counterpart to the respondent-facing Survey module and the
 Authoring tool.
@@ -15,7 +15,7 @@ Authoring tool.
 ## Target Users
 
 - **Survey administrators** — staff who register subjects, generate invitation
-  tokens, dispatch and re-send invitation/reminder emails, and monitor
+  access codes, dispatch and re-send invitation/reminder emails, and monitor
   completion across a study.
 - **Researchers / clinicians** — consumers who review results and derived
   reports produced from respondent submissions.
@@ -24,7 +24,7 @@ Authoring tool.
 
 ## Goals
 
-- Bulk-register subjects and generate per-subject invitation tokens.
+- Bulk-register subjects and generate per-subject invitation access codes.
 - Track and display each subject's progress through their survey.
 - Send invitation and reminder emails to subjects.
 - Present results and reports to authorized staff.
@@ -36,7 +36,7 @@ Authoring tool.
 ## Scope
 
 **In scope**
-- Subject upload/registration and token generation.
+- Subject upload/registration and access code generation.
 - Progress monitoring dashboards over the shared survey database.
 - Reminder / invitation email workflows.
 - Results and report viewing for authorized roles.

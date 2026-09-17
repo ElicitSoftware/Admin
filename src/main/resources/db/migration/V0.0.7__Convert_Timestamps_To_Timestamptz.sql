@@ -40,7 +40,7 @@ SELECT s.id,
        r.finalized_dt,
        d.name AS department_name,
        d.id AS department_id,
-       r.token,
+       r.access_code,
        CASE
            WHEN r.first_access_dt IS NULL AND r.finalized_dt IS NULL THEN 'Not Started'::text
            WHEN r.first_access_dt IS NOT NULL AND r.finalized_dt IS NULL THEN 'In Progress'::text

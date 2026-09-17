@@ -78,7 +78,7 @@ import jakarta.inject.Inject;
  * <p>The view features a sophisticated search interface with multiple filter options:</p>
  * <ul>
  *   <li><strong>Department Filtering:</strong> Multi-select department filter with "All Departments" option</li>
- *   <li><strong>Token Search:</strong> Find subjects by their unique survey tokens</li>
+ *   <li><strong>Access Code Search:</strong> Find subjects by their unique survey access codes</li>
  *   <li><strong>Name Search:</strong> Filter by first name, middle name, or last name</li>
  *   <li><strong>Contact Information:</strong> Search by email address or phone number</li>
  * </ul>
@@ -123,8 +123,8 @@ import jakarta.inject.Inject;
 @RolesAllowed({"elicit_user", "elicit_admin"})
 
 public class SearchView extends VerticalLayout implements HasDynamicTitle, BeforeEnterObserver {
-    /** Tracks the currently active action token (only one row can have a selection at a time). */
-    private String activeActionToken = null;
+    /** Tracks the currently active action access code (only one row can have a selection at a time). */
+    private String activeActionAccessCode = null;
     /** Tracks the current action value for the active row. */
     private String activeActionValue = null;
 
@@ -183,8 +183,8 @@ public class SearchView extends VerticalLayout implements HasDynamicTitle, Befor
     /** Multi-select combo box for department filtering. */
     private MultiSelectComboBox<Department> departmentComboBox;
 
-    /** Text field for token-based search filtering. */
-    private TextField tokenField;
+    /** Text field for access-code-based search filtering. */
+    private TextField accessCodeField;
 
     /** Text field for first name search filtering. */
     private TextField firstNameField;
@@ -331,7 +331,7 @@ public class SearchView extends VerticalLayout implements HasDynamicTitle, Befor
      *
      * <ul>
      *   <li><strong>Department Filter:</strong> Multi-select combo box with "All Departments" option</li>
-     *   <li><strong>Text Filters:</strong> Individual search fields for token, names, email, and phone</li>
+     *   <li><strong>Text Filters:</strong> Individual search fields for access code, names, email, and phone</li>
      *   <li><strong>Search Action:</strong> Button to trigger filtering with pagination reset</li>
      * </ul>
      *
@@ -357,10 +357,10 @@ public class SearchView extends VerticalLayout implements HasDynamicTitle, Befor
         departmentComboBox.setId("department-filter");
         searchBar.add(departmentComboBox);
 
-        tokenField = new TextField("Token");
-        tokenField.setId("token-filter");
-        tokenField.addThemeVariants(TextFieldVariant.LUMO_SMALL);
-        searchBar.add(tokenField);
+        accessCodeField = new TextField("Access Code");
+        accessCodeField.setId("access-code-filter");
+        accessCodeField.addThemeVariants(TextFieldVariant.LUMO_SMALL);
+        searchBar.add(accessCodeField);
 
         firstNameField = new TextField("First name");
         firstNameField.setId("first-name-filter");
@@ -485,7 +485,7 @@ public class SearchView extends VerticalLayout implements HasDynamicTitle, Befor
      *
      * <h4>Column Configuration:</h4>
      * <ul>
-     *   <li><strong>Token:</strong> Fixed-width column (150px) for survey tokens</li>
+     *   <li><strong>Access code:</strong> Fixed-width column (150px) for survey access codes</li>
      *   <li><strong>Department:</strong> Department name with sorting capability</li>
      *   <li><strong>Names:</strong> First, middle, and last name columns with sorting</li>
      *   <li><strong>Contact:</strong> Email and phone columns with sorting</li>
@@ -494,7 +494,7 @@ public class SearchView extends VerticalLayout implements HasDynamicTitle, Befor
      *
      * <h4>Interactive Features:</h4>
      * <ul>
-     *   <li><strong>Edit Column:</strong> Edit buttons that navigate to subject registration with token parameter</li>
+     *   <li><strong>Edit Column:</strong> Edit buttons that navigate to subject registration with access code parameter</li>
      *   <li><strong>Action Column:</strong> Dropdown menus for email sending and report generation</li>
      *   <li><strong>Multi-sort:</strong> Support for sorting by multiple columns simultaneously</li>
      * </ul>
@@ -520,7 +520,7 @@ public class SearchView extends VerticalLayout implements HasDynamicTitle, Befor
         subjectGrid = new Grid<>(Status.class, false);
         subjectGrid.setId("subject-grid");
         subjectGrid.setSizeFull();
-        subjectGrid.addColumn(Status::getToken).setHeader("Token").setSortable(true).setSortProperty(Status.PROP_TOKEN).setWidth("150px").setFlexGrow(0);
+        subjectGrid.addColumn(Status::getAccessCode).setHeader("Access Code").setSortable(true).setSortProperty(Status.PROP_ACCESS_CODE).setWidth("150px").setFlexGrow(0);
         subjectGrid.addColumn(Status::getDepartmentName).setHeader("Department").setSortable(true).setSortProperty(Status.PROP_DEPARTMENT_NAME);
         subjectGrid.addColumn(Status::getFirstName).setHeader("First name").setSortable(true).setSortProperty(Status.PROP_FIRST_NAME);
         subjectGrid.addColumn(Status::getMiddleName).setHeader("Middle name").setSortable(true).setSortProperty(Status.PROP_MIDDLE_NAME);
@@ -539,8 +539,8 @@ public class SearchView extends VerticalLayout implements HasDynamicTitle, Befor
             editButton.addThemeVariants(ButtonVariant.LUMO_ICON, ButtonVariant.LUMO_TERTIARY);
             editButton.getElement().setProperty("title", "Edit");
             editButton.addClickListener(e -> {
-                // Pass the token as a query parameter (or use another unique identifier)
-                ui.navigate("register", QueryParameters.simple(Map.of("token", status.getToken())));
+                // Pass the access code as a query parameter (or use another unique identifier)
+                ui.navigate("register", QueryParameters.simple(Map.of("accessCode", status.getAccessCode())));
             });
             return editButton;
         }).setHeader("Edit").setWidth("80px").setFlexGrow(0);
@@ -558,9 +558,9 @@ public class SearchView extends VerticalLayout implements HasDynamicTitle, Befor
 
             actionComboBox.setItems(buildActionOptions(status));
 
-            String token = status.getToken();
+            String accessCode = status.getAccessCode();
             // Set value only if this is the active row
-            if (activeActionToken != null && activeActionToken.equals(token)) {
+            if (activeActionAccessCode != null && activeActionAccessCode.equals(accessCode)) {
                 actionComboBox.setValue(activeActionValue);
             }
 
@@ -579,20 +579,20 @@ public class SearchView extends VerticalLayout implements HasDynamicTitle, Befor
                 String value = event.getValue();
                 if (value != null) {
                     // If another row is active, clear its selection
-                    if (activeActionToken != null && !activeActionToken.equals(token)) {
-                        activeActionToken = null;
+                    if (activeActionAccessCode != null && !activeActionAccessCode.equals(accessCode)) {
+                        activeActionAccessCode = null;
                         activeActionValue = null;
                         // Refresh the grid to update the previous row's UI
                         subjectGrid.getDataProvider().refreshAll();
                     }
-                    activeActionToken = token;
+                    activeActionAccessCode = accessCode;
                     activeActionValue = value;
                     if (!actionLayout.getChildren().anyMatch(c -> c.equals(submitButton))) {
                         actionLayout.add(submitButton);
                     }
                 } else {
-                    if (activeActionToken != null && activeActionToken.equals(token)) {
-                        activeActionToken = null;
+                    if (activeActionAccessCode != null && activeActionAccessCode.equals(accessCode)) {
+                        activeActionAccessCode = null;
                         activeActionValue = null;
                     }
                     actionLayout.remove(submitButton);
@@ -626,8 +626,8 @@ public class SearchView extends VerticalLayout implements HasDynamicTitle, Befor
                     }
                     // Clear selection and remove submit button after action
                     actionComboBox.clear();
-                    if (activeActionToken != null && activeActionToken.equals(token)) {
-                        activeActionToken = null;
+                    if (activeActionAccessCode != null && activeActionAccessCode.equals(accessCode)) {
+                        activeActionAccessCode = null;
                         activeActionValue = null;
                     }
                     actionLayout.remove(submitButton);
@@ -727,7 +727,7 @@ public class SearchView extends VerticalLayout implements HasDynamicTitle, Befor
      *
      * <h4>Optional Filters:</h4>
      * <ul>
-     *   <li><strong>Token Search:</strong> Case-insensitive partial matching</li>
+     *   <li><strong>Access Code Search:</strong> Case-insensitive partial matching</li>
      *   <li><strong>Name Filters:</strong> Case-insensitive partial matching for first and last names</li>
      *   <li><strong>Email Filter:</strong> Case-insensitive partial matching</li>
      *   <li><strong>Phone Filter:</strong> Partial matching without case conversion</li>
@@ -740,7 +740,7 @@ public class SearchView extends VerticalLayout implements HasDynamicTitle, Befor
      */
     private StatusQuery buildStatusQuery() {
         List<Long> departmentIds = getSelectedDepartmentIds(departmentComboBox);
-        String token = tokenField.getValue();
+        String accessCode = accessCodeField.getValue();
         String firstName = firstNameField.getValue();
         String lastName = lastNameField.getValue();
         String email = emailField.getValue();
@@ -755,9 +755,9 @@ public class SearchView extends VerticalLayout implements HasDynamicTitle, Befor
         params.put("departments", departmentIds);
 
         // Optional filters — values bound as parameters, wildcards added to the value only.
-        if (token != null && !token.isBlank()) {
-            where.append(" and lower(").append(Status.PROP_TOKEN).append(") like :token");
-            params.put("token", "%" + token.toLowerCase() + "%");
+        if (accessCode != null && !accessCode.isBlank()) {
+            where.append(" and lower(").append(Status.PROP_ACCESS_CODE).append(") like :accessCode");
+            params.put("accessCode", "%" + accessCode.toLowerCase() + "%");
         }
         if (firstName != null && !firstName.isBlank()) {
             where.append(" and lower(").append(Status.PROP_FIRST_NAME).append(") like :firstName");

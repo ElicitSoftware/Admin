@@ -26,7 +26,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  *
  * <p>Traceability: UC-002 (Search and Monitor Subject Progress) — the console surfaces how long
  * a respondent took to complete their survey via {@link Respondent#getElapsedTime()}. These are
- * non-booted tests; the static token-lookup finders are covered against a real database in
+ * non-booted tests; the static access-code lookup finders are covered against a real database in
  * {@link StatusViewQueryTest}-style tests elsewhere and are not re-tested here.</p>
  */
 class RespondentTest {
@@ -67,7 +67,7 @@ class RespondentTest {
         respondent.active = true;
         respondent.logins = 3;
         respondent.survey = survey;
-        respondent.token = "tok-123";
+        respondent.accessCode = "tok-123";
 
         assertEquals(5, respondent.id);
         assertEquals(created, respondent.createdDt);
@@ -76,7 +76,7 @@ class RespondentTest {
         assertTrue(respondent.active);
         assertEquals(3, respondent.logins);
         assertEquals(survey, respondent.survey);
-        assertEquals("tok-123", respondent.token);
+        assertEquals("tok-123", respondent.accessCode);
     }
 
     @Test
@@ -85,7 +85,7 @@ class RespondentTest {
         a.id = 9;
         Respondent b = new Respondent();
         b.id = 9;
-        b.token = "different-token-same-id";
+        b.accessCode = "different-code-same-id";
 
         assertEquals(a, b);
         assertEquals(a.hashCode(), b.hashCode());

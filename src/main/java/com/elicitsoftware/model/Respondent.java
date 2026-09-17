@@ -30,7 +30,7 @@ import java.util.concurrent.TimeUnit;
  *
  * <p><strong>Key Tracking Features:</strong></p>
  * <ul>
- *   <li><strong>Session Management:</strong> Token-based access control and session tracking</li>
+ *   <li><strong>Session Management:</strong> Access-code-based access control and session tracking</li>
  *   <li><strong>Participation Timeline:</strong> Creation, first access, and completion timestamps</li>
  *   <li><strong>Access Analytics:</strong> Login count and elapsed time calculations</li>
  *   <li><strong>Status Management:</strong> Active/inactive status for participation control</li>
@@ -44,18 +44,18 @@ import java.util.concurrent.TimeUnit;
  *   <li><strong>Completion:</strong> Finalization timestamp recorded when survey is completed</li>
  * </ol>
  *
- * <p><strong>Token-Based Access:</strong></p>
+ * <p><strong>Access-Code-Based Access:</strong></p>
  * <ul>
- *   <li><strong>Unique Tokens:</strong> Each respondent has a unique access token</li>
- *   <li><strong>Security:</strong> Tokens provide secure, anonymous access to surveys</li>
- *   <li><strong>Session Tracking:</strong> Tokens enable tracking without requiring registration</li>
+ *   <li><strong>Unique Access Codes:</strong> Each respondent has a unique access code</li>
+ *   <li><strong>Security:</strong> Access codes provide secure, anonymous access to surveys</li>
+ *   <li><strong>Session Tracking:</strong> Access codes enable tracking without requiring registration</li>
  *   <li><strong>Active Status:</strong> Only active respondents can access surveys</li>
  * </ul>
  *
  * <p><strong>Named Queries:</strong></p>
  * <ul>
- *   <li><strong>findBySurveyAndToken:</strong> Find respondent by survey ID and access token</li>
- *   <li><strong>findActiveByToken:</strong> Find active respondent by token (ordered by survey ID)</li>
+ *   <li><strong>findBySurveyAndAccessCode:</strong> Find respondent by survey ID and access code</li>
+ *   <li><strong>findActiveByAccessCode:</strong> Find active respondent by access code (ordered by survey ID)</li>
  * </ul>
  *
  * <p><strong>Analytics and Reporting:</strong></p>
@@ -68,8 +68,8 @@ import java.util.concurrent.TimeUnit;
  *
  * <p><strong>Usage Examples:</strong></p>
  * <pre>{@code
- * // Find respondent by survey and token
- * Respondent respondent = Respondent.findBySurveyAndToken(123, "abc123token");
+ * // Find respondent by survey and access code
+ * Respondent respondent = Respondent.findBySurveyAndAccessCode(123, "Bx7kQ2mNp");
  *
  * // Check if respondent is active
  * if (respondent.active) {
@@ -94,8 +94,8 @@ import java.util.concurrent.TimeUnit;
 @Entity
 @Table(name = "respondents", schema = "survey")
 @NamedQueries({
-        @NamedQuery(name = "Respondent.findBySurveyAndToken", query = "SELECT R FROM Respondent R where R.survey.id = :survey_id and R.token = :token"),
-        @NamedQuery(name = "Respondent.findActiveByToken", query = "SELECT R FROM Respondent R where R.token = :token and R.active = true order by R.survey.id")
+        @NamedQuery(name = "Respondent.findBySurveyAndAccessCode", query = "SELECT R FROM Respondent R where R.survey.id = :survey_id and R.accessCode = :accessCode"),
+        @NamedQuery(name = "Respondent.findActiveByAccessCode", query = "SELECT R FROM Respondent R where R.accessCode = :accessCode and R.active = true order by R.survey.id")
 })
 public class Respondent extends PanacheEntityBase {
 
@@ -143,7 +143,7 @@ public class Respondent extends PanacheEntityBase {
      * Timestamp of the respondent's first access to the survey.
      *
      * <p>Records when the respondent first accessed their survey using their
-     * unique token. This marks the transition from "invited" to "active"
+     * unique access code. This marks the transition from "invited" to "active"
      * participation and is used for engagement analytics.</p>
      *
      * <p><strong>States:</strong></p>
@@ -226,22 +226,22 @@ public class Respondent extends PanacheEntityBase {
     public Survey survey;
 
     /**
-     * Unique access token for the respondent.
+     * Unique access code for the respondent.
      *
      * <p>Provides secure, anonymous access to the assigned survey without
-     * requiring user registration or authentication. The token serves as
+     * requiring user registration or authentication. The access code serves as
      * both identifier and access credential for survey participation.</p>
      *
      * <p><strong>Security Features:</strong></p>
      * <ul>
-     *   <li><strong>Uniqueness:</strong> Each token is globally unique across all surveys</li>
+     *   <li><strong>Uniqueness:</strong> Each access code is unique within its survey</li>
      *   <li><strong>Anonymity:</strong> Enables participation without personal credentials</li>
      *   <li><strong>Access Control:</strong> Required for all survey interactions</li>
      *   <li><strong>Session Management:</strong> Links survey sessions to specific respondents</li>
      * </ul>
      */
-    @Column(name = "token")
-    public String token;
+    @Column(name = "access_code")
+    public String accessCode;
 
     /**
      * Default constructor for JPA.
@@ -254,52 +254,52 @@ public class Respondent extends PanacheEntityBase {
     }
 
     /**
-     * Finds a respondent by survey ID and access token.
+     * Finds a respondent by survey ID and access code.
      *
-     * <p>Uses the named query "Respondent.findBySurveyAndToken" to locate a specific
-     * respondent within a survey using their unique access token. This method
+     * <p>Uses the named query "Respondent.findBySurveyAndAccessCode" to locate a specific
+     * respondent within a survey using their unique access code. This method
      * is commonly used for survey access validation and session management.</p>
      *
      * <p><strong>Query Parameters:</strong></p>
      * <ul>
      *   <li><strong>survey_id:</strong> The ID of the survey to search within</li>
-     *   <li><strong>token:</strong> The respondent's unique access token</li>
+     *   <li><strong>accessCode:</strong> The respondent's unique access code</li>
      * </ul>
      *
      * @param survey_id the survey ID to search within
-     * @param token the respondent's access token
+     * @param accessCode the respondent's access code
      * @return the matching Respondent, or null if not found
      *
      * @see NamedQuery
      */
     @Transient
-    public static Respondent findBySurveyAndToken(Integer survey_id, String token) {
-        return find("#Respondent.findBySurveyAndToken", Parameters.with("survey_id", survey_id).and("token", token)).firstResult();
+    public static Respondent findBySurveyAndAccessCode(Integer survey_id, String accessCode) {
+        return find("#Respondent.findBySurveyAndAccessCode", Parameters.with("survey_id", survey_id).and("accessCode", accessCode)).firstResult();
     }
 
     /**
-     * Finds an active respondent by access token across all surveys.
+     * Finds an active respondent by access code across all surveys.
      *
-     * <p>Uses the named query "Respondent.findActiveByToken" to locate an active
-     * respondent by their token, regardless of which survey they're assigned to.
+     * <p>Uses the named query "Respondent.findActiveByAccessCode" to locate an active
+     * respondent by their access code, regardless of which survey they're assigned to.
      * Results are ordered by survey ID to ensure consistent behavior when a
-     * token might exist across multiple surveys.</p>
+     * access code might exist across multiple surveys.</p>
      *
      * <p><strong>Query Criteria:</strong></p>
      * <ul>
-     *   <li><strong>Token Match:</strong> Exact match on the provided token</li>
+     *   <li><strong>Access Code Match:</strong> Exact match on the provided access code</li>
      *   <li><strong>Active Status:</strong> Only returns respondents where active = true</li>
      *   <li><strong>Ordering:</strong> Results ordered by survey ID for consistency</li>
      * </ul>
      *
-     * @param token the respondent's access token
+     * @param accessCode the respondent's access code
      * @return the first matching active Respondent, or null if not found
      *
      * @see NamedQuery
      */
     @Transient
-    public static Respondent findActiveByToken(String token) {
-        return find("#Respondent.findActiveByToken", Parameters.with("token", token)).firstResult();
+    public static Respondent findActiveByAccessCode(String accessCode) {
+        return find("#Respondent.findActiveByAccessCode", Parameters.with("accessCode", accessCode)).firstResult();
     }
 
     /**
