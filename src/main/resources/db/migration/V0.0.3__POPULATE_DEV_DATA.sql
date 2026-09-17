@@ -41,9 +41,17 @@ We appreciate you taking the time to help us evaluate how we can use this tool t
 Test Department','text/html');
 -- Alice Admin
 INSERT INTO survey.users(id, username, first_name, last_name) VALUES (NEXTVAL('survey.users_seq'), 'admin','Alice', 'Admin');
-INSERT INTO survey.user_surveys(user_id, survey_id) VALUES(CURRVAL('survey.users_seq'),1);
+-- Conditional on survey 1 existing: this schema is created before any survey definition is
+-- imported, so on a fresh deployment survey.surveys is empty and an unconditional insert
+-- fails on user_surveys_surveys_fk, taking the whole application down at startup. The dev
+-- user still gets created either way; only the survey assignment waits for a survey.
+INSERT INTO survey.user_surveys(user_id, survey_id)
+    SELECT CURRVAL('survey.users_seq'), 1
+    WHERE EXISTS (SELECT 1 FROM survey.surveys WHERE id = 1);
 INSERT INTO survey.user_departments(department_id, user_id) VALUES(1,CURRVAL('survey.users_seq'));
 -- Umar User
 INSERT INTO survey.users(id, username, first_name, last_name) VALUES (NEXTVAL('survey.users_seq'), 'user','Umar', 'User');
-INSERT INTO survey.user_surveys(user_id, survey_id) VALUES(CURRVAL('survey.users_seq'),1);
+INSERT INTO survey.user_surveys(user_id, survey_id)
+    SELECT CURRVAL('survey.users_seq'), 1
+    WHERE EXISTS (SELECT 1 FROM survey.surveys WHERE id = 1);
 INSERT INTO survey.user_departments(department_id, user_id) VALUES(1,CURRVAL('survey.users_seq'));

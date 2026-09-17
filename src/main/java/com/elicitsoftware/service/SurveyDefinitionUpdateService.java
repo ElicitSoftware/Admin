@@ -652,6 +652,12 @@ public class SurveyDefinitionUpdateService {
         Integer displayOrder = SurveyDefinitionFileFields.parseIntOrNull(fields[2]);
         String name = SurveyDefinitionFileFields.nullIfEmpty(fields[3]);
         String dimensionName = SurveyDefinitionFileFields.nullIfEmpty(fields[4]);
+        // Default dimension_name to step name if empty (NOT NULL constraint). Done before the
+        // unchanged-comparison below so a re-uploaded file matches the defaulted stored value
+        // instead of versioning the row on every apply.
+        if (dimensionName == null) {
+            dimensionName = name != null ? name : "";
+        }
         String description = SurveyDefinitionFileFields.nullIfEmpty(fields[5]);
 
         Object[] current = findCurrentRow("survey.steps", "step_key", elementKey, surveyId,

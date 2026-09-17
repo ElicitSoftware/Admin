@@ -620,6 +620,8 @@ public class SurveyDefinitionImportService {
      * Inserts a new step row. {@code element_key} carried over verbatim (or freshly
      * generated) — see {@link #resolveElementKey(String)}.
      * Fields: source_id|element_key|display_order|name|dimension_name|description|version|effective_from|effective_to|published_by|published_comment|is_draft
+     * <p>
+     * Note: If dimension_name is empty, it defaults to the step name to satisfy NOT NULL constraint.
      *
      * @return the new row's durable {@code step_id}
      */
@@ -631,6 +633,13 @@ public class SurveyDefinitionImportService {
         Query seqQuery = em.createNativeQuery("SELECT nextval('survey.steps_seq')");
         Long newId = ((Number) seqQuery.getSingleResult()).longValue();
 
+        String name = nullIfEmpty(fields[3]);
+        String dimensionName = nullIfEmpty(fields[4]);
+        // Default dimension_name to step name if empty (NOT NULL constraint)
+        if (dimensionName == null) {
+            dimensionName = name != null ? name : "";
+        }
+
         Query query = em.createNativeQuery("""
                 INSERT INTO survey.steps
                     (id, survey_id, step_key, display_order, name, dimension_name, description)
@@ -640,8 +649,8 @@ public class SurveyDefinitionImportService {
         query.setParameter(2, surveyId);
         query.setParameter(3, elementKey);
         query.setParameter(4, parseIntOrNull(fields[2]));
-        query.setParameter(5, nullIfEmpty(fields[3]));
-        query.setParameter(6, nullIfEmpty(fields[4]));
+        query.setParameter(5, name);
+        query.setParameter(6, dimensionName);
         query.setParameter(7, nullIfEmpty(fields[5]));
         query.executeUpdate();
         return getDurableId("step_id", "survey.steps", newId);
