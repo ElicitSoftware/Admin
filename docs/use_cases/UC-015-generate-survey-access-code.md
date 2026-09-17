@@ -31,7 +31,7 @@
 
 ### A2: Unable to generate a unique access code
 
-**Trigger:** A unique access code cannot be produced.
+**Trigger:** Every candidate collides for `AccessCodeService.MAX_ACCESS_CODE_ATTEMPTS` (4) attempts in a row.
 **Flow:**
 
 1. The system raises an access code generation error, which the calling use case surfaces to the caller (UC-003 A4, UC-010 A3).
@@ -60,4 +60,4 @@ An access code must be unique among respondents of the same survey.
 
 ## Reference
 
-Derived from `AccessCodeService.generateAccessCode` and `Respondent`. Note: the retry counter in the generation loop increments rather than decrements, so the "try a limited number of times" intent is not enforced as written — flagged for review.
+Derived from `AccessCodeService.generateAccessCode` and `Respondent`.

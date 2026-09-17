@@ -18,6 +18,7 @@ import com.elicitsoftware.request.AddRequest;
 import com.elicitsoftware.response.AddResponse;
 import com.elicitsoftware.response.AddResponseStatus;
 import com.elicitsoftware.service.CsvImportService;
+import com.elicitsoftware.util.LogMasking;
 import com.elicitsoftware.util.RandomString;
 import io.quarkus.logging.Log;
 import io.quarkus.narayana.jta.QuarkusTransaction;
@@ -75,6 +76,9 @@ public class AccessCodeService {
     @Context
     private UriInfo uriInfo;
     private RandomString generator = null;
+
+    /** How many candidate access codes {@link #generateAccessCode(int)} tries before giving up. */
+    static final int MAX_ACCESS_CODE_ATTEMPTS = 4;
 
     /**
      * Initializes the AccessCodeService with a secure random access code generator.
@@ -259,7 +263,7 @@ public class AccessCodeService {
     public Respondent generateAccessCode(int surveyId) {
         String accessCode = null;
         Respondent respondent = null;
-        int tries = 4; // Lets only try this three times.
+        int tries = MAX_ACCESS_CODE_ATTEMPTS;
         Survey survey = Survey.findById(surveyId);
         try {
             while (tries > 0) {
@@ -272,9 +276,9 @@ public class AccessCodeService {
                     respondent.active = true;
                     return respondent;
                 } else {
-                    Log.info("Duplicate access code " + accessCode);
+                    Log.info("Duplicate access code " + LogMasking.maskAccessCode(accessCode));
                 }
-                tries++;
+                tries--;
             }
         } catch (Exception e) {
             //Pass along the error message.
