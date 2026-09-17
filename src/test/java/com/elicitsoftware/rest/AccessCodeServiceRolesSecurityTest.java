@@ -22,7 +22,7 @@ import static org.hamcrest.Matchers.anyOf;
 import static org.hamcrest.Matchers.is;
 
 /**
- * Role-based access tests for {@link TokenService#roles()}.
+ * Role-based access tests for {@link AccessCodeService#roles()}.
  *
  * <p>Traceability: UC-001 (Authenticate and Access the Admin Console), UC-015 (Security
  * Diagnostics). 2026-09 audit finding #6: {@code /api/secured/roles} was previously
@@ -32,7 +32,7 @@ import static org.hamcrest.Matchers.is;
  */
 @QuarkusTest
 @QuarkusTestResource(PostgresTestResource.class)
-class TokenServiceRolesSecurityTest {
+class AccessCodeServiceRolesSecurityTest {
 
     private static final String ROLES_PATH = "/api/secured/roles";
 

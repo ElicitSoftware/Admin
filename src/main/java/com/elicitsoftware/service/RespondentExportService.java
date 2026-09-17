@@ -35,7 +35,7 @@ import jakarta.transaction.Transactional;
  * # respondent_id: 123
  * # timezone: America/Detroit
  * # generated: 2026-03-13T20:50:38.106350589-04:00
- * respondents: survey_id|token|logins|created_dt|first_access_dt
+ * respondents: survey_id|access_code|logins|created_dt|first_access_dt
  * answers: survey_id|step|step_instance|...|created_dt|saved_dt|question_version
  * dependents: upstream_display_key|downstream_display_key|relationship_id|deleted
  * subjects: subject_index|xid|firstname|lastname|...|created_dt
@@ -106,7 +106,7 @@ public class RespondentExportService {
         out.append("# ").append(FORMAT_VERSION).append("\n");
         out.append("# respondent_id: ").append(respondentId).append("\n");
         out.append("# survey_id: ").append(respondent[1]).append("\n");
-        out.append("# token: ").append(respondent[2]).append("\n");
+        out.append("# access_code: ").append(respondent[2]).append("\n");
         out.append("# answers: ").append(answers.size()).append("\n");
         out.append("# dependents: ").append(dependents.size()).append("\n");
         out.append("# subjects: ").append(subjects.size()).append("\n");
@@ -117,10 +117,10 @@ public class RespondentExportService {
         out.append("\n");
 
         // Respondent record
-        // Fields: survey_id, token, logins, created_dt, first_access_dt
+        // Fields: survey_id, access_code, logins, created_dt, first_access_dt
         out.append("respondents: ");
         out.append(escapeField(respondent[1]));  // survey_id
-        out.append(FIELD_DELIMITER).append(escapeField(respondent[2]));  // token
+        out.append(FIELD_DELIMITER).append(escapeField(respondent[2]));  // access_code
         out.append(FIELD_DELIMITER).append(escapeField(respondent[4]));  // logins
         out.append(FIELD_DELIMITER).append(formatTimestamp(respondent[5], zoneId));  // created_dt
         out.append(FIELD_DELIMITER).append(formatTimestamp(respondent[6], zoneId));  // first_access_dt
@@ -235,7 +235,7 @@ public class RespondentExportService {
 
     private Object[] getRespondent(Integer respondentId) {
         String querySql = """
-                SELECT id, survey_id, token, active, logins,
+                SELECT id, survey_id, access_code, active, logins,
                        created_dt, first_access_dt, finalized_dt
                 FROM survey.respondents
                 WHERE id = :respondentId

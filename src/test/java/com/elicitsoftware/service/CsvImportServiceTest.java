@@ -14,6 +14,7 @@ package com.elicitsoftware.service;
 import com.elicitsoftware.model.Department;
 import com.elicitsoftware.model.Status;
 import com.elicitsoftware.response.AddResponse;
+import com.elicitsoftware.rest.AccessCodeService;
 import com.elicitsoftware.test.PostgresTestResource;
 import io.quarkus.test.TestTransaction;
 import io.quarkus.test.common.QuarkusTestResource;
@@ -39,7 +40,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * best-practices audit: {@code CsvImportService} had zero test coverage.</p>
  *
  * <p>{@code importSubjects} delegates each row to the real, CDI-intercepted
- * {@link com.elicitsoftware.rest.TokenService#putSubject}, which is {@code @RolesAllowed}
+ * {@link AccessCodeService#putSubject}, which is {@code @RolesAllowed}
  * ({@code elicit_importer}, {@code elicit_admin}, {@code elicit_user}) — that check applies to
  * this direct bean-to-bean call just as it would to an HTTP request, so every test method needs
  * {@code @TestSecurity} with one of those roles.</p>

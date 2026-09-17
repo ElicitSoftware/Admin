@@ -77,7 +77,7 @@ CREATE TABLE IF NOT EXISTS survey.surveys
 
 -- -----------------------------------------------------------------------------
 -- 4. survey.respondents — FK target for subjects; drives the survey.status view
---    (r.first_access_dt, r.finalized_dt, r.token). Columns match the Respondent
+--    (r.first_access_dt, r.finalized_dt, r.access_code). Columns match the Respondent
 --    entity. Timestamps use timestamptz to match the post-V0.0.7 world.
 -- -----------------------------------------------------------------------------
 CREATE SEQUENCE IF NOT EXISTS survey.respondents_seq START WITH 1 INCREMENT BY 1;
@@ -90,7 +90,7 @@ CREATE TABLE IF NOT EXISTS survey.respondents
     active          boolean DEFAULT true,
     logins          integer DEFAULT 0,
     survey_id       bigint NOT NULL,
-    token           character varying(255),
+    access_code     character varying(255),
     CONSTRAINT respondents_pk PRIMARY KEY (id),
     CONSTRAINT respondents_surveys_fk FOREIGN KEY (survey_id) REFERENCES survey.surveys (id)
 );
@@ -131,7 +131,7 @@ CREATE TABLE IF NOT EXISTS survey.post_survey_actions
 
 -- -----------------------------------------------------------------------------
 -- 6. survey.excluded_xids — owned by the Survey module (V006__CREATE_EXCLUDE_XIDS.sql
---    there), not Admin. Admin only reads/writes it via ExcludedXid/TokenService, so
+--    there), not Admin. Admin only reads/writes it via ExcludedXid/AccessCodeService, so
 --    it needs the real columns here. Matches Survey's V006 exactly (no department
 --    FK — Survey's version doesn't have one either).
 -- -----------------------------------------------------------------------------

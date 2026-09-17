@@ -54,7 +54,7 @@ An export includes the respondent and all of its related answers, dependents, su
 
 ### BR-039: Portable, self-describing format
 
-The export uses a versioned, escaped, delimited format whose header records counts, survey, token, and timezone so it can be re-imported into another instance.
+The export uses a versioned, escaped, delimited format whose header records counts, survey, access code, and timezone so it can be re-imported into another instance.
 
 ### BR-040: Orphaned messages skipped
 

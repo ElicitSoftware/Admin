@@ -298,7 +298,7 @@ public class RespondentImportService {
     }
 
     private Long insertRespondent(String[] fields) {
-        // Fields: survey_id, token, logins, created_dt, first_access_dt
+        // Fields: survey_id, access_code, logins, created_dt, first_access_dt
         if (fields.length < 5) {
             throw new IllegalArgumentException("Respondent requires 5 fields, got " + fields.length);
         }
@@ -307,7 +307,7 @@ public class RespondentImportService {
         Long newId = ((Number) seqQuery.getSingleResult()).longValue();
 
         Query query = em.createNativeQuery("""
-            INSERT INTO survey.respondents (id, survey_id, token, active, logins, created_dt, first_access_dt, finalized_dt)
+            INSERT INTO survey.respondents (id, survey_id, access_code, active, logins, created_dt, first_access_dt, finalized_dt)
             VALUES (?1, ?2, ?3, true, ?4, ?5, ?6, NULL)
             """);
         query.setParameter(1, newId);

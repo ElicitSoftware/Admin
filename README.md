@@ -150,7 +150,7 @@ This project was built with <a href="http://docker.com" target="_blank">Docker</
 <!-- USAGE EXAMPLES -->
 ## Usage
 The Admin tool doesn't define a survey. The Author tool will be used for that. If you would like to see the Admin tool in practice, you can use the <a href="https://github.com/ElicitSoftware/FHHS" target="_blank">FHHS</a> survey.<br/> 
-After running the `docker-compose` command, open [http://localhost:8080](http://localhost:8080) in your browser. Enter any token (the demo accepts any value), complete the questionnaire, and review your data. Once you finalize the survey, a report similar to the one below will be generated.
+After running the `docker-compose` command, open [http://localhost:8080](http://localhost:8080) in your browser. Enter any access code (the demo accepts any value), complete the questionnaire, and review your data. Once you finalize the survey, a report similar to the one below will be generated.
 <div align="center"><image src="images/samplePedigree.png" height=600></div>
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 
@@ -161,7 +161,7 @@ cases in `docs/use_cases` (each test references its `UC-XXX` ID).
 Two tiers of tests exist:
 
 - **Unit tests** — fast, no external services. They cover pure logic such as
-  the token generator (UC-015), respondent contact validation (UC-003), the
+  the access code generator (UC-015), respondent contact validation (UC-003), the
   validation `Result` wrapper (UC-006/UC-007), the integration-API response DTO
   (UC-010), and brand presentation helpers (UC-001).
 - **Booted tests** (`@QuarkusTest`) — start the full application against a
@@ -213,7 +213,7 @@ Run tests and generate a JaCoCo coverage report
 ./mvnw test jacoco:report -Dquarkus.container-image.build=false
 ```
 
-Also run the opt-in `TokenServiceEndpointIT` smoke test:
+Also run the opt-in `AccessCodeServiceEndpointIT` smoke test:
 
 ```shell
 ./mvnw test -Dit.integration=true -Dquarkus.container-image.build=false

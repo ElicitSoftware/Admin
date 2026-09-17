@@ -78,13 +78,13 @@ A person registered to take a survey, associated with a department and linked to
 
 ### RESPONDENT
 
-*Owned by the Survey module.* The record that carries a subject's survey access token and tracks access/finalization timestamps used to derive progress.
+*Owned by the Survey module.* The record that carries a subject's survey access code and tracks access/finalization timestamps used to derive progress.
 
 | Attribute     | Description                                | Data Type | Length/Precision | Validation Rules                    |
 |---------------|--------------------------------------------|-----------|------------------|-------------------------------------|
 | id            | Unique identifier                          | Long      |                  | Primary Key, Sequence               |
 | surveyId      | Survey this respondent belongs to          | Long      |                  | Not Null, Foreign Key (surveys.id)  |
-| token         | Survey access token                        | String    |                  | Not Null; Unique per Survey         |
+| access_code   | Survey access code                         | String    |                  | Not Null; Unique per Survey         |
 | active        | Whether the respondent is active           | Boolean   |                  | Not Null                            |
 | createdDt     | Creation timestamp                         | DateTime  |                  | Optional                            |
 | firstAccessDt | When the survey was first accessed         | DateTime  |                  | Optional                            |
@@ -220,4 +220,4 @@ Join table linking users to the surveys they are assigned to. Composite key of `
 
 ### STATUS (view)
 
-A database view joining `respondents`, `subjects`, and `departments` to expose each subject's demographics, token, department, and a derived progress status (`Not Started`, `In Progress`, `Finished`) based on the respondent's first-access and finalized timestamps. Backs the search/monitoring view (UC-002); read-only.
+A database view joining `respondents`, `subjects`, and `departments` to expose each subject's demographics, access code, department, and a derived progress status (`Not Started`, `In Progress`, `Finished`) based on the respondent's first-access and finalized timestamps. Backs the search/monitoring view (UC-002); read-only.

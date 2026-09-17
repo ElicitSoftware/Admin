@@ -23,7 +23,7 @@
 | FR-012 | Import Respondent Data              | As a survey administrator, I want to import respondent data so that externally collected responses can be loaded into the system.                  | Medium   | Implemented |
 | FR-013 | Export Survey Definition            | As a system administrator, I want to export a survey definition so that it can be backed up or migrated to another environment.                    | Medium   | Implemented |
 | FR-014 | Import Survey Definition            | As a system administrator, I want to import a survey definition so that surveys authored elsewhere can be deployed into this environment.          | Medium   | Implemented |
-| FR-015 | Generate Survey Access Token        | As a survey administrator, I want to generate a unique access token for a subject so that they can reach their survey securely without a password. | High     | Implemented |
+| FR-015 | Generate Survey Access Code         | As a survey administrator, I want to generate a unique access code for a subject so that they can reach their survey securely without a password. | High     | Implemented |
 | FR-016 | Manage User Role Assignments        | As a system administrator, I want to assign and revoke roles for admin users so that console access matches each user's responsibilities.          | High     | Implemented |
 | FR-017 | Update Survey Definition            | As a system administrator, I want to push a revised survey definition into an existing survey so that a survey authored once can be kept in sync across separate deployments (e.g., institutions) without losing their respondent data. | Medium   | Implemented |
 | FR-018 | Apply Survey Definition             | As a system administrator, I want to upload a survey definition without first deciding whether it is new to this deployment, so that one distributed file can be applied unchanged at every site in a multi-site rollout. | Medium   | Implemented |
@@ -58,6 +58,7 @@
 | C-008 | Shared Multi-Module Schema | Database schema and message contracts must remain compatible with the sibling Survey and Authoring modules; changes require cross-module coordination. | Operational | High     | Verified    |
 | C-009 | PHI Handling             | Subject and respondent records must be treated as potentially containing PHI (e.g., in the FHHS deployment) and handled accordingly. | Regulatory | High     | Open        |
 | C-010 | Accessible Component Usage | UI must be implemented via Vaadin component APIs rather than raw HTML/JS that bypasses framework accessibility support.      | Technical   | Medium   | Verified    |
+| C-011 | Terminology              | The credential a respondent enters to reach a survey is the **access code** (`survey.respondents.access_code`, `Status.accessCode`, the `<ACCESS_CODE>` template placeholder). "Token" is reserved for OIDC/Bearer tokens and the question-text placeholder (`survey.relationships.token`); it must not be used for the respondent credential. | Business    | Medium   | Implemented |
 
 ## Traceability
 

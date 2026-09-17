@@ -34,7 +34,7 @@ rectangle "Elicit Admin" {
     usecase "UC-019\nSurface Missing Survey Definition" as UC019
 
     ' --- Shared subflow ---
-    usecase "UC-015\nGenerate Survey Access Token" as UC015
+    usecase "UC-015\nGenerate Survey Access Code" as UC015
 }
 
 ' Survey User

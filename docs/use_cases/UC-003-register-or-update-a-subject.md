@@ -5,7 +5,7 @@
 **Use Case ID:** UC-003
 **Use Case Name:** Register or Update a Subject
 **Primary Actor:** Survey User
-**Goal:** Add a subject to a survey (individually or by CSV upload) so they receive an access token and invitation messages, or update an existing subject's details.
+**Goal:** Add a subject to a survey (individually or by CSV upload) so they receive an access code and invitation messages, or update an existing subject's details.
 **Status:** Implemented
 
 ## Preconditions
@@ -22,7 +22,7 @@
 4. The user saves the form.
 5. The system validates the entered values.
 6. The system confirms the external ID is not on the department's exclusion list.
-7. The system generates a unique survey access token and creates a respondent (UC-015).
+7. The system generates a unique survey access code and creates a respondent (UC-015).
 8. The system stores the subject linked to that respondent and creates the department's default invitation/reminder messages for the subject.
 9. The system confirms the subject was saved and clears the form for the next entry.
 
@@ -51,23 +51,23 @@
 
 1. The system reports a duplicate entry and does not create a second subject.
 
-### A4: Token generation fails
+### A4: Access code generation fails
 
-**Trigger:** A unique token cannot be generated (step 7).
+**Trigger:** A unique access code cannot be generated (step 7).
 **Flow:**
 
-1. The system reports a token generation error and asks the user to try again.
+1. The system reports an access code generation error and asks the user to try again.
 2. No subject is created.
 
 ### A5: Update an existing subject
 
-**Trigger:** The user opens the registration view for an existing subject's token.
+**Trigger:** The user opens the registration view for an existing subject's access code.
 **Flow:**
 
 1. The system loads the subject's current details and switches to update mode.
 2. The user changes fields and saves.
 3. The system validates and stores the changes, then returns to the search view.
-4. The token and messages are **not** regenerated.
+4. The access code and messages are **not** regenerated.
 
 ### A6: Bulk upload by CSV
 
@@ -81,12 +81,12 @@
 
 ### Success Postconditions
 
-- A subject and its respondent exist, an access token is assigned, and invitation/reminder messages are queued.
-- On update, the subject's details reflect the changes; token and messages are unchanged.
+- A subject and its respondent exist, an access code is assigned, and invitation/reminder messages are queued.
+- On update, the subject's details reflect the changes; access code and messages are unchanged.
 
 ### Failure Postconditions
 
-- No subject is created or modified, and the user is told why (validation, exclusion, duplicate, or token error).
+- No subject is created or modified, and the user is told why (validation, exclusion, duplicate, or access code error).
 
 ## Business Rules
 
@@ -112,10 +112,10 @@ A subject whose external ID is on the department's exclusion list cannot be regi
 
 ### BR-014: Messages created only at registration
 
-Invitation/reminder messages are generated when a subject is first registered. Updating a subject does not regenerate the token or messages.
+Invitation/reminder messages are generated when a subject is first registered. Updating a subject does not regenerate the access code or messages.
 
 ---
 
 ## Reference
 
-Derived from `RegisterView`, `TokenService`, `CsvImportService`, `Subject`, `ExcludedXid`, `Message`, and `Department`.
+Derived from `RegisterView`, `AccessCodeService`, `CsvImportService`, `Subject`, `ExcludedXid`, `Message`, and `Department`.

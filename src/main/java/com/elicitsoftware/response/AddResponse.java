@@ -16,51 +16,21 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import java.util.ArrayList;
 
 /**
- * AddResponse represents the response payload returned after successfully adding a new participant to a survey.
+ * AddResponse is the JSON payload returned by the subject-registration endpoints
+ * ({@code /api/secured/add/subject}, {@code /add/subjects} and {@code /add/csv}).
  * <p>
- * This class serves as a data transfer object (DTO) that encapsulates the results of a participant
- * registration operation. It provides essential information needed by client applications to
- * continue the participant workflow, including unique identifiers and authentication tokens.
+ * {@code subjects} holds one {@link AddResponseStatus} per subject processed. Each carries the
+ * subject's {@link com.elicitsoftware.model.Status} row, serialized as {@code status}, which
+ * includes the respondent's {@code accessCode}, plus an {@code importStatus} such as
+ * "New Subject", "Existing Subject" or "Exluded Subject". {@code error} lists any failures.
  * <p>
- * The response follows a standard pattern where:
- * - **Success cases** populate respondentId and token fields with valid data
- * - **Error cases** populate the error field with descriptive error messages
- * - **Partial success** may include some fields populated with others null
- * <p>
- * Key features:
- * - **Unique identification** via respondent ID for system tracking
- * - **Authentication token** for secure participant access
- * - **Error handling** with descriptive error messages
- * - **JSON serialization** compatibility for REST API responses
- * - **Immutable after creation** through controlled setter access
- * <p>
- * Response scenarios:
- * - **Successful registration**: respondentId and token populated, error is null
- * - **Validation failure**: error populated with validation details, other fields null
- * - **System error**: error populated with system error message, other fields null
- * - **Duplicate participant**: error indicates duplicate, may include existing respondentId
- * <p>
- * Usage example:
+ * Example:
  * <pre>
- * {@code
- * // Server-side response creation
- * AddResponse response = new AddResponse();
- * if (participant != null) {
- *     response.setRespondentId(participant.getId());
- *     response.setToken(tokenService.generateToken(participant));
- * } else {
- *     response.setError("Failed to create participant: Invalid email format");
- * }
- *
- * // Client-side response handling
- * if (response.getError() == null) {
- *     // Success - redirect to survey with token
- *     String surveyUrl = "/survey?token=" + response.getToken();
- *     redirectTo(surveyUrl);
- * } else {
- *     // Error - display error message to user
- *     showErrorMessage(response.getError());
- * }
+ * {
+ *   "subjects": [
+ *     { "status": { "xid": "MRN123", "accessCode": "ABC123DEF", ... }, "importStatus": "New Subject" }
+ *   ],
+ *   "error": []
  * }
  * </pre>
  *
@@ -85,10 +55,7 @@ public class AddResponse {
     /**
      * Default constructor for creating an empty AddResponse instance.
      * <p>
-     * Creates a new AddResponse with default values:
-     * - respondentId: 0 (indicating no ID assigned)
-     * - token: null (no authentication token)
-     * - error: null (no error message)
+     * Creates a new AddResponse with empty {@code subjects} and {@code error} lists.
      * <p>
      * This constructor is typically used by:
      * - JSON/XML serialization frameworks
@@ -134,8 +101,7 @@ public class AddResponse {
      * - Actionable when possible (suggesting corrective steps)
      * - Consistent with application error messaging standards
      * <p>
-     * Setting an error message typically indicates that respondentId and
-     * token fields should remain null or unset.
+     * Setting an error message typically means the affected subject was not registered.
      *
      * @param error The error message describing the failure; should be non-null for failed operations
      */

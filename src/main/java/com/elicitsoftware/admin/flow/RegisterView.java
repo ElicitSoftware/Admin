@@ -11,11 +11,11 @@ package com.elicitsoftware.admin.flow;
  * ***LICENSE_END***
  */
 
-import com.elicitsoftware.exception.TokenGenerationError;
+import com.elicitsoftware.exception.AccessCodeGenerationError;
 import com.elicitsoftware.model.*;
 import com.elicitsoftware.response.AddResponse;
 import com.elicitsoftware.service.CsvImportService;
-import com.elicitsoftware.rest.TokenService;
+import com.elicitsoftware.rest.AccessCodeService;
 import com.elicitsoftware.service.SurveyDefinitionPresenceCheck;
 import com.vaadin.flow.component.Component;
 import com.vaadin.flow.component.button.Button;
@@ -73,16 +73,16 @@ import java.util.Optional;
  * <ul>
  *   <li><strong>Individual Registration:</strong> Complete form with validation for all subject fields</li>
  *   <li><strong>Bulk CSV Import:</strong> Upload CSV files with multiple subjects for batch processing</li>
- *   <li><strong>Subject Updates:</strong> Edit existing subjects using URL tokens</li>
+ *   <li><strong>Subject Updates:</strong> Edit existing subjects via the {@code accessCode} URL parameter</li>
  *   <li><strong>Department Integration:</strong> Automatic department filtering based on user permissions</li>
- *   <li><strong>Token Generation:</strong> Automatic creation of unique tokens for survey access</li>
+ *   <li><strong>Access Code Generation:</strong> Automatic creation of unique access codes for survey access</li>
  *   <li><strong>Message Creation:</strong> Automatic generation of communication messages for new subjects</li>
  * </ul>
  *
  * <p>The view supports two operational modes:</p>
  * <ul>
  *   <li><strong>Registration Mode:</strong> Default mode for creating new subjects</li>
- *   <li><strong>Update Mode:</strong> Activated when accessing with a valid subject token parameter</li>
+ *   <li><strong>Update Mode:</strong> Activated when accessing with a valid subject access code parameter</li>
  * </ul>
  *
  * <p>Form validation includes:</p>
@@ -98,7 +98,7 @@ import java.util.Optional;
  * @version 1.0
  * @see Subject
  * @see CsvImportService
- * @see TokenService
+ * @see AccessCodeService
  * @since 1.0
  */
 @Route(value = "register", layout = MainLayout.class)
@@ -119,10 +119,10 @@ public class RegisterView extends HorizontalLayout implements HasDynamicTitle, B
     private Component missingSurveyNotice;
 
     /**
-     * Injected service for generating and managing survey tokens.
+     * Injected service for generating and managing survey access codes.
      */
     @Inject
-    TokenService tokenService;
+    AccessCodeService accessCodeService;
 
     /**
      * Security identity for user authentication and role checking.
@@ -365,7 +365,7 @@ public class RegisterView extends HorizontalLayout implements HasDynamicTitle, B
         // Use modern InMemoryUploadHandler instead of deprecated MemoryBuffer
         csvUpload.setUploadHandler(UploadHandler.inMemory((metadata, data) -> {
             try {
-                CsvImportService importService = new CsvImportService(tokenService);
+                CsvImportService importService = new CsvImportService(accessCodeService);
                 InputStream inputStream = new java.io.ByteArrayInputStream(data);
                 AddResponse response = importService.importSubjects(inputStream);
                 showSuccessDialog("CSV Import Success", "Successfully imported subjects:\n\n" + response.toString());
@@ -394,15 +394,15 @@ public class RegisterView extends HorizontalLayout implements HasDynamicTitle, B
     /**
      * Handles navigation events and determines the view mode based on URL parameters.
      *
-     * <p>This method processes the "token" query parameter to determine whether the view
+     * <p>This method processes the "accessCode" query parameter to determine whether the view
      * should operate in registration mode (new subject) or update mode (existing subject):</p>
      *
-     * <h4>Token Parameter Processing:</h4>
+     * <h4>Access Code Parameter Processing:</h4>
      * <ul>
-     *   <li><strong>Token Present:</strong> Attempts to find and load the subject associated with the token</li>
+     *   <li><strong>Access Code Present:</strong> Attempts to find and load the subject associated with the access code</li>
      *   <li><strong>Subject Found:</strong> Switches to update mode, populates form, shows Update button</li>
      *   <li><strong>Subject Not Found:</strong> Shows error notification, remains in registration mode</li>
-     *   <li><strong>No Token:</strong> Operates in registration mode with Save button visible</li>
+     *   <li><strong>No Access Code:</strong> Operates in registration mode with Save button visible</li>
      * </ul>
      *
      * <h4>UI State Management:</h4>
@@ -423,11 +423,11 @@ public class RegisterView extends HorizontalLayout implements HasDynamicTitle, B
         // Authorization is now handled by @RolesAllowed annotation
         refreshMissingSurveyNotice();
 
-        Optional<String> tokenOpt = event.getLocation().getQueryParameters().getParameters().getOrDefault("token", List.of()).stream().findFirst();
-        if (tokenOpt.isPresent()) {
-            String token = tokenOpt.get();
-            // Fetch the subject by token (implement this in your StatusDataSource or Subject repository)
-            Subject found = Subject.findSubjectByToken(token);
+        Optional<String> accessCodeOpt = event.getLocation().getQueryParameters().getParameters().getOrDefault("accessCode", List.of()).stream().findFirst();
+        if (accessCodeOpt.isPresent()) {
+            String accessCode = accessCodeOpt.get();
+            // Fetch the subject by access code (implement this in your StatusDataSource or Subject repository)
+            Subject found = Subject.findSubjectByAccessCode(accessCode);
             if (found != null) {
                 this.subject = found;
                 if (binder != null) {
@@ -439,7 +439,7 @@ public class RegisterView extends HorizontalLayout implements HasDynamicTitle, B
                     saveButton.setVisible(false);
                 }
             } else {
-                Notification.show("Subject not found for token: " + token, 3000, Notification.Position.MIDDLE);
+                Notification.show("Subject not found for access code: " + accessCode, 3000, Notification.Position.MIDDLE);
                 // New: show save, hide update
                 if (updateButton != null && saveButton != null) {
                     updateButton.setVisible(false);
@@ -462,8 +462,8 @@ public class RegisterView extends HorizontalLayout implements HasDynamicTitle, B
      *
      * <ol>
      *   <li><strong>Form Validation:</strong> Validates all form fields using the data binder</li>
-     *   <li><strong>Token Generation:</strong> Creates a unique survey respondent token</li>
-     *   <li><strong>Data Population:</strong> Sets respondent and survey ID from token service</li>
+     *   <li><strong>Access Code Generation:</strong> Creates a unique survey respondent access code</li>
+     *   <li><strong>Data Population:</strong> Sets respondent and survey ID from access code service</li>
      *   <li><strong>Database Persistence:</strong> Saves the subject with immediate flush for constraint checking</li>
      *   <li><strong>Message Creation:</strong> Generates communication messages for the new subject</li>
      *   <li><strong>Form Reset:</strong> Clears the form for next entry</li>
@@ -473,7 +473,7 @@ public class RegisterView extends HorizontalLayout implements HasDynamicTitle, B
      * <ul>
      *   <li><strong>Validation Errors:</strong> Shows field-specific error messages</li>
      *   <li><strong>Duplicate External ID:</strong> Handles constraint violations with specific messaging</li>
-     *   <li><strong>Token Generation Errors:</strong> Manages token service failures</li>
+     *   <li><strong>Access Code Generation Errors:</strong> Manages access code service failures</li>
      *   <li><strong>Database Errors:</strong> Catches and reports persistence exceptions</li>
      * </ul>
      *
@@ -482,11 +482,11 @@ public class RegisterView extends HorizontalLayout implements HasDynamicTitle, B
      *
      * @param binder the data binder containing form validation and data mapping
      * @throws ValidationException  if form validation fails
-     * @throws TokenGenerationError if token creation fails
+     * @throws AccessCodeGenerationError if access code creation fails
      * @throws PersistenceException if database constraints are violated
      */
     @Transactional
-    public void saveSubject(Binder<Subject> binder) throws ValidationException, TokenGenerationError, PersistenceException {
+    public void saveSubject(Binder<Subject> binder) throws ValidationException, AccessCodeGenerationError, PersistenceException {
         try {
             // Write form values to subject first to get current values
             binder.writeBean(subject);
@@ -504,7 +504,7 @@ public class RegisterView extends HorizontalLayout implements HasDynamicTitle, B
                 return; // Exit early if excluded
             }
 
-            Respondent respondent = tokenService.getToken(1);
+            Respondent respondent = accessCodeService.generateAccessCode(1);
             subject.setRespondent(respondent);
             subject.setSurveyId(respondent.survey.id);
             // Optionally, flush to force exception now:
@@ -518,8 +518,8 @@ public class RegisterView extends HorizontalLayout implements HasDynamicTitle, B
             binder.readBean(subject); // reset form
         } catch (ValidationException e) {
             Notification.show("Please fix validation errors", 3000, Notification.Position.MIDDLE);
-        } catch (TokenGenerationError e) {
-            Notification.show("Error generating new token. Please try again", 3000, Notification.Position.MIDDLE);
+        } catch (AccessCodeGenerationError e) {
+            Notification.show("Error generating new access code. Please try again", 3000, Notification.Position.MIDDLE);
         }
     }
 
@@ -542,7 +542,7 @@ public class RegisterView extends HorizontalLayout implements HasDynamicTitle, B
      *   <li><strong>Database Errors:</strong> Catches and reports persistence exceptions</li>
      * </ul>
      *
-     * <p>Unlike the save operation, updates don't require token generation or message creation
+     * <p>Unlike the save operation, updates don't require access code generation or message creation
      * since these are only needed for new subjects entering the system.</p>
      *
      * @param binder the data binder containing form validation and data mapping
@@ -742,7 +742,7 @@ public class RegisterView extends HorizontalLayout implements HasDynamicTitle, B
      * <ul>
      *   <li>Successful response structure with generated IDs</li>
      *   <li>Error handling and response codes</li>
-     *   <li>Token generation information</li>
+     *   <li>Access code generation information</li>
      * </ul>
      *
      * <p>The documentation provides developers with everything needed to integrate
@@ -862,7 +862,7 @@ public class RegisterView extends HorizontalLayout implements HasDynamicTitle, B
                                         "firstName": "John",
                                         "lastName": "Doe",
                                         "email": "john.doe@email.com",
-                                        "token": "ABC123DEF",
+                                        "accessCode": "ABC123DEF",
                                         "created": "2025-10-13"
                                     },
                                     "message": "New Subject"

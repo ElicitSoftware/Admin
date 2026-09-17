@@ -13,7 +13,7 @@ package com.elicitsoftware.service;
 
 import com.elicitsoftware.request.AddRequest;
 import com.elicitsoftware.response.AddResponse;
-import com.elicitsoftware.rest.TokenService;
+import com.elicitsoftware.rest.AccessCodeService;
 import io.quarkus.logging.Log;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.transaction.Transactional;
@@ -93,7 +93,7 @@ import java.util.List;
  *
  * @see AddRequest
  * @see AddResponse
- * @see TokenService
+ * @see AccessCodeService
  * @see com.elicitsoftware.model.User
  * @since 1.0.0
  */
@@ -101,23 +101,23 @@ import java.util.List;
 public class CsvImportService {
 
     /**
-     * Token service for participant registration and authentication token generation.
+     * Access code service for participant registration and access code generation.
      * <p>
      * This service handles the actual participant creation in the database
-     * and generates authentication tokens for survey access.
+     * and generates access codes for survey access.
      */
-    private final TokenService tokenService;
+    private final AccessCodeService accessCodeService;
 
     /**
-     * Constructs a new CsvImportService with the specified TokenService dependency.
+     * Constructs a new CsvImportService with the specified AccessCodeService dependency.
      * <p>
-     * The TokenService is injected to handle participant registration operations
+     * The AccessCodeService is injected to handle participant registration operations
      * that occur during the CSV import process.
      *
-     * @param tokenService The service responsible for participant registration and token generation
+     * @param accessCodeService The service responsible for participant registration and access code generation
      */
-    public CsvImportService(TokenService tokenService) {
-        this.tokenService = tokenService;
+    public CsvImportService(AccessCodeService accessCodeService) {
+        this.accessCodeService = accessCodeService;
     }
 
     /**
@@ -134,7 +134,7 @@ public class CsvImportService {
      * 3. **Check department permissions** against user's accessible departments
      * 4. **Validate required fields** (firstName, lastName, email)
      * 5. **Parse and validate dates** with multiple format support
-     * 6. **Create participant records** via TokenService
+     * 6. **Create participant records** via AccessCodeService
      * 7. **Collect errors** for detailed reporting
      * 8. **Return success count** or throw aggregated errors
      * <p>
@@ -171,7 +171,7 @@ public class CsvImportService {
      *                   //     * @see #parseCsvLine(String, User)
      * @see #parseCsvLine(String)
      * @see #splitCsvLine(String)
-     * @see TokenService#putSubject(AddRequest)
+     * @see AccessCodeService#putSubject(AddRequest)
      */
     @Transactional
     public AddResponse importSubjects(InputStream csvInputStream) throws Exception {
@@ -200,7 +200,7 @@ public class CsvImportService {
                     // (missing/invalid field values), which are safe to surface as-is.
                     AddRequest request = parseCsvLine(line);
                     try {
-                        AddResponse subjectResponse = tokenService.putSubject(request);
+                        AddResponse subjectResponse = accessCodeService.putSubject(request);
 
                         if (subjectResponse.getErrors().size() > 0) {
                             response.setError(subjectResponse.getErrors().get(0));

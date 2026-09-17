@@ -294,7 +294,7 @@ has never actually existed (see the format-version validation note above).
 
 ## 5. Respondent Validator — no changes required
 
-`RespondentValidator` checks whether a respondent token is valid and whether the
+`RespondentValidator` checks whether a respondent access code is valid and whether the
 respondent is active. It queries `survey.respondents` (which does not receive Type 2
 changes) and `survey.surveys` (Type 1 only). No changes needed.
 

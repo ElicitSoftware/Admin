@@ -19,7 +19,7 @@ import static io.restassured.RestAssured.given;
 import static org.hamcrest.Matchers.containsString;
 
 /**
- * Integration smoke test for the {@link TokenService} REST surface.
+ * Integration smoke test for the {@link AccessCodeService} REST surface.
  *
  * <p>Traceability: UC-001 (Authenticate and Access the Admin Console) and
  * UC-010 (Register Subjects via Integration API). This is a booted
@@ -36,7 +36,7 @@ import static org.hamcrest.Matchers.containsString;
  */
 @QuarkusTest
 @EnabledIfSystemProperty(named = "it.integration", matches = "true")
-class TokenServiceEndpointIT {
+class AccessCodeServiceEndpointIT {
 
     /** UC-001/UC-010: the secured application root is reachable and the probe responds. */
     @Test
@@ -45,6 +45,6 @@ class TokenServiceEndpointIT {
             .when().get("/api/secured/test")
             .then()
             .statusCode(200)
-            .body(containsString("token test"));
+            .body(containsString("access code service test"));
     }
 }

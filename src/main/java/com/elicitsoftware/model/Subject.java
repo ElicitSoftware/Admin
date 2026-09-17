@@ -473,18 +473,18 @@ public class Subject extends PanacheEntityBase {
     }
 
     /**
-     * Finds a subject by their authentication token.
+     * Finds a subject by their access code.
      * <p>
      * Searches for a subject whose associated respondent has the specified
-     * authentication token. This method is used for token-based authentication
+     * access code. This method is used for access-code-based authentication
      * and survey access.
      *
-     * @param token the authentication token to search for
-     * @return the Subject associated with the token, or null if not found
+     * @param accessCode the access code to search for
+     * @return the Subject associated with the access code, or null if not found
      */
-    public static Subject findSubjectByToken(String token) {
+    public static Subject findSubjectByAccessCode(String accessCode) {
         // Implement DB lookup here, e.g. using JPA or Panache
-        return Subject.find("respondent.token", token).firstResult();
+        return Subject.find("respondent.accessCode", accessCode).firstResult();
     }
 
     /**

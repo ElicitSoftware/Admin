@@ -32,9 +32,9 @@ fixed along the way — has been verified fixed in the source and is no longer t
 ## Minor
 
 - [ ] **`com.elicitsoftware.service` mixes JAX-RS `@Path` resources and plain CDI services**
-  in one package — e.g. `TokenService` is actually a REST resource despite its name. A
+  in one package — e.g. `AccessCodeService` is actually a REST resource despite its name. A
   mechanical rename/move (e.g. `com.elicitsoftware.rest` for the four `*Resource` classes plus
-  `TokenService`) would make "what's network-reachable" easier to audit at a glance. No
+  `AccessCodeService`) would make "what's network-reachable" easier to audit at a glance. No
   functional bug; purely a readability/maintainability cleanup.
 - [ ] **`Refresh`/`ListResponse` DTOs live in the `model` package** alongside actual `@Entity`
   classes. Should move to `com.elicitsoftware.response` (where `AddResponse` etc. already

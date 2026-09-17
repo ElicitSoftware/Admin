@@ -44,30 +44,30 @@ class StatusViewQueryTest {
 
     /**
      * Creates and persists a Department, a Respondent (linked to the seeded
-     * survey id=1), and a Subject wired to that respondent. Returns the token
+     * survey id=1), and a Subject wired to that respondent. Returns the access code
      * used, so the caller can look the row up through the status view.
      */
-    private String persistSubjectGraph(String token, Date firstAccess, Date finalized) {
+    private String persistSubjectGraph(String accessCode, Date firstAccess, Date finalized) {
         Survey survey = Survey.findById(1L);
         assertNotNull(survey, "test bootstrap should have seeded survey id=1");
 
         Department department = new Department();
-        department.name = "UC-002 Dept " + token;
-        department.code = "UC002-" + token;
+        department.name = "UC-002 Dept " + accessCode;
+        department.code = "UC002-" + accessCode;
         department.defaultMessageId = "1";
         department.fromEmail = "uc002@example.org";
         department.persist();
 
         Respondent respondent = new Respondent();
         respondent.survey = survey;
-        respondent.token = token;
+        respondent.accessCode = accessCode;
         respondent.active = true;
         respondent.firstAccessDt = firstAccess;
         respondent.finalizedDt = finalized;
         respondent.persist();
 
         Subject subject = new Subject(
-                "XID-" + token,               // xid
+                "XID-" + accessCode,           // xid
                 survey.id.longValue(),        // surveyId
                 department.id,                // departmentId
                 "Pat",                        // firstName
@@ -78,20 +78,20 @@ class StatusViewQueryTest {
                 null);                        // phone (optional; @Pattern when present)
         subject.setRespondent(respondent);
         subject.persistAndFlush();
-        return token;
+        return accessCode;
     }
 
     /** UC-002: a respondent that has neither accessed nor finished shows "Not Started". */
     @Test
     @TestTransaction
     void notStartedStatusIsDerived() {
-        String token = "TOK-NS";
-        persistSubjectGraph(token, null, null);
+        String accessCode = "TOK-NS";
+        persistSubjectGraph(accessCode, null, null);
 
-        Status status = Status.find("token", token).firstResult();
+        Status status = Status.find("accessCode", accessCode).firstResult();
         assertNotNull(status, "status view should return a row for the persisted subject");
         assertEquals("Not Started", status.getStatus());
-        assertEquals(token, status.getToken());
+        assertEquals(accessCode, status.getAccessCode());
         assertEquals(1L, status.getSurveyId());
         assertNotNull(status.getDepartmentName());
     }
@@ -100,10 +100,10 @@ class StatusViewQueryTest {
     @Test
     @TestTransaction
     void inProgressStatusIsDerived() {
-        String token = "TOK-IP";
-        persistSubjectGraph(token, new Date(), null);
+        String accessCode = "TOK-IP";
+        persistSubjectGraph(accessCode, new Date(), null);
 
-        Status status = Status.find("token", token).firstResult();
+        Status status = Status.find("accessCode", accessCode).firstResult();
         assertNotNull(status);
         assertEquals("In Progress", status.getStatus());
     }
@@ -112,10 +112,10 @@ class StatusViewQueryTest {
     @Test
     @TestTransaction
     void finishedStatusIsDerived() {
-        String token = "TOK-DONE";
-        persistSubjectGraph(token, new Date(), new Date());
+        String accessCode = "TOK-DONE";
+        persistSubjectGraph(accessCode, new Date(), new Date());
 
-        Status status = Status.find("token", token).firstResult();
+        Status status = Status.find("accessCode", accessCode).firstResult();
         assertNotNull(status);
         assertEquals("Finished", status.getStatus());
     }

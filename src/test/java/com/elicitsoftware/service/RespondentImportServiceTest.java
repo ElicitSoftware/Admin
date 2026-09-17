@@ -64,7 +64,7 @@ class RespondentImportServiceTest {
     EntityManager em;
 
     /** Holds the seeded values a round trip needs to assert against post-import. */
-    private record RespondentFixture(int respondentId, String token, String firstName, String email,
+    private record RespondentFixture(int respondentId, String accessCode, String firstName, String email,
                                       String answerKey1, String answerKey2, String messageSubject,
                                       String messageBody, String psaStatus) {
     }
@@ -174,59 +174,59 @@ class RespondentImportServiceTest {
      * carries: respondent, subject, message, two linked answers (via a dependent), and a
      * respondent_psa row.
      */
-    private RespondentFixture persistRespondentTree(String token) {
+    private RespondentFixture persistRespondentTree(String accessCode) {
         Survey survey = Survey.findById(1L);
         assertNotNull(survey, "test bootstrap should have seeded survey id=1");
         int surveyId = survey.id;
 
         Department department = new Department();
-        department.name = "RX Dept " + token;
-        department.code = "RX-" + token;
+        department.name = "RX Dept " + accessCode;
+        department.code = "RX-" + accessCode;
         department.defaultMessageId = "1";
         department.fromEmail = "rx-import@example.org";
         department.persist();
 
         Respondent respondent = new Respondent();
         respondent.survey = survey;
-        respondent.token = token;
+        respondent.accessCode = accessCode;
         respondent.active = true;
         respondent.logins = 2;
         respondent.persist();
         int respondentId = respondent.id;
 
-        Subject subject = new Subject("XID-" + token, surveyId, department.id,
-                "First-" + token, "Last-" + token, null, LocalDate.of(1990, 1, 15),
-                "rx-" + token.toLowerCase() + "@example.org", null);
+        Subject subject = new Subject("XID-" + accessCode, surveyId, department.id,
+                "First-" + accessCode, "Last-" + accessCode, null, LocalDate.of(1990, 1, 15),
+                "rx-" + accessCode.toLowerCase() + "@example.org", null);
         subject.setRespondent(respondent);
         subject.persistAndFlush();
 
         MessageType messageType = new MessageType();
-        messageType.setName("Type " + token);
+        messageType.setName("Type " + accessCode);
         messageType.persist();
 
-        Message message = new Message(subject, messageType, "Subject " + token, "Body " + token);
+        Message message = new Message(subject, messageType, "Subject " + accessCode, "Body " + accessCode);
         message.persist();
 
         PostSurveyAction psa = new PostSurveyAction();
         psa.survey = survey;
-        psa.name = "PSA " + token;
+        psa.name = "PSA " + accessCode;
         psa.persistAndFlush();
 
-        long stepId = insertStep(surveyId, 1, "Step " + token);
-        long sectionId = insertSection(surveyId, 1, "Section " + token);
-        long questionId = insertQuestion(surveyId, "Question " + token + "?");
+        long stepId = insertStep(surveyId, 1, "Step " + accessCode);
+        long sectionId = insertSection(surveyId, 1, "Section " + accessCode);
+        long questionId = insertQuestion(surveyId, "Question " + accessCode + "?");
         long sqId = insertSectionQuestion(surveyId, questionId, sectionId, 1);
         long relationshipId = insertRelationship(surveyId, sqId);
 
-        String key1 = "A1-" + token;
-        String key2 = "A2-" + token;
-        long answer1Id = insertAnswer(surveyId, respondentId, stepId, key1, "Answer text 1 " + token);
-        long answer2Id = insertAnswer(surveyId, respondentId, stepId, key2, "Answer text 2 " + token);
+        String key1 = "A1-" + accessCode;
+        String key2 = "A2-" + accessCode;
+        long answer1Id = insertAnswer(surveyId, respondentId, stepId, key1, "Answer text 1 " + accessCode);
+        long answer2Id = insertAnswer(surveyId, respondentId, stepId, key2, "Answer text 2 " + accessCode);
         insertDependent(respondentId, answer1Id, answer2Id, relationshipId);
 
         insertRespondentPsa(respondentId, psa.id, "PENDING");
 
-        return new RespondentFixture(respondentId, token, subject.getFirstName(), subject.getEmail(),
+        return new RespondentFixture(respondentId, accessCode, subject.getFirstName(), subject.getEmail(),
                 key1, key2, message.subjectLine, message.body, "PENDING");
     }
 
@@ -264,7 +264,7 @@ class RespondentImportServiceTest {
         assertEquals(1, result.getCounts().get("respondent_psa"));
 
         long newRespondentId = queryLong(
-                "SELECT id FROM survey.respondents WHERE token = ?1 ORDER BY id DESC LIMIT 1", fixture.token());
+                "SELECT id FROM survey.respondents WHERE access_code = ?1 ORDER BY id DESC LIMIT 1", fixture.accessCode());
         assertNotEquals((long) fixture.respondentId(), newRespondentId,
                 "import should create a new respondent, not reuse the original");
 

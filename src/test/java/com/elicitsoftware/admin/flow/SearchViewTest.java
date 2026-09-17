@@ -100,7 +100,7 @@ class SearchViewTest extends QuarkusBrowserlessTest {
     @TestSecurity(user = "search.tester", roles = {"elicit_user"})
     void sortableColumnsUseEntityPropertyConstants() {
         Set<String> allowed = Set.of(
-                Status.PROP_TOKEN, Status.PROP_DEPARTMENT_NAME, Status.PROP_FIRST_NAME,
+                Status.PROP_ACCESS_CODE, Status.PROP_DEPARTMENT_NAME, Status.PROP_FIRST_NAME,
                 Status.PROP_MIDDLE_NAME, Status.PROP_LAST_NAME, Status.PROP_EMAIL,
                 Status.PROP_PHONE, Status.PROP_STATUS, Status.PROP_CREATED_DT);
 
@@ -118,17 +118,17 @@ class SearchViewTest extends QuarkusBrowserlessTest {
         }
     }
 
-    /** UC-002 (#12): the token column specifically maps to the PROP_TOKEN constant. */
+    /** UC-002 (#12): the access code column specifically maps to the PROP_ACCESS_CODE constant. */
     @Test
     @TestSecurity(user = "search.tester", roles = {"elicit_user"})
-    void tokenColumnMapsToTokenProperty() {
-        long tokenMappings = grid().getColumns().stream()
+    void accessCodeColumnMapsToAccessCodeProperty() {
+        long accessCodeMappings = grid().getColumns().stream()
                 .filter(Grid.Column::isSortable)
                 .flatMap(c -> c.getSortOrder(SortDirection.ASCENDING))
                 .map(order -> order.getSorted())
-                .filter(Status.PROP_TOKEN::equals)
+                .filter(Status.PROP_ACCESS_CODE::equals)
                 .count();
-        assertEquals(1, tokenMappings, "exactly one column should sort by the token property");
+        assertEquals(1, accessCodeMappings, "exactly one column should sort by the access code property");
     }
 
     /** UC-011 (Export Respondent Data): elicit_admin is offered "Export" alongside the other actions. */

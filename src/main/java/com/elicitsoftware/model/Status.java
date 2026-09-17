@@ -50,12 +50,12 @@ import java.util.Date;
  *   <li><strong>Reporting:</strong> Generate participation and completion reports by department</li>
  *   <li><strong>Contact Management:</strong> Manage participant communication and follow-up</li>
  *   <li><strong>Data Integration:</strong> Interface with external systems via XID mapping</li>
- *   <li><strong>Access Control:</strong> Token-based secure survey access management</li>
+ *   <li><strong>Access Control:</strong> Access-code-based secure survey access management</li>
  * </ul>
  *
  * <p><strong>Security Considerations:</strong></p>
  * <ul>
- *   <li><strong>Token Authentication:</strong> Secure, anonymous survey access via unique tokens</li>
+ *   <li><strong>Access Code Authentication:</strong> Secure, anonymous survey access via unique access codes</li>
  *   <li><strong>PII Protection:</strong> Personal information handling with proper database constraints</li>
  *   <li><strong>Date Tracking:</strong> Comprehensive audit trail with creation and finalization timestamps</li>
  * </ul>
@@ -78,8 +78,8 @@ import java.util.Date;
 @Table(name = "status", schema = "survey")
 public class Status extends PanacheEntityBase {
 
-    /** Sortable/filterable entity attribute name for the survey token. */
-    public static final String PROP_TOKEN = "token";
+    /** Sortable/filterable entity attribute name for the survey access code. */
+    public static final String PROP_ACCESS_CODE = "accessCode";
     /** Sortable entity attribute name for the department name. */
     public static final String PROP_DEPARTMENT_NAME = "departmentName";
     /** Filterable entity attribute name for the numeric department id. */
@@ -223,14 +223,14 @@ public class Status extends PanacheEntityBase {
     private long departmentId;
 
     /**
-     * Unique access token for survey participation.
+     * Unique access code for survey participation.
      *
-     * <p>Secure token that provides anonymous access to the assigned
-     * survey. This token enables survey participation without requiring
+     * <p>Secure access code that provides anonymous access to the assigned
+     * survey. This access code enables survey participation without requiring
      * user registration while maintaining response tracking capabilities.</p>
      */
-    @Column(name = "token")
-    private String token;
+    @Column(name = "access_code")
+    private String accessCode;
 
     /**
      * Current participation status of the participant.
@@ -490,21 +490,21 @@ public class Status extends PanacheEntityBase {
     }
 
     /**
-     * Gets the participant's unique access token.
+     * Gets the participant's unique access code.
      *
-     * @return the access token
+     * @return the access code
      */
-    public String getToken() {
-        return token;
+    public String getAccessCode() {
+        return accessCode;
     }
 
     /**
-     * Sets the participant's unique access token.
+     * Sets the participant's unique access code.
      *
-     * @param token the access token to set
+     * @param accessCode the access code to set
      */
-    public void setToken(String token) {
-        this.token = token;
+    public void setAccessCode(String accessCode) {
+        this.accessCode = accessCode;
     }
 
     /**
@@ -613,7 +613,7 @@ public class Status extends PanacheEntityBase {
     public String toString(){
         StringBuilder sb = new StringBuilder();
         sb.append(this.status != null ? this.status : "null").append(", ");
-        sb.append(this.token != null ? this.token : "null").append(", ");
+        sb.append(this.accessCode != null ? this.accessCode : "null").append(", ");
         sb.append(this.createdDt != null ? sdf.format(this.createdDt) : "null").append(", ");
         return sb.toString();
     }

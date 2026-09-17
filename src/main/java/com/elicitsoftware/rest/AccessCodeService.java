@@ -12,16 +12,16 @@ package com.elicitsoftware.rest;
  */
 
 import com.elicitsoftware.admin.upload.MultipartBody;
-import com.elicitsoftware.exception.TokenGenerationError;
+import com.elicitsoftware.exception.AccessCodeGenerationError;
 import com.elicitsoftware.model.*;
 import com.elicitsoftware.request.AddRequest;
 import com.elicitsoftware.response.AddResponse;
 import com.elicitsoftware.response.AddResponseStatus;
 import com.elicitsoftware.service.CsvImportService;
+import com.elicitsoftware.util.LogMasking;
 import com.elicitsoftware.util.RandomString;
 import io.quarkus.logging.Log;
 import io.quarkus.narayana.jta.QuarkusTransaction;
-import io.quarkus.security.Authenticated;
 import io.quarkus.security.identity.SecurityIdentity;
 import jakarta.annotation.security.PermitAll;
 import jakarta.annotation.security.RolesAllowed;
@@ -39,18 +39,18 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * TokenService provides token-based authentication and subject management for surveys.
+ * AccessCodeService registers survey subjects and issues their access codes.
  * <p>
- * This REST service handles secure token generation, subject registration,
- * and authentication operations for the survey system. It provides endpoints
- * for adding subjects and retrieving authentication tokens.
+ * This REST resource (Bearer-authenticated, under {@code /api/secured}) creates subjects,
+ * generates a unique access code for each new respondent, and imports subjects from CSV.
+ * The access code is the credential the respondent enters to reach the survey.
  *
  * @author Elicit Software
  * @since 1.0.0
  */
 @Path("/secured")
 @ApplicationScoped
-public class TokenService {
+public class AccessCodeService {
 
     /**
      * CSV import service for processing participant data from uploaded files.
@@ -77,28 +77,31 @@ public class TokenService {
     private UriInfo uriInfo;
     private RandomString generator = null;
 
+    /** How many candidate access codes {@link #generateAccessCode(int)} tries before giving up. */
+    static final int MAX_ACCESS_CODE_ATTEMPTS = 4;
+
     /**
-     * Initializes the TokenService with a secure random token generator.
+     * Initializes the AccessCodeService with a secure random access code generator.
      * <p>
      * Sets up the service with a random string generator that uses
      * easily distinguishable characters (avoiding similar-looking characters
-     * like 0/O and 1/l) to create 9-character authentication tokens.
+     * like 0/O and 1/l) to create 9-character access codes.
      */
-    public TokenService() {
+    public AccessCodeService() {
         super();
         String easy = RandomString.digits + "BCDFGHJKLMNPQRSTVWXZbcdfghjkmnpqrstvwxz2456789";
         generator = new RandomString(9, new SecureRandom(), easy);
     }
 
     /**
-     * Adds a new subject to the survey system and generates an authentication token.
+     * Adds a new subject to the survey system and generates an access code.
      * <p>
      * Creates a new subject record based on the provided request data,
-     * generates a secure authentication token, and returns the response
-     * containing the subject ID and token for survey access.
+     * generates a unique access code, and returns the response
+     * containing the subject's status, including the access code.
      *
      * @param request the subject registration request containing demographic data
-     * @return AddResponse containing the new subject ID, authentication token, or error message
+     * @return AddResponse containing the subject's status (with its access code) or an error message
      */
     @Path("/add/subject")
     @POST
@@ -119,7 +122,7 @@ public class TokenService {
                 // Check if they are an existing respondent.
                 Status status = Status.findByXidAndDepartmentId(request.xid, request.departmentId);
                 if (status == null) {
-                    Respondent respondent = getToken(request.surveyId);
+                    Respondent respondent = generateAccessCode(request.surveyId);
                     Subject subject = new Subject(request.xid, request.surveyId, request.departmentId, request.firstName, request.lastName, request.middleName, request.dob, request.email, request.phone);
                     subject.setRespondent(respondent);
                     subject.persistAndFlush();
@@ -135,24 +138,24 @@ public class TokenService {
             }
             response.addStatus(addStatus);
 
-        } catch (TokenGenerationError e) {
+        } catch (AccessCodeGenerationError e) {
             response.setError(e.getMessage());
         }
         return response;
     }
 
     /**
-     * Adds multiple subjects to the survey system in bulk and generates authentication tokens.
+     * Adds multiple subjects to the survey system in bulk and generates access codes.
      * <p>
      * Processes an array of subject registration requests, creating subject records
-     * and generating secure authentication tokens for each valid subject. This method
+     * and generating a unique access code for each valid subject. This method
      * provides bulk processing capabilities with individual error handling for each subject.
      *
      * <p><strong>Processing Logic:</strong></p>
      * <ul>
      *   <li><strong>Exclusion Check:</strong> Validates each XID against the exclusion list</li>
      *   <li><strong>Duplicate Detection:</strong> Checks for existing subjects before creation</li>
-     *   <li><strong>Token Generation:</strong> Creates unique tokens for new subjects</li>
+     *   <li><strong>Access Code Generation:</strong> Creates unique access codes for new subjects</li>
      *   <li><strong>Message Creation:</strong> Generates communication messages for each subject</li>
      *   <li><strong>Individual Handling:</strong> Each subject is processed independently</li>
      * </ul>
@@ -201,7 +204,7 @@ public class TokenService {
     /**
      * Processes a single subject registration request within the caller's transaction.
      * <p>
-     * Known/expected failure modes ({@link TokenGenerationError}) are handled here and
+     * Known/expected failure modes ({@link AccessCodeGenerationError}) are handled here and
      * turned into an error status. Any other, unexpected exception (e.g. a persistence
      * failure) is intentionally left to propagate so the per-item transaction boundary
      * in {@link #putSubjects(List)} rolls back exactly this request.
@@ -222,7 +225,7 @@ public class TokenService {
             Status status = Status.findByXidAndDepartmentId(request.xid, request.departmentId);
             if (status == null) {
                 // Create new subject
-                Respondent respondent = getToken(request.surveyId);
+                Respondent respondent = generateAccessCode(request.surveyId);
                 Subject subject = new Subject(request.xid, request.surveyId, request.departmentId,
                                             request.firstName, request.lastName, request.middleName,
                                             request.dob, request.email, request.phone);
@@ -240,49 +243,49 @@ public class TokenService {
             } else {
                 return new AddResponseStatus(status, "Existing Subject: " + request.xid);
             }
-        } catch (TokenGenerationError e) {
+        } catch (AccessCodeGenerationError e) {
             Status errorStatus = new Status();
             return new AddResponseStatus(errorStatus, "Error processing " + request.xid + ": " + e.getMessage());
         }
     }
 
     /**
-     * Generates and retrieves a unique authentication token for a survey.
+     * Generates a unique access code for a survey.
      * <p>
-     * Creates a new respondent record with a unique token for the specified
-     * survey. If token generation fails after multiple attempts, throws an
+     * Creates a new respondent record with an access code that is unique within the specified
+     * survey. If access code generation fails after multiple attempts, throws an
      * exception to prevent infinite loops.
      *
-     * @param surveyId the ID of the survey to generate a token for
-     * @return Respondent object containing the generated token
-     * @throws TokenGenerationError if unable to generate a unique token after multiple attempts
+     * @param surveyId the ID of the survey to generate an access code for
+     * @return Respondent object containing the generated access code
+     * @throws AccessCodeGenerationError if unable to generate a unique access code after multiple attempts
      */
-    public Respondent getToken(int surveyId) {
-        String token = null;
+    public Respondent generateAccessCode(int surveyId) {
+        String accessCode = null;
         Respondent respondent = null;
-        int tries = 4; // Lets only try this three times.
+        int tries = MAX_ACCESS_CODE_ATTEMPTS;
         Survey survey = Survey.findById(surveyId);
         try {
             while (tries > 0) {
-                token = generator.nextString();
-                respondent = Respondent.findBySurveyAndToken(surveyId, token);
+                accessCode = generator.nextString();
+                respondent = Respondent.findBySurveyAndAccessCode(surveyId, accessCode);
                 if (respondent == null) {
                     respondent = new Respondent();
                     respondent.survey = survey;
-                    respondent.token = token;
+                    respondent.accessCode = accessCode;
                     respondent.active = true;
                     return respondent;
                 } else {
-                    Log.info("Duplicate token " + token);
+                    Log.info("Duplicate access code " + LogMasking.maskAccessCode(accessCode));
                 }
-                tries++;
+                tries--;
             }
         } catch (Exception e) {
             //Pass along the error message.
-            throw new TokenGenerationError(e.getMessage());
+            throw new AccessCodeGenerationError(e.getMessage());
         }
-        //The tries worked but we couldn't find a unique token. This should never happen.
-        throw new TokenGenerationError("Unable to generate a unique token");
+        //The tries worked but we couldn't find a unique access code. This should never happen.
+        throw new AccessCodeGenerationError("Unable to generate a unique access code");
     }
 
     /**
@@ -378,7 +381,7 @@ public class TokenService {
     /**
      * Simple test endpoint to verify service availability.
      * <p>
-     * Returns a test message to confirm that the TokenService is
+     * Returns a test message to confirm that the AccessCodeService is
      * accessible and functioning properly.
      *
      * @return a test message string
@@ -387,7 +390,7 @@ public class TokenService {
     @GET
     @PermitAll
     public String test() {
-        return "token test";
+        return "access code service test";
     }
 
     /**

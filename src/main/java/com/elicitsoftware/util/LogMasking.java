@@ -12,9 +12,9 @@ package com.elicitsoftware.util;
  */
 
 /**
- * Masks tokens and email addresses for logging.
+ * Masks access codes and email addresses for logging.
  * <p>
- * Respondent survey tokens and participant email addresses are PII/credential-adjacent
+ * Respondent survey access codes and participant email addresses are PII/credential-adjacent
  * values. The application's default {@code com.elicitsoftware} log category is INFO in
  * production, but one {@code ELICIT_LOG_LEVEL=DEBUG} override away from writing these
  * values into logs verbatim. Masking (rather than relying solely on log level) keeps
@@ -28,17 +28,17 @@ public final class LogMasking {
     }
 
     /**
-     * Masks a token down to its last 4 characters, e.g. {@code "****xz2q"} -&gt; {@code "*****2q"}.
+     * Masks an access code down to its last 4 characters, e.g. {@code "****xz2q"} -&gt; {@code "*****2q"}.
      *
-     * @param token the raw token value
-     * @return the masked token, or the original value if it's too short to mask meaningfully
+     * @param accessCode the raw access code value
+     * @return the masked access code, or the original value if it's too short to mask meaningfully
      */
-    public static String maskToken(String token) {
-        if (token == null) {
+    public static String maskAccessCode(String accessCode) {
+        if (accessCode == null) {
             return null;
         }
-        int visible = Math.min(4, token.length());
-        return "*".repeat(Math.max(0, token.length() - visible)) + token.substring(token.length() - visible);
+        int visible = Math.min(4, accessCode.length());
+        return "*".repeat(Math.max(0, accessCode.length() - visible)) + accessCode.substring(accessCode.length() - visible);
     }
 
     /**

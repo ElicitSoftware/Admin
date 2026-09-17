@@ -144,7 +144,7 @@ class ReportingServiceTest extends QuarkusBrowserlessTest {
         status.setDepartmentId(deptId);
         status.setRespondentId(1L);
         status.setEmail("rs1@example.org");
-        status.setToken("rs-token-1");
+        status.setAccessCode("rs-token-1");
 
         assertDoesNotThrow(() -> reportingService.printReports(status));
 
@@ -172,7 +172,7 @@ class ReportingServiceTest extends QuarkusBrowserlessTest {
         status.setDepartmentId(deptId);
         status.setRespondentId(2L);
         status.setEmail("rs2@example.org");
-        status.setToken("rs-token-2");
+        status.setAccessCode("rs-token-2");
 
         assertDoesNotThrow(() -> reportingService.printReports(status));
 

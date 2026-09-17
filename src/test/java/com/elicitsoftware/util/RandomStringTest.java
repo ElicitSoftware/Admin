@@ -23,14 +23,14 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 /**
  * Unit tests for {@link RandomString}.
  *
- * <p>Traceability: UC-015 (Generate Survey Access Token). The token generator
- * underpins the unique access token created for every respondent, so these
+ * <p>Traceability: UC-015 (Generate Survey Access Code). The access code generator
+ * underpins the unique access code created for every respondent, so these
  * tests pin down the length, character-set, and determinism guarantees the
- * token-generation flow depends on.</p>
+ * access-code generation flow depends on.</p>
  */
 class RandomStringTest {
 
-    /** UC-015: generated tokens must have exactly the configured length. */
+    /** UC-015: generated access codes must have exactly the configured length. */
     @Test
     void nextStringHasConfiguredLength() {
         RandomString generator = new RandomString(9, new Random(42L));
@@ -43,13 +43,13 @@ class RandomStringTest {
         assertEquals(16, RandomString.generate(16).length());
     }
 
-    /** UC-015: tokens draw only from the supplied symbol set. */
+    /** UC-015: access codes draw only from the supplied symbol set. */
     @Test
     void nextStringOnlyUsesConfiguredSymbols() {
         String symbols = "AB";
         RandomString generator = new RandomString(50, new Random(1L), symbols);
-        String token = generator.nextString();
-        for (char c : token.toCharArray()) {
+        String accessCode = generator.nextString();
+        for (char c : accessCode.toCharArray()) {
             assertTrue(symbols.indexOf(c) >= 0, "unexpected character: " + c);
         }
     }

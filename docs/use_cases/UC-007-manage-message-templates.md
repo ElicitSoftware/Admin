@@ -55,6 +55,10 @@ A template's content type must be one of the supported values: HTML or plain tex
 
 The department chosen for a template is limited to the departments the authoring administrator is affiliated with.
 
+### BR-079: Access code placeholder
+
+A template body may contain the placeholder `<ACCESS_CODE>`, which is replaced with the subject's survey access code when the message is built or sent (UC-004, BR-015). Use it to build the subject's personal login link, e.g. `https://survey.example.org/#/login/<ACCESS_CODE>`.
+
 ---
 
 ## Reference
