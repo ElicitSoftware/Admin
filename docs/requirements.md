@@ -46,7 +46,7 @@
 
 | ID    | Title                    | Constraint                                                                                                                   | Category    | Priority | Status      |
 |-------|--------------------------|--------------------------------------------------------------------------------------------------------------------------------|-------------|----------|-------------|
-| C-001 | Runtime Platform         | Backend must run on Java 21 with Quarkus 3.37.x.                                                                               | Technical   | High     | Verified    |
+| C-001 | Runtime Platform         | Backend must run on Java 25 with Quarkus 3.39.x.                                                                               | Technical   | High     | Verified    |
 | C-002 | UI Framework             | UI must be built with Vaadin 25.2.x Flow (server-side rendering); no client-side framework substitution.                       | Technical   | High     | Verified    |
 | C-003 | Persistence Technology   | Data access must use Hibernate ORM with Panache (JPA); jOOQ patterns are prohibited.                                           | Technical   | High     | Verified    |
 | C-004 | Database Platform        | System must use PostgreSQL with schema changes managed exclusively through Flyway migrations.                                 | Technical   | High     | Verified    |

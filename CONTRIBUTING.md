@@ -102,7 +102,7 @@ and the test suite honest about what's actually verified. Existing tests and rec
 ## Getting Started
 
 ### Prerequisites
-- Java 21 JDK
+- Java 25 JDK
 - Maven (or use `./mvnw`, the included wrapper)
 - Docker (for Testcontainers-backed tests, and for the full reference deployment)
 - IDE with Vaadin support
@@ -155,7 +155,7 @@ cd admin
   new code.)
 
 ### Java Features
-- Java 21 features are fine: records, switch expressions, pattern matching, text blocks
+- Java 25 features are fine: records, switch expressions, pattern matching, text blocks
 - Use `@Transactional` on service/boundary methods (REST resource methods that mutate data,
   or service methods called from views) — **not** on entity or repository methods
 - Prefer `io.quarkus.logging.Log` over any other logging API for consistency with the rest of
