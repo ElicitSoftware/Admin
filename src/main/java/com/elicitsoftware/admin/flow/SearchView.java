@@ -11,6 +11,7 @@ package com.elicitsoftware.admin.flow;
  * ***LICENSE_END***
  */
 
+import com.elicitsoftware.service.SurveyDefinitionPresenceCheck;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -155,6 +156,13 @@ public class SearchView extends VerticalLayout implements HasDynamicTitle, Befor
     @Inject
     UiSessionLogin uiSessionLogin;
 
+    /** Reports whether this deployment has a survey installed (UC-019). */
+    @Inject
+    SurveyDefinitionPresenceCheck surveyPresence;
+
+    /** The missing-survey explanation currently shown, if any (UC-019). */
+    private Component missingSurveyNotice;
+
     /** Injected service for sending emails to subjects. */
     @Inject
     EmailService emailService;
@@ -269,6 +277,7 @@ public class SearchView extends VerticalLayout implements HasDynamicTitle, Befor
     @Override
     public void beforeEnter(BeforeEnterEvent event) {
         // Authorization is now handled by @RolesAllowed annotation
+        refreshMissingSurveyNotice();
     }
 
     /**
@@ -836,5 +845,26 @@ public class SearchView extends VerticalLayout implements HasDynamicTitle, Befor
      */
     @Override    public String getPageTitle() {
         return "Elicit Search";
+    }
+
+    /**
+     * Shows or clears this view's missing-survey explanation (UC-019).
+     * <p>
+     * Re-evaluated on every entry rather than once at construction, so the explanation
+     * disappears as soon as a definition is applied (BR-076). The view stays usable
+     * either way -- the explanation is added to it, not put in front of it (BR-077).
+     * <p>
+     * Package-private so same-package tests can drive it directly: under
+     * {@code @QuarkusTest} there is no route navigation to deliver a real enter event.
+     */
+    void refreshMissingSurveyNotice() {
+        if (missingSurveyNotice != null) {
+            remove(missingSurveyNotice);
+            missingSurveyNotice = null;
+        }
+        if (!surveyPresence.isSurveyInstalled()) {
+            missingSurveyNotice = MissingSurveyNotice.emptyState(identity.hasRole("elicit_admin"));
+            addComponentAsFirst(missingSurveyNotice);
+        }
     }
 }

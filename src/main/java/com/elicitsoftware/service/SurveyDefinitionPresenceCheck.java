@@ -47,6 +47,21 @@ public class SurveyDefinitionPresenceCheck {
      * {@code @Transactional} interceptor -- the Panache count needs an active transaction,
      * and interceptors do not apply to CDI lifecycle callbacks.
      */
+    /**
+     * Whether this deployment has at least one survey installed.
+     * <p>
+     * Queried per navigation by the console (UC-019 BR-076) rather than answered from a
+     * value captured at startup: a deployment that starts empty and has a definition
+     * applied minutes later must stop warning without a restart, and one whose last
+     * survey is removed must start warning without one.
+     *
+     * @return {@code true} when at least one survey is installed
+     */
+    @Transactional
+    public boolean isSurveyInstalled() {
+        return Survey.count() > 0;
+    }
+
     @Startup
     @Transactional
     void warnWhenNoSurveyDefined() {
