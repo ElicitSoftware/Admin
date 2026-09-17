@@ -16,6 +16,8 @@ import com.elicitsoftware.model.*;
 import com.elicitsoftware.response.AddResponse;
 import com.elicitsoftware.service.CsvImportService;
 import com.elicitsoftware.rest.TokenService;
+import com.elicitsoftware.service.SurveyDefinitionPresenceCheck;
+import com.vaadin.flow.component.Component;
 import com.vaadin.flow.component.button.Button;
 import com.vaadin.flow.component.button.ButtonVariant;
 import com.vaadin.flow.component.combobox.ComboBox;
@@ -108,6 +110,13 @@ public class RegisterView extends HorizontalLayout implements HasDynamicTitle, B
      */
     @Inject
     UiSessionLogin uiSessionLogin;
+
+    /** Reports whether this deployment has a survey installed (UC-019). */
+    @Inject
+    SurveyDefinitionPresenceCheck surveyPresence;
+
+    /** The missing-survey explanation currently shown, if any (UC-019). */
+    private Component missingSurveyNotice;
 
     /**
      * Injected service for generating and managing survey tokens.
@@ -412,6 +421,7 @@ public class RegisterView extends HorizontalLayout implements HasDynamicTitle, B
     @Override
     public void beforeEnter(BeforeEnterEvent event) {
         // Authorization is now handled by @RolesAllowed annotation
+        refreshMissingSurveyNotice();
 
         Optional<String> tokenOpt = event.getLocation().getQueryParameters().getParameters().getOrDefault("token", List.of()).stream().findFirst();
         if (tokenOpt.isPresent()) {
@@ -970,5 +980,26 @@ public class RegisterView extends HorizontalLayout implements HasDynamicTitle, B
     @Override
     public String getPageTitle() {
         return "Elicit Register";
+    }
+
+    /**
+     * Shows or clears this view's missing-survey explanation (UC-019).
+     * <p>
+     * Re-evaluated on every entry rather than once at construction, so the explanation
+     * disappears as soon as a definition is applied (BR-076). The view stays usable
+     * either way -- the explanation is added to it, not put in front of it (BR-077).
+     * <p>
+     * Package-private so same-package tests can drive it directly: under
+     * {@code @QuarkusTest} there is no route navigation to deliver a real enter event.
+     */
+    void refreshMissingSurveyNotice() {
+        if (missingSurveyNotice != null) {
+            remove(missingSurveyNotice);
+            missingSurveyNotice = null;
+        }
+        if (!surveyPresence.isSurveyInstalled()) {
+            missingSurveyNotice = MissingSurveyNotice.emptyState(identity.hasRole("elicit_admin"));
+            addComponentAsFirst(missingSurveyNotice);
+        }
     }
 }

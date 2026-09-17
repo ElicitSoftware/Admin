@@ -26,6 +26,8 @@
 | FR-015 | Generate Survey Access Token        | As a survey administrator, I want to generate a unique access token for a subject so that they can reach their survey securely without a password. | High     | Implemented |
 | FR-016 | Manage User Role Assignments        | As a system administrator, I want to assign and revoke roles for admin users so that console access matches each user's responsibilities.          | High     | Implemented |
 | FR-017 | Update Survey Definition            | As a system administrator, I want to push a revised survey definition into an existing survey so that a survey authored once can be kept in sync across separate deployments (e.g., institutions) without losing their respondent data. | Medium   | Implemented |
+| FR-018 | Apply Survey Definition             | As a system administrator, I want to upload a survey definition without first deciding whether it is new to this deployment, so that one distributed file can be applied unchanged at every site in a multi-site rollout. | Medium   | Implemented |
+| FR-019 | Surface Missing Survey Definition   | As a survey administrator, I want the console to tell me when no survey is installed so that I understand why subject registration and reporting have nothing to work with, rather than inferring it from empty grids. | Medium   | Implemented |
 
 ## Non-Functional Requirements
 
@@ -59,6 +61,6 @@
 
 ## Traceability
 
-Functional requirements FR-001–FR-017 map one-to-one to `docs/use_cases/UC-001`–`UC-017`. See `docs/use_cases.puml`
+Functional requirements FR-001–FR-019 map one-to-one to `docs/use_cases/UC-001`–`UC-019`. See `docs/use_cases.puml`
 for the actor/use-case diagram and `docs/entity_model.md` for the underlying data model referenced by these
 requirements.

@@ -13,7 +13,10 @@ package com.elicitsoftware.admin.flow;
 
 import com.elicitsoftware.admin.util.BrandUtil;
 import com.elicitsoftware.model.User;
+import com.elicitsoftware.service.SurveyDefinitionPresenceCheck;
 import com.vaadin.flow.component.AttachEvent;
+import com.vaadin.flow.component.Component;
+import com.vaadin.flow.component.HasElement;
 import com.vaadin.flow.component.applayout.AppLayout;
 import com.vaadin.flow.component.applayout.DrawerToggle;
 import com.vaadin.flow.component.html.Anchor;
@@ -21,6 +24,7 @@ import com.vaadin.flow.component.html.Div;
 import com.vaadin.flow.component.html.Image;
 import com.vaadin.flow.component.icon.VaadinIcon;
 import com.vaadin.flow.component.sidenav.SideNav;
+import com.vaadin.flow.component.orderedlayout.VerticalLayout;
 import com.vaadin.flow.component.sidenav.SideNavItem;
 import com.vaadin.flow.router.AfterNavigationEvent;
 import com.vaadin.flow.router.AfterNavigationListener;
@@ -79,6 +83,12 @@ public class MainLayout extends AppLayout implements AfterNavigationListener {
      */
     @Inject
     BrandUtil brandUtil;
+
+    /**
+     * Reports whether this deployment has a survey installed (UC-019).
+     */
+    @Inject
+    SurveyDefinitionPresenceCheck surveyPresence;
 
     /**
      * The current authenticated user.
@@ -287,5 +297,32 @@ public class MainLayout extends AppLayout implements AfterNavigationListener {
     @Override
     public void afterNavigation(AfterNavigationEvent event) {
         getContent().scrollIntoView();
+    }
+
+    /**
+     * Shows the routed view, preceded by the missing-survey banner when this deployment
+     * has no survey installed (UC-019).
+     * <p>
+     * The check runs on every navigation rather than once, so the banner appears and
+     * disappears as definitions are applied or removed without a restart (BR-076). When a
+     * survey is installed -- the ordinary case -- the view is shown exactly as it was
+     * before this was added, with no wrapper of any kind in the way of its layout.
+     *
+     * @param content the routed view to display
+     */
+    @Override
+    public void showRouterLayoutContent(HasElement content) {
+        if (surveyPresence.isSurveyInstalled()) {
+            super.showRouterLayoutContent(content);
+            return;
+        }
+
+        VerticalLayout wrapper = new VerticalLayout();
+        wrapper.setSizeFull();
+        wrapper.setPadding(false);
+        wrapper.setSpacing(false);
+        wrapper.add(MissingSurveyNotice.banner(identity.hasRole("elicit_admin")));
+        wrapper.add((Component) content);
+        setContent(wrapper);
     }
 }
