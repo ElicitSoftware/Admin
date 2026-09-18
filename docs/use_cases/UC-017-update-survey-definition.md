@@ -23,8 +23,9 @@
 5. On a match, the system updates the target survey's own attributes in place. Every other table in the survey definition is part of this update too — matching each file record to the target's record by its stable element key, never by content or by the file's local identifiers:
    - For the eight Type 2 tables (select groups/items, steps, sections, steps-sections, questions, sections-questions, relationships): a matched record with identical content is left as-is; a matched record with different content has its current effective-dated version closed and a new version inserted effective now, under the same durable identifier; an element key with no match in the target is inserted as a brand-new record.
    - For the remaining tables that are part of the survey definition but not Type 2 versioned (reports, post-survey actions, dimensions, ontology, metadata): a matched record with different content is updated in place (no version history); an element key with no match is inserted as a brand-new record. Dimensions, being a shared lookup, are also matched by name.
+   - A file record marked as retired (its validity window closed by the authoring tool when the element was removed) has the target's current version closed as of now, with nothing inserted; a record already retired here, or never installed here, is left alone. Respondents who started earlier keep the element; new respondents do not see it.
    - A target record whose element key no longer appears anywhere in the file is left untouched; this use case never deletes.
-6. The system reports success with per-table counts of records created, versioned (or updated in place), or left unchanged.
+6. The system reports success with per-table counts of records created, versioned (or updated in place), retired, or left unchanged.
 
 ## Alternative Flows
 
@@ -113,7 +114,7 @@ Every table in the survey definition carries a stable element key (the survey's 
 
 ### BR-068: Update never deletes
 
-A target record whose element key is absent from the file is left completely untouched. This use case has no mechanism for removing a record that was deleted from the authored copy; that is out of scope.
+No row is ever physically removed by an update. An element the file marks as retired has its current version closed (the same close that versioning performs, without the re-insert), so recorded answers and the as-of view of respondents already in progress are untouched. An element simply absent from the file is left as it is.
 
 ### BR-069: An older revision is always refused
 

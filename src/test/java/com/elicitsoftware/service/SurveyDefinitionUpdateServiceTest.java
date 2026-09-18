@@ -253,7 +253,7 @@ class SurveyDefinitionUpdateServiceTest {
 
         assertTrue(result.isSuccess(), () -> "update errors: " + result.getErrors());
         SurveyDefinitionUpdateService.TableUpdateCounts unchangedOne =
-                new SurveyDefinitionUpdateService.TableUpdateCounts(0, 0, 1);
+                new SurveyDefinitionUpdateService.TableUpdateCounts(0, 0, 1, 0);
         for (String table : new String[] {
                 "surveys", "select_groups", "select_items", "steps", "sections", "steps_sections",
                 "questions", "sections_questions", "relationships", "reports", "post_survey_actions",
@@ -280,9 +280,9 @@ class SurveyDefinitionUpdateServiceTest {
                 surveyDefinitionUpdateService.updateFromFile(toStream(exported), "self.elicit", survey.id);
 
         assertTrue(result.isSuccess(), () -> "update errors: " + result.getErrors());
-        assertEquals(new SurveyDefinitionUpdateService.TableUpdateCounts(0, 0, 1), result.getCounts().get("surveys"));
-        assertEquals(new SurveyDefinitionUpdateService.TableUpdateCounts(0, 0, 1), result.getCounts().get("steps"));
-        assertEquals(new SurveyDefinitionUpdateService.TableUpdateCounts(0, 0, 1), result.getCounts().get("reports"));
+        assertEquals(new SurveyDefinitionUpdateService.TableUpdateCounts(0, 0, 1, 0), result.getCounts().get("surveys"));
+        assertEquals(new SurveyDefinitionUpdateService.TableUpdateCounts(0, 0, 1, 0), result.getCounts().get("steps"));
+        assertEquals(new SurveyDefinitionUpdateService.TableUpdateCounts(0, 0, 1, 0), result.getCounts().get("reports"));
 
         assertEquals("Step A", queryOne("SELECT name FROM survey.steps WHERE id = ?1", stepId));
         assertEquals("Report A", queryOne("SELECT name FROM survey.reports WHERE id = ?1", reportId));
@@ -321,9 +321,9 @@ class SurveyDefinitionUpdateServiceTest {
                 surveyDefinitionUpdateService.updateFromFile(toStream(content), "changed.elicit", survey.id);
 
         assertTrue(result.isSuccess(), () -> "update errors: " + result.getErrors());
-        assertEquals(new SurveyDefinitionUpdateService.TableUpdateCounts(0, 1, 0), result.getCounts().get("surveys"));
-        assertEquals(new SurveyDefinitionUpdateService.TableUpdateCounts(1, 1, 0), result.getCounts().get("steps"));
-        assertEquals(new SurveyDefinitionUpdateService.TableUpdateCounts(0, 1, 0), result.getCounts().get("reports"));
+        assertEquals(new SurveyDefinitionUpdateService.TableUpdateCounts(0, 1, 0, 0), result.getCounts().get("surveys"));
+        assertEquals(new SurveyDefinitionUpdateService.TableUpdateCounts(1, 1, 0, 0), result.getCounts().get("steps"));
+        assertEquals(new SurveyDefinitionUpdateService.TableUpdateCounts(0, 1, 0, 0), result.getCounts().get("reports"));
 
         assertEquals("New Title", queryOne("SELECT title FROM survey.surveys WHERE id = ?1", survey.id));
 
@@ -483,8 +483,8 @@ class SurveyDefinitionUpdateServiceTest {
                 surveyDefinitionUpdateService.updateFromFile(toStream(content), "ontology.elicit", survey.id);
 
         assertTrue(result.isSuccess(), () -> "update errors: " + result.getErrors());
-        assertEquals(new SurveyDefinitionUpdateService.TableUpdateCounts(0, 0, 1), result.getCounts().get("dimensions"));
-        assertEquals(new SurveyDefinitionUpdateService.TableUpdateCounts(0, 1, 0), result.getCounts().get("ontology"));
+        assertEquals(new SurveyDefinitionUpdateService.TableUpdateCounts(0, 0, 1, 0), result.getCounts().get("dimensions"));
+        assertEquals(new SurveyDefinitionUpdateService.TableUpdateCounts(0, 1, 0, 0), result.getCounts().get("ontology"));
 
         assertEquals(1L, queryLong("SELECT count(*) FROM survey.dimensions WHERE name = 'SharedDim'"),
                 "the existing dimension must be reused by name, not duplicated");
@@ -686,5 +686,63 @@ class SurveyDefinitionUpdateServiceTest {
         assertFalse(result.isSuccess());
         assertTrue(String.join("; ", result.getErrors()).contains("does not match the selected survey's key"),
                 () -> "should report the key mismatch, not a regression: " + result.getErrors());
+    }
+
+    /**
+     * A record the file marks as retired (closed effective_to, written by the authoring tool
+     * when an element is removed) closes the target's current row and inserts nothing; applying
+     * the same file again is a no-op for that record.
+     */
+    @Test
+    @TestTransaction
+    void retiredRecordInFileClosesTheTargetsCurrentRowWithoutInsertingOne() {
+        Survey survey = newSurvey("UpdRetire");
+        long stepSurrogateId = insertStep(survey.id, 1, "Doomed Step");
+        UUID stepKey = queryOne("SELECT step_key FROM survey.steps WHERE id = ?1", stepSurrogateId);
+        long stepDurableId = queryLong("SELECT step_id FROM survey.steps WHERE id = ?1", stepSurrogateId);
+
+        String content = "# ELICIT_SURVEY_EXPORT_V1\n\n"
+                + "surveys: " + survey.id + "|" + survey.surveyKey + "|" + survey.name + "|1|Title UpdRetire|||||\n"
+                + "steps: 100|" + stepKey + "|1|Doomed Step|D||0|1970-01-01 00:00:00+00|2026-09-17 12:00:00+00||\n";
+
+        SurveyDefinitionUpdateService.UpdateResult result =
+                surveyDefinitionUpdateService.updateFromFile(toStream(content), "retire.elicit", survey.id);
+
+        assertTrue(result.isSuccess(), () -> "update errors: " + result.getErrors());
+        assertEquals(new SurveyDefinitionUpdateService.TableUpdateCounts(0, 0, 0, 1), result.getCounts().get("steps"));
+        String effectiveTo = queryOne("SELECT effective_to::text FROM survey.steps WHERE id = ?1", stepSurrogateId);
+        assertFalse(effectiveTo.startsWith("9999-12-31"), "the current row must be closed: " + effectiveTo);
+        assertEquals(1L, queryLong("SELECT count(*) FROM survey.steps WHERE step_id = ?1", stepDurableId),
+                "retiring must not insert a new version row");
+
+        SurveyDefinitionUpdateService.UpdateResult again =
+                surveyDefinitionUpdateService.updateFromFile(toStream(content), "retire.elicit", survey.id);
+        assertTrue(again.isSuccess());
+        assertEquals(new SurveyDefinitionUpdateService.TableUpdateCounts(0, 0, 1, 0), again.getCounts().get("steps"),
+                "an already-retired element is left alone");
+    }
+
+    /**
+     * Export carries an element whose every version is closed as its latest retired row, so the
+     * removal travels to other sites; an element with a current row is exported as that row only.
+     */
+    @Test
+    @TestTransaction
+    void exportCarriesTheLatestRetiredRowWhenNoCurrentRowExists() {
+        Survey survey = newSurvey("ExpRetire");
+        long keptId = insertStep(survey.id, 1, "Kept Step");
+        long goneId = insertStep(survey.id, 2, "Gone Step");
+        em.createNativeQuery("UPDATE survey.steps SET effective_to = '2026-09-17 12:00:00+00' WHERE id = ?1")
+                .setParameter(1, goneId).executeUpdate();
+
+        String exported = surveyDefinitionExportService.exportSurvey(survey.id);
+        java.util.List<String> stepLines = exported.lines().filter(l -> l.startsWith("steps: ")).toList();
+        assertEquals(2, stepLines.size(), exported);
+        String gone = stepLines.stream().filter(l -> l.contains("Gone Step")).findFirst().orElseThrow();
+        String[] fields = SurveyDefinitionFileFields.parseFields(gone.substring("steps: ".length()));
+        assertTrue(SurveyDefinitionFileFields.isRetired("steps", fields), "retired row keeps its closing instant: " + gone);
+        String kept = stepLines.stream().filter(l -> l.contains("Kept Step")).findFirst().orElseThrow();
+        assertFalse(SurveyDefinitionFileFields.isRetired("steps", SurveyDefinitionFileFields.parseFields(kept.substring("steps: ".length()))));
+        assertEquals(1L, queryLong("SELECT count(*) FROM survey.steps WHERE id = ?1", keptId));
     }
 }

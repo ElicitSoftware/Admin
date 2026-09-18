@@ -75,3 +75,7 @@ Every export includes the survey's stable, cross-instance-portable key (assigned
 ## Reference
 
 Derived from `SurveyDefinitionExportResource` and `SurveyDefinitionExportService` (`ELICIT_SURVEY_EXPORT_V1` format). Reads the shared survey-definition tables (surveys, select groups/items, steps, sections, questions, relationships, reports, post-survey actions, dimensions, ontology, metadata). See UC-017 for the update flow this key enables.
+
+### BR-073: Retired elements travel with the file
+
+For each versioned element the export writes its current version; an element whose every version is closed is written once, as its latest version with its closing instant, so that a removal made in the authoring tool is applied at every site that later updates from the file (UC-017).

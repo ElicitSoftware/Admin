@@ -73,6 +73,38 @@ final class SurveyDefinitionFileFields {
      * Parses one data line's pipe-delimited fields with escape sequence handling
      * ({@code \|}, {@code \\}, {@code \n}, {@code \r}).
      */
+    /** Zero-based index of {@code effective_to} within each Type 2 record (post-V015 layout). */
+    static final java.util.Map<String, Integer> EFFECTIVE_TO_INDEX = java.util.Map.ofEntries(
+            java.util.Map.entry("select_groups", 7),
+            java.util.Map.entry("select_items", 8),
+            java.util.Map.entry("steps", 8),
+            java.util.Map.entry("sections", 8),
+            java.util.Map.entry("steps_sections", 9),
+            java.util.Map.entry("questions", 17),
+            java.util.Map.entry("sections_questions", 7),
+            java.util.Map.entry("relationships", 16));
+
+    /**
+     * True when a Type 2 record's {@code effective_to} field carries a real closing instant
+     * rather than the open-ended sentinel (or nothing): the authoring tool removed the element,
+     * and a site applying the file closes its own current row instead of versioning it.
+     */
+    static boolean isRetired(String table, String[] fields) {
+        Integer idx = EFFECTIVE_TO_INDEX.get(table);
+        if (idx == null || fields.length <= idx) {
+            return false;
+        }
+        String value = nullIfEmpty(fields[idx]);
+        if (value == null) {
+            return false;
+        }
+        try {
+            return OffsetDateTime.parse(value.trim().replace(' ', 'T')).getYear() < 9999;
+        } catch (DateTimeParseException e) {
+            return !value.startsWith("9999");
+        }
+    }
+
     static String[] parseFields(String data) {
         List<String> fieldList = new ArrayList<>();
         StringBuilder current = new StringBuilder();

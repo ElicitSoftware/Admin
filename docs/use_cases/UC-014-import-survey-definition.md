@@ -87,3 +87,7 @@ A create-import is rejected if a survey with the file's stable key already exist
 ## Reference
 
 Derived from `SurveyDefinitionImportResource` and `SurveyDefinitionImportService` (`ELICIT_SURVEY_EXPORT_V1` format). Writes the shared survey-definition tables.
+
+### BR-076: Retired records are not installed
+
+A versioned record whose validity window is closed in the file describes an element removed before this site ever had it; it is skipped and counted separately in the import summary rather than installed.
