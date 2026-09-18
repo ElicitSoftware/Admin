@@ -60,8 +60,8 @@ import java.util.UUID;
  * <strong>Versioning:</strong> for the eight Type 2 tables, an element_key match whose content
  * differs from the file is versioned — the current row's {@code effective_to} is closed to now,
  * and a new row is inserted carrying the <em>same durable id</em> (e.g. {@code step_id}) with
- * {@code version + 1}, {@code effective_from = now()}, open-ended {@code effective_to}, and
- * {@code is_draft = false}. The durable id is what lets sibling rows keep referencing this
+ * {@code version + 1}, {@code effective_from = now()}, and open-ended {@code effective_to}.
+ * The durable id is what lets sibling rows keep referencing this
  * element across the version boundary with no remapping. An element_key match with identical
  * content is left completely untouched. An element_key with no match is inserted as a brand-new
  * row (version 0). For the five Type 1 tables (and the survey shell itself), there is no version
@@ -537,11 +537,11 @@ public class SurveyDefinitionUpdateService {
     // -------------------------------------------------------------------------
 
     /**
-     * Fields: source_id|element_key|name|description|data_type|version|effective_from|effective_to|published_by|published_comment|is_draft
+     * Fields: source_id|element_key|name|description|data_type|version|effective_from|effective_to|published_by|published_comment
      */
     private UpsertOutcome upsertSelectGroup(String[] fields, Integer surveyId) {
-        if (fields.length < 11) {
-            throw new IllegalArgumentException("select_groups requires 11 fields, got " + fields.length);
+        if (fields.length < 10) {
+            throw new IllegalArgumentException("select_groups requires 10 fields, got " + fields.length);
         }
         UUID elementKey = requireElementKey(fields[1], "select_groups");
         String name = SurveyDefinitionFileFields.nullIfEmpty(fields[2]);
@@ -579,8 +579,8 @@ public class SurveyDefinitionUpdateService {
         em.createNativeQuery("""
                 INSERT INTO survey.select_groups
                     (id, survey_id, select_group_key, name, description, data_type,
-                     select_group_id, version, effective_from, effective_to, is_draft)
-                VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, NOW(), '9999-12-31 23:59:59+00', false)
+                     select_group_id, version, effective_from, effective_to)
+                VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, NOW(), '9999-12-31 23:59:59+00')
                 """)
                 .setParameter(1, newId).setParameter(2, surveyId).setParameter(3, elementKey)
                 .setParameter(4, name).setParameter(5, description).setParameter(6, dataType)
@@ -590,11 +590,11 @@ public class SurveyDefinitionUpdateService {
     }
 
     /**
-     * Fields: source_id|element_key|select_group_id|display_text|display_order|coded_value|version|effective_from|effective_to|published_by|published_comment|is_draft
+     * Fields: source_id|element_key|select_group_id|display_text|display_order|coded_value|version|effective_from|effective_to|published_by|published_comment
      */
     private ChangeType upsertSelectItem(String[] fields, Integer surveyId, Map<Long, Long> selectGroupIdMap) {
-        if (fields.length < 12) {
-            throw new IllegalArgumentException("select_items requires 12 fields, got " + fields.length);
+        if (fields.length < 11) {
+            throw new IllegalArgumentException("select_items requires 11 fields, got " + fields.length);
         }
         UUID elementKey = requireElementKey(fields[1], "select_items");
         Long newGroupId = SurveyDefinitionFileFields.resolveRequired(
@@ -629,10 +629,10 @@ public class SurveyDefinitionUpdateService {
         em.createNativeQuery("""
                 INSERT INTO survey.select_items
                     (id, survey_id, select_item_key, select_group_id, display_text, display_order, coded_value,
-                     select_item_id, version, effective_from, effective_to, is_draft)
+                     select_item_id, version, effective_from, effective_to)
                 VALUES (nextval('survey.select_items_seq'), ?1, ?2, ?3, ?4, ?5, ?6,
                         (SELECT select_item_id FROM survey.select_items WHERE id = ?7),
-                        ?8, NOW(), '9999-12-31 23:59:59+00', false)
+                        ?8, NOW(), '9999-12-31 23:59:59+00')
                 """)
                 .setParameter(1, surveyId).setParameter(2, elementKey).setParameter(3, newGroupId)
                 .setParameter(4, displayText).setParameter(5, displayOrder).setParameter(6, codedValue)
@@ -642,11 +642,11 @@ public class SurveyDefinitionUpdateService {
     }
 
     /**
-     * Fields: source_id|element_key|display_order|name|dimension_name|description|version|effective_from|effective_to|published_by|published_comment|is_draft
+     * Fields: source_id|element_key|display_order|name|dimension_name|description|version|effective_from|effective_to|published_by|published_comment
      */
     private UpsertOutcome upsertStep(String[] fields, Integer surveyId) {
-        if (fields.length < 12) {
-            throw new IllegalArgumentException("steps requires 12 fields, got " + fields.length);
+        if (fields.length < 11) {
+            throw new IllegalArgumentException("steps requires 11 fields, got " + fields.length);
         }
         UUID elementKey = requireElementKey(fields[1], "steps");
         Integer displayOrder = SurveyDefinitionFileFields.parseIntOrNull(fields[2]);
@@ -688,8 +688,8 @@ public class SurveyDefinitionUpdateService {
         em.createNativeQuery("""
                 INSERT INTO survey.steps
                     (id, survey_id, step_key, display_order, name, dimension_name, description,
-                     step_id, version, effective_from, effective_to, is_draft)
-                VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, NOW(), '9999-12-31 23:59:59+00', false)
+                     step_id, version, effective_from, effective_to)
+                VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, NOW(), '9999-12-31 23:59:59+00')
                 """)
                 .setParameter(1, newId).setParameter(2, surveyId).setParameter(3, elementKey)
                 .setParameter(4, displayOrder).setParameter(5, name).setParameter(6, dimensionName)
@@ -699,11 +699,11 @@ public class SurveyDefinitionUpdateService {
     }
 
     /**
-     * Fields: source_id|element_key|display_order|name|dimension_name|description|version|effective_from|effective_to|published_by|published_comment|is_draft
+     * Fields: source_id|element_key|display_order|name|dimension_name|description|version|effective_from|effective_to|published_by|published_comment
      */
     private UpsertOutcome upsertSection(String[] fields, Integer surveyId) {
-        if (fields.length < 12) {
-            throw new IllegalArgumentException("sections requires 12 fields, got " + fields.length);
+        if (fields.length < 11) {
+            throw new IllegalArgumentException("sections requires 11 fields, got " + fields.length);
         }
         UUID elementKey = requireElementKey(fields[1], "sections");
         Integer displayOrder = SurveyDefinitionFileFields.parseIntOrNull(fields[2]);
@@ -742,8 +742,8 @@ public class SurveyDefinitionUpdateService {
         em.createNativeQuery("""
                 INSERT INTO survey.sections
                     (id, survey_id, section_key, display_order, name, dimension_name, description,
-                     section_id, version, effective_from, effective_to, is_draft)
-                VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, NOW(), '9999-12-31 23:59:59+00', false)
+                     section_id, version, effective_from, effective_to)
+                VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, NOW(), '9999-12-31 23:59:59+00')
                 """)
                 .setParameter(1, newId).setParameter(2, surveyId).setParameter(3, elementKey)
                 .setParameter(4, displayOrder).setParameter(5, name).setParameter(6, dimensionName)
@@ -753,12 +753,12 @@ public class SurveyDefinitionUpdateService {
     }
 
     /**
-     * Fields: source_id|element_key|step_id|step_display_order|section_id|section_display_order|display_key|version|effective_from|effective_to|published_by|published_comment|is_draft
+     * Fields: source_id|element_key|step_id|step_display_order|section_id|section_display_order|display_key|version|effective_from|effective_to|published_by|published_comment
      */
     private UpsertOutcome upsertStepsSection(String[] fields, Integer surveyId,
             Map<Long, Long> stepIdMap, Map<Long, Long> sectionIdMap) {
-        if (fields.length < 13) {
-            throw new IllegalArgumentException("steps_sections requires 13 fields, got " + fields.length);
+        if (fields.length < 12) {
+            throw new IllegalArgumentException("steps_sections requires 12 fields, got " + fields.length);
         }
         UUID elementKey = requireElementKey(fields[1], "steps_sections");
         Long newStepId = SurveyDefinitionFileFields.resolveRequired(
@@ -801,8 +801,8 @@ public class SurveyDefinitionUpdateService {
         em.createNativeQuery("""
                 INSERT INTO survey.steps_sections
                     (id, survey_id, steps_sections_key, step_id, step_display_order, section_id, section_display_order, display_key,
-                     steps_sections_id, version, effective_from, effective_to, is_draft)
-                VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, NOW(), '9999-12-31 23:59:59+00', false)
+                     steps_sections_id, version, effective_from, effective_to)
+                VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, NOW(), '9999-12-31 23:59:59+00')
                 """)
                 .setParameter(1, newId).setParameter(2, surveyId).setParameter(3, elementKey)
                 .setParameter(4, newStepId).setParameter(5, stepDisplayOrder).setParameter(6, newSectionId)
@@ -815,11 +815,11 @@ public class SurveyDefinitionUpdateService {
     /**
      * Fields: source_id|element_key|type_id|text|short_text|tool_tip|required|min_value|max_value|
      *         validation_text|select_group_id|mask|placeholder|default_value|variant|
-     *         version|effective_from|effective_to|published_by|published_comment|is_draft
+     *         version|effective_from|effective_to|published_by|published_comment
      */
     private UpsertOutcome upsertQuestion(String[] fields, Integer surveyId, Map<Long, Long> selectGroupIdMap) {
-        if (fields.length < 21) {
-            throw new IllegalArgumentException("questions requires 21 fields, got " + fields.length);
+        if (fields.length < 20) {
+            throw new IllegalArgumentException("questions requires 20 fields, got " + fields.length);
         }
         UUID elementKey = requireElementKey(fields[1], "questions");
         Integer typeId = SurveyDefinitionFileFields.parseIntOrNull(fields[2]);
@@ -880,9 +880,9 @@ public class SurveyDefinitionUpdateService {
                     (id, survey_id, question_key, type_id, text, short_text, tool_tip, required,
                      min_value, max_value, validation_text, select_group_id,
                      mask, placeholder, default_value, variant,
-                     question_id, version, effective_from, effective_to, is_draft)
+                     question_id, version, effective_from, effective_to)
                 VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15, ?16,
-                        ?17, ?18, NOW(), '9999-12-31 23:59:59+00', false)
+                        ?17, ?18, NOW(), '9999-12-31 23:59:59+00')
                 """)
                 .setParameter(1, newId).setParameter(2, surveyId).setParameter(3, elementKey)
                 .setParameter(4, typeId).setParameter(5, text).setParameter(6, shortText)
@@ -895,12 +895,12 @@ public class SurveyDefinitionUpdateService {
     }
 
     /**
-     * Fields: source_id|element_key|question_id|section_id|display_order|version|effective_from|effective_to|published_by|published_comment|is_draft
+     * Fields: source_id|element_key|question_id|section_id|display_order|version|effective_from|effective_to|published_by|published_comment
      */
     private UpsertOutcome upsertSectionsQuestion(String[] fields, Integer surveyId,
             Map<Long, Long> questionIdMap, Map<Long, Long> sectionIdMap) {
-        if (fields.length < 11) {
-            throw new IllegalArgumentException("sections_questions requires 11 fields, got " + fields.length);
+        if (fields.length < 10) {
+            throw new IllegalArgumentException("sections_questions requires 10 fields, got " + fields.length);
         }
         UUID elementKey = requireElementKey(fields[1], "sections_questions");
         Long newQuestionId = SurveyDefinitionFileFields.resolveRequired(
@@ -938,8 +938,8 @@ public class SurveyDefinitionUpdateService {
         em.createNativeQuery("""
                 INSERT INTO survey.sections_questions
                     (id, survey_id, sections_question_key, question_id, section_id, display_order,
-                     sections_question_id, version, effective_from, effective_to, is_draft)
-                VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, NOW(), '9999-12-31 23:59:59+00', false)
+                     sections_question_id, version, effective_from, effective_to)
+                VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, NOW(), '9999-12-31 23:59:59+00')
                 """)
                 .setParameter(1, newId).setParameter(2, surveyId).setParameter(3, elementKey)
                 .setParameter(4, newQuestionId).setParameter(5, newSectionId).setParameter(6, displayOrder)
@@ -952,12 +952,12 @@ public class SurveyDefinitionUpdateService {
      * Fields: source_id|element_key|upstream_step_id|upstream_sq_id|downstream_step_id|downstream_ss_id|
      *         downstream_sq_id|operator_id|action_id|description|token|reference_value|
      *         default_upstream_value|override_upstream_value|version|effective_from|
-     *         effective_to|published_by|published_comment|is_draft
+     *         effective_to|published_by|published_comment
      */
     private ChangeType upsertRelationship(String[] fields, Integer surveyId,
             Map<Long, Long> stepIdMap, Map<Long, Long> sectionsQuestionIdMap, Map<Long, Long> stepsSectionIdMap) {
-        if (fields.length < 20) {
-            throw new IllegalArgumentException("relationships requires 20 fields, got " + fields.length);
+        if (fields.length < 19) {
+            throw new IllegalArgumentException("relationships requires 19 fields, got " + fields.length);
         }
         UUID elementKey = requireElementKey(fields[1], "relationships");
         Long newUpstreamStepId = SurveyDefinitionFileFields.resolveNullable(
@@ -1016,9 +1016,9 @@ public class SurveyDefinitionUpdateService {
                     (id, survey_id, relationship_key, upstream_step_id, upstream_sq_id, downstream_step_id,
                      downstream_ss_id, downstream_sq_id, operator_id, action_id, description,
                      token, reference_value, default_upstream_value, override_upstream_value,
-                     relationship_id, version, effective_from, effective_to, is_draft)
+                     relationship_id, version, effective_from, effective_to)
                 VALUES (nextval('survey.relationships_seq'), ?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14,
-                        (SELECT relationship_id FROM survey.relationships WHERE id = ?15), ?16, NOW(), '9999-12-31 23:59:59+00', false)
+                        (SELECT relationship_id FROM survey.relationships WHERE id = ?15), ?16, NOW(), '9999-12-31 23:59:59+00')
                 """)
                 .setParameter(1, surveyId).setParameter(2, elementKey).setParameter(3, newUpstreamStepId)
                 .setParameter(4, newUpstreamSqId).setParameter(5, newDownstreamStepId).setParameter(6, newDownstreamSsId)
@@ -1265,7 +1265,7 @@ public class SurveyDefinitionUpdateService {
     }
 
     /**
-     * Looks up the target's current (open-ended, non-draft) row for one element_key, returning
+     * Looks up the target's current (open-ended) row for one element_key, returning
      * the requested columns as an {@code Object[]} (first column always {@code id}), or
      * {@code null} if no such row exists yet.
      */
@@ -1276,7 +1276,7 @@ public class SurveyDefinitionUpdateService {
                         + (table.equals("survey.reports") || table.equals("survey.post_survey_actions")
                                 || table.equals("survey.ontology") || table.equals("survey.metadata")
                                 ? ""
-                                : " AND effective_to = '" + OPEN_ENDED + "' AND is_draft = false"));
+                                : " AND effective_to = '" + OPEN_ENDED + "'"));
         query.setParameter(1, surveyId);
         query.setParameter(2, elementKey);
         List<?> results = query.getResultList();

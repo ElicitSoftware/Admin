@@ -227,7 +227,6 @@ CREATE TABLE IF NOT EXISTS survey.select_groups
     version            integer NOT NULL DEFAULT 0,
     effective_from     timestamptz DEFAULT '1970-01-01 00:00:00+00',
     effective_to       timestamptz DEFAULT '9999-12-31 23:59:59+00',
-    is_draft           boolean NOT NULL DEFAULT false,
     published_by       text,
     published_comment  text,
     CONSTRAINT select_groups_pk PRIMARY KEY (id),
@@ -239,9 +238,6 @@ CREATE UNIQUE INDEX select_groups_name_un
 CREATE UNIQUE INDEX select_groups_one_current_un
     ON survey.select_groups (select_group_id)
     WHERE effective_to = '9999-12-31 23:59:59+00';
-CREATE UNIQUE INDEX select_groups_one_draft_un
-    ON survey.select_groups (select_group_id)
-    WHERE is_draft = true;
 
 CREATE SEQUENCE IF NOT EXISTS survey.select_items_seq START WITH 1 INCREMENT BY 1;
 CREATE TABLE IF NOT EXISTS survey.select_items
@@ -258,7 +254,6 @@ CREATE TABLE IF NOT EXISTS survey.select_items
     version                integer NOT NULL DEFAULT 0,
     effective_from         timestamptz DEFAULT '1970-01-01 00:00:00+00',
     effective_to           timestamptz DEFAULT '9999-12-31 23:59:59+00',
-    is_draft               boolean NOT NULL DEFAULT false,
     published_by           text,
     published_comment      text,
     CONSTRAINT select_items_pk PRIMARY KEY (id),
@@ -273,9 +268,6 @@ CREATE UNIQUE INDEX select_items_display_text_un
 CREATE UNIQUE INDEX select_items_one_current_un
     ON survey.select_items (select_item_id)
     WHERE effective_to = '9999-12-31 23:59:59+00';
-CREATE UNIQUE INDEX select_items_one_draft_un
-    ON survey.select_items (select_item_id)
-    WHERE is_draft = true;
 
 CREATE SEQUENCE IF NOT EXISTS survey.steps_seq START WITH 1 INCREMENT BY 1;
 CREATE TABLE IF NOT EXISTS survey.steps
@@ -291,7 +283,6 @@ CREATE TABLE IF NOT EXISTS survey.steps
     version            integer NOT NULL DEFAULT 0,
     effective_from     timestamptz DEFAULT '1970-01-01 00:00:00+00',
     effective_to       timestamptz DEFAULT '9999-12-31 23:59:59+00',
-    is_draft           boolean NOT NULL DEFAULT false,
     published_by       text,
     published_comment  text,
     CONSTRAINT steps_pk PRIMARY KEY (id),
@@ -306,9 +297,6 @@ CREATE UNIQUE INDEX steps_survey_display_order
 CREATE UNIQUE INDEX steps_one_current_un
     ON survey.steps (step_id)
     WHERE effective_to = '9999-12-31 23:59:59+00';
-CREATE UNIQUE INDEX steps_one_draft_un
-    ON survey.steps (step_id)
-    WHERE is_draft = true;
 
 CREATE SEQUENCE IF NOT EXISTS survey.sections_seq START WITH 1 INCREMENT BY 1;
 CREATE TABLE IF NOT EXISTS survey.sections
@@ -324,7 +312,6 @@ CREATE TABLE IF NOT EXISTS survey.sections
     version            integer NOT NULL DEFAULT 0,
     effective_from     timestamptz DEFAULT '1970-01-01 00:00:00+00',
     effective_to       timestamptz DEFAULT '9999-12-31 23:59:59+00',
-    is_draft           boolean NOT NULL DEFAULT false,
     published_by       text,
     published_comment  text,
     CONSTRAINT sections_pk PRIMARY KEY (id),
@@ -336,9 +323,6 @@ CREATE UNIQUE INDEX sections_survey_order_un
 CREATE UNIQUE INDEX sections_one_current_un
     ON survey.sections (section_id)
     WHERE effective_to = '9999-12-31 23:59:59+00';
-CREATE UNIQUE INDEX sections_one_draft_un
-    ON survey.sections (section_id)
-    WHERE is_draft = true;
 
 CREATE SEQUENCE IF NOT EXISTS survey.steps_sections_seq START WITH 1 INCREMENT BY 1;
 CREATE TABLE IF NOT EXISTS survey.steps_sections
@@ -357,7 +341,6 @@ CREATE TABLE IF NOT EXISTS survey.steps_sections
     version                integer NOT NULL DEFAULT 0,
     effective_from         timestamptz DEFAULT '1970-01-01 00:00:00+00',
     effective_to           timestamptz DEFAULT '9999-12-31 23:59:59+00',
-    is_draft               boolean NOT NULL DEFAULT false,
     published_by           text,
     published_comment      text,
     CONSTRAINT steps_sections_pk PRIMARY KEY (id),
@@ -374,9 +357,6 @@ CREATE TABLE IF NOT EXISTS survey.steps_sections
 CREATE UNIQUE INDEX steps_sections_one_current_un
     ON survey.steps_sections (steps_sections_id)
     WHERE effective_to = '9999-12-31 23:59:59+00';
-CREATE UNIQUE INDEX steps_sections_one_draft_un
-    ON survey.steps_sections (steps_sections_id)
-    WHERE is_draft = true;
 
 CREATE SEQUENCE IF NOT EXISTS survey.questions_seq START WITH 1 INCREMENT BY 1;
 CREATE TABLE IF NOT EXISTS survey.questions
@@ -402,7 +382,6 @@ CREATE TABLE IF NOT EXISTS survey.questions
     version               integer NOT NULL DEFAULT 0,
     effective_from        timestamptz DEFAULT '1970-01-01 00:00:00+00',
     effective_to          timestamptz DEFAULT '9999-12-31 23:59:59+00',
-    is_draft              boolean NOT NULL DEFAULT false,
     published_by          text,
     published_comment     text,
     CONSTRAINT questions_pk PRIMARY KEY (id),
@@ -416,9 +395,6 @@ CREATE TABLE IF NOT EXISTS survey.questions
 CREATE UNIQUE INDEX questions_one_current_un
     ON survey.questions (question_id)
     WHERE effective_to = '9999-12-31 23:59:59+00';
-CREATE UNIQUE INDEX questions_one_draft_un
-    ON survey.questions (question_id)
-    WHERE is_draft = true;
 
 CREATE SEQUENCE IF NOT EXISTS survey.sections_questions_seq START WITH 1 INCREMENT BY 1;
 CREATE TABLE IF NOT EXISTS survey.sections_questions
@@ -435,7 +411,6 @@ CREATE TABLE IF NOT EXISTS survey.sections_questions
     version                integer NOT NULL DEFAULT 0,
     effective_from         timestamptz DEFAULT '1970-01-01 00:00:00+00',
     effective_to           timestamptz DEFAULT '9999-12-31 23:59:59+00',
-    is_draft               boolean NOT NULL DEFAULT false,
     published_by           text,
     published_comment      text,
     CONSTRAINT sections_questions_pk PRIMARY KEY (id),
@@ -452,9 +427,6 @@ CREATE TABLE IF NOT EXISTS survey.sections_questions
 CREATE UNIQUE INDEX sections_questions_one_current_un
     ON survey.sections_questions (sections_question_id)
     WHERE effective_to = '9999-12-31 23:59:59+00';
-CREATE UNIQUE INDEX sections_questions_one_draft_un
-    ON survey.sections_questions (sections_question_id)
-    WHERE is_draft = true;
 
 CREATE SEQUENCE IF NOT EXISTS survey.relationships_seq START WITH 1 INCREMENT BY 1;
 CREATE TABLE IF NOT EXISTS survey.relationships
@@ -483,7 +455,6 @@ CREATE TABLE IF NOT EXISTS survey.relationships
     version                  integer NOT NULL DEFAULT 0,
     effective_from           timestamptz DEFAULT '1970-01-01 00:00:00+00',
     effective_to             timestamptz DEFAULT '9999-12-31 23:59:59+00',
-    is_draft                 boolean NOT NULL DEFAULT false,
     published_by             text,
     published_comment        text,
     CONSTRAINT relationships_pk PRIMARY KEY (id),
@@ -516,9 +487,6 @@ CREATE TABLE IF NOT EXISTS survey.relationships
 CREATE UNIQUE INDEX relationships_one_current_un
     ON survey.relationships (relationship_id)
     WHERE effective_to = '9999-12-31 23:59:59+00';
-CREATE UNIQUE INDEX relationships_one_draft_un
-    ON survey.relationships (relationship_id)
-    WHERE is_draft = true;
 
 CREATE SEQUENCE IF NOT EXISTS survey.answers_seq START WITH 1 INCREMENT BY 1;
 CREATE TABLE IF NOT EXISTS survey.answers

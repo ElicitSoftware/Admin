@@ -46,9 +46,9 @@ import java.util.UUID;
  *       dimensions, ontology, metadata). It is used to resolve FK references; new IDs are
  *       allocated from sequences in this system.</li>
  *   <li>Every Type 2 table's trailing {@code version|effective_from|effective_to|
- *       published_by|published_comment|is_draft} fields are parsed (so field-count
+ *       published_by|published_comment} fields are parsed (so field-count
  *       validation and escaping still work) but their values are discarded — every imported
- *       row is created fresh as the current, non-draft, version 0 row via each column's own
+ *       row is created fresh as the current, version 0 row via each column's own
  *       schema default, never from the file. A file with an outdated
  *       {@code ELICIT_SURVEY_EXPORT_V1} header (pre-Kimball, no durable keys or Type 2
  *       columns) is rejected outright by the format-version check below — there is no
@@ -556,17 +556,17 @@ public class SurveyDefinitionImportService {
 
     /**
      * Inserts a new select_group row. Type 2 columns (version/effective_from/effective_to/
-     * is_draft/durable id) are left to their schema defaults; published_by/published_comment
+     * durable id) are left to their schema defaults; published_by/published_comment
      * are parsed but not inserted (left {@code NULL}). {@code element_key} is carried over
      * verbatim from the file (or freshly generated if absent, BR-061-style) — see
      * {@link #resolveElementKey(String)}.
-     * Fields: source_id|element_key|name|description|data_type|version|effective_from|effective_to|published_by|published_comment|is_draft
+     * Fields: source_id|element_key|name|description|data_type|version|effective_from|effective_to|published_by|published_comment
      *
      * @return the new row's durable {@code select_group_id}
      */
     private Long insertSelectGroup(String[] fields, Long surveyId) {
-        if (fields.length < 11) {
-            throw new IllegalArgumentException("select_groups requires 11 fields, got " + fields.length);
+        if (fields.length < 10) {
+            throw new IllegalArgumentException("select_groups requires 10 fields, got " + fields.length);
         }
         UUID elementKey = resolveElementKey(fields[1]);
         Query seqQuery = em.createNativeQuery("SELECT nextval('survey.select_groups_seq')");
@@ -592,11 +592,11 @@ public class SurveyDefinitionImportService {
      * Inserts a new select_item row; select_group_id (durable) resolved via selectGroupIdMap.
      * {@code element_key} carried over verbatim (or freshly generated) — see
      * {@link #resolveElementKey(String)}.
-     * Fields: source_id|element_key|select_group_id|display_text|display_order|coded_value|version|effective_from|effective_to|published_by|published_comment|is_draft
+     * Fields: source_id|element_key|select_group_id|display_text|display_order|coded_value|version|effective_from|effective_to|published_by|published_comment
      */
     private void insertSelectItem(String[] fields, Long surveyId, Map<Long, Long> selectGroupIdMap) {
-        if (fields.length < 12) {
-            throw new IllegalArgumentException("select_items requires 12 fields, got " + fields.length);
+        if (fields.length < 11) {
+            throw new IllegalArgumentException("select_items requires 11 fields, got " + fields.length);
         }
         UUID elementKey = resolveElementKey(fields[1]);
         Long oldGroupId = parseLongOrNull(fields[2]);
@@ -619,15 +619,15 @@ public class SurveyDefinitionImportService {
     /**
      * Inserts a new step row. {@code element_key} carried over verbatim (or freshly
      * generated) — see {@link #resolveElementKey(String)}.
-     * Fields: source_id|element_key|display_order|name|dimension_name|description|version|effective_from|effective_to|published_by|published_comment|is_draft
+     * Fields: source_id|element_key|display_order|name|dimension_name|description|version|effective_from|effective_to|published_by|published_comment
      * <p>
      * Note: If dimension_name is empty, it defaults to the step name to satisfy NOT NULL constraint.
      *
      * @return the new row's durable {@code step_id}
      */
     private Long insertStep(String[] fields, Long surveyId) {
-        if (fields.length < 12) {
-            throw new IllegalArgumentException("steps requires 12 fields, got " + fields.length);
+        if (fields.length < 11) {
+            throw new IllegalArgumentException("steps requires 11 fields, got " + fields.length);
         }
         UUID elementKey = resolveElementKey(fields[1]);
         Query seqQuery = em.createNativeQuery("SELECT nextval('survey.steps_seq')");
@@ -659,15 +659,15 @@ public class SurveyDefinitionImportService {
     /**
      * Inserts a new section row. {@code element_key} carried over verbatim (or freshly
      * generated) — see {@link #resolveElementKey(String)}.
-     * Fields: source_id|element_key|display_order|name|dimension_name|description|version|effective_from|effective_to|published_by|published_comment|is_draft
+     * Fields: source_id|element_key|display_order|name|dimension_name|description|version|effective_from|effective_to|published_by|published_comment
      * <p>
      * Note: If dimension_name is empty, it defaults to the section name to satisfy NOT NULL constraint.
      *
      * @return the new row's durable {@code section_id}
      */
     private Long insertSection(String[] fields, Long surveyId) {
-        if (fields.length < 12) {
-            throw new IllegalArgumentException("sections requires 12 fields, got " + fields.length);
+        if (fields.length < 11) {
+            throw new IllegalArgumentException("sections requires 11 fields, got " + fields.length);
         }
         UUID elementKey = resolveElementKey(fields[1]);
         Query seqQuery = em.createNativeQuery("SELECT nextval('survey.sections_seq')");
@@ -700,14 +700,14 @@ public class SurveyDefinitionImportService {
      * Inserts a new steps_sections row; step_id and section_id (durable) resolved via maps.
      * {@code element_key} carried over verbatim (or freshly generated) — see
      * {@link #resolveElementKey(String)}.
-     * Fields: source_id|element_key|step_id|step_display_order|section_id|section_display_order|display_key|version|effective_from|effective_to|published_by|published_comment|is_draft
+     * Fields: source_id|element_key|step_id|step_display_order|section_id|section_display_order|display_key|version|effective_from|effective_to|published_by|published_comment
      *
      * @return the new row's durable {@code steps_sections_id}
      */
     private Long insertStepsSection(String[] fields, Long surveyId,
             Map<Long, Long> stepIdMap, Map<Long, Long> sectionIdMap) {
-        if (fields.length < 13) {
-            throw new IllegalArgumentException("steps_sections requires 13 fields, got " + fields.length);
+        if (fields.length < 12) {
+            throw new IllegalArgumentException("steps_sections requires 12 fields, got " + fields.length);
         }
         UUID elementKey = resolveElementKey(fields[1]);
         Long newStepId = resolveRequired(parseLongOrNull(fields[2]), stepIdMap, "step (for steps_sections)");
@@ -740,13 +740,13 @@ public class SurveyDefinitionImportService {
      * {@link #resolveElementKey(String)}.
      * Fields: source_id|element_key|type_id|text|short_text|tool_tip|required|min_value|max_value|
      *         validation_text|select_group_id|mask|placeholder|default_value|variant|
-     *         version|effective_from|effective_to|published_by|published_comment|is_draft
+     *         version|effective_from|effective_to|published_by|published_comment
      *
      * @return the new row's durable {@code question_id}
      */
     private Long insertQuestion(String[] fields, Long surveyId, Map<Long, Long> selectGroupIdMap) {
-        if (fields.length < 21) {
-            throw new IllegalArgumentException("questions requires 21 fields, got " + fields.length);
+        if (fields.length < 20) {
+            throw new IllegalArgumentException("questions requires 20 fields, got " + fields.length);
         }
         UUID elementKey = resolveElementKey(fields[1]);
         Long oldSelectGroupId = parseLongOrNull(fields[10]);
@@ -789,14 +789,14 @@ public class SurveyDefinitionImportService {
      * Inserts a new sections_questions row; question_id and section_id (durable) resolved via maps.
      * {@code element_key} carried over verbatim (or freshly generated) — see
      * {@link #resolveElementKey(String)}.
-     * Fields: source_id|element_key|question_id|section_id|display_order|version|effective_from|effective_to|published_by|published_comment|is_draft
+     * Fields: source_id|element_key|question_id|section_id|display_order|version|effective_from|effective_to|published_by|published_comment
      *
      * @return the new row's durable {@code sections_question_id}
      */
     private Long insertSectionsQuestion(String[] fields, Long surveyId,
             Map<Long, Long> questionIdMap, Map<Long, Long> sectionIdMap) {
-        if (fields.length < 11) {
-            throw new IllegalArgumentException("sections_questions requires 11 fields, got " + fields.length);
+        if (fields.length < 10) {
+            throw new IllegalArgumentException("sections_questions requires 10 fields, got " + fields.length);
         }
         UUID elementKey = resolveElementKey(fields[1]);
         Long newQuestionId = resolveRequired(parseLongOrNull(fields[2]), questionIdMap, "question (for sections_questions)");
@@ -827,13 +827,13 @@ public class SurveyDefinitionImportService {
      * Fields: source_id|element_key|upstream_step_id|upstream_sq_id|downstream_step_id|downstream_ss_id|
      *         downstream_sq_id|operator_id|action_id|description|token|reference_value|
      *         default_upstream_value|override_upstream_value|version|effective_from|
-     *         effective_to|published_by|published_comment|is_draft
+     *         effective_to|published_by|published_comment
      */
     private void insertRelationship(String[] fields, Long surveyId,
             Map<Long, Long> stepIdMap, Map<Long, Long> sectionsQuestionIdMap,
             Map<Long, Long> stepsSectionIdMap) {
-        if (fields.length < 20) {
-            throw new IllegalArgumentException("relationships requires 20 fields, got " + fields.length);
+        if (fields.length < 19) {
+            throw new IllegalArgumentException("relationships requires 19 fields, got " + fields.length);
         }
         UUID elementKey = resolveElementKey(fields[1]);
         Long newUpstreamStepId = resolveNullable(parseLongOrNull(fields[2]), stepIdMap, "step (upstream)");
