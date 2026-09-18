@@ -393,4 +393,25 @@ class SurveyDefinitionImportServiceTest {
 
         assertTrue(ex.getMessage().contains("No ID mapping found"), ex.getMessage());
     }
+
+    /** A record the file marks as retired is not installed; the summary counts it as skipped. */
+    @Test
+    @TestTransaction
+    void retiredRecordsAreSkippedOnInstall() {
+        java.util.UUID surveyKey = java.util.UUID.randomUUID();
+        String content = "# ELICIT_SURVEY_EXPORT_V1\n\n"
+                + "surveys: 1|" + surveyKey + "|ImpRetire|1|Import Retire|||||\n"
+                + "steps: 1|" + java.util.UUID.randomUUID() + "|1|Live Step|D||0|||||\n"
+                + "steps: 2|" + java.util.UUID.randomUUID() + "|2|Retired Step|D||0|1970-01-01 00:00:00+00|2026-09-17 12:00:00+00||\n";
+
+        SurveyDefinitionImportService.ImportResult result =
+                surveyDefinitionImportService.importFromFile(toStream(content), "retire.elicit");
+
+        assertTrue(result.isSuccess(), () -> "import errors: " + result.getErrors());
+        assertEquals(1, result.getCounts().get("steps"));
+        assertEquals(1, result.getCounts().get("skipped_retired"));
+        long surveyId = queryLong("SELECT id FROM survey.surveys WHERE survey_key = ?1", surveyKey);
+        assertEquals(1L, queryLong("SELECT count(*) FROM survey.steps WHERE survey_id = ?1", surveyId));
+        assertEquals(0L, queryLong("SELECT count(*) FROM survey.steps WHERE survey_id = ?1 AND name = 'Retired Step'", surveyId));
+    }
 }

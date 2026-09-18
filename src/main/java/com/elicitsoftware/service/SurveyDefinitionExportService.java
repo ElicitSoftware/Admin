@@ -438,8 +438,10 @@ public class SurveyDefinitionExportService {
         Query query = em.createNativeQuery(
                 "SELECT select_group_id, select_group_key, name, description, data_type, " +
                 "version, effective_from, effective_to, published_by, published_comment " +
-                "FROM survey.select_groups " +
-                "WHERE survey_id = :surveyId AND effective_to = '9999-12-31 23:59:59+00' " +
+                "FROM survey.select_groups t " +
+                "WHERE survey_id = :surveyId AND (effective_to = '9999-12-31 23:59:59+00' " +
+                "   OR (NOT EXISTS (SELECT 1 FROM survey.select_groups c WHERE c.select_group_id = t.select_group_id AND c.effective_to = '9999-12-31 23:59:59+00') " +
+                "       AND version = (SELECT MAX(l.version) FROM survey.select_groups l WHERE l.select_group_id = t.select_group_id))) " +
                 "ORDER BY select_group_id");
         query.setParameter("surveyId", surveyId);
         return toObjectArrayRows(query.getResultList(), "select_groups");
@@ -455,8 +457,10 @@ public class SurveyDefinitionExportService {
         Query query = em.createNativeQuery(
                 "SELECT select_item_id, select_item_key, select_group_id, display_text, display_order, coded_value, " +
                 "version, effective_from, effective_to, published_by, published_comment " +
-                "FROM survey.select_items " +
-                "WHERE survey_id = :surveyId AND effective_to = '9999-12-31 23:59:59+00' " +
+                "FROM survey.select_items t " +
+                "WHERE survey_id = :surveyId AND (effective_to = '9999-12-31 23:59:59+00' " +
+                "   OR (NOT EXISTS (SELECT 1 FROM survey.select_items c WHERE c.select_item_id = t.select_item_id AND c.effective_to = '9999-12-31 23:59:59+00') " +
+                "       AND version = (SELECT MAX(l.version) FROM survey.select_items l WHERE l.select_item_id = t.select_item_id))) " +
                 "ORDER BY select_group_id, display_order");
         query.setParameter("surveyId", surveyId);
         return toObjectArrayRows(query.getResultList(), "select_items");
@@ -472,8 +476,10 @@ public class SurveyDefinitionExportService {
         Query query = em.createNativeQuery(
                 "SELECT step_id, step_key, display_order, name, dimension_name, description, " +
                 "version, effective_from, effective_to, published_by, published_comment " +
-                "FROM survey.steps " +
-                "WHERE survey_id = :surveyId AND effective_to = '9999-12-31 23:59:59+00' " +
+                "FROM survey.steps t " +
+                "WHERE survey_id = :surveyId AND (effective_to = '9999-12-31 23:59:59+00' " +
+                "   OR (NOT EXISTS (SELECT 1 FROM survey.steps c WHERE c.step_id = t.step_id AND c.effective_to = '9999-12-31 23:59:59+00') " +
+                "       AND version = (SELECT MAX(l.version) FROM survey.steps l WHERE l.step_id = t.step_id))) " +
                 "ORDER BY display_order");
         query.setParameter("surveyId", surveyId);
         return toObjectArrayRows(query.getResultList(), "steps");
@@ -489,8 +495,10 @@ public class SurveyDefinitionExportService {
         Query query = em.createNativeQuery(
                 "SELECT section_id, section_key, display_order, name, dimension_name, description, " +
                 "version, effective_from, effective_to, published_by, published_comment " +
-                "FROM survey.sections " +
-                "WHERE survey_id = :surveyId AND effective_to = '9999-12-31 23:59:59+00' " +
+                "FROM survey.sections t " +
+                "WHERE survey_id = :surveyId AND (effective_to = '9999-12-31 23:59:59+00' " +
+                "   OR (NOT EXISTS (SELECT 1 FROM survey.sections c WHERE c.section_id = t.section_id AND c.effective_to = '9999-12-31 23:59:59+00') " +
+                "       AND version = (SELECT MAX(l.version) FROM survey.sections l WHERE l.section_id = t.section_id))) " +
                 "ORDER BY display_order");
         query.setParameter("surveyId", surveyId);
         return toObjectArrayRows(query.getResultList(), "sections");
@@ -506,8 +514,10 @@ public class SurveyDefinitionExportService {
         Query query = em.createNativeQuery(
                 "SELECT steps_sections_id, steps_sections_key, step_id, step_display_order, section_id, section_display_order, display_key, " +
                 "version, effective_from, effective_to, published_by, published_comment " +
-                "FROM survey.steps_sections " +
-                "WHERE survey_id = :surveyId AND effective_to = '9999-12-31 23:59:59+00' " +
+                "FROM survey.steps_sections t " +
+                "WHERE survey_id = :surveyId AND (effective_to = '9999-12-31 23:59:59+00' " +
+                "   OR (NOT EXISTS (SELECT 1 FROM survey.steps_sections c WHERE c.steps_sections_id = t.steps_sections_id AND c.effective_to = '9999-12-31 23:59:59+00') " +
+                "       AND version = (SELECT MAX(l.version) FROM survey.steps_sections l WHERE l.steps_sections_id = t.steps_sections_id))) " +
                 "ORDER BY display_key");
         query.setParameter("surveyId", surveyId);
         return toObjectArrayRows(query.getResultList(), "steps_sections");
@@ -524,8 +534,10 @@ public class SurveyDefinitionExportService {
                 "SELECT question_id, question_key, type_id, text, short_text, tool_tip, required, min_value, max_value, " +
                 "validation_text, select_group_id, mask, placeholder, default_value, variant, " +
                 "version, effective_from, effective_to, published_by, published_comment " +
-                "FROM survey.questions " +
-                "WHERE survey_id = :surveyId AND effective_to = '9999-12-31 23:59:59+00' " +
+                "FROM survey.questions t " +
+                "WHERE survey_id = :surveyId AND (effective_to = '9999-12-31 23:59:59+00' " +
+                "   OR (NOT EXISTS (SELECT 1 FROM survey.questions c WHERE c.question_id = t.question_id AND c.effective_to = '9999-12-31 23:59:59+00') " +
+                "       AND version = (SELECT MAX(l.version) FROM survey.questions l WHERE l.question_id = t.question_id))) " +
                 "ORDER BY question_id");
         query.setParameter("surveyId", surveyId);
         return toObjectArrayRows(query.getResultList(), "questions");
@@ -541,8 +553,10 @@ public class SurveyDefinitionExportService {
         Query query = em.createNativeQuery(
                 "SELECT sections_question_id, sections_question_key, question_id, section_id, display_order, " +
                 "version, effective_from, effective_to, published_by, published_comment " +
-                "FROM survey.sections_questions " +
-                "WHERE survey_id = :surveyId AND effective_to = '9999-12-31 23:59:59+00' " +
+                "FROM survey.sections_questions t " +
+                "WHERE survey_id = :surveyId AND (effective_to = '9999-12-31 23:59:59+00' " +
+                "   OR (NOT EXISTS (SELECT 1 FROM survey.sections_questions c WHERE c.sections_question_id = t.sections_question_id AND c.effective_to = '9999-12-31 23:59:59+00') " +
+                "       AND version = (SELECT MAX(l.version) FROM survey.sections_questions l WHERE l.sections_question_id = t.sections_question_id))) " +
                 "ORDER BY sections_question_id");
         query.setParameter("surveyId", surveyId);
         return toObjectArrayRows(query.getResultList(), "sections_questions");
@@ -560,8 +574,10 @@ public class SurveyDefinitionExportService {
                 "downstream_sq_id, operator_id, action_id, description, token, reference_value, " +
                 "default_upstream_value, override_upstream_value, " +
                 "version, effective_from, effective_to, published_by, published_comment " +
-                "FROM survey.relationships " +
-                "WHERE survey_id = :surveyId AND effective_to = '9999-12-31 23:59:59+00' " +
+                "FROM survey.relationships t " +
+                "WHERE survey_id = :surveyId AND (effective_to = '9999-12-31 23:59:59+00' " +
+                "   OR (NOT EXISTS (SELECT 1 FROM survey.relationships c WHERE c.relationship_id = t.relationship_id AND c.effective_to = '9999-12-31 23:59:59+00') " +
+                "       AND version = (SELECT MAX(l.version) FROM survey.relationships l WHERE l.relationship_id = t.relationship_id))) " +
                 "ORDER BY relationship_id");
         query.setParameter("surveyId", surveyId);
         return toObjectArrayRows(query.getResultList(), "relationships");

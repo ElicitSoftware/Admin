@@ -263,6 +263,13 @@ public class SurveyDefinitionImportService {
                 String fieldData = line.substring(colonIndex + 1).trim();
                 String[] fields = parseFields(fieldData);
 
+                if (SurveyDefinitionFileFields.isRetired(tableName, fields)) {
+                    // A removal made in the authoring tool: nothing to install here (BR: the
+                    // element never existed at this site), but count it so the summary explains
+                    // why the file's header count and the installed count differ.
+                    counts.merge("skipped_retired", 1, Integer::sum);
+                    continue;
+                }
                 try {
                     switch (tableName) {
                         case "surveys": {

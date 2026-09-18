@@ -124,10 +124,10 @@ public class SurveyDefinitionApplyView extends VerticalLayout {
             case SurveyDefinitionUpdateService.UpdateResult updated -> {
                 Map<String, SurveyDefinitionUpdateService.TableUpdateCounts> counts = updated.getCounts();
                 if (counts != null) {
-                    summary.append("\ncreated / versioned / unchanged:\n");
+                    summary.append("\ncreated / versioned / unchanged / retired:\n");
                     counts.forEach((table, c) -> summary.append("  ").append(table).append(": ")
                             .append(c.created()).append(" / ").append(c.versioned())
-                            .append(" / ").append(c.unchanged()).append("\n"));
+                            .append(" / ").append(c.unchanged()).append(" / ").append(c.retired()).append("\n"));
                 }
                 appendErrors(summary, updated.getErrors());
             }

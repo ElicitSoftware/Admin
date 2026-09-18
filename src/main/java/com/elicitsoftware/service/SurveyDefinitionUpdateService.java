@@ -69,6 +69,8 @@ import java.util.UUID;
  * <p>
  * A target row whose {@code element_key} no longer appears anywhere in the file (i.e. the element
  * was removed from the authored copy) is left completely alone — this service never deletes.
+ * A record the file marks as <em>retired</em> (closed {@code effective_to}, the authoring tool's
+ * removal) has its current row closed here too; nothing is inserted (see {@code retireCurrentRow}).
  * <p>
  * The entire update runs inside one {@code @Transactional} method; any failure rolls back every
  * change made so far (BR-066).
@@ -99,14 +101,16 @@ public class SurveyDefinitionUpdateService {
      * How one file row was reconciled against the target survey's current state.
      */
     public enum ChangeType {
-        CREATED, VERSIONED, UNCHANGED
+        CREATED, VERSIONED, UNCHANGED,
+        /** The file marks the record as retired and the target's current row was closed. */
+        RETIRED
     }
 
     /**
      * Per-table breakdown of how many rows were created, versioned (Type 2) or updated in place
      * (Type 1), and left unchanged.
      */
-    public record TableUpdateCounts(int created, int versioned, int unchanged) {
+    public record TableUpdateCounts(int created, int versioned, int unchanged, int retired) {
     }
 
     /**
@@ -145,17 +149,19 @@ public class SurveyDefinitionUpdateService {
         int created;
         int versioned;
         int unchanged;
+        int retired;
 
         void record(ChangeType type) {
             switch (type) {
                 case CREATED -> created++;
                 case VERSIONED -> versioned++;
                 case UNCHANGED -> unchanged++;
+                case RETIRED -> retired++;
             }
         }
 
         TableUpdateCounts toImmutable() {
-            return new TableUpdateCounts(created, versioned, unchanged);
+            return new TableUpdateCounts(created, versioned, unchanged, retired);
         }
     }
 
@@ -298,48 +304,64 @@ public class SurveyDefinitionUpdateService {
                             break;
                         }
                         case "select_groups": {
-                            UpsertOutcome outcome = upsertSelectGroup(fields, target.id);
+                            UpsertOutcome outcome = SurveyDefinitionFileFields.isRetired("select_groups", fields)
+                                    ? retireCurrentRow("survey.select_groups", "select_group_key", "select_group_id", fields, target.id)
+                                    : upsertSelectGroup(fields, target.id);
                             selectGroupIdMap.put(SurveyDefinitionFileFields.parseLongOrNull(fields[0]), outcome.durableId());
                             counts.get("select_groups").record(outcome.changeType());
                             break;
                         }
                         case "select_items": {
-                            ChangeType outcome = upsertSelectItem(fields, target.id, selectGroupIdMap);
+                            ChangeType outcome = SurveyDefinitionFileFields.isRetired("select_items", fields)
+                                    ? retireCurrentRow("survey.select_items", "select_item_key", "select_item_id", fields, target.id).changeType()
+                                    : upsertSelectItem(fields, target.id, selectGroupIdMap);
                             counts.get("select_items").record(outcome);
                             break;
                         }
                         case "steps": {
-                            UpsertOutcome outcome = upsertStep(fields, target.id);
+                            UpsertOutcome outcome = SurveyDefinitionFileFields.isRetired("steps", fields)
+                                    ? retireCurrentRow("survey.steps", "step_key", "step_id", fields, target.id)
+                                    : upsertStep(fields, target.id);
                             stepIdMap.put(SurveyDefinitionFileFields.parseLongOrNull(fields[0]), outcome.durableId());
                             counts.get("steps").record(outcome.changeType());
                             break;
                         }
                         case "sections": {
-                            UpsertOutcome outcome = upsertSection(fields, target.id);
+                            UpsertOutcome outcome = SurveyDefinitionFileFields.isRetired("sections", fields)
+                                    ? retireCurrentRow("survey.sections", "section_key", "section_id", fields, target.id)
+                                    : upsertSection(fields, target.id);
                             sectionIdMap.put(SurveyDefinitionFileFields.parseLongOrNull(fields[0]), outcome.durableId());
                             counts.get("sections").record(outcome.changeType());
                             break;
                         }
                         case "steps_sections": {
-                            UpsertOutcome outcome = upsertStepsSection(fields, target.id, stepIdMap, sectionIdMap);
+                            UpsertOutcome outcome = SurveyDefinitionFileFields.isRetired("steps_sections", fields)
+                                    ? retireCurrentRow("survey.steps_sections", "steps_sections_key", "steps_sections_id", fields, target.id)
+                                    : upsertStepsSection(fields, target.id, stepIdMap, sectionIdMap);
                             stepsSectionIdMap.put(SurveyDefinitionFileFields.parseLongOrNull(fields[0]), outcome.durableId());
                             counts.get("steps_sections").record(outcome.changeType());
                             break;
                         }
                         case "questions": {
-                            UpsertOutcome outcome = upsertQuestion(fields, target.id, selectGroupIdMap);
+                            UpsertOutcome outcome = SurveyDefinitionFileFields.isRetired("questions", fields)
+                                    ? retireCurrentRow("survey.questions", "question_key", "question_id", fields, target.id)
+                                    : upsertQuestion(fields, target.id, selectGroupIdMap);
                             questionIdMap.put(SurveyDefinitionFileFields.parseLongOrNull(fields[0]), outcome.durableId());
                             counts.get("questions").record(outcome.changeType());
                             break;
                         }
                         case "sections_questions": {
-                            UpsertOutcome outcome = upsertSectionsQuestion(fields, target.id, questionIdMap, sectionIdMap);
+                            UpsertOutcome outcome = SurveyDefinitionFileFields.isRetired("sections_questions", fields)
+                                    ? retireCurrentRow("survey.sections_questions", "sections_question_key", "sections_question_id", fields, target.id)
+                                    : upsertSectionsQuestion(fields, target.id, questionIdMap, sectionIdMap);
                             sectionsQuestionIdMap.put(SurveyDefinitionFileFields.parseLongOrNull(fields[0]), outcome.durableId());
                             counts.get("sections_questions").record(outcome.changeType());
                             break;
                         }
                         case "relationships": {
-                            ChangeType outcome = upsertRelationship(fields, target.id, stepIdMap, sectionsQuestionIdMap, stepsSectionIdMap);
+                            ChangeType outcome = SurveyDefinitionFileFields.isRetired("relationships", fields)
+                                    ? retireCurrentRow("survey.relationships", "relationship_key", "relationship_id", fields, target.id).changeType()
+                                    : upsertRelationship(fields, target.id, stepIdMap, sectionsQuestionIdMap, stepsSectionIdMap);
                             counts.get("relationships").record(outcome);
                             break;
                         }
@@ -1243,6 +1265,29 @@ public class SurveyDefinitionUpdateService {
     // -------------------------------------------------------------------------
     // Helpers
     // -------------------------------------------------------------------------
+
+    /**
+     * A record the file marks as retired (a closed {@code effective_to}, written by the authoring
+     * tool when an element is removed): close the target's current row for that element key at
+     * now, exactly as versioning would, but insert nothing. Respondents who started before this
+     * instant keep the element through the as-of resolution; new respondents never see it. No
+     * current row (already retired here, or never installed) is a no-op. The durable id is still
+     * returned so retired dependents in the same file can resolve their references.
+     */
+    private UpsertOutcome retireCurrentRow(String table, String keyColumn, String durableColumn, String[] fields, Integer surveyId) {
+        UUID elementKey = requireElementKey(fields[1], table.substring(table.indexOf('.') + 1));
+        Object[] current = findCurrentRow(table, keyColumn, elementKey, surveyId, "id, " + durableColumn);
+        if (current != null) {
+            closeCurrentVersion(table, ((Number) current[0]).longValue());
+            return new UpsertOutcome(toLong(current[1]), ChangeType.RETIRED);
+        }
+        Query latest = em.createNativeQuery("SELECT " + durableColumn + " FROM " + table
+                + " WHERE survey_id = ?1 AND " + keyColumn + " = ?2 ORDER BY version DESC LIMIT 1");
+        latest.setParameter(1, surveyId);
+        latest.setParameter(2, elementKey);
+        List<?> rows = latest.getResultList();
+        return new UpsertOutcome(rows.isEmpty() ? null : toLong(rows.get(0)), ChangeType.UNCHANGED);
+    }
 
     /**
      * Every structural row in an update file must carry its stable element_key — matching, the
