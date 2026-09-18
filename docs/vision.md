@@ -21,6 +21,8 @@ Authoring tool.
   reports produced from respondent submissions.
 - **Platform operators** — staff responsible for OIDC-based access control and
   the health of the deployed service.
+- **Analysts** — researchers who read aggregate dashboards over the reporting
+  schema. An analyst may hold no other console role.
 
 ## Goals
 
@@ -30,6 +32,8 @@ Authoring tool.
 - Present results and reports to authorized staff.
 - Enforce role-based access via an OIDC provider (Keycloak in test; any
   OIDC-compliant server in production).
+- Hand analysts off to the platform's analytics tool (Apache Superset) with
+  single sign-on, and surface its primary dashboard inside the console.
 - Operate as a Quarkus service deployable via Docker with health, metrics, and
   tracing endpoints.
 
@@ -41,13 +45,16 @@ Authoring tool.
 - Reminder / invitation email workflows.
 - Results and report viewing for authorized roles.
 - OIDC authentication and authorization (pre-defined roles).
+- Authorising access to the platform's analytics tool and embedding its
+  primary dashboard in the console.
 - Observability: OpenTelemetry tracing, SmallRye Health, Micrometer/Prometheus
   metrics.
 
 **Out of scope** (handled by sibling modules)
 - Rendering surveys and recording respondent answers → Survey module.
 - Authoring surveys / defining question trees → Authoring tool.
-- Cross-survey analytics dashboards → downstream reporting tools.
+- Building cross-survey analytics dashboards → downstream reporting tools
+  (Apache Superset); Admin embeds and links to them but does not author them.
 
 ## Constraints
 

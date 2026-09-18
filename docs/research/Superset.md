@@ -1,6 +1,8 @@
 # Embedding Apache Superset in Elicit Admin
 
-> **Status (2026-09-18):** Research. Nothing described here is implemented. This document
+> **Status (2026-09-18):** Implementation planned; see
+> `docs/plan/superset-analytics-implementation.md` for the resolved decisions (which close
+> open decisions 1–8 and 11 in section 10) and the sequenced steps. This document
 > records what was learned about [Apache Superset](https://superset.apache.org/), how it
 > would attach to the existing `surveyreport` star schema, how an **Analytics** role and
 > left-menu item would reach it from Admin, which out-of-the-box visualizations to ship,

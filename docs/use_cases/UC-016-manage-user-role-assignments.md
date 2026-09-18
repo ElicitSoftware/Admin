@@ -5,9 +5,9 @@
 **Use Case ID:** UC-016
 **Use Case Name:** Manage User Role Assignments
 **Primary Actor:** Survey Administrator
-**Goal:** Directly grant or clear a single database-fallback role for a user, when the deployment is configured to source roles from the database rather than relying solely on OIDC.
+**Goal:** Directly grant or clear a user's database-fallback ladder role and, independently, their analytics access, when the deployment is configured to source roles from the database rather than relying solely on OIDC.
 
-**Status:** Implemented
+**Status:** Implemented (revised 2026-09-18: analytics grant added, Planned)
 
 ## Preconditions
 
@@ -17,10 +17,10 @@
 ## Main Success Scenario
 
 1. The administrator opens Edit User for a user (UC-008).
-2. Because the deployment is in database mode, the system shows a Database Role Assignment section with a heading, explanatory text, and a single-select role dropdown, pre-populated with the user's current raw grant, if any.
-3. The administrator selects a role, or clears the current selection.
+2. Because the deployment is in database mode, the system shows a Database Role Assignment section with a heading, explanatory text, a single-select role dropdown pre-populated with the user's current ladder grant (if any), and an Analytics checkbox reflecting whether the user holds `elicit_analytics`.
+3. The administrator selects a role or clears the current selection, and checks or unchecks Analytics.
 4. The administrator saves.
-5. The system sets, replaces, or clears the user's single grant in the local role table to match the selection, then returns to the list.
+5. The system sets, replaces, or clears the user's ladder grant and, separately, adds or removes the analytics grant in the local role table to match the selections, then returns to the list.
 
 ## Alternative Flows
 
@@ -44,7 +44,7 @@
 
 ### Success Postconditions
 
-- The user's local role table entry reflects the administrator's selection: exactly one row if a role was chosen, or none if cleared.
+- The user's local role table rows reflect the administrator's selections: at most one ladder row, and an `elicit_analytics` row if and only if Analytics was checked.
 
 ### Failure Postconditions
 
@@ -54,15 +54,15 @@
 
 ### BR-054: Recognized roles enforced at two layers
 
-Only `elicit_admin`, `elicit_user`, and `elicit_importer` may be granted. This is enforced both by the service layer and by a database check constraint on `survey.user_roles.role_name`.
+Only `elicit_admin`, `elicit_user`, `elicit_importer`, and `elicit_analytics` may be granted. This is enforced both by the service layer and by a database check constraint on `survey.user_roles.role_name`.
 
-### BR-055: At most one raw grant per user
+### BR-055: At most one ladder grant per user, plus an independent analytics grant
 
-A user holds at most one raw role grant at a time. This is enforced by the service, which deletes any existing grant before inserting the selected one; no additional schema uniqueness beyond the existing composite primary key is needed.
+A user holds at most one raw ladder grant (`elicit_admin`, `elicit_user`, or `elicit_importer`) at a time. This is enforced by the service, which deletes any existing ladder grant before inserting the selected one. The `elicit_analytics` grant is stored as its own row and is added or removed without touching the ladder grant; changing the ladder grant never removes it. No additional schema uniqueness beyond the existing composite primary key is needed.
 
 ### BR-056: Administrator picks the highest role only
 
-The administrator selects a user's single highest role. The cumulative role hierarchy (UC-001, BR-006) fills in the implied roles at resolution time; the dropdown never needs to represent more than one selection.
+The administrator selects a user's single highest ladder role. The cumulative role hierarchy (UC-001, BR-006) fills in the implied roles at resolution time; the dropdown never needs to represent more than one selection. Analytics is outside the ladder and is never implied by it (UC-020, BR-060), which is why it is a separate checkbox.
 
 ### BR-057: Grants require an existing user
 

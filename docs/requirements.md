@@ -28,6 +28,8 @@
 | FR-017 | Update Survey Definition            | As a system administrator, I want to push a revised survey definition into an existing survey so that a survey authored once can be kept in sync across separate deployments (e.g., institutions) without losing their respondent data. | Medium   | Implemented |
 | FR-018 | Apply Survey Definition             | As a system administrator, I want to upload a survey definition without first deciding whether it is new to this deployment, so that one distributed file can be applied unchanged at every site in a multi-site rollout. | Medium   | Implemented |
 | FR-019 | Surface Missing Survey Definition   | As a survey administrator, I want the console to tell me when no survey is installed so that I understand why subject registration and reporting have nothing to work with, rather than inferring it from empty grids. | Medium   | Implemented |
+| FR-020 | View Analytics Dashboard            | As an analyst, I want an Analytics item that shows the Survey Operations dashboard inside the console and lets me open the full analytics tool, so that I can read and explore aggregate results without a second login. | High     | Planned     |
+| FR-021 | Grant Analytics Access              | As a system administrator, I want to grant or revoke a user's analytics access independently of their console role, so that researchers can read dashboards without gaining subject administration rights. | Medium   | Planned     |
 
 ## Non-Functional Requirements
 
@@ -43,6 +45,7 @@
 | NFR-008 | Deployment Portability      | The Admin service must run as a single Docker container configured entirely via environment variables, with no host-specific setup. | Portability | Medium   | Implemented |
 | NFR-009 | Concurrent Admin Users      | The system must support at least 25 concurrent admin users without response times exceeding the NFR-001 threshold.            | Scalability     | Low      | Open        |
 | NFR-010 | Service Availability        | The Admin service must maintain 99.5% uptime during business hours, measured monthly.                                          | Availability    | Medium   | Open        |
+| NFR-011 | Guest Token Lifetime        | Tokens minted for the embedded analytics dashboard must expire within 5 minutes of issue and be refreshed without user action. | Security        | High     | Planned     |
 
 ## Constraints
 
@@ -59,9 +62,11 @@
 | C-009 | PHI Handling             | Subject and respondent records must be treated as potentially containing PHI (e.g., in the FHHS deployment) and handled accordingly. | Regulatory | High     | Open        |
 | C-010 | Accessible Component Usage | UI must be implemented via Vaadin component APIs rather than raw HTML/JS that bypasses framework accessibility support.      | Technical   | Medium   | Verified    |
 | C-011 | Terminology              | The credential a respondent enters to reach a survey is the **access code** (`survey.respondents.access_code`, `Status.accessCode`, the `<ACCESS_CODE>` template placeholder). "Token" is reserved for OIDC/Bearer tokens and the question-text placeholder (`survey.relationships.token`); it must not be used for the respondent credential. | Business    | Medium   | Implemented |
+| C-012 | Analytics Tool License   | The analytics tool is Apache Superset (Apache License 2.0). Elicit redistributes only its own configuration and exported dashboard assets; Superset's LICENSE and NOTICE accompany any customised image. | Business    | Medium   | Planned     |
 
 ## Traceability
 
-Functional requirements FR-001–FR-019 map one-to-one to `docs/use_cases/UC-001`–`UC-019`. See `docs/use_cases.puml`
+Functional requirements FR-001–FR-020 map one-to-one to `docs/use_cases/UC-001`–`UC-020`; FR-021 refines
+`UC-016`. See `docs/use_cases.puml`
 for the actor/use-case diagram and `docs/entity_model.md` for the underlying data model referenced by these
 requirements.

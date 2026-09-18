@@ -63,7 +63,7 @@ Findings that change or sharpen what the research proposed:
 | `docs/requirements.md` | **FR-020 View Analytics Dashboard** — "As an analyst, I want an Analytics item that shows the Survey Operations dashboard inside the console and lets me open the full analytics tool, so that I can read and explore aggregate results without a second login." (High, Planned). **FR-021 Grant Analytics Access** — "As a system administrator, I want to grant or revoke a user's analytics access independently of their console role, so that researchers can read dashboards without gaining subject administration rights." (Medium, Planned). **NFR-011 Guest Token Lifetime** — embedded dashboard tokens expire within 5 minutes and are refreshed silently (Security, High). **C-012 Analytics Tool License** — the analytics tool is Apache Superset (Apache-2.0); Elicit redistributes only configuration and exported dashboard assets. Update the Traceability paragraph to FR-001–FR-021 ↔ UC-001–UC-021 (with FR-021 refining UC-016). |
 | `docs/entity_model.md` | `USER_ROLE.roleName` validation rule: allowed values gain `elicit_analytics`; note that a user may hold one ladder role plus the analytics role. |
 | `docs/use_cases.puml` | Actor `"Analyst" as analyst`. New `usecase "UC-020\nView Analytics Dashboard" as UC020` in the interactive-console group; `analyst --> UC001`, `analyst --> UC020`, `admin --> UC020` *only via grant* (no implicit arrow from admin; add a note). External actor `"Analytics Service" as analytics` → `UC020`. `oidc --> UC020` (SSO). |
-| `docs/use_cases/UC-020-view-analytics-dashboard.md` | Written with `/use-case-spec UC-020`, then hand-edited. Main flow: analyst opens Analytics → console mints a guest token → embedded Survey Operations dashboard renders → "Open in Superset" opens the full tool in a new tab, Keycloak SSO completes without a prompt. Alternatives: A1 analytics URL not configured (item hidden, route 404); A2 user lacks `elicit_analytics` (item hidden, direct route → Access Restricted 403); A3 token expiry (SDK calls back, console mints a new token); A4 Superset unreachable (view shows an error panel with the direct link). Business rules: BR-060 analytics role is orthogonal, never implied; BR-061 guest tokens are read-only, dashboard-scoped, ≤ 5 min; BR-062 the embedded dashboard id and Superset URL are deployment configuration, never code. |
+| `docs/use_cases/UC-020-view-analytics-dashboard.md` | Written with `/use-case-spec UC-020`, then hand-edited. Main flow: analyst opens Analytics → console mints a guest token → embedded Survey Operations dashboard renders → "Open in Superset" opens the full tool in a new tab, Keycloak SSO completes without a prompt. Alternatives: A1 analytics URL not configured (item hidden, route 404); A2 user lacks `elicit_analytics` (item hidden, direct route → Access Restricted 403); A3 token expiry (SDK calls back, console mints a new token); A4 Superset unreachable (view shows an error panel with the direct link). Business rules: BR-080 analytics role is orthogonal, never implied; BR-081 guest tokens are read-only, dashboard-scoped, ≤ 5 min; BR-082 the embedded dashboard id and Superset URL are deployment configuration, never code. |
 | `docs/use_cases/UC-016-manage-user-role-assignments.md` | Revise: step 2 gains the Analytics checkbox; step 5 "sets, replaces, or clears the ladder grant and sets or clears the analytics grant". BR-054 list gains `elicit_analytics`; BR-055 becomes "at most one **ladder** grant plus at most one analytics grant"; BR-056 unchanged for the ladder. Status stays Implemented with a "revised 2026-09-18" note. |
 | `docs/use_cases/UC-001-...md` | Add a sentence to the role-resolution rules: `elicit_analytics` passes through expansion unchanged and counts as an Elicit role for the OIDC/DATABASE decision. |
 | `docs/research/Superset.md` | Status header: "Implementation planned, see `docs/plan/superset-analytics-implementation.md`"; §10 marks decisions 1–8 and 11 resolved. |
@@ -110,7 +110,7 @@ shape as `AuthorizationModeConfig`):
 `isEnabled()` = url, dashboard id and secret all present. `DebugView` masks the secret
 using its existing `maskToken` convention.
 
-### 4.3 Guest token minting (UC-020 BR-061)
+### 4.3 Guest token minting (UC-020 BR-081)
 
 - `pom.xml`: add `io.quarkus:quarkus-smallrye-jwt-build` explicitly.
 - `service/SupersetGuestTokenService.java`: `String mint(SecurityIdentity identity)` builds
@@ -148,14 +148,14 @@ using its existing `maskToken` convention.
 
 | Test class | Cases |
 |---|---|
-| `security/ElicitRolesTest` | UC-001/BR-060: `analyticsDoesNotExpand`, `adminDoesNotImplyAnalytics`, `allContainsAnalytics` |
+| `security/ElicitRolesTest` | UC-001/BR-080: `analyticsDoesNotExpand`, `adminDoesNotImplyAnalytics`, `allContainsAnalytics` |
 | `service/UserRoleServiceTest` | UC-016/BR-055: `settingLadderRolePreservesAnalytics`, `setAnalyticsAddsRow`, `clearingAnalyticsKeepsLadder`, `checkConstraintAcceptsAnalytics` |
 | `admin/flow/EditUserViewRoleAssignmentTest` | UC-016: `analyticsCheckboxVisibleInDatabaseMode`, `savingPersistsAnalyticsWithRole`, `uncheckingRemovesOnlyAnalyticsRow` |
 | `admin/flow/EditUserViewTest` | UC-016/A1: `analyticsCheckboxHiddenInOidcMode` |
 | `security/RoleSecurityIdentityAugmentor{Oidc,Database}ModeTest` | UC-001: analytics-only OIDC identity is not sent to the DB; DB analytics row merges with OIDC ladder role |
 | `admin/flow/MainLayoutTest` | UC-020: `analystSeesAnalyticsItem`, `userWithoutAnalyticsDoesNotSeeItem`, `analyticsItemHiddenWhenNotConfigured` (test profile with the URL unset) |
 | `admin/flow/AnalyticsViewTest` | UC-020: renders "Open in Superset" with the configured URL and target `_blank`; renders the not-configured notice under the unset profile |
-| `service/SupersetGuestTokenServiceTest` | UC-020/BR-061: token verifies with the shared secret; claims `type=guest`, `resources[0].id`, `exp − iat = ttl`; audience present only when configured |
+| `service/SupersetGuestTokenServiceTest` | UC-020/BR-081: token verifies with the shared secret; claims `type=guest`, `resources[0].id`, `exp − iat = ttl`; audience present only when configured |
 | `rest/AnalyticsResourceTest` | UC-020: 200 with `token` for `elicit_analytics`; 403 for `elicit_user`; 401 anonymous |
 
 New test profile `test/AnalyticsDisabledTestProfile` (unset URL) and analytics values in

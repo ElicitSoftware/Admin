@@ -64,7 +64,7 @@
 
 ### BR-001: Recognized application roles
 
-The application recognizes exactly three roles: `elicit_admin`, `elicit_user`, and `elicit_importer`. Any other role carried by the identity provider is ignored when deciding whether database role fallback is needed.
+The application recognizes four roles: the ladder roles `elicit_admin`, `elicit_user`, and `elicit_importer`, and the orthogonal `elicit_analytics` (UC-020). Any other role carried by the identity provider is ignored when deciding whether database role fallback is needed; an identity carrying only `elicit_analytics` counts as role-bearing and is not sent to the database fallback.
 
 ### BR-002: OIDC is the primary authority for roles
 
@@ -84,7 +84,7 @@ The local role table is consulted only when `elicit.authorization.mode=DATABASE`
 
 ### BR-006: Roles are cumulative
 
-Roles imply a hierarchy, independent of source: `elicit_admin` implies `elicit_user` and `elicit_importer`; `elicit_user` implies `elicit_importer`; `elicit_importer` implies only itself. This expansion applies uniformly to roles resolved from OIDC and from the database fallback. Only the raw (unexpanded) role is ever stored in Keycloak or in the local role table; the expanded set exists only at resolution time.
+Roles imply a hierarchy, independent of source: `elicit_admin` implies `elicit_user` and `elicit_importer`; `elicit_user` implies `elicit_importer`; `elicit_importer` implies only itself. `elicit_analytics` is outside the hierarchy: it implies nothing and is implied by nothing, and passes through expansion unchanged. This expansion applies uniformly to roles resolved from OIDC and from the database fallback. Only the raw (unexpanded) roles are ever stored in Keycloak or in the local role table; the expanded set exists only at resolution time.
 
 ---
 
