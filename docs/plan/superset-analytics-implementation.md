@@ -29,11 +29,13 @@
 Findings that change or sharpen what the research proposed:
 
 - **Role visibility across clients.** Admin's Quarkus OIDC extension reads roles from
-  `realm_access.roles` and `resource_access.<its own client>.roles`. A role on the new
-  `elicit-superset` client will *not* appear in Admin's token unless the realm adds a
-  client-role mapper for `elicit-superset` to the `elicit-admin` client and Admin sets
-  `quarkus.oidc.roles.role-claim-path` to both paths. Without this, D2 breaks the menu
-  item in OIDC mode. (Research §4.4 did not cover it.)
+  `realm_access.roles` and `resource_access.<its own client>.roles` only. Keycloak, because
+  the clients allow full scope, already puts *every* client role of the user under
+  `resource_access` in Admin's tokens (verified 2026-09-18 with example tokens from a
+  throwaway Keycloak), so no extra mapper is needed; what is needed is
+  `quarkus.oidc.roles.role-claim-path` listing `realm_access/roles`,
+  `resource_access/elicit-admin/roles` and `resource_access/elicit-superset/roles`, since
+  setting the property replaces the defaults. Done in step 6.4.
 - **`UserRoleService` is replace-all.** `setRole` deletes every row for the user before
   inserting, and `findRoleName` returns the first row. D3 requires separating the ladder
   grant from the analytics grant (UC-016 BR-055 changes). The DB check constraint
@@ -90,9 +92,9 @@ Findings that change or sharpen what the research proposed:
 5. `security/RoleSecurityIdentityAugmentor.java`: no code change expected; add tests
    proving an analytics-only identity is left alone in OIDC mode and merged with DB rows in
    DATABASE mode.
-6. `application.properties`: `quarkus.oidc.roles.role-claim-path=resource_access/elicit-admin/roles,resource_access/elicit-superset/roles`
-   (verify the Quarkus property accepts a list; fall back to a realm-level role mapper on
-   the `elicit-admin` client if not).
+6. `application.properties`: `quarkus.oidc.roles.role-claim-path=realm_access/roles,resource_access/elicit-admin/roles,resource_access/elicit-superset/roles`
+   (`realm_access/roles` kept because the `etl` user carries `elicit_importer` as a realm
+   role). Done: Admin starts with it and the token check in step 6.4 passed.
 
 ### 4.2 Configuration
 
@@ -171,8 +173,8 @@ New test profile `test/AnalyticsDisabledTestProfile` (unset URL) and analytics v
   `elicit-author`; protocol mapper "elicit-superset client roles" (`oidc-usermodel-client-role-mapper`,
   claim `resource_access.${client_id}.roles`, userinfo + id + access token).
 - Client roles on `elicit-superset`: `elicit_analytics`, `elicit_superset_admin`.
-- Mapper on **`elicit-admin`**: "elicit-superset roles for admin" mapping `elicit-superset`
-  client roles into `resource_access.elicit-superset.roles` of Admin's tokens (see §4.1.6).
+- No mapper on `elicit-admin` is needed: with full scope allowed, the default `roles`
+  client scope already emits the user's `elicit-superset` roles in Admin's tokens (§2).
 - Users: new `analyst` / `analyst` with `elicit_analytics` only; `admin` gains
   `elicit_analytics` and `elicit_superset_admin` so the existing local login can author
   dashboards.
@@ -214,7 +216,7 @@ is expected to exit; `README.md` mentions Analytics.
 | 6.1 | Branches: `feature/analytics` (Admin, off `V3`), `feature/superset` (umbrella, off `feature/author-service`) | both | — |
 | 6.2 | AIUP artifacts (section 3), including `/use-case-spec UC-020` | Admin | — |
 | 6.3 | Roles, migration, `UserRoleService`, `EditUserView`, tests (§4.1, §4.5 rows 1–5) | Admin | 6.2 |
-| 6.4 | Keycloak realm changes (§5.1); verify `admin` token carries both `resource_access` entries; set `role-claim-path` | umbrella, Admin | 6.3 |
+| 6.4 | Keycloak realm changes (§5.1); verify `admin` token carries both `resource_access` entries; set `role-claim-path` — **done 2026-09-18** (umbrella `6a676b1`) | umbrella, Admin | 6.3 |
 | 6.5 | Superset image, config, compose, scripts (§5.2–5.4); bring the stack up; log in to Superset as `admin` via Keycloak | umbrella | 6.4 |
 | 6.6 | Author the Survey Operations dashboard in local Superset (funnel + status breakdown from research §6.2.1, then the rest of §6.2); enable embedding with allowed domain `localhost:8081`; export ZIP; commit under `superset/assets/`; re-run `superset-init` to prove the import | umbrella | 6.5 |
 | 6.7 | `AnalyticsConfig`, guest-token service, REST endpoint, tests (§4.2, §4.3, §4.5 rows 8–9) | Admin | 6.3 |
