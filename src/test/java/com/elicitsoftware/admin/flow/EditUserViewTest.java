@@ -15,6 +15,7 @@ import com.elicitsoftware.test.PostgresTestResource;
 import com.vaadin.browserless.quarkus.QuarkusBrowserlessTest;
 import com.vaadin.flow.component.UI;
 import com.vaadin.flow.component.button.Button;
+import com.vaadin.flow.component.checkbox.Checkbox;
 import com.vaadin.flow.component.combobox.ComboBox;
 import com.vaadin.flow.component.textfield.TextField;
 import io.quarkus.test.common.QuarkusTestResource;
@@ -113,5 +114,13 @@ class EditUserViewTest extends QuarkusBrowserlessTest {
         boolean visible = find(ComboBox.class, view).all().stream()
                 .anyMatch(box -> "Role".equals(box.getLabel()) && box.isVisible());
         assertFalse(visible, "Role dropdown must not be visible when elicit.authorization.mode=OIDC");
+    }
+
+    /** UC-016/A1 + UC-020: in OIDC mode the Analytics checkbox is hidden along with the role section. */
+    @Test
+    void analyticsCheckboxHiddenInOidcMode() {
+        boolean visible = find(Checkbox.class, view).all().stream()
+                .anyMatch(box -> "Analytics".equals(box.getLabel()) && box.isVisible());
+        assertFalse(visible, "Analytics checkbox must not be visible when elicit.authorization.mode=OIDC");
     }
 }

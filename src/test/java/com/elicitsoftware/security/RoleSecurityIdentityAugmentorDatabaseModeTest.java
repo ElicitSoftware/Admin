@@ -21,9 +21,12 @@ import io.quarkus.test.common.QuarkusTestResource;
 import io.quarkus.test.junit.QuarkusTest;
 import io.quarkus.test.junit.TestProfile;
 import io.smallrye.mutiny.Uni;
+import com.elicitsoftware.model.User;
+import com.elicitsoftware.service.UserRoleService;
 import jakarta.inject.Inject;
 import org.junit.jupiter.api.Test;
 
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
@@ -56,6 +59,9 @@ class RoleSecurityIdentityAugmentorDatabaseModeTest {
     @Inject
     RoleSecurityIdentityAugmentor augmentor;
 
+    @Inject
+    UserRoleService userRoleService;
+
     /** UC-001/A3/BR-006: a raw elicit_admin database grant expands to all three roles. */
     @Test
     void databaseGrantExpandsToFullRoleSet() {
@@ -83,5 +89,32 @@ class RoleSecurityIdentityAugmentorDatabaseModeTest {
 
         assertTrue(augmented.getRoles().contains("elicit_user"));
         assertTrue(augmented.getRoles().contains("elicit_importer"));
+    }
+
+    /**
+     * UC-001/A3 + UC-016/BR-055 + UC-020/BR-080: a database analytics row is granted alongside
+     * the seeded elicit_user ladder grant, expanded independently (no elicit_admin appears).
+     * The grant is committed by the service and removed again afterwards so the seeded data
+     * is left as found.
+     */
+    @Test
+    void databaseAnalyticsGrantMergesWithLadderGrant() {
+        User seededUser = User.find("username", "user").firstResult();
+        userRoleService.setAnalytics(seededUser.getId(), true);
+        try {
+            SecurityIdentity noRoleIdentity = QuarkusSecurityIdentity.builder()
+                    .setPrincipal(new QuarkusPrincipal("user"))
+                    .build();
+
+            SecurityIdentity augmented = augmentor.augment(noRoleIdentity, SYNC_CONTEXT)
+                    .await().indefinitely();
+
+            assertTrue(augmented.getRoles().contains("elicit_analytics"));
+            assertTrue(augmented.getRoles().contains("elicit_user"));
+            assertTrue(augmented.getRoles().contains("elicit_importer"));
+            assertFalse(augmented.getRoles().contains("elicit_admin"));
+        } finally {
+            userRoleService.setAnalytics(seededUser.getId(), false);
+        }
     }
 }

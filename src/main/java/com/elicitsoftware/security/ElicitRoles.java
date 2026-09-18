@@ -16,12 +16,16 @@ import java.util.Map;
 import java.util.Set;
 
 /**
- * The three roles Elicit Admin recognizes, from any source (OIDC or database), and the
- * cumulative hierarchy between them: {@code elicit_admin} implies {@code elicit_user} and
- * {@code elicit_importer}; {@code elicit_user} implies {@code elicit_importer};
- * {@code elicit_importer} implies only itself.
+ * The roles Elicit Admin recognizes, from any source (OIDC or database), and the
+ * cumulative hierarchy between the three <em>ladder</em> roles: {@code elicit_admin} implies
+ * {@code elicit_user} and {@code elicit_importer}; {@code elicit_user} implies
+ * {@code elicit_importer}; {@code elicit_importer} implies only itself.
  *
- * <p>Keycloak declares all three client roles {@code composite: false} today, so this
+ * <p>{@code elicit_analytics} (UC-020) is outside the ladder: it implies nothing, is implied
+ * by nothing, and passes through {@link #expand} unchanged. A user may hold it alongside one
+ * ladder role.</p>
+ *
+ * <p>Keycloak declares all client roles {@code composite: false} today, so this
  * hierarchy is not expressed on the identity-provider side -- {@link #expand} computes it
  * application-side, uniformly regardless of whether a raw role came from OIDC or the
  * {@code survey.user_roles} database fallback. Only the raw (unexpanded) role is ever stored
@@ -35,9 +39,14 @@ public final class ElicitRoles {
     public static final String USER = "elicit_user";
     /** The importer role; implies only itself. */
     public static final String IMPORTER = "elicit_importer";
+    /** The analytics role (UC-020); orthogonal to the ladder, implies only itself. */
+    public static final String ANALYTICS = "elicit_analytics";
+
+    /** The three cumulative ladder roles, of which a user holds at most one raw grant. */
+    public static final Set<String> LADDER = Set.of(ADMIN, USER, IMPORTER);
 
     /** All roles Elicit Admin recognizes. */
-    public static final Set<String> ALL = Set.of(ADMIN, USER, IMPORTER);
+    public static final Set<String> ALL = Set.of(ADMIN, USER, IMPORTER, ANALYTICS);
 
     private static final Map<String, Set<String>> IMPLIED = Map.of(
             ADMIN, Set.of(ADMIN, USER, IMPORTER),

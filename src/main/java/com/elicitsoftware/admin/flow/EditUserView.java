@@ -107,6 +107,12 @@ public class EditUserView extends VerticalLayout implements BeforeEnterObserver 
     /** Single-select dropdown for the user's database role grant. */
     private final ComboBox<String> roleBox = new ComboBox<>("Role");
 
+    /**
+     * Checkbox for the orthogonal {@code elicit_analytics} grant (UC-020, BR-080). Stored as
+     * its own row in {@code survey.user_roles}, independent of the ladder role above.
+     */
+    private final Checkbox analyticsBox = new Checkbox("Analytics");
+
     /** Wraps the role dropdown with a heading and explanatory text; shown only in DATABASE mode. */
     private final VerticalLayout roleSection = new VerticalLayout();
 
@@ -143,14 +149,19 @@ public class EditUserView extends VerticalLayout implements BeforeEnterObserver 
         List<Department> allDepartments = Department.findAll().list();
         departmentsBox.setItems(allDepartments);
 
-        roleBox.setItems(new ArrayList<>(ElicitRoles.ALL));
+        roleBox.setItems(new ArrayList<>(ElicitRoles.LADDER));
         roleBox.setClearButtonVisible(true);
         roleBox.setWidthFull();
         Paragraph roleSectionInfo = new Paragraph(
                 "Sets this user's database role fallback. Choose the user's highest role; "
                         + "elicit_admin and elicit_user each imply the roles below them.");
         roleSectionInfo.addClassNames(LumoUtility.Margin.NONE, LumoUtility.TextColor.SECONDARY);
-        roleSection.add(new H4("Database Role Assignment"), roleSectionInfo, roleBox);
+        Paragraph analyticsInfo = new Paragraph(
+                "Grants read access to the analytics dashboards. Independent of the role above; "
+                        + "no role implies it.");
+        analyticsInfo.addClassNames(LumoUtility.Margin.NONE, LumoUtility.TextColor.SECONDARY);
+        roleSection.add(new H4("Database Role Assignment"), roleSectionInfo, roleBox,
+                analyticsInfo, analyticsBox);
         roleSection.setPadding(false);
         roleSection.setSpacing(false);
         // Visibility is finalized in initRoleSectionVisibility() (@PostConstruct), not here:
@@ -258,7 +269,8 @@ public class EditUserView extends VerticalLayout implements BeforeEnterObserver 
                 departmentsBox.setValue(user.getDepartments());
             }
             if (authorizationModeConfig.isDatabaseMode()) {
-                roleBox.setValue(userRoleService.findRoleName(user.getId()).orElse(null));
+                roleBox.setValue(userRoleService.findLadderRole(user.getId()).orElse(null));
+                analyticsBox.setValue(userRoleService.hasAnalytics(user.getId()));
             }
         } else {
             user = new User();
@@ -300,15 +312,17 @@ public class EditUserView extends VerticalLayout implements BeforeEnterObserver 
 
         userService.save(user);
 
-        // The role grant is keyed on the user's id, so it must be saved after userService.save
-        // (a new user has no id until persisted). Skipped entirely in OIDC mode.
+        // The role grants are keyed on the user's id, so they must be saved after userService.save
+        // (a new user has no id until persisted). Skipped entirely in OIDC mode. The ladder
+        // grant and the analytics grant are independent rows (UC-016 BR-055).
         if (authorizationModeConfig.isDatabaseMode()) {
             String selectedRole = roleBox.getValue();
             if (selectedRole != null) {
-                userRoleService.setRole(user.getId(), selectedRole);
+                userRoleService.setLadderRole(user.getId(), selectedRole);
             } else {
-                userRoleService.clearRole(user.getId());
+                userRoleService.clearLadderRole(user.getId());
             }
+            userRoleService.setAnalytics(user.getId(), Boolean.TRUE.equals(analyticsBox.getValue()));
         }
 
         Notification.show("User saved");

@@ -24,13 +24,16 @@ import org.junit.jupiter.api.Test;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * Booted persistence tests for {@link UserRoleService} (UC-016: Manage User Role
- * Assignments). Exercises {@code setRole}/{@code clearRole}/{@code findRoleName} against the
- * real schema, including the BR-054 CHECK constraint's rejection of unrecognized role names.
+ * Assignments). Exercises the ladder grant ({@code setLadderRole}/{@code clearLadderRole}/
+ * {@code findLadderRole}) and the independent analytics grant ({@code setAnalytics}/
+ * {@code hasAnalytics}, UC-020) against the real schema, including the BR-054 CHECK
+ * constraint's rejection of unrecognized role names.
  */
 @QuarkusTest
 @QuarkusTestResource(PostgresTestResource.class)
@@ -49,51 +52,51 @@ class UserRoleServiceTest {
         return u;
     }
 
-    /** UC-016: setRole grants a role that was not previously present. */
+    /** UC-016: setLadderRole grants a role that was not previously present. */
     @Test
     @TestTransaction
-    void setRoleGrantsRole() {
+    void setLadderRoleGrantsRole() {
         User user = newUser("uc016.svc.add@example.org");
 
-        userRoleService.setRole(user.getId(), "elicit_admin");
+        userRoleService.setLadderRole(user.getId(), "elicit_admin");
 
-        assertEquals(Optional.of("elicit_admin"), userRoleService.findRoleName(user.getId()));
+        assertEquals(Optional.of("elicit_admin"), userRoleService.findLadderRole(user.getId()));
     }
 
-    /** UC-016/BR-055: setRole replaces the existing grant rather than adding a second row. */
+    /** UC-016/BR-055: setLadderRole replaces the existing grant rather than adding a second row. */
     @Test
     @TestTransaction
-    void setRoleReplacesExistingGrant() {
+    void setLadderRoleReplacesExistingGrant() {
         User user = newUser("uc016.svc.replace@example.org");
-        userRoleService.setRole(user.getId(), "elicit_admin");
+        userRoleService.setLadderRole(user.getId(), "elicit_admin");
 
-        userRoleService.setRole(user.getId(), "elicit_importer");
+        userRoleService.setLadderRole(user.getId(), "elicit_importer");
 
-        assertEquals(Optional.of("elicit_importer"), userRoleService.findRoleName(user.getId()));
+        assertEquals(Optional.of("elicit_importer"), userRoleService.findLadderRole(user.getId()));
         assertEquals(1, UserRole.count("id.userId", user.getId()));
     }
 
-    /** UC-016: clearRole removes the grant entirely. */
+    /** UC-016: clearLadderRole removes the grant entirely. */
     @Test
     @TestTransaction
-    void clearRoleRemovesGrant() {
+    void clearLadderRoleRemovesGrant() {
         User user = newUser("uc016.svc.clear@example.org");
-        userRoleService.setRole(user.getId(), "elicit_user");
+        userRoleService.setLadderRole(user.getId(), "elicit_user");
 
-        userRoleService.clearRole(user.getId());
+        userRoleService.clearLadderRole(user.getId());
 
-        assertEquals(Optional.empty(), userRoleService.findRoleName(user.getId()));
+        assertEquals(Optional.empty(), userRoleService.findLadderRole(user.getId()));
     }
 
     /** UC-016/BR-054: an unrecognized role name is rejected before any write. */
     @Test
     @TestTransaction
-    void setRoleRejectsUnrecognizedRole() {
+    void setLadderRoleRejectsUnrecognizedRole() {
         User user = newUser("uc016.svc.invalid@example.org");
 
         assertThrows(IllegalArgumentException.class,
-                () -> userRoleService.setRole(user.getId(), "not_a_role"));
-        assertEquals(Optional.empty(), userRoleService.findRoleName(user.getId()));
+                () -> userRoleService.setLadderRole(user.getId(), "not_a_role"));
+        assertEquals(Optional.empty(), userRoleService.findLadderRole(user.getId()));
     }
 
     /** UC-016/BR-054: the database CHECK constraint independently rejects a bad role name. */
@@ -109,12 +112,102 @@ class UserRoleServiceTest {
         });
     }
 
-    /** UC-016: findRoleName returns empty when the user has no grant. */
+    /** UC-016/BR-054: setLadderRole rejects elicit_analytics; it is not a ladder role. */
     @Test
     @TestTransaction
-    void findRoleNameReturnsEmptyWhenNoGrant() {
+    void setLadderRoleRejectsAnalytics() {
+        User user = newUser("uc016.svc.ladder-analytics@example.org");
+
+        assertThrows(IllegalArgumentException.class,
+                () -> userRoleService.setLadderRole(user.getId(), "elicit_analytics"));
+    }
+
+    /** UC-020: setAnalytics(true) adds an analytics row; hasAnalytics reports it. */
+    @Test
+    @TestTransaction
+    void setAnalyticsAddsRow() {
+        User user = newUser("uc016.svc.analytics@example.org");
+
+        userRoleService.setAnalytics(user.getId(), true);
+
+        assertTrue(userRoleService.hasAnalytics(user.getId()));
+        assertEquals(1, UserRole.count("id.userId", user.getId()));
+        assertEquals(Optional.empty(), userRoleService.findLadderRole(user.getId()));
+    }
+
+    /** UC-020: setAnalytics(true) twice leaves a single row. */
+    @Test
+    @TestTransaction
+    void setAnalyticsIsIdempotent() {
+        User user = newUser("uc016.svc.analytics-twice@example.org");
+
+        userRoleService.setAnalytics(user.getId(), true);
+        userRoleService.setAnalytics(user.getId(), true);
+
+        assertEquals(1, UserRole.count("id.userId", user.getId()));
+    }
+
+    /** UC-016/BR-055: replacing the ladder grant preserves the analytics grant. */
+    @Test
+    @TestTransaction
+    void settingLadderRolePreservesAnalytics() {
+        User user = newUser("uc016.svc.keep-analytics@example.org");
+        userRoleService.setAnalytics(user.getId(), true);
+        userRoleService.setLadderRole(user.getId(), "elicit_admin");
+
+        userRoleService.setLadderRole(user.getId(), "elicit_user");
+
+        assertEquals(Optional.of("elicit_user"), userRoleService.findLadderRole(user.getId()));
+        assertTrue(userRoleService.hasAnalytics(user.getId()));
+        assertEquals(2, UserRole.count("id.userId", user.getId()));
+    }
+
+    /** UC-016/BR-055: clearing the ladder grant preserves the analytics grant. */
+    @Test
+    @TestTransaction
+    void clearingLadderRolePreservesAnalytics() {
+        User user = newUser("uc016.svc.clear-keep-analytics@example.org");
+        userRoleService.setLadderRole(user.getId(), "elicit_user");
+        userRoleService.setAnalytics(user.getId(), true);
+
+        userRoleService.clearLadderRole(user.getId());
+
+        assertEquals(Optional.empty(), userRoleService.findLadderRole(user.getId()));
+        assertTrue(userRoleService.hasAnalytics(user.getId()));
+    }
+
+    /** UC-016/BR-055: revoking analytics removes only the analytics row. */
+    @Test
+    @TestTransaction
+    void clearingAnalyticsKeepsLadder() {
+        User user = newUser("uc016.svc.revoke-analytics@example.org");
+        userRoleService.setLadderRole(user.getId(), "elicit_importer");
+        userRoleService.setAnalytics(user.getId(), true);
+
+        userRoleService.setAnalytics(user.getId(), false);
+
+        assertFalse(userRoleService.hasAnalytics(user.getId()));
+        assertEquals(Optional.of("elicit_importer"), userRoleService.findLadderRole(user.getId()));
+    }
+
+    /** UC-016/BR-054: the database CHECK constraint accepts elicit_analytics (V0.0.19). */
+    @Test
+    @TestTransaction
+    void checkConstraintAcceptsAnalytics() {
+        User user = newUser("uc016.svc.dbcheck-analytics@example.org");
+
+        new UserRole(user.getId(), "elicit_analytics").persist();
+        UserRole.flush();
+
+        assertEquals(1, UserRole.count("id.userId", user.getId()));
+    }
+
+    /** UC-016: findLadderRole returns empty when the user has no grant. */
+    @Test
+    @TestTransaction
+    void findLadderRoleReturnsEmptyWhenNoGrant() {
         User user = newUser("uc016.svc.none@example.org");
 
-        assertTrue(userRoleService.findRoleName(user.getId()).isEmpty());
+        assertTrue(userRoleService.findLadderRole(user.getId()).isEmpty());
     }
 }

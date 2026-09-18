@@ -22,7 +22,9 @@ import io.smallrye.mutiny.Uni;
 import jakarta.inject.Inject;
 import org.junit.jupiter.api.Test;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * Confirms {@link RoleSecurityIdentityAugmentor}'s database fallback is skipped in the
@@ -66,5 +68,27 @@ class RoleSecurityIdentityAugmentorOidcModeTest {
         assertFalse(augmented.getRoles().contains("elicit_admin"));
         assertFalse(augmented.getRoles().contains("elicit_user"));
         assertFalse(augmented.getRoles().contains("elicit_importer"));
+    }
+
+    /**
+     * UC-001/BR-001 + UC-020/BR-080: an OIDC identity carrying only elicit_analytics counts as
+     * role-bearing, so the database is not consulted (the seeded admin's elicit_admin row must
+     * not leak in) and analytics passes through unexpanded.
+     */
+    @Test
+    void analyticsOnlyOidcIdentityIsNotSentToDatabase() {
+        SecurityIdentity analyticsOnly = QuarkusSecurityIdentity.builder()
+                .setPrincipal(new QuarkusPrincipal("admin"))
+                .addRole("elicit_analytics")
+                .build();
+
+        SecurityIdentity augmented = augmentor.augment(analyticsOnly, SYNC_CONTEXT)
+                .await().indefinitely();
+
+        assertTrue(augmented.getRoles().contains("elicit_analytics"));
+        assertFalse(augmented.getRoles().contains("elicit_admin"));
+        assertFalse(augmented.getRoles().contains("elicit_user"));
+        assertEquals(RoleSecurityIdentityAugmentor.ROLE_SOURCE_OIDC,
+                augmented.getAttribute(RoleSecurityIdentityAugmentor.ROLE_SOURCE_ATTRIBUTE));
     }
 }

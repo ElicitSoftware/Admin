@@ -18,6 +18,7 @@ import com.elicitsoftware.test.PostgresTestResource;
 import com.vaadin.browserless.quarkus.QuarkusBrowserlessTest;
 import com.vaadin.flow.component.UI;
 import com.vaadin.flow.component.button.Button;
+import com.vaadin.flow.component.checkbox.Checkbox;
 import com.vaadin.flow.component.combobox.ComboBox;
 import com.vaadin.flow.component.textfield.TextField;
 import com.vaadin.flow.router.BeforeEnterEvent;
@@ -36,6 +37,7 @@ import org.junit.jupiter.api.Test;
 import java.util.Collections;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -82,6 +84,13 @@ class EditUserViewRoleAssignmentTest extends QuarkusBrowserlessTest {
                 .orElseThrow(() -> new AssertionError("No Role ComboBox"));
     }
 
+    private Checkbox analyticsBox() {
+        return find(Checkbox.class, view).all().stream()
+                .filter(box -> "Analytics".equals(box.getLabel()))
+                .findFirst()
+                .orElseThrow(() -> new AssertionError("No Analytics checkbox"));
+    }
+
     private TextField field(String label) {
         return find(TextField.class, view).all().stream()
                 .filter(f -> label.equals(f.getLabel()))
@@ -101,6 +110,73 @@ class EditUserViewRoleAssignmentTest extends QuarkusBrowserlessTest {
     void roleDropdownVisibleAndOffersRecognizedRoles() {
         ComboBox<String> roleBox = roleBox();
         assertTrue(roleBox.isVisible(), "Role dropdown must be visible when elicit.authorization.mode=DATABASE");
+    }
+
+    /** UC-016/UC-020: the Analytics checkbox is visible in database mode and starts unchecked. */
+    @Test
+    void analyticsCheckboxVisibleInDatabaseMode() {
+        Checkbox box = analyticsBox();
+        assertTrue(box.isVisible(), "Analytics checkbox must be visible when elicit.authorization.mode=DATABASE");
+        assertFalse(box.getValue(), "a new user starts without the analytics grant");
+    }
+
+    /** UC-016/BR-055: saving with a role and Analytics checked persists two independent rows. */
+    @Test
+    @TestTransaction
+    void savingPersistsAnalyticsWithRole() {
+        field("Username").setValue("uc016.analytics@example.org");
+        field("First Name").setValue("Analytics");
+        field("Last Name").setValue("Test");
+        roleBox().setValue("elicit_user");
+        analyticsBox().setValue(true);
+
+        saveButton().click();
+
+        User saved = User.find("username", "uc016.analytics@example.org").firstResult();
+        assertNotNull(saved);
+        assertEquals(2, UserRole.count("id.userId", saved.getId()));
+        assertEquals(1, UserRole.count("id.userId = ?1 and id.roleName = ?2", saved.getId(), "elicit_analytics"));
+        assertEquals(1, UserRole.count("id.userId = ?1 and id.roleName = ?2", saved.getId(), "elicit_user"));
+    }
+
+    /** UC-016/BR-055: unchecking Analytics on a second save removes only the analytics row. */
+    @Test
+    @TestTransaction
+    void uncheckingRemovesOnlyAnalyticsRow() {
+        field("Username").setValue("uc016.revoke@example.org");
+        field("First Name").setValue("Revoke");
+        field("Last Name").setValue("Test");
+        roleBox().setValue("elicit_admin");
+        analyticsBox().setValue(true);
+        saveButton().click();
+
+        analyticsBox().setValue(false);
+        saveButton().click();
+
+        User saved = User.find("username", "uc016.revoke@example.org").firstResult();
+        assertEquals(1, UserRole.count("id.userId", saved.getId()));
+        UserRole role = UserRole.<UserRole>list("id.userId", saved.getId()).get(0);
+        assertEquals("elicit_admin", role.getId().getRoleName());
+    }
+
+    /** UC-016/BR-055: changing the ladder role on a second save keeps the analytics row. */
+    @Test
+    @TestTransaction
+    void changingRoleKeepsAnalyticsRow() {
+        field("Username").setValue("uc016.keep@example.org");
+        field("First Name").setValue("Keep");
+        field("Last Name").setValue("Test");
+        roleBox().setValue("elicit_admin");
+        analyticsBox().setValue(true);
+        saveButton().click();
+
+        roleBox().setValue("elicit_importer");
+        saveButton().click();
+
+        User saved = User.find("username", "uc016.keep@example.org").firstResult();
+        assertEquals(2, UserRole.count("id.userId", saved.getId()));
+        assertEquals(1, UserRole.count("id.userId = ?1 and id.roleName = ?2", saved.getId(), "elicit_analytics"));
+        assertEquals(1, UserRole.count("id.userId = ?1 and id.roleName = ?2", saved.getId(), "elicit_importer"));
     }
 
     /** UC-016: saving a new user with a role selected persists exactly one row in survey.user_roles. */
