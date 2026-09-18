@@ -37,14 +37,14 @@ import java.util.List;
  * # survey_name: My Survey
  * # survey_revision: 2026-09-15T14:32:07.412-04:00
  * surveys: source_id|survey_key|name|display_order|title|description|initial_display_key|post_survey_url|published_by|published_comment
- * select_groups: source_id|element_key|name|description|data_type|version|effective_from|effective_to|published_by|published_comment|is_draft
- * select_items: source_id|element_key|select_group_id|display_text|display_order|coded_value|version|effective_from|effective_to|published_by|published_comment|is_draft
- * steps: source_id|element_key|display_order|name|dimension_name|description|version|effective_from|effective_to|published_by|published_comment|is_draft
- * sections: source_id|element_key|display_order|name|dimension_name|description|version|effective_from|effective_to|published_by|published_comment|is_draft
- * steps_sections: source_id|element_key|step_id|step_display_order|section_id|section_display_order|display_key|version|effective_from|effective_to|published_by|published_comment|is_draft
- * questions: source_id|element_key|type_id|text|short_text|tool_tip|required|min_value|max_value|validation_text|select_group_id|mask|placeholder|default_value|variant|version|effective_from|effective_to|published_by|published_comment|is_draft
- * sections_questions: source_id|element_key|question_id|section_id|display_order|version|effective_from|effective_to|published_by|published_comment|is_draft
- * relationships: source_id|element_key|upstream_step_id|upstream_sq_id|downstream_step_id|downstream_ss_id|downstream_sq_id|operator_id|action_id|description|token|reference_value|default_upstream_value|override_upstream_value|version|effective_from|effective_to|published_by|published_comment|is_draft
+ * select_groups: source_id|element_key|name|description|data_type|version|effective_from|effective_to|published_by|published_comment
+ * select_items: source_id|element_key|select_group_id|display_text|display_order|coded_value|version|effective_from|effective_to|published_by|published_comment
+ * steps: source_id|element_key|display_order|name|dimension_name|description|version|effective_from|effective_to|published_by|published_comment
+ * sections: source_id|element_key|display_order|name|dimension_name|description|version|effective_from|effective_to|published_by|published_comment
+ * steps_sections: source_id|element_key|step_id|step_display_order|section_id|section_display_order|display_key|version|effective_from|effective_to|published_by|published_comment
+ * questions: source_id|element_key|type_id|text|short_text|tool_tip|required|min_value|max_value|validation_text|select_group_id|mask|placeholder|default_value|variant|version|effective_from|effective_to|published_by|published_comment
+ * sections_questions: source_id|element_key|question_id|section_id|display_order|version|effective_from|effective_to|published_by|published_comment
+ * relationships: source_id|element_key|upstream_step_id|upstream_sq_id|downstream_step_id|downstream_ss_id|downstream_sq_id|operator_id|action_id|description|token|reference_value|default_upstream_value|override_upstream_value|version|effective_from|effective_to|published_by|published_comment
  * reports: source_id|element_key|name|description|url|display_order
  * post_survey_actions: source_id|element_key|name|description|url|execution_order
  * dimensions: source_id|element_key|name
@@ -86,12 +86,14 @@ import java.util.List;
  * SurveyDefinitionUpdateService} refuses a file whose revision predates the one already applied
  * at the target, so an out-of-order distribution is caught rather than silently regressing a site.
  * <p>
- * The trailing {@code version|effective_from|effective_to|published_by|published_comment|is_draft}
+ * The trailing {@code version|effective_from|effective_to|published_by|published_comment}
  * fields on every Type 2 table are exported for informational/audit purposes only — on import,
- * every row is created fresh as the current, non-draft, version 0 row, and these six values are
+ * every row is created fresh as the current, version 0 row, and these five values are
  * discarded rather than fed into the INSERT (see {@link SurveyDefinitionImportService}). Only
- * current, non-draft rows (i.e. rows that would satisfy each table's own "one current row"
- * partial unique index) are exported in the first place.
+ * current rows (open-ended {@code effective_to}, i.e. rows that satisfy each table's own "one
+ * current row" partial unique index) are exported in the first place. Survey {@code V015}
+ * dropped the {@code is_draft} column and with it the trailing {@code is_draft} field these
+ * records used to carry; readers still accept a file written with it.
  * <p>
  * Field delimiter: | (pipe)<br>
  * Escape sequences: \| for literal pipe, \\ for literal backslash,
@@ -189,7 +191,7 @@ public class SurveyDefinitionExportService {
         out.append(FIELD_DELIMITER).append(escapeField(survey[9]));            // published_comment
         out.append("\n");
 
-        // select_groups: source_id(=select_group_id)|element_key|name|description|data_type|version|effective_from|effective_to|published_by|published_comment|is_draft
+        // select_groups: source_id(=select_group_id)|element_key|name|description|data_type|version|effective_from|effective_to|published_by|published_comment
         for (Object[] sg : selectGroups) {
             out.append("select_groups: ");
             out.append(escapeField(sg[0]));                                    // source_id (durable select_group_id)
@@ -202,11 +204,10 @@ public class SurveyDefinitionExportService {
             out.append(FIELD_DELIMITER).append(escapeField(sg[7]));            // effective_to
             out.append(FIELD_DELIMITER).append(escapeField(sg[8]));            // published_by
             out.append(FIELD_DELIMITER).append(escapeField(sg[9]));            // published_comment
-            out.append(FIELD_DELIMITER).append(escapeField(sg[10]));           // is_draft
             out.append("\n");
         }
 
-        // select_items: source_id(=select_item_id)|element_key|select_group_id(durable)|display_text|display_order|coded_value|version|effective_from|effective_to|published_by|published_comment|is_draft
+        // select_items: source_id(=select_item_id)|element_key|select_group_id(durable)|display_text|display_order|coded_value|version|effective_from|effective_to|published_by|published_comment
         for (Object[] si : selectItems) {
             out.append("select_items: ");
             out.append(escapeField(si[0]));                                    // source_id (durable select_item_id)
@@ -220,11 +221,10 @@ public class SurveyDefinitionExportService {
             out.append(FIELD_DELIMITER).append(escapeField(si[8]));            // effective_to
             out.append(FIELD_DELIMITER).append(escapeField(si[9]));            // published_by
             out.append(FIELD_DELIMITER).append(escapeField(si[10]));           // published_comment
-            out.append(FIELD_DELIMITER).append(escapeField(si[11]));           // is_draft
             out.append("\n");
         }
 
-        // steps: source_id(=step_id)|element_key|display_order|name|dimension_name|description|version|effective_from|effective_to|published_by|published_comment|is_draft
+        // steps: source_id(=step_id)|element_key|display_order|name|dimension_name|description|version|effective_from|effective_to|published_by|published_comment
         for (Object[] step : steps) {
             out.append("steps: ");
             out.append(escapeField(step[0]));                                  // source_id (durable step_id)
@@ -238,11 +238,10 @@ public class SurveyDefinitionExportService {
             out.append(FIELD_DELIMITER).append(escapeField(step[8]));          // effective_to
             out.append(FIELD_DELIMITER).append(escapeField(step[9]));          // published_by
             out.append(FIELD_DELIMITER).append(escapeField(step[10]));         // published_comment
-            out.append(FIELD_DELIMITER).append(escapeField(step[11]));         // is_draft
             out.append("\n");
         }
 
-        // sections: source_id(=section_id)|element_key|display_order|name|dimension_name|description|version|effective_from|effective_to|published_by|published_comment|is_draft
+        // sections: source_id(=section_id)|element_key|display_order|name|dimension_name|description|version|effective_from|effective_to|published_by|published_comment
         for (Object[] section : sections) {
             out.append("sections: ");
             out.append(escapeField(section[0]));                               // source_id (durable section_id)
@@ -256,11 +255,10 @@ public class SurveyDefinitionExportService {
             out.append(FIELD_DELIMITER).append(escapeField(section[8]));       // effective_to
             out.append(FIELD_DELIMITER).append(escapeField(section[9]));       // published_by
             out.append(FIELD_DELIMITER).append(escapeField(section[10]));      // published_comment
-            out.append(FIELD_DELIMITER).append(escapeField(section[11]));      // is_draft
             out.append("\n");
         }
 
-        // steps_sections: source_id(=steps_sections_id)|element_key|step_id(durable)|step_display_order|section_id(durable)|section_display_order|display_key|version|effective_from|effective_to|published_by|published_comment|is_draft
+        // steps_sections: source_id(=steps_sections_id)|element_key|step_id(durable)|step_display_order|section_id(durable)|section_display_order|display_key|version|effective_from|effective_to|published_by|published_comment
         for (Object[] ss : stepsSections) {
             out.append("steps_sections: ");
             out.append(escapeField(ss[0]));                                    // source_id (durable steps_sections_id)
@@ -275,13 +273,12 @@ public class SurveyDefinitionExportService {
             out.append(FIELD_DELIMITER).append(escapeField(ss[9]));            // effective_to
             out.append(FIELD_DELIMITER).append(escapeField(ss[10]));           // published_by
             out.append(FIELD_DELIMITER).append(escapeField(ss[11]));           // published_comment
-            out.append(FIELD_DELIMITER).append(escapeField(ss[12]));           // is_draft
             out.append("\n");
         }
 
         // questions: source_id(=question_id)|type_id|text|short_text|tool_tip|required|min_value|max_value|
         //            validation_text|select_group_id(durable)|mask|placeholder|default_value|variant|
-        //            version|effective_from|effective_to|published_by|published_comment|is_draft
+        //            version|effective_from|effective_to|published_by|published_comment
         for (Object[] q : questions) {
             out.append("questions: ");
             out.append(escapeField(q[0]));                                     // source_id (durable question_id)
@@ -304,11 +301,10 @@ public class SurveyDefinitionExportService {
             out.append(FIELD_DELIMITER).append(escapeField(q[17]));            // effective_to
             out.append(FIELD_DELIMITER).append(escapeField(q[18]));            // published_by
             out.append(FIELD_DELIMITER).append(escapeField(q[19]));            // published_comment
-            out.append(FIELD_DELIMITER).append(escapeField(q[20]));            // is_draft
             out.append("\n");
         }
 
-        // sections_questions: source_id(=sections_question_id)|element_key|question_id(durable)|section_id(durable)|display_order|version|effective_from|effective_to|published_by|published_comment|is_draft
+        // sections_questions: source_id(=sections_question_id)|element_key|question_id(durable)|section_id(durable)|display_order|version|effective_from|effective_to|published_by|published_comment
         for (Object[] sq : sectionsQuestions) {
             out.append("sections_questions: ");
             out.append(escapeField(sq[0]));                                    // source_id (durable sections_question_id)
@@ -321,14 +317,13 @@ public class SurveyDefinitionExportService {
             out.append(FIELD_DELIMITER).append(escapeField(sq[7]));            // effective_to
             out.append(FIELD_DELIMITER).append(escapeField(sq[8]));            // published_by
             out.append(FIELD_DELIMITER).append(escapeField(sq[9]));            // published_comment
-            out.append(FIELD_DELIMITER).append(escapeField(sq[10]));           // is_draft
             out.append("\n");
         }
 
         // relationships: source_id(=relationship_id)|upstream_step_id(durable)|upstream_sq_id(durable)|downstream_step_id(durable)|
         //                downstream_ss_id(durable)|downstream_sq_id(durable)|operator_id|action_id|
         //                description|token|reference_value|default_upstream_value|override_upstream_value|
-        //                version|effective_from|effective_to|published_by|published_comment|is_draft
+        //                version|effective_from|effective_to|published_by|published_comment
         for (Object[] rel : relationships) {
             out.append("relationships: ");
             out.append(escapeField(rel[0]));                                   // source_id (durable relationship_id)
@@ -350,7 +345,6 @@ public class SurveyDefinitionExportService {
             out.append(FIELD_DELIMITER).append(escapeField(rel[16]));          // effective_to
             out.append(FIELD_DELIMITER).append(escapeField(rel[17]));          // published_by
             out.append(FIELD_DELIMITER).append(escapeField(rel[18]));          // published_comment
-            out.append(FIELD_DELIMITER).append(escapeField(rel[19]));          // is_draft
             out.append("\n");
         }
 
@@ -443,9 +437,9 @@ public class SurveyDefinitionExportService {
     private List<Object[]> getSelectGroups(Integer surveyId) {
         Query query = em.createNativeQuery(
                 "SELECT select_group_id, select_group_key, name, description, data_type, " +
-                "version, effective_from, effective_to, published_by, published_comment, is_draft " +
+                "version, effective_from, effective_to, published_by, published_comment " +
                 "FROM survey.select_groups " +
-                "WHERE survey_id = :surveyId AND effective_to = '9999-12-31 23:59:59+00' AND is_draft = false " +
+                "WHERE survey_id = :surveyId AND effective_to = '9999-12-31 23:59:59+00' " +
                 "ORDER BY select_group_id");
         query.setParameter("surveyId", surveyId);
         return toObjectArrayRows(query.getResultList(), "select_groups");
@@ -460,9 +454,9 @@ public class SurveyDefinitionExportService {
     private List<Object[]> getSelectItems(Integer surveyId) {
         Query query = em.createNativeQuery(
                 "SELECT select_item_id, select_item_key, select_group_id, display_text, display_order, coded_value, " +
-                "version, effective_from, effective_to, published_by, published_comment, is_draft " +
+                "version, effective_from, effective_to, published_by, published_comment " +
                 "FROM survey.select_items " +
-                "WHERE survey_id = :surveyId AND effective_to = '9999-12-31 23:59:59+00' AND is_draft = false " +
+                "WHERE survey_id = :surveyId AND effective_to = '9999-12-31 23:59:59+00' " +
                 "ORDER BY select_group_id, display_order");
         query.setParameter("surveyId", surveyId);
         return toObjectArrayRows(query.getResultList(), "select_items");
@@ -477,9 +471,9 @@ public class SurveyDefinitionExportService {
     private List<Object[]> getSteps(Integer surveyId) {
         Query query = em.createNativeQuery(
                 "SELECT step_id, step_key, display_order, name, dimension_name, description, " +
-                "version, effective_from, effective_to, published_by, published_comment, is_draft " +
+                "version, effective_from, effective_to, published_by, published_comment " +
                 "FROM survey.steps " +
-                "WHERE survey_id = :surveyId AND effective_to = '9999-12-31 23:59:59+00' AND is_draft = false " +
+                "WHERE survey_id = :surveyId AND effective_to = '9999-12-31 23:59:59+00' " +
                 "ORDER BY display_order");
         query.setParameter("surveyId", surveyId);
         return toObjectArrayRows(query.getResultList(), "steps");
@@ -494,9 +488,9 @@ public class SurveyDefinitionExportService {
     private List<Object[]> getSections(Integer surveyId) {
         Query query = em.createNativeQuery(
                 "SELECT section_id, section_key, display_order, name, dimension_name, description, " +
-                "version, effective_from, effective_to, published_by, published_comment, is_draft " +
+                "version, effective_from, effective_to, published_by, published_comment " +
                 "FROM survey.sections " +
-                "WHERE survey_id = :surveyId AND effective_to = '9999-12-31 23:59:59+00' AND is_draft = false " +
+                "WHERE survey_id = :surveyId AND effective_to = '9999-12-31 23:59:59+00' " +
                 "ORDER BY display_order");
         query.setParameter("surveyId", surveyId);
         return toObjectArrayRows(query.getResultList(), "sections");
@@ -511,9 +505,9 @@ public class SurveyDefinitionExportService {
     private List<Object[]> getStepsSections(Integer surveyId) {
         Query query = em.createNativeQuery(
                 "SELECT steps_sections_id, steps_sections_key, step_id, step_display_order, section_id, section_display_order, display_key, " +
-                "version, effective_from, effective_to, published_by, published_comment, is_draft " +
+                "version, effective_from, effective_to, published_by, published_comment " +
                 "FROM survey.steps_sections " +
-                "WHERE survey_id = :surveyId AND effective_to = '9999-12-31 23:59:59+00' AND is_draft = false " +
+                "WHERE survey_id = :surveyId AND effective_to = '9999-12-31 23:59:59+00' " +
                 "ORDER BY display_key");
         query.setParameter("surveyId", surveyId);
         return toObjectArrayRows(query.getResultList(), "steps_sections");
@@ -529,9 +523,9 @@ public class SurveyDefinitionExportService {
         Query query = em.createNativeQuery(
                 "SELECT question_id, question_key, type_id, text, short_text, tool_tip, required, min_value, max_value, " +
                 "validation_text, select_group_id, mask, placeholder, default_value, variant, " +
-                "version, effective_from, effective_to, published_by, published_comment, is_draft " +
+                "version, effective_from, effective_to, published_by, published_comment " +
                 "FROM survey.questions " +
-                "WHERE survey_id = :surveyId AND effective_to = '9999-12-31 23:59:59+00' AND is_draft = false " +
+                "WHERE survey_id = :surveyId AND effective_to = '9999-12-31 23:59:59+00' " +
                 "ORDER BY question_id");
         query.setParameter("surveyId", surveyId);
         return toObjectArrayRows(query.getResultList(), "questions");
@@ -546,9 +540,9 @@ public class SurveyDefinitionExportService {
     private List<Object[]> getSectionsQuestions(Integer surveyId) {
         Query query = em.createNativeQuery(
                 "SELECT sections_question_id, sections_question_key, question_id, section_id, display_order, " +
-                "version, effective_from, effective_to, published_by, published_comment, is_draft " +
+                "version, effective_from, effective_to, published_by, published_comment " +
                 "FROM survey.sections_questions " +
-                "WHERE survey_id = :surveyId AND effective_to = '9999-12-31 23:59:59+00' AND is_draft = false " +
+                "WHERE survey_id = :surveyId AND effective_to = '9999-12-31 23:59:59+00' " +
                 "ORDER BY sections_question_id");
         query.setParameter("surveyId", surveyId);
         return toObjectArrayRows(query.getResultList(), "sections_questions");
@@ -565,9 +559,9 @@ public class SurveyDefinitionExportService {
                 "SELECT relationship_id, relationship_key, upstream_step_id, upstream_sq_id, downstream_step_id, downstream_ss_id, " +
                 "downstream_sq_id, operator_id, action_id, description, token, reference_value, " +
                 "default_upstream_value, override_upstream_value, " +
-                "version, effective_from, effective_to, published_by, published_comment, is_draft " +
+                "version, effective_from, effective_to, published_by, published_comment " +
                 "FROM survey.relationships " +
-                "WHERE survey_id = :surveyId AND effective_to = '9999-12-31 23:59:59+00' AND is_draft = false " +
+                "WHERE survey_id = :surveyId AND effective_to = '9999-12-31 23:59:59+00' " +
                 "ORDER BY relationship_id");
         query.setParameter("surveyId", surveyId);
         return toObjectArrayRows(query.getResultList(), "relationships");
