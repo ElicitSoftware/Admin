@@ -3,6 +3,7 @@
   "license": "UNLICENSED",
   "type": "module",
   "dependencies": {
+    "@superset-ui/embedded-sdk": "0.4.0",
     "@vaadin/aura": "25.2.10",
     "@vaadin/common-frontend": "0.0.24",
     "@vaadin/react-components": "25.2.10",
@@ -40,6 +41,7 @@
   },
   "vaadin": {
     "dependencies": {
+      "@superset-ui/embedded-sdk": "0.4.0",
       "@vaadin/aura": "25.2.10",
       "@vaadin/common-frontend": "0.0.24",
       "@vaadin/react-components": "25.2.10",
@@ -75,9 +77,10 @@
       "vite": "8.0.16",
       "vite-plugin-checker": "0.14.5"
     },
-    "hash": "f412d3078841e2b673e3369d28b0f1fd055bfc5b115be1984403c3b1e82087ea"
+    "hash": "93b783873bdda05f7783741d91330f5260a8056308b770010eb8d30fc2c89026"
   },
   "overrides": {
+    "@superset-ui/embedded-sdk": "$@superset-ui/embedded-sdk",
     "@vaadin/a11y-base": "25.2.10",
     "@vaadin/accordion": "25.2.10",
     "@vaadin/app-layout": "25.2.10",
