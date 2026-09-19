@@ -13,6 +13,7 @@ package com.elicitsoftware.admin.flow;
 
 import com.elicitsoftware.exception.AccessCodeGenerationError;
 import com.elicitsoftware.model.*;
+import io.quarkus.panache.common.Sort;
 import com.elicitsoftware.response.AddResponse;
 import com.elicitsoftware.service.CsvImportService;
 import com.elicitsoftware.rest.AccessCodeService;
@@ -146,6 +147,12 @@ public class RegisterView extends HorizontalLayout implements HasDynamicTitle, B
     private Binder<Subject> binder;
 
     /**
+     * Survey selector: the survey a new subject's access code is generated for. Read-only when
+     * editing an existing subject, whose respondent already belongs to a survey.
+     */
+    private ComboBox<Survey> surveyComboBox;
+
+    /**
      * Button for saving new subjects.
      */
     private Button saveButton;
@@ -184,6 +191,7 @@ public class RegisterView extends HorizontalLayout implements HasDynamicTitle, B
      * <h4>Form Configuration:</h4>
      * <ul>
      *   <li>Responsive single-column form layout</li>
+     *   <li>Survey selection (auto-populated if exactly one survey is installed)</li>
      *   <li>Department selection (auto-populated if user has single department)</li>
      *   <li>Personal information fields (name, date of birth, contact info)</li>
      *   <li>External ID field for integration purposes</li>
@@ -234,6 +242,14 @@ public class RegisterView extends HorizontalLayout implements HasDynamicTitle, B
             subject.setDepartmentId(user.getDepartments().iterator().next().id);
         }
 
+        List<Survey> surveys = Survey.findAll(Sort.by("displayOrder")).list();
+        surveyComboBox = getSurveyComboBox(surveys);
+        surveyComboBox.setId("register-survey");
+        if (surveys.size() == 1) {
+            surveyComboBox.setValue(surveys.get(0));
+            subject.setSurveyId(surveys.get(0).id);
+        }
+
         TextField firstName = new TextField("First Name");
         firstName.setId("register-first-name");
         firstName.addThemeVariants(TextFieldVariant.LUMO_SMALL);
@@ -256,7 +272,7 @@ public class RegisterView extends HorizontalLayout implements HasDynamicTitle, B
         xid.setId("register-xid");
         xid.addThemeVariants(TextFieldVariant.LUMO_SMALL);
 
-        formLayout.add(departmentComboBox, firstName, lastName, middleName, dob, email, phone, xid);
+        formLayout.add(surveyComboBox, departmentComboBox, firstName, lastName, middleName, dob, email, phone, xid);
 
         binder = new Binder<>(Subject.class);
 
@@ -273,6 +289,19 @@ public class RegisterView extends HorizontalLayout implements HasDynamicTitle, B
                                     .orElse(null);
                         },
                         (s, dept) -> s.setDepartmentId(dept == null ? null : dept.id)
+                );
+
+        binder.forField(surveyComboBox)
+                .asRequired("Survey is required")
+                .bind(
+                        s -> {
+                            if (s.getSurveyId() == 0) return null;
+                            return surveys.stream()
+                                    .filter(survey -> survey.id == s.getSurveyId())
+                                    .findFirst()
+                                    .orElse(null);
+                        },
+                        (s, survey) -> s.setSurveyId(survey == null ? 0 : survey.id)
                 );
 
         binder.forField(xid)
@@ -433,10 +462,13 @@ public class RegisterView extends HorizontalLayout implements HasDynamicTitle, B
                 if (binder != null) {
                     binder.readBean(subject);
                 }
-                // Editing: show update, hide save
+                // Editing: show update, hide save; the survey is fixed by the existing respondent
                 if (updateButton != null && saveButton != null) {
                     updateButton.setVisible(true);
                     saveButton.setVisible(false);
+                }
+                if (surveyComboBox != null) {
+                    surveyComboBox.setReadOnly(true);
                 }
             } else {
                 Notification.show("Subject not found for access code: " + accessCode, 3000, Notification.Position.MIDDLE);
@@ -504,7 +536,7 @@ public class RegisterView extends HorizontalLayout implements HasDynamicTitle, B
                 return; // Exit early if excluded
             }
 
-            Respondent respondent = accessCodeService.generateAccessCode(1);
+            Respondent respondent = accessCodeService.generateAccessCode((int) subject.getSurveyId());
             subject.setRespondent(respondent);
             subject.setSurveyId(respondent.survey.id);
             // Optionally, flush to force exception now:
@@ -596,6 +628,23 @@ public class RegisterView extends HorizontalLayout implements HasDynamicTitle, B
      *
      * @return a configured ComboBox for department selection
      */
+    /**
+     * Creates the survey selection combo box (UC-003): the survey the new subject's access code
+     * is generated for. Lists every installed survey in display order; when only one survey is
+     * installed the caller pre-selects it so the form behaves as it did before this selector
+     * existed.
+     *
+     * @param surveys the installed surveys, in display order
+     * @return a configured ComboBox for survey selection
+     */
+    private ComboBox<Survey> getSurveyComboBox(List<Survey> surveys) {
+        ComboBox<Survey> surveyComboBox = new ComboBox<>("Survey");
+        surveyComboBox.setItems(surveys);
+        surveyComboBox.setItemLabelGenerator(survey -> survey.name);
+        surveyComboBox.addThemeVariants(ComboBoxVariant.LUMO_SMALL);
+        return surveyComboBox;
+    }
+
     private ComboBox<Department> getDepartmentComboBox() {
         ComboBox<Department> departmentComboBox = new ComboBox<>("Deparments");
         departmentComboBox.setItems(user.getDepartments());
