@@ -12,6 +12,8 @@ package com.elicitsoftware.admin.flow;
  */
 
 import com.elicitsoftware.admin.util.BrandUtil;
+import com.elicitsoftware.analytics.AnalyticsConfig;
+import com.elicitsoftware.security.ElicitRoles;
 import com.elicitsoftware.model.User;
 import com.elicitsoftware.service.SurveyDefinitionPresenceCheck;
 import com.vaadin.flow.component.AttachEvent;
@@ -89,6 +91,12 @@ public class MainLayout extends AppLayout implements AfterNavigationListener {
      */
     @Inject
     SurveyDefinitionPresenceCheck surveyPresence;
+
+    /**
+     * Whether the Analytics feature is configured for this deployment (UC-020).
+     */
+    @Inject
+    AnalyticsConfig analyticsConfig;
 
     /**
      * The current authenticated user.
@@ -213,6 +221,11 @@ public class MainLayout extends AppLayout implements AfterNavigationListener {
      *   <li><strong>Register Subjects:</strong> Navigate to subject registration</li>
      * </ul>
      *
+     * <h4>Analytics (holders of {@code elicit_analytics}, when configured):</h4>
+     * <ul>
+     *   <li><strong>Analytics:</strong> The embedded Survey Operations dashboard (UC-020)</li>
+     * </ul>
+     *
      * <h4>Admin Section (admin users only):</h4>
      * <ul>
      *   <li><strong>Departments:</strong> Manage department information</li>
@@ -241,6 +254,11 @@ public class MainLayout extends AppLayout implements AfterNavigationListener {
         SideNavItem registerLink = new SideNavItem("Register Subjects", RegisterView.class,
                 VaadinIcon.USERS.create());
         nav.addItem(searchLink, registerLink);
+        // Analytics (UC-020): only for holders of the orthogonal analytics role, and only when
+        // the deployment is configured for it (A1). Never implied by elicit_admin (BR-080).
+        if (identity.hasRole(ElicitRoles.ANALYTICS) && analyticsConfig.isEnabled()) {
+            nav.addItem(new SideNavItem("Analytics", AnalyticsView.class, VaadinIcon.CHART.create()));
+        }
         // Message Templates Button (Admin only)
         if (identity.hasRole("elicit_admin")) {
             SideNavItem adminSection = new SideNavItem("Admin");

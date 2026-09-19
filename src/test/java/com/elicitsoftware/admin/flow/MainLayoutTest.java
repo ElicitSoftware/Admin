@@ -49,6 +49,22 @@ class MainLayoutTest extends QuarkusBrowserlessTest {
         return layout;
     }
 
+    /**
+     * Puts a session user in place the way a signed-in browser would have one. The UI-scoped
+     * {@link UiSessionLogin} looks the principal up in the database the first time it is used
+     * in a UI and, finding no row for a test principal, clears the session user -- so it is
+     * touched first and the user set afterwards. Without this, whichever test runs first in
+     * a fresh UI scope sees the Logout-only fallback nav regardless of its roles.
+     */
+    private void seedSessionUser(long id, String username) {
+        CDI.current().select(UiSessionLogin.class).get().getUser();
+        User user = new User();
+        user.setId(id);
+        user.setUsername(username);
+        user.setActive(true);
+        VaadinSession.getCurrent().setAttribute("user", user);
+    }
+
     private boolean hasNavItem(MainLayout layout, String text) {
         return find(SideNavItem.class, layout).all().stream()
                 .anyMatch(item -> text.equals(item.getLabel()));
@@ -104,6 +120,29 @@ class MainLayoutTest extends QuarkusBrowserlessTest {
         // Exactly one item (Logout) in the fallback nav.
         SideNav nav = find(SideNav.class, layout).single();
         assertTrue(find(SideNavItem.class, nav).all().size() == 1);
+    }
+
+    /** UC-020: an analyst (no ladder role) sees the Analytics item when analytics is configured. */
+    @Test
+    @TestSecurity(user = "mainlayout.analyst", roles = {"elicit_analytics"})
+    void analystSeesAnalyticsItem() {
+        seedSessionUser(4, "mainlayout.analyst");
+
+        MainLayout layout = attachLayout();
+
+        assertTrue(hasNavItem(layout, "Analytics"), "an analyst should see the Analytics item");
+        assertFalse(hasNavItem(layout, "Admin"), "the analytics role implies no admin rights");
+    }
+
+    /** UC-020/A2 + BR-080: neither elicit_user nor elicit_admin implies the Analytics item. */
+    @Test
+    @TestSecurity(user = "mainlayout.admin2", roles = {"elicit_admin", "elicit_user"})
+    void ladderRolesDoNotSeeAnalyticsItem() {
+        seedSessionUser(5, "mainlayout.admin2");
+
+        MainLayout layout = attachLayout();
+
+        assertFalse(hasNavItem(layout, "Analytics"), "elicit_admin must not imply the Analytics item");
     }
 
     /** afterNavigation() (registered via onAttach) runs without error. */
