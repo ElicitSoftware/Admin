@@ -29,13 +29,15 @@
 Findings that change or sharpen what the research proposed:
 
 - **Role visibility across clients.** Admin's Quarkus OIDC extension reads roles from
-  `realm_access.roles` and `resource_access.<its own client>.roles` only. Keycloak, because
-  the clients allow full scope, already puts *every* client role of the user under
-  `resource_access` in Admin's tokens (verified 2026-09-18 with example tokens from a
-  throwaway Keycloak), so no extra mapper is needed; what is needed is
+  `realm_access.roles` and `resource_access.<its own client>.roles` only, and Keycloak's
+  default roles scope emits only the *requesting* client's roles under `resource_access`.
+  Two things are therefore needed, both done: a client-role mapper on `elicit-admin`
+  ("elicit-superset roles for admin") that writes the `elicit-superset` roles to
+  `resource_access.elicit-superset.roles` in Admin's tokens, and
   `quarkus.oidc.roles.role-claim-path` listing `realm_access/roles`,
   `resource_access/elicit-admin/roles` and `resource_access/elicit-superset/roles`, since
-  setting the property replaces the defaults. Done in step 6.4.
+  setting the property replaces the defaults. (An interim commit dropped the mapper on a
+  wrong reading of a throwaway test; the end-to-end check in 6.9 caught it.)
 - **`UserRoleService` is replace-all.** `setRole` deletes every row for the user before
   inserting, and `findRoleName` returns the first row. D3 requires separating the ladder
   grant from the analytics grant (UC-016 BR-055 changes). The DB check constraint
@@ -173,8 +175,8 @@ New test profile `test/AnalyticsDisabledTestProfile` (unset URL) and analytics v
   `elicit-author`; protocol mapper "elicit-superset client roles" (`oidc-usermodel-client-role-mapper`,
   claim `resource_access.${client_id}.roles`, userinfo + id + access token).
 - Client roles on `elicit-superset`: `elicit_analytics`, `elicit_superset_admin`.
-- No mapper on `elicit-admin` is needed: with full scope allowed, the default `roles`
-  client scope already emits the user's `elicit-superset` roles in Admin's tokens (§2).
+- Mapper on **`elicit-admin`**: "elicit-superset roles for admin" mapping `elicit-superset`
+  client roles into `resource_access.elicit-superset.roles` of Admin's tokens (§2).
 - Users: new `analyst` / `analyst` with `elicit_analytics` only; `admin` gains
   `elicit_analytics` and `elicit_superset_admin` so the existing local login can author
   dashboards.
@@ -217,11 +219,34 @@ is expected to exit; `README.md` mentions Analytics.
 | 6.2 | AIUP artifacts (section 3), including `/use-case-spec UC-020` | Admin | — |
 | 6.3 | Roles, migration, `UserRoleService`, `EditUserView`, tests (§4.1, §4.5 rows 1–5) | Admin | 6.2 |
 | 6.4 | Keycloak realm changes (§5.1); verify `admin` token carries both `resource_access` entries; set `role-claim-path` — **done 2026-09-18** (umbrella `6a676b1`) | umbrella, Admin | 6.3 |
-| 6.5 | Superset image, config, compose, scripts (§5.2–5.4); bring the stack up; log in to Superset as `admin` via Keycloak | umbrella | 6.4 |
-| 6.6 | Author the Survey Operations dashboard in local Superset (funnel + status breakdown from research §6.2.1, then the rest of §6.2); enable embedding with allowed domain `localhost:8081`; export ZIP; commit under `superset/assets/`; re-run `superset-init` to prove the import | umbrella | 6.5 |
-| 6.7 | `AnalyticsConfig`, guest-token service, REST endpoint, tests (§4.2, §4.3, §4.5 rows 8–9) | Admin | 6.3 |
-| 6.8 | `AnalyticsView`, npm dependency, JS module, `MainLayout` item, tests (§4.4, §4.5 rows 6–7) | Admin | 6.6, 6.7 |
+| 6.5 | Superset image, config, compose, scripts (§5.2–5.4); bring the stack up; log in to Superset as `admin` via Keycloak — **done 2026-09-18** (umbrella `56b76f5`); Keycloak's sign-in page is reached through the `elicit-superset` client | umbrella | 6.4 |
+| 6.6 | Author the Survey Operations dashboard in local Superset (funnel + status breakdown from research §6.2.1, then the rest of §6.2); enable embedding with allowed domain `localhost:8081`; export ZIP; commit under `superset/assets/`; re-run `superset-init` to prove the import — **done 2026-09-18**: built through the REST API (datasets, seven charts with saved query contexts, dashboard with a survey filter), exported to `superset/assets/survey-operations.zip`, re-imported by `superset-init`, embedded id pinned by `bootstrap.py` | umbrella | 6.5 |
+| 6.7 | `AnalyticsConfig`, guest-token service, REST endpoint, tests (§4.2, §4.3, §4.5 rows 8–9) — **done 2026-09-18** (Admin `113f8fa`) | Admin | 6.3 |
+| 6.8 | `AnalyticsView`, npm dependency, JS module, `MainLayout` item, tests (§4.4, §4.5 rows 6–7) — **done 2026-09-18** (Admin `dd38770`) | Admin | 6.6, 6.7 |
 | 6.9 | End-to-end verification (section 7); update research doc status; PRs per D8 | both | all |
+
+### Findings while implementing 6.5–6.8
+
+- **`elemental.json` is gone in Vaadin 25.** `executeJs` receives plain string arguments
+  and the object literal is built in the JS expression.
+- **`EmbeddedDashboard.allowed_domains` is read-only in Superset 6.1**; the column is
+  `allow_domain_list` (comma-separated). `bootstrap.py` writes that.
+- **`superset-init` must wait for the database.** A `docker compose restart` cycles `db`
+  under the run-once job, so `init.sh` retries the owner connection for up to three minutes.
+- **Chart data endpoint needs a saved `query_context`.** Charts created through the API
+  with only `params` render in the dashboard but return "Chart has no query context saved"
+  from `/api/v1/chart/{id}/data/`; the build script saves one per chart so thumbnails and
+  Alerts & Reports work.
+- **`MainLayoutTest` ordering.** The UI-scoped `UiSessionLogin` clears the session user for
+  an unknown principal the first time it is used in a UI; new tests touch it before seeding
+  the session user (`seedSessionUser`). The pre-existing tests passed only by order.
+- **Direct grants on `elicit-admin` return the login page** because the client overrides its
+  direct-grant flow with the browser flow; the Keycloak admin API's example-token endpoint
+  is the way to inspect claims.
+- **Local stacks conflict.** The Author project's compose (`Author/docker-compose.yml`,
+  project `author`) uses the same ports as the umbrella's; the umbrella's pre-Kimball
+  `postgresql/PGDATA` was moved to `postgresql/PGDATA_pre_kimball` and a fresh V3 database
+  initialised (decision 2026-09-18).
 
 ## 7. Verification
 
