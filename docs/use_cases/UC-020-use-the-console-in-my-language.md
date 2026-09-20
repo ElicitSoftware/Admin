@@ -11,7 +11,7 @@
 ## Preconditions
 
 - The administrator is authenticated and has reached the admin console (UC-001).
-- The console ships English texts and at least one additional language (Latin American Spanish and Arabic in the reference deployment).
+- The console ships English texts only; the deployment's translations directory supplies every other language (Latin American Spanish and Arabic in the reference deployment).
 - The deployment may have mounted further language files or text overrides; if so, those languages are also available.
 
 ## Main Success Scenario

@@ -34,6 +34,7 @@
 | FR-023 | Right-to-Left Layout                | As a survey administrator whose language is written right-to-left, I want the whole console laid out right-to-left when that language is selected so that it reads naturally. | High     | Implemented |
 | FR-024 | Translation Handoff Package         | As a platform operator, I want one generated document containing every translatable text with its context and translation rules so that I can hand it to a translator or an AI agent and receive a complete language file back. | Medium   | Implemented |
 | FR-025 | Localized Service Messages          | As a survey administrator, I want error messages produced by import, export and reporting services to appear in my language so that failures are understandable. | Low      | Planned     |
+| FR-026 | Manage Languages from the Console   | As a survey administrator with the `elicit_admin` role, I want to add, replace or remove a language for the console and for the survey application by uploading a validated translation file on a Languages screen so that a site can offer a new language without server access. | Medium   | Planned     |
 
 ## Non-Functional Requirements
 
@@ -69,9 +70,10 @@
 | C-011 | Terminology              | The credential a respondent enters to reach a survey is the **access code** (`survey.respondents.access_code`, `Status.accessCode`, the `<ACCESS_CODE>` template placeholder). "Token" is reserved for OIDC/Bearer tokens and the question-text placeholder (`survey.relationships.token`); it must not be used for the respondent credential. | Business    | Medium   | Implemented |
 | C-012 | Translation File Layout  | Translation files must use the Vaadin standard layout (`src/main/resources/vaadin-i18n/translations[_tag].properties`, `getTranslation` keys, `{0}` placeholders) so that Vaadin Copilot's internationalization tooling keeps working alongside hand-written extraction. | Technical   | Medium   | Implemented |
 | C-013 | Stored Content Language  | Only console chrome is localized. Subject, department, template and survey data stored in the database (including message templates and survey definitions) is presented as entered; content translation is tracked on a separate branch. | Business    | High     | Verified    |
+| C-014 | Writable Translations Directory | Managing languages from the console (FR-026) requires the translations directory (`i18n.file.system.path`) to be mounted writable for the console; the compose file currently mounts it read-only, and languages are then added on the server as documented in the umbrella `DeploymentScript.md`. | Technical   | Medium   | Planned     |
 
 ## Traceability
 
-Functional requirements FR-001–FR-019 map one-to-one to `docs/use_cases/UC-001`–`UC-019`; FR-020–FR-025 (localization) trace to `UC-020`. See `docs/use_cases.puml`
+Functional requirements FR-001–FR-019 map one-to-one to `docs/use_cases/UC-001`–`UC-019`; FR-020–FR-025 (localization) trace to `UC-020`; FR-026 (managing languages) traces to `UC-021`. See `docs/use_cases.puml`
 for the actor/use-case diagram and `docs/entity_model.md` for the underlying data model referenced by these
 requirements.
