@@ -87,42 +87,42 @@ public class DebugView extends VerticalLayout implements HasDynamicTitle {
      */
     @PostConstruct
     public void init() {
-        add(new H1("Debug Information"));
+        add(new H1(getTranslation("debugView.title")));
 
         StringBuilder sb = new StringBuilder();
 
         // Basic identity information
-        sb.append("User: ").append(identity.getPrincipal().getName()).append("\n");
-        sb.append("Is Anonymous: ").append(identity.isAnonymous()).append("\n");
-        sb.append("Roles: ").append(identity.getRoles()).append("\n");
+        sb.append(getTranslation("debugView.user", identity.getPrincipal().getName())).append("\n");
+        sb.append(getTranslation("debugView.isAnonymous", identity.isAnonymous())).append("\n");
+        sb.append(getTranslation("debugView.roles", identity.getRoles())).append("\n");
         String roleSource = identity.getAttribute(RoleSecurityIdentityAugmentor.ROLE_SOURCE_ATTRIBUTE);
-        sb.append("Role Source: ").append(roleSource).append("\n");
-        sb.append("Has elicit_admin: ").append(identity.hasRole("elicit_admin")).append("\n");
-        sb.append("Has elicit_user: ").append(identity.hasRole("elicit_user")).append("\n");
+        sb.append(getTranslation("debugView.roleSource", roleSource)).append("\n");
+        sb.append(getTranslation("debugView.hasAdminRole", identity.hasRole("elicit_admin"))).append("\n");
+        sb.append(getTranslation("debugView.hasUserRole", identity.hasRole("elicit_user"))).append("\n");
         sb.append("\n");
 
         // ID Token information
         try {
             if (idTokenInstance.isResolvable()) {
                 JsonWebToken idToken = idTokenInstance.get();
-                sb.append("ID Token: ").append(maskToken(idToken.getRawToken(), revealTokens)).append("\n\n");
+                sb.append(getTranslation("debugView.idToken", maskToken(idToken.getRawToken(), revealTokens))).append("\n\n");
             } else {
-                sb.append("ID Token: Not available or resolvable\n\n");
+                sb.append(getTranslation("debugView.idTokenUnavailable")).append("\n\n");
             }
         } catch (Exception e) {
-            sb.append("ID Token Error: ").append(e.getMessage()).append("\n\n");
+            sb.append(getTranslation("debugView.idTokenError", e.getMessage())).append("\n\n");
         }
 
         // Access Token information
         try {
             if (accessTokenInstance.isResolvable()) {
                 AccessTokenCredential accessToken = accessTokenInstance.get();
-                sb.append("Access Token: ").append(maskToken(accessToken.getToken(), revealTokens)).append("\n\n");
+                sb.append(getTranslation("debugView.accessToken", maskToken(accessToken.getToken(), revealTokens))).append("\n\n");
             } else {
-                sb.append("Access Token: Not available or resolvable\n\n");
+                sb.append(getTranslation("debugView.accessTokenUnavailable")).append("\n\n");
             }
         } catch (Exception e) {
-            sb.append("Access Token Error: ").append(e.getMessage()).append("\n\n");
+            sb.append(getTranslation("debugView.accessTokenError", e.getMessage())).append("\n\n");
         }
 
         Pre debugInfo = new Pre(sb.toString());
@@ -148,6 +148,6 @@ public class DebugView extends VerticalLayout implements HasDynamicTitle {
 
     @Override
     public String getPageTitle() {
-        return "Debug - Elicit Admin";
+        return getTranslation("debugView.pageTitle");
     }
 }

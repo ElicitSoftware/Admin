@@ -37,6 +37,7 @@ import com.vaadin.flow.component.textfield.EmailField;
 import com.vaadin.flow.component.textfield.TextField;
 import com.vaadin.flow.component.textfield.TextFieldVariant;
 import com.vaadin.flow.component.upload.Upload;
+import com.vaadin.flow.component.upload.UploadI18N;
 import com.vaadin.flow.server.streams.UploadHandler;
 import com.vaadin.flow.data.binder.Binder;
 import com.vaadin.flow.data.binder.ValidationException;
@@ -53,6 +54,8 @@ import jakarta.inject.Inject;
 import jakarta.persistence.PersistenceException;
 import jakarta.transaction.Transactional;
 import java.io.InputStream;
+import java.text.DateFormatSymbols;
+import java.util.Arrays;
 
 import java.time.LocalDate;
 import java.util.ArrayList;
@@ -250,25 +253,27 @@ public class RegisterView extends HorizontalLayout implements HasDynamicTitle, B
             subject.setSurveyId(surveys.get(0).id);
         }
 
-        TextField firstName = new TextField("First Name");
+        TextField firstName = new TextField(getTranslation("registerView.firstName"));
         firstName.setId("register-first-name");
         firstName.addThemeVariants(TextFieldVariant.LUMO_SMALL);
-        TextField lastName = new TextField("Last Name");
+        TextField lastName = new TextField(getTranslation("registerView.lastName"));
         lastName.setId("register-last-name");
         lastName.addThemeVariants(TextFieldVariant.LUMO_SMALL);
-        TextField middleName = new TextField("Middle Name");
+        TextField middleName = new TextField(getTranslation("registerView.middleName"));
         middleName.setId("register-middle-name");
         middleName.addThemeVariants(TextFieldVariant.LUMO_SMALL);
-        DatePicker dob = new DatePicker("Date of Birth");
+        DatePicker dob = new DatePicker(getTranslation("registerView.dob"));
         dob.setId("register-dob");
+        dob.setLocale(getLocale());
+        dob.setI18n(datePickerI18n());
         dob.addThemeVariants(DatePickerVariant.LUMO_SMALL);
-        EmailField email = new EmailField("Email");
+        EmailField email = new EmailField(getTranslation("registerView.email"));
         email.setId("register-email");
-        TextField phone = new TextField("Phone");
+        TextField phone = new TextField(getTranslation("registerView.phone"));
         phone.setId("register-phone");
         phone.setPlaceholder("123-456-7890");
         phone.addThemeVariants(TextFieldVariant.LUMO_SMALL);
-        TextField xid = new TextField("external ID");
+        TextField xid = new TextField(getTranslation("registerView.xid"));
         xid.setId("register-xid");
         xid.addThemeVariants(TextFieldVariant.LUMO_SMALL);
 
@@ -278,7 +283,7 @@ public class RegisterView extends HorizontalLayout implements HasDynamicTitle, B
 
         // Add this binder for departmentComboBox
         binder.forField(departmentComboBox)
-                .asRequired("Department is required")
+                .asRequired(getTranslation("registerView.error.departmentRequired"))
                 .bind(
                         s -> {
                             // Find the Department object by id
@@ -292,7 +297,7 @@ public class RegisterView extends HorizontalLayout implements HasDynamicTitle, B
                 );
 
         binder.forField(surveyComboBox)
-                .asRequired("Survey is required")
+                .asRequired(getTranslation("registerView.error.surveyRequired"))
                 .bind(
                         s -> {
                             if (s.getSurveyId() == 0) return null;
@@ -312,25 +317,25 @@ public class RegisterView extends HorizontalLayout implements HasDynamicTitle, B
                 .bind("xid");
 
         binder.forField(firstName)
-                .asRequired("First name is required")
+                .asRequired(getTranslation("registerView.error.firstNameRequired"))
                 .bind("firstName");
 
         binder.forField(lastName)
-                .asRequired("Last name is required")
+                .asRequired(getTranslation("registerView.error.lastNameRequired"))
                 .bind("lastName");
 
         binder.forField(middleName)
                 .bind("middleName");
 
         binder.forField(dob)
-                .withValidator(date -> date == null || date.isBefore(LocalDate.now()), "DOB must be in the past")
+                .withValidator(date -> date == null || date.isBefore(LocalDate.now()), getTranslation("registerView.error.dobPast"))
                 .bind(
                         s -> s.getDob() == null ? null : s.getDob(),
                         (s, value) -> s.setDob(value == null ? null : LocalDate.from(value))
                 );
 
         binder.forField(email)
-                .withValidator(new EmailValidator("Enter a valid email address"))
+                .withValidator(new EmailValidator(getTranslation("registerView.error.emailInvalid")))
                 .bind("email");
 
         binder.forField(phone)
@@ -340,31 +345,31 @@ public class RegisterView extends HorizontalLayout implements HasDynamicTitle, B
                 )
                 .withValidator(
                         phoneVal -> phoneVal == null || phoneVal.matches("^\\d{3}-\\d{3}-\\d{4}$"),
-                        "Phone must be ###-###-####"
+                        getTranslation("registerView.error.phoneFormat")
                 )
                 .bind("phone");
 
-        saveButton = new Button("Save", event -> {
+        saveButton = new Button(getTranslation("common.save"), event -> {
             try {
                 saveSubject(binder);
             } catch (PersistenceException e) {
-                Notification.show("Duplicate entry: A subject with this External ID " + subject.getXid() + " already exists for this department.", 5000, Notification.Position.MIDDLE);
+                Notification.show(getTranslation("registerView.error.duplicateXid", subject.getXid()), 5000, Notification.Position.MIDDLE);
                 subject = new Subject();
             } catch (Exception e) {
-                showErrorDialog("Database Error", "Database error: " + e.getMessage());
+                showErrorDialog(getTranslation("registerView.error.databaseTitle"), getTranslation("registerView.error.database", e.getMessage()));
                 subject = new Subject();
             }
         });
         saveButton.setId("register-save-button");
         saveButton.addThemeVariants(ButtonVariant.LUMO_PRIMARY);
 
-        updateButton = new Button("Update Subject", event -> {
+        updateButton = new Button(getTranslation("registerView.btnUpdate"), event -> {
             try {
                 updateSubject(binder);
                 // Navigate back to the search view after update
                 getUI().ifPresent(ui -> ui.navigate(""));
             } catch (Exception e) {
-                showErrorDialog("Database Error", "Database error: " + e.getMessage());
+                showErrorDialog(getTranslation("registerView.error.databaseTitle"), getTranslation("registerView.error.database", e.getMessage()));
             }
         });
         updateButton.setId("register-update-button");
@@ -386,8 +391,9 @@ public class RegisterView extends HorizontalLayout implements HasDynamicTitle, B
         csvUpload.setAcceptedFileTypes(".csv");
         csvUpload.setMaxFiles(1);
         csvUpload.setMaxFileSize(5 * 1024 * 1024); // 5MB limit
+        csvUpload.setI18n(uploadI18n());
 
-        Button uploadButton = new Button("Upload CSV");
+        Button uploadButton = new Button(getTranslation("registerView.btnUploadCsv"));
         uploadButton.addThemeVariants(ButtonVariant.LUMO_PRIMARY);
         csvUpload.setUploadButton(uploadButton);
 
@@ -397,14 +403,15 @@ public class RegisterView extends HorizontalLayout implements HasDynamicTitle, B
                 CsvImportService importService = new CsvImportService(accessCodeService);
                 InputStream inputStream = new java.io.ByteArrayInputStream(data);
                 AddResponse response = importService.importSubjects(inputStream);
-                showSuccessDialog("CSV Import Success", "Successfully imported subjects:\n\n" + response.toString());
+                showSuccessDialog(getTranslation("registerView.csvImport.successTitle"),
+                        getTranslation("registerView.csvImport.success", response.toString()));
             } catch (Exception e) {
-                showErrorDialog("CSV Import Error", e.getMessage());
+                showErrorDialog(getTranslation("registerView.csvImport.errorTitle"), e.getMessage());
             }
         }));
 
         // Create REST API instructions accordion
-        Details restApiDetails = new Details("REST API Instructions", createRestApiContent());
+        Details restApiDetails = new Details(getTranslation("registerView.apiDoc.title"), createRestApiContent());
         restApiDetails.setOpened(false);
 
         rightLayout.add(getRestfulInstructionsDiv(), csvUpload, restApiDetails);
@@ -471,7 +478,7 @@ public class RegisterView extends HorizontalLayout implements HasDynamicTitle, B
                     surveyComboBox.setReadOnly(true);
                 }
             } else {
-                Notification.show("Subject not found for access code: " + accessCode, 3000, Notification.Position.MIDDLE);
+                Notification.show(getTranslation("registerView.error.subjectNotFound", accessCode), 3000, Notification.Position.MIDDLE);
                 // New: show save, hide update
                 if (updateButton != null && saveButton != null) {
                     updateButton.setVisible(false);
@@ -530,9 +537,9 @@ public class RegisterView extends HorizontalLayout implements HasDynamicTitle, B
                     .filter(dept -> dept.id == this.subject.getDepartmentId())
                     .map(Department::getName)
                     .findFirst()
-                    .orElse("Unknown");
+                    .orElse(getTranslation("registerView.unknownDepartment"));
 
-                Notification.show("External id " + this.subject.getXid() + " is in the exclude list for department " + departmentName, 3000, Notification.Position.MIDDLE);
+                Notification.show(getTranslation("registerView.error.excludedXid", this.subject.getXid(), departmentName), 3000, Notification.Position.MIDDLE);
                 return; // Exit early if excluded
             }
 
@@ -545,13 +552,13 @@ public class RegisterView extends HorizontalLayout implements HasDynamicTitle, B
             for (Message message : messages) {
                 message.persistAndFlush();
             }
-            Notification.show("Subject saved", 3000, Notification.Position.MIDDLE);
+            Notification.show(getTranslation("registerView.subjectSaved"), 3000, Notification.Position.MIDDLE);
             subject = new Subject();
             binder.readBean(subject); // reset form
         } catch (ValidationException e) {
-            Notification.show("Please fix validation errors", 3000, Notification.Position.MIDDLE);
+            Notification.show(getTranslation("registerView.error.fixValidation"), 3000, Notification.Position.MIDDLE);
         } catch (AccessCodeGenerationError e) {
-            Notification.show("Error generating new access code. Please try again", 3000, Notification.Position.MIDDLE);
+            Notification.show(getTranslation("registerView.error.accessCode"), 3000, Notification.Position.MIDDLE);
         }
     }
 
@@ -586,9 +593,9 @@ public class RegisterView extends HorizontalLayout implements HasDynamicTitle, B
             binder.writeBean(subject);
             subject = Subject.getEntityManager().merge(subject);
             Subject.getEntityManager().flush();
-            Notification.show("Subject updated", 3000, Notification.Position.MIDDLE);
+            Notification.show(getTranslation("registerView.subjectUpdated"), 3000, Notification.Position.MIDDLE);
         } catch (ValidationException e) {
-            Notification.show("Please fix validation errors", 3000, Notification.Position.MIDDLE);
+            Notification.show(getTranslation("registerView.error.fixValidation"), 3000, Notification.Position.MIDDLE);
         }
     }
 
@@ -638,7 +645,7 @@ public class RegisterView extends HorizontalLayout implements HasDynamicTitle, B
      * @return a configured ComboBox for survey selection
      */
     private ComboBox<Survey> getSurveyComboBox(List<Survey> surveys) {
-        ComboBox<Survey> surveyComboBox = new ComboBox<>("Survey");
+        ComboBox<Survey> surveyComboBox = new ComboBox<>(getTranslation("registerView.survey"));
         surveyComboBox.setItems(surveys);
         surveyComboBox.setItemLabelGenerator(survey -> survey.name);
         surveyComboBox.addThemeVariants(ComboBoxVariant.LUMO_SMALL);
@@ -646,7 +653,7 @@ public class RegisterView extends HorizontalLayout implements HasDynamicTitle, B
     }
 
     private ComboBox<Department> getDepartmentComboBox() {
-        ComboBox<Department> departmentComboBox = new ComboBox<>("Deparments");
+        ComboBox<Department> departmentComboBox = new ComboBox<>(getTranslation("registerView.department"));
         departmentComboBox.setItems(user.getDepartments());
         departmentComboBox.setItemLabelGenerator(Department::getName);
         departmentComboBox.addThemeVariants(ComboBoxVariant.LUMO_SMALL);
@@ -673,12 +680,12 @@ public class RegisterView extends HorizontalLayout implements HasDynamicTitle, B
         Div div = new Div();
 
         // Create CSV Structure Accordion
-        Details csvDetails = new Details("CSV File Structure", createCsvStructureContent());
+        Details csvDetails = new Details(getTranslation("registerView.csvDoc.title"), createCsvStructureContent());
         csvDetails.setOpened(false); // Open by default so users can see the format
 
         div.add(
-                new Paragraph("You can register subjects individually using the form, a rest API, or upload a CSV file with multiple subjects."),
-                new Paragraph("Click below to see the required CSV file format and examples:"),
+                new Paragraph(getTranslation("registerView.intro.methods")),
+                new Paragraph(getTranslation("registerView.intro.clickBelow")),
                 csvDetails
         );
 
@@ -716,18 +723,20 @@ public class RegisterView extends HorizontalLayout implements HasDynamicTitle, B
         Div content = new Div();
 
         content.add(
-                new Paragraph("The CSV file should contain the following columns in order:"),
-                new Paragraph("#departmentId, firstName, lastName, middleName, dob, email, phone, xid"),
-                new Paragraph("All rows starting with a '#' character are considered comments and will be ignored."),
+                new Paragraph(getTranslation("registerView.csvDoc.columnsIntro")),
+                new Paragraph("#departmentId, firstName, lastName, middleName, dob, email, phone, xid"), // i18n:ignore CSV header line
+                new Paragraph(getTranslation("registerView.csvDoc.comments")),
 
-                new H4("Column Descriptions:"),
+                new H4(getTranslation("registerView.csvDoc.columnDescriptions")),
                 columnDescriptionsList(),
 
-                new H4("Example CSV data:"),
+                new H4(getTranslation("registerView.csvDoc.example")),
+                // i18n:ignore-start (sample CSV data)
                 new Pre("#departmentId,firstName,lastName,middleName,dob,email,phone,xid\n" +
                         "1,John,Doe,Michael,1990-01-15,john.doe@email.com,123-456-7890,EXT001\n" +
                         "2,Jane,Smith,,1985-03-22,jane.smith@email.com,555-123-4567,EXT002\n" +
                         "1,Bob,Johnson,Robert,12/10/1992,bob.johnson@email.com,999-888-7777,EXT003")
+                // i18n:ignore-end
         );
 
         return content;
@@ -744,28 +753,59 @@ public class RegisterView extends HorizontalLayout implements HasDynamicTitle, B
      */
     private UnorderedList columnDescriptionsList() {
         UnorderedList list = new UnorderedList();
-        list.add(columnDescription("departmentId:", " Integer (required) - Must be a valid department ID for the user"));
-        list.add(columnDescription("firstName:", " String (required) - Subject's first name"));
-        list.add(columnDescription("lastName:", " String (required) - Subject's last name"));
-        list.add(columnDescription("middleName:", " String (optional) - Subject's middle name"));
-        list.add(columnDescription("dob:", " Date (optional) - Date of birth in yyyy-MM-dd or MM/dd/yyyy format"));
-        list.add(columnDescription("email:", " String (required) - Valid email address"));
-        list.add(columnDescription("phone:", " String (optional) - Phone number in ###-###-#### format"));
-        list.add(columnDescription("xid:", " String (optional) - External ID for the subject"));
+        list.add(columnDescription("departmentId", getTranslation("registerView.csvDoc.col.departmentId")));
+        list.add(columnDescription("firstName", getTranslation("registerView.csvDoc.col.firstName")));
+        list.add(columnDescription("lastName", getTranslation("registerView.csvDoc.col.lastName")));
+        list.add(columnDescription("middleName", getTranslation("registerView.csvDoc.col.middleName")));
+        list.add(columnDescription("dob", getTranslation("registerView.csvDoc.col.dob")));
+        list.add(columnDescription("email", getTranslation("registerView.csvDoc.col.email")));
+        list.add(columnDescription("phone", getTranslation("registerView.csvDoc.col.phone")));
+        list.add(columnDescription("xid", getTranslation("registerView.csvDoc.col.xid")));
         return list;
     }
 
     /**
      * Creates a single CSV column-description list item with a bold field name.
      *
-     * @param label       the column name, rendered in bold
-     * @param description the human-readable description text
+     * @param column      the technical CSV column name, rendered in bold (never translated)
+     * @param description the translated, human-readable description text
      * @return a {@link ListItem} for the column
      */
-    private ListItem columnDescription(String label, String description) {
-        Span name = new Span(label);
+    private ListItem columnDescription(String column, String description) {
+        Span name = new Span(column + ":");
         name.addClassName(LumoUtility.FontWeight.BOLD);
-        return new ListItem(name, new Span(description));
+        return new ListItem(name, new Span(" " + description));
+    }
+
+    /**
+     * Month and weekday names for the date picker in the current locale (UC-020), with the
+     * button labels from the translation bundle.
+     */
+    private DatePicker.DatePickerI18n datePickerI18n() {
+        DateFormatSymbols symbols = DateFormatSymbols.getInstance(getLocale());
+        DatePicker.DatePickerI18n i18n = new DatePicker.DatePickerI18n();
+        i18n.setMonthNames(Arrays.asList(symbols.getMonths()).subList(0, 12));
+        i18n.setWeekdays(Arrays.asList(symbols.getWeekdays()).subList(1, 8));
+        i18n.setWeekdaysShort(Arrays.asList(symbols.getShortWeekdays()).subList(1, 8));
+        i18n.setToday(getTranslation("registerView.datePicker.today"));
+        i18n.setCancel(getTranslation("common.cancel"));
+        return i18n;
+    }
+
+    /** Upload component texts in the current locale (UC-020). */
+    private UploadI18N uploadI18n() {
+        UploadI18N i18n = new UploadI18N();
+        i18n.setAddFiles(new UploadI18N.AddFiles()
+                .setOne(getTranslation("registerView.btnUploadCsv"))
+                .setMany(getTranslation("registerView.btnUploadCsv")));
+        i18n.setDropFiles(new UploadI18N.DropFiles()
+                .setOne(getTranslation("registerView.upload.dropFile"))
+                .setMany(getTranslation("registerView.upload.dropFile")));
+        i18n.setError(new UploadI18N.Error()
+                .setFileIsTooBig(getTranslation("registerView.upload.error.tooBig"))
+                .setIncorrectFileType(getTranslation("registerView.upload.error.wrongType"))
+                .setTooManyFiles(getTranslation("registerView.upload.error.tooMany")));
+        return i18n;
     }
 
     /**
@@ -803,19 +843,20 @@ public class RegisterView extends HorizontalLayout implements HasDynamicTitle, B
         Div content = new Div();
 
         content.add(
-                new Paragraph("You can also add subjects programmatically using the REST API endpoints"),
+                new Paragraph(getTranslation("registerView.apiDoc.intro")),
 
-                new H3("1. Single Subject Registration"),
-                new H4("Endpoint:"),
-                new Pre("POST /api/secured/add/subject"),
+                new H3(getTranslation("registerView.apiDoc.single.h")),
+                new H4(getTranslation("registerView.apiDoc.endpoint")),
+                new Pre("POST /api/secured/add/subject"), // i18n:ignore
 
-                new H4("Authentication:"),
-                new Paragraph("Requires a Bearer token with elicit_admin, elicit_user, or elicit_importer role"),
+                new H4(getTranslation("registerView.apiDoc.authentication")),
+                new Paragraph(getTranslation("registerView.apiDoc.auth.anyRole")),
 
-                new H4("Content-Type:"),
+                new H4(getTranslation("registerView.apiDoc.contentType")),
                 new Pre("application/json"),
 
-                new H4("Request Body Example:"),
+                new H4(getTranslation("registerView.apiDoc.requestBodyExample")),
+                // i18n:ignore-start (sample request body)
                 new Pre("{\n" +
                         "  \"surveyId\": 1,\n" +
                         "  \"departmentId\": 1,\n" +
@@ -827,18 +868,20 @@ public class RegisterView extends HorizontalLayout implements HasDynamicTitle, B
                         "  \"phone\": \"123-456-7890\",\n" +
                         "  \"xid\": \"EXT001\"\n" +
                         "}"),
+                // i18n:ignore-end
 
-                new H3("2. Bulk Subject Registration"),
-                new H4("Endpoint:"),
-                new Pre("POST /api/secured/add/subjects"),
+                new H3(getTranslation("registerView.apiDoc.bulk.h")),
+                new H4(getTranslation("registerView.apiDoc.endpoint")),
+                new Pre("POST /api/secured/add/subjects"), // i18n:ignore
 
-                new H4("Authentication:"),
-                new Paragraph("Requires a Bearer token with elicit_admin, elicit_user, or elicit_importer role"),
+                new H4(getTranslation("registerView.apiDoc.authentication")),
+                new Paragraph(getTranslation("registerView.apiDoc.auth.anyRole")),
 
-                new H4("Content-Type:"),
+                new H4(getTranslation("registerView.apiDoc.contentType")),
                 new Pre("application/json"),
 
-                new H4("Request Body Example (Array of Subjects):"),
+                new H4(getTranslation("registerView.apiDoc.requestBodyArray")),
+                // i18n:ignore-start (sample request body)
                 new Pre("[\n" +
                         "  {\n" +
                         "    \"surveyId\": 1,\n" +
@@ -860,45 +903,42 @@ public class RegisterView extends HorizontalLayout implements HasDynamicTitle, B
                         "    \"xid\": \"EXT002\"\n" +
                         "  }\n" +
                         "]"),
+                // i18n:ignore-end
 
-                new H3("3. CSV File Upload (REST API)"),
-                new H4("Endpoint:"),
-                new Pre("POST /api/secured/add/csv"),
+                new H3(getTranslation("registerView.apiDoc.csvUpload.h")),
+                new H4(getTranslation("registerView.apiDoc.endpoint")),
+                new Pre("POST /api/secured/add/csv"), // i18n:ignore
 
-                new H4("Authentication:"),
-                new Paragraph("Requires a Bearer token with elicit_importer role"),
+                new H4(getTranslation("registerView.apiDoc.authentication")),
+                new Paragraph(getTranslation("registerView.apiDoc.auth.importerRole")),
 
-                new H4("Content-Type:"),
+                new H4(getTranslation("registerView.apiDoc.contentType")),
                 new Pre("multipart/form-data"),
 
-                new H4("Request Body:"),
-                new Paragraph("Form field 'file' containing CSV file with subject data"),
+                new H4(getTranslation("registerView.apiDoc.requestBody")),
+                new Paragraph(getTranslation("registerView.apiDoc.requestBodyFile")),
 
-                new H4("CSV File Format:"),
-                new Paragraph("The CSV file should contain the following columns in order:"),
+                new H4(getTranslation("registerView.apiDoc.csvFormat")),
+                new Paragraph(getTranslation("registerView.csvDoc.columnsIntro")),
                 new Pre("departmentId,firstName,lastName,middleName,dob,email,phone,xid"),
 
-                new Paragraph("Column Requirements:"),
-                new Pre("• departmentId: Integer (required) - Valid department ID\n" +
-                        "• firstName: String (required) - Subject's first name\n" +
-                        "• lastName: String (required) - Subject's last name\n" +
-                        "• middleName: String (optional) - Subject's middle name\n" +
-                        "• dob: Date (optional) - Format: yyyy-MM-dd or MM/dd/yyyy\n" +
-                        "• email: String (required) - Valid email address\n" +
-                        "• phone: String (optional) - Format: ###-###-####\n" +
-                        "• xid: String (optional) - External ID for the subject"),
+                new Paragraph(getTranslation("registerView.apiDoc.columnRequirements")),
+                new Pre(getTranslation("registerView.apiDoc.columnRequirementsList")),
 
-                new H4("CSV Example:"),
+                new H4(getTranslation("registerView.apiDoc.csvExample")),
+                // i18n:ignore-start (sample CSV data and API responses)
                 new Pre("departmentId,firstName,lastName,middleName,dob,email,phone,xid\n" +
                         "1,John,Doe,Michael,1990-01-15,john.doe@email.com,123-456-7890,EXT001\n" +
                         "2,Jane,Smith,,1985-03-22,jane.smith@email.com,555-123-4567,EXT002"),
+                // i18n:ignore-end
 
-                new H3("4. CSV File Upload (Web Interface)"),
-                new Paragraph("You can also upload a CSV file using the upload component above in the web interface."),
+                new H3(getTranslation("registerView.apiDoc.webUpload.h")),
+                new Paragraph(getTranslation("registerView.apiDoc.webUpload.p")),
 
-                new H3("Response Format (All Endpoints)"),
+                new H3(getTranslation("registerView.apiDoc.response.h")),
 
-                new H4("Response Example (Single Subject):"),
+                new H4(getTranslation("registerView.apiDoc.response.single")),
+                // i18n:ignore-start (sample API response, message values are literal API output)
                 new Pre("""
                         {
                             "statuses": [
@@ -919,8 +959,10 @@ public class RegisterView extends HorizontalLayout implements HasDynamicTitle, B
                             ]
                         }
                         """),
+                // i18n:ignore-end
 
-                new H4("Response Example (Bulk Subjects):"),
+                new H4(getTranslation("registerView.apiDoc.response.bulk")),
+                // i18n:ignore-start (sample API response, message values are literal API output)
                 new Pre("""
                         {
                             "statuses": [
@@ -939,12 +981,13 @@ public class RegisterView extends HorizontalLayout implements HasDynamicTitle, B
                             ]
                         }
                         """),
+                // i18n:ignore-end
 
-                new H4("Important Notes:"),
-                new Paragraph("• XID Exclusion: Subjects with XIDs in the exclusion list will not be created"),
-                new Paragraph("• Duplicate Detection: Existing subjects (same XID + department) will be identified"),
-                new Paragraph("• Individual Processing: In bulk requests, each subject is processed independently"),
-                new Paragraph("• Authentication: All endpoints require valid Bearer token authentication")
+                new H4(getTranslation("registerView.apiDoc.notes.h")),
+                new Paragraph(getTranslation("registerView.apiDoc.notes.exclusion")),
+                new Paragraph(getTranslation("registerView.apiDoc.notes.duplicates")),
+                new Paragraph(getTranslation("registerView.apiDoc.notes.individual")),
+                new Paragraph(getTranslation("registerView.apiDoc.notes.auth"))
         );
 
         return content;
@@ -967,7 +1010,7 @@ public class RegisterView extends HorizontalLayout implements HasDynamicTitle, B
         Span errorMessage = new Span(message);
         errorMessage.addClassName(LumoUtility.Whitespace.PRE_WRAP);
 
-        Button closeButton = new Button("Close", evt -> errorDialog.close());
+        Button closeButton = new Button(getTranslation("common.close"), evt -> errorDialog.close());
         closeButton.addThemeVariants(ButtonVariant.LUMO_PRIMARY);
         closeButton.addClassName(LumoUtility.Margin.Top.MEDIUM);
 
@@ -1002,7 +1045,7 @@ public class RegisterView extends HorizontalLayout implements HasDynamicTitle, B
         Span successMessage = new Span(message);
         successMessage.addClassNames(LumoUtility.Whitespace.PRE_WRAP, LumoUtility.TextColor.SUCCESS);
 
-        Button closeButton = new Button("Close", evt -> successDialog.close());
+        Button closeButton = new Button(getTranslation("common.close"), evt -> successDialog.close());
         closeButton.addThemeVariants(ButtonVariant.LUMO_PRIMARY);
         closeButton.addClassName(LumoUtility.Margin.Top.MEDIUM);
 
@@ -1028,7 +1071,7 @@ public class RegisterView extends HorizontalLayout implements HasDynamicTitle, B
      */
     @Override
     public String getPageTitle() {
-        return "Elicit Register";
+        return getTranslation("registerView.pageTitle");
     }
 
     /**

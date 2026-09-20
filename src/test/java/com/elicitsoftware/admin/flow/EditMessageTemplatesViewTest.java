@@ -105,7 +105,7 @@ class EditMessageTemplatesViewTest extends QuarkusBrowserlessTest {
     @SuppressWarnings("unchecked")
     private ComboBox<String> mimeTypeField() {
         return (ComboBox<String>) find(ComboBox.class, view).all().stream()
-                .filter(box -> "MIME Type".equals(box.getLabel()))
+                .filter(box -> UI.getCurrent().getTranslation("editMessageTemplatesView.mimeType").equals(box.getLabel()))
                 .findFirst()
                 .orElseThrow(() -> new AssertionError("No MIME Type ComboBox"));
     }
@@ -113,7 +113,7 @@ class EditMessageTemplatesViewTest extends QuarkusBrowserlessTest {
     @SuppressWarnings("unchecked")
     private ComboBox<Department> departmentField() {
         return (ComboBox<Department>) find(ComboBox.class, view).all().stream()
-                .filter(box -> "Department".equals(box.getLabel()))
+                .filter(box -> UI.getCurrent().getTranslation("editMessageTemplatesView.department").equals(box.getLabel()))
                 .findFirst()
                 .orElseThrow(() -> new AssertionError("No Department ComboBox"));
     }
@@ -123,7 +123,8 @@ class EditMessageTemplatesViewTest extends QuarkusBrowserlessTest {
      * semantics; {@code saveBtn}/{@code updateBtn} toggle visibility rather than existing/not
      * existing, so a hidden button is simply not findable by label.
      */
-    private Button buttonLabeled(String text) {
+    private Button buttonLabeled(String textKey) {
+        String text = UI.getCurrent().getTranslation(textKey);
         return find(Button.class, view).all().stream()
                 .filter(b -> text.equals(b.getText()))
                 .findFirst()
@@ -144,7 +145,7 @@ class EditMessageTemplatesViewTest extends QuarkusBrowserlessTest {
         setUpWithDepartment();
         enterMode("0");
 
-        assertTrue(buttonLabeled("Save").isVisible());
+        assertTrue(buttonLabeled("common.save").isVisible());
         assertEquals(1, find(Button.class, view).all().size(), "Update must be hidden in create mode");
         assertEquals("text/html", mimeTypeField().getValue());
     }
@@ -167,7 +168,7 @@ class EditMessageTemplatesViewTest extends QuarkusBrowserlessTest {
         assertEquals("Existing Subject", subjectField().getValue());
         assertEquals("Existing body", bodyField().getValue());
         assertEquals("text/plain", mimeTypeField().getValue());
-        assertTrue(buttonLabeled("Update").isVisible());
+        assertTrue(buttonLabeled("editMessageTemplatesView.btnUpdate").isVisible());
         assertEquals(1, find(Button.class, view).all().size(), "Save must be hidden in edit mode");
     }
 
@@ -207,11 +208,11 @@ class EditMessageTemplatesViewTest extends QuarkusBrowserlessTest {
 
         departmentField().setValue(department);
         subjectField().setValue("");
-        assertFalse(buttonLabeled("Save").isEnabled());
+        assertFalse(buttonLabeled("common.save").isEnabled());
 
         subjectField().setValue("A Subject");
         bodyField().setValue("A body");
-        assertTrue(buttonLabeled("Save").isEnabled());
+        assertTrue(buttonLabeled("common.save").isEnabled());
     }
 
     /** UC-007: saving a new template in create mode persists it and returns to the list route. */
@@ -225,7 +226,7 @@ class EditMessageTemplatesViewTest extends QuarkusBrowserlessTest {
         subjectField().setValue("New UC-007 Subject");
         bodyField().setValue("New UC-007 body");
 
-        buttonLabeled("Save").click();
+        buttonLabeled("common.save").click();
 
         MessageTemplate saved = MessageTemplate.find("subject", "New UC-007 Subject").firstResult();
         assertTrue(saved != null && "New UC-007 body".equals(saved.message));
@@ -247,7 +248,7 @@ class EditMessageTemplatesViewTest extends QuarkusBrowserlessTest {
         enterMode(String.valueOf(template.id));
         subjectField().setValue("After Update");
 
-        buttonLabeled("Update").click();
+        buttonLabeled("editMessageTemplatesView.btnUpdate").click();
 
         MessageTemplate updated = MessageTemplate.findById(template.id);
         assertEquals("After Update", updated.subject);

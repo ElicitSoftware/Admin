@@ -18,6 +18,7 @@ import java.util.ArrayList;
 
 import org.eclipse.microprofile.rest.client.RestClientBuilder;
 
+import com.elicitsoftware.admin.i18n.Translations;
 import com.elicitsoftware.model.ReportDefinition;
 import com.elicitsoftware.model.Status;
 import com.elicitsoftware.model.Survey;
@@ -205,7 +206,7 @@ public class ReportingService {
             ui.getPage().executeJs("window.open($0, '_blank')", pdfUrl);
         } catch (Exception e) {
             Log.error("Failed to generate PDF", e);
-            Notification.show("Failed to generate PDF: " + e.getMessage(), 3000, Notification.Position.MIDDLE);
+            Notification.show(Translations.get("reporting.error.pdf", e.getMessage()), 3000, Notification.Position.MIDDLE);
         }
     }
 
@@ -271,7 +272,7 @@ public class ReportingService {
             return reportResponse;
         } catch (jakarta.ws.rs.WebApplicationException e) {
             // Handle license validation errors and other HTTP errors specifically
-            String errorMessage = "Service error: " + e.getMessage();
+            String errorMessage = Translations.get("reporting.error.service", e.getMessage());
 
             // Try to extract more detailed error information
             if (e.getResponse() != null) {
@@ -286,45 +287,38 @@ public class ReportingService {
                         }
                     } catch (Exception readException) {
                         // Response may have already been consumed, fall back to status-based message
-                        if (status == 403) {
-                            errorMessage = "Access forbidden - License validation may have failed. Please check your license configuration.";
-                        } else {
-                            errorMessage = "Service error (HTTP " + status + "): " + e.getMessage();
-                        }
+                        errorMessage = status == 403
+                                ? Translations.get("reporting.error.forbidden")
+                                : Translations.get("reporting.error.serviceHttp", status, e.getMessage());
                     }
                 } else {
                     // No response entity, provide status-based error message
-                    if (status == 403) {
-                        errorMessage = "Access forbidden - License validation may have failed. Please check your license configuration.";
-                    } else {
-                        errorMessage = "Service error (HTTP " + status + "): " + e.getMessage();
-                    }
+                    errorMessage = status == 403
+                            ? Translations.get("reporting.error.forbidden")
+                            : Translations.get("reporting.error.serviceHttp", status, e.getMessage());
                 }
             }
 
             // Check if the exception message contains clues about license validation
             if (e.getMessage() != null && e.getMessage().toLowerCase().contains("forbidden")) {
                 if (!errorMessage.toLowerCase().contains("license")) {
-                    errorMessage = "License validation failed - " + errorMessage;
+                    errorMessage = Translations.get("reporting.error.license", errorMessage);
                 }
             }
 
             ReportResponse reportResponse = new ReportResponse();
-            reportResponse.title = "Error - " + rpt.name;
-            reportResponse.innerHTML = "<div style='color: red; padding: 20px; border: 1px solid red; background-color: #ffe6e6;'>" +
-                    "<h3>Report Generation Error</h3>" +
-                    "<p><strong>Service:</strong> " + rpt.name + "</p>" +
-                    "<p><strong>Error:</strong> " + errorMessage + "</p>" +
-                    "<p><em>If this is a license error, please ensure your PREMM5 license is valid and properly configured.</em></p>" +
-                    "</div>";
+            reportResponse.title = Translations.get("reporting.error.title", rpt.name);
+            reportResponse.innerHTML = Translations.get("reporting.error.html", rpt.name, errorMessage,
+                    Translations.get("reporting.error.licenseHint"));
 
             PDFDocument pdf = new PDFDocument();
-            pdf.title = "Error - " + rpt.name;
+            pdf.title = Translations.get("reporting.error.title", rpt.name);
             Content[] content = new Content[1];
             Content body = new Content();
             // Remove newlines and other control characters that might cause PDF encoding issues
             String cleanErrorMessage = errorMessage.replaceAll("[\\r\\n\\t]", " ").trim();
-            body.text = "Report Generation Error - Service: " + rpt.name + " - Error: " + cleanErrorMessage + " - If this is a license error, please ensure your PREMM5 license is valid and properly configured.";
+            body.text = Translations.get("reporting.error.pdfText", rpt.name, cleanErrorMessage,
+                    Translations.get("reporting.error.pdfLicenseHint"));
             content[0] = body;
             pdf.content = content;
             reportResponse.pdf = pdf;
@@ -332,20 +326,16 @@ public class ReportingService {
         } catch (Exception e) {
             // Handle other exceptions (network issues, URI parsing, etc.)
             ReportResponse reportResponse = new ReportResponse();
-            reportResponse.title = "Error - " + rpt.name;
-            reportResponse.innerHTML = "<div style='color: red; padding: 20px; border: 1px solid red; background-color: #ffe6e6;'>" +
-                    "<h3>Report Generation Error</h3>" +
-                    "<p><strong>Service:</strong> " + rpt.name + "</p>" +
-                    "<p><strong>Error:</strong> " + e.getMessage() + "</p>" +
-                    "</div>";
+            reportResponse.title = Translations.get("reporting.error.title", rpt.name);
+            reportResponse.innerHTML = Translations.get("reporting.error.html", rpt.name, e.getMessage(), "");
 
             PDFDocument pdf = new PDFDocument();
-            pdf.title = "Error - " + rpt.name;
+            pdf.title = Translations.get("reporting.error.title", rpt.name);
             Content[] content = new Content[1];
             Content body = new Content();
             // Remove newlines and other control characters that might cause PDF encoding issues
-            String cleanErrorMessage = (e.getMessage() != null ? e.getMessage() : "Unknown error").replaceAll("[\\r\\n\\t]", " ").trim();
-            body.text = "Report Generation Error - Service: " + rpt.name + " - Error: " + cleanErrorMessage;
+            String cleanErrorMessage = (e.getMessage() != null ? e.getMessage() : Translations.get("reporting.error.unknown")).replaceAll("[\\r\\n\\t]", " ").trim();
+            body.text = Translations.get("reporting.error.pdfText", rpt.name, cleanErrorMessage, "");
             content[0] = body;
             pdf.content = content;
             reportResponse.pdf = pdf;

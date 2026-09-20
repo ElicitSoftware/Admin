@@ -16,6 +16,14 @@
     "description": "Elicit Software's default brand: Ink navy and Verdigris teal drawn from the clipboard/checkmark mark, warm Paper background, IBM Plex Sans/Mono typography.",
     "primaryColor": "#0A3D62",
     "organization": "Elicit Software",
-    "lastUpdated": "2026-08-14"
+    "lastUpdated": "2026-08-14",
+    "localized": {
+      "es-419": {
+        "description": "Marca predeterminada de Elicit Software."
+      },
+      "ar": {
+        "description": "العلامة الافتراضية لـ Elicit Software."
+      }
+    }
   }
 }

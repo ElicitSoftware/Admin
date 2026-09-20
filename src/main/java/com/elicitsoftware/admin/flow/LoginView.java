@@ -69,7 +69,7 @@ public class LoginView extends VerticalLayout implements BeforeEnterObserver  {
      */
     public LoginView() {
         Log.debug("LoginView constructor");
-        add("FHHS Admin :-)");
+        add(getTranslation("loginView.redirecting"));
     }
 
     /**

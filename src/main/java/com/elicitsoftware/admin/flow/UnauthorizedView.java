@@ -46,15 +46,12 @@ public class UnauthorizedView extends VerticalLayout {
                                LumoUtility.Padding.LARGE);
         container.setWidth("400px");
 
-        H1 title = new H1("Access Restricted");
+        H1 title = new H1(getTranslation("unauthorizedView.title"));
         title.addClassName(LumoUtility.TextColor.ERROR);
         
-        Paragraph message = new Paragraph(
-            "You are authenticated but do not have the required permissions to access this application. " +
-            "Please contact your administrator to request access with the 'elicit_user' or 'elicit_admin' role."
-        );
+        Paragraph message = new Paragraph(getTranslation("unauthorizedView.message"));
         
-        Button logoutButton = new Button("Logout", event -> {
+        Button logoutButton = new Button(getTranslation("unauthorizedView.logout"), event -> {
             getUI().ifPresent(ui -> ui.getPage().setLocation("/logout"));
         });
         logoutButton.addThemeVariants(ButtonVariant.LUMO_PRIMARY);

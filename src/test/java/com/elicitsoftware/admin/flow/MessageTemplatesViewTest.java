@@ -90,7 +90,7 @@ class MessageTemplatesViewTest extends QuarkusBrowserlessTest {
         UI.getCurrent().add(view);
 
         Button newTemplateBtn = find(Button.class, view).all().stream()
-                .filter(b -> "New Message Template".equals(b.getText()))
+                .filter(b -> view.getTranslation("messageTemplatesView.newTemplate").equals(b.getText()))
                 .findFirst()
                 .orElseThrow(() -> new AssertionError("No New Message Template button"));
 

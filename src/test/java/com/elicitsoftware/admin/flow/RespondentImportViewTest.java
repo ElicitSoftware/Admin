@@ -69,7 +69,7 @@ class RespondentImportViewTest extends QuarkusBrowserlessTest {
     @Test
     @TestSecurity(user = "import.admin", roles = {"elicit_admin"})
     void rendersUploadControl() {
-        assertTrue(find(H3.class, view).all().stream().anyMatch(h -> "Import Respondent".equals(h.getText())));
+        assertTrue(find(H3.class, view).all().stream().anyMatch(h -> view.getTranslation("respondentImportView.title").equals(h.getText())));
 
         Upload upload = find(Upload.class, view).single();
         assertEquals("respondent-import-upload", upload.getId().orElse(null));
@@ -88,7 +88,7 @@ class RespondentImportViewTest extends QuarkusBrowserlessTest {
         view.handleUpload(content.getBytes(StandardCharsets.UTF_8));
 
         Dialog dialog = find(Dialog.class).single();
-        assertTrue(dialog.getHeaderTitle().contains("Import Successful"));
+        assertTrue(dialog.getHeaderTitle().contains(view.getTranslation("respondentImportView.importSuccessful")));
     }
 
     /** UC-012: a file missing the format-version header fails without throwing, and shows an error dialog. */
@@ -101,6 +101,6 @@ class RespondentImportViewTest extends QuarkusBrowserlessTest {
         view.handleUpload(content.getBytes(StandardCharsets.UTF_8));
 
         Dialog dialog = find(Dialog.class).single();
-        assertTrue(dialog.getHeaderTitle().contains("Import Failed"));
+        assertTrue(dialog.getHeaderTitle().contains(view.getTranslation("respondentImportView.importFailed")));
     }
 }

@@ -123,7 +123,7 @@ public class UiSessionLogin implements Serializable {
         Log.debugf("Initializing UI for principal: %s", principalName);
 
         // This runs once per UI session (browser tab/window)
-        User user = User.find("username = ?1 and active = true", principalName).firstResult();
+        User user = User.find("username = ?1 and active = true", principalName).firstResult(); // i18n:ignore (JPQL)
 
         if (user != null) {
             Log.debugf("Found active user for principal: %s", principalName);

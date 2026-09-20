@@ -67,7 +67,7 @@ public class LogoutView extends VerticalLayout implements BeforeEnterObserver {
      * due to immediate redirects.</p>
      */
     public LogoutView() {
-        add("Admin Logout :-)");
+        add(getTranslation("logoutView.signingOut"));
     }
 
     /**

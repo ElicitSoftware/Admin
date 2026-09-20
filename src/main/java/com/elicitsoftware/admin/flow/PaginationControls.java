@@ -130,7 +130,7 @@ public class PaginationControls extends HorizontalLayout {
             pageSize = e.getValue();
             updatePageCount();
         });
-        var label = new Span("Page size");
+        var label = new Span(getTranslation("paginationControls.pageSize"));
         label.setId("page-size-label");
         label.addClassName(LumoUtility.FontSize.SMALL);
         select.setAriaLabelledBy("page-size-label");
@@ -234,7 +234,7 @@ public class PaginationControls extends HorizontalLayout {
      * <p>This method is called automatically whenever pagination state changes.</p>
      */
     private void updateControls() {
-        currentPageLabel.setText(String.format("Page %d of %d", currentPage, pageCount));
+        currentPageLabel.setText(getTranslation("paginationControls.pageOf", currentPage, pageCount));
         firstPageButton.setEnabled(currentPage > 1);
         lastPageButton.setEnabled(currentPage < pageCount);
         goToPreviousPageButton.setEnabled(currentPage > 1);
@@ -247,7 +247,7 @@ public class PaginationControls extends HorizontalLayout {
      * @return a button that navigates to the first page when clicked
      */
     private Button firstPageButton() {
-        return createIconButton(VaadinIcon.ANGLE_DOUBLE_LEFT, "Go to first page", () -> currentPage = 1);
+        return createIconButton(VaadinIcon.ANGLE_DOUBLE_LEFT, getTranslation("paginationControls.firstPage"), () -> currentPage = 1);
     }
 
     /**
@@ -256,7 +256,7 @@ public class PaginationControls extends HorizontalLayout {
      * @return a button that navigates to the last page when clicked
      */
     private Button lastPageButton() {
-        return createIconButton(VaadinIcon.ANGLE_DOUBLE_RIGHT, "Go to last page", () -> currentPage = pageCount);
+        return createIconButton(VaadinIcon.ANGLE_DOUBLE_RIGHT, getTranslation("paginationControls.lastPage"), () -> currentPage = pageCount);
     }
 
     /**
@@ -265,7 +265,7 @@ public class PaginationControls extends HorizontalLayout {
      * @return a button that navigates to the next page when clicked
      */
     private Button goToNextPageButton() {
-        return createIconButton(VaadinIcon.ANGLE_RIGHT, "Go to next page", () -> currentPage++);
+        return createIconButton(VaadinIcon.ANGLE_RIGHT, getTranslation("paginationControls.nextPage"), () -> currentPage++);
     }
 
     /**
@@ -274,7 +274,7 @@ public class PaginationControls extends HorizontalLayout {
      * @return a button that navigates to the previous page when clicked
      */
     private Button goToPreviousPageButton() {
-        return createIconButton(VaadinIcon.ANGLE_LEFT, "Go to previous page", () -> currentPage--);
+        return createIconButton(VaadinIcon.ANGLE_LEFT, getTranslation("paginationControls.previousPage"), () -> currentPage--);
     }
 
     /**

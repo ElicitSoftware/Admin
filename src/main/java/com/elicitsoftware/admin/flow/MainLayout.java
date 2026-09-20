@@ -11,6 +11,9 @@ package com.elicitsoftware.admin.flow;
  * ***LICENSE_END***
  */
 
+import com.elicitsoftware.admin.i18n.ElicitI18NProvider;
+import com.elicitsoftware.admin.i18n.LanguageSwitcher;
+import com.elicitsoftware.admin.i18n.LocaleSelection;
 import com.elicitsoftware.admin.util.BrandUtil;
 import com.elicitsoftware.model.User;
 import com.elicitsoftware.service.SurveyDefinitionPresenceCheck;
@@ -28,6 +31,7 @@ import com.vaadin.flow.component.orderedlayout.VerticalLayout;
 import com.vaadin.flow.component.sidenav.SideNavItem;
 import com.vaadin.flow.router.AfterNavigationEvent;
 import com.vaadin.flow.router.AfterNavigationListener;
+import com.vaadin.quarkus.annotation.VaadinServiceEnabled;
 import io.quarkus.security.identity.SecurityIdentity;
 import jakarta.annotation.PostConstruct;
 import jakarta.annotation.security.PermitAll;
@@ -84,6 +88,15 @@ public class MainLayout extends AppLayout implements AfterNavigationListener {
     @Inject
     BrandUtil brandUtil;
 
+    /** Remembers the language the administrator picks (UC-020). */
+    @Inject
+    LocaleSelection localeSelection;
+
+    /** Supplies the languages offered by the switcher. */
+    @Inject
+    @VaadinServiceEnabled
+    ElicitI18NProvider i18nProvider;
+
     /**
      * Reports whether this deployment has a survey installed (UC-019).
      */
@@ -135,7 +148,7 @@ public class MainLayout extends AppLayout implements AfterNavigationListener {
             createNavBar();
         } else {
             SideNav nav = new SideNav();
-            SideNavItem logoutLink = new SideNavItem("Logout", LogoutView.class,
+            SideNavItem logoutLink = new SideNavItem(getTranslation("mainLayout.nav.logout"), LogoutView.class,
                     VaadinIcon.LOCK.create());
             nav.addItem(logoutLink);
             addToDrawer(nav);
@@ -182,7 +195,7 @@ public class MainLayout extends AppLayout implements AfterNavigationListener {
         try {
             Image logo = new Image();
             logo.setSrc(brandUtil.getIconResourcePath(brandInfo));
-            logo.setAlt(brandInfo.getDisplayName() + " Logo");
+            logo.setAlt(getTranslation("common.logoAlt", brandInfo.getDisplayName(getLocale())));
             logo.addClassName("logo");
 
             Div logoContainer = new Div(logo);
@@ -193,10 +206,16 @@ public class MainLayout extends AppLayout implements AfterNavigationListener {
         }
 
         // Create application title
-        String appTitle = brandUtil.getApplicationTitle(brandInfo, "Admin");
+        String appType = getTranslation("common.appType.admin");
+        String appTitle = brandInfo == null || brandInfo.isDefaultBrand()
+                ? getTranslation("common.appTitle.default", appType)
+                : getTranslation("common.appTitle", brandInfo.getDisplayName(getLocale()), appType);
         Anchor title = new Anchor("/", appTitle);
         title.addClassName("brand-title");
         headerContainer.add(title);
+
+        // Language selector (UC-020): every screen offers the shipped and mounted languages.
+        headerContainer.add(new LanguageSwitcher(localeSelection, i18nProvider));
 
         // Add header to navbar
         addToNavbar(headerContainer);
@@ -238,30 +257,30 @@ public class MainLayout extends AppLayout implements AfterNavigationListener {
     private void createNavBar() {
         SideNav nav = new SideNav();
 
-        SideNavItem searchLink = new SideNavItem("Search Subjects",
+        SideNavItem searchLink = new SideNavItem(getTranslation("mainLayout.nav.searchSubjects"),
                 SearchView.class, VaadinIcon.SEARCH.create());
-        SideNavItem registerLink = new SideNavItem("Register Subjects", RegisterView.class,
+        SideNavItem registerLink = new SideNavItem(getTranslation("mainLayout.nav.registerSubjects"), RegisterView.class,
                 VaadinIcon.USERS.create());
         nav.addItem(searchLink, registerLink);
         // Message Templates Button (Admin only)
         if (identity.hasRole("elicit_admin")) {
-            SideNavItem adminSection = new SideNavItem("Admin");
+            SideNavItem adminSection = new SideNavItem(getTranslation("mainLayout.nav.admin"));
             adminSection.setPrefixComponent(VaadinIcon.COG.create());
-            adminSection.addItem(new SideNavItem("Departments", DepartmentsView.class,
+            adminSection.addItem(new SideNavItem(getTranslation("mainLayout.nav.departments"), DepartmentsView.class,
                     VaadinIcon.GRID_BEVEL.create()));
-            adminSection.addItem(new SideNavItem("Message Templates", MessageTemplatesView.class,
+            adminSection.addItem(new SideNavItem(getTranslation("mainLayout.nav.messageTemplates"), MessageTemplatesView.class,
                     VaadinIcon.ENVELOPE.create()));
-            adminSection.addItem(new SideNavItem("Users", UsersView.class,
+            adminSection.addItem(new SideNavItem(getTranslation("mainLayout.nav.users"), UsersView.class,
                     VaadinIcon.GROUP.create()));
-            adminSection.addItem(new SideNavItem("Import Respondent", RespondentImportView.class,
+            adminSection.addItem(new SideNavItem(getTranslation("mainLayout.nav.importRespondent"), RespondentImportView.class,
                     VaadinIcon.UPLOAD.create()));
-            adminSection.addItem(new SideNavItem("Apply Survey Definition", SurveyDefinitionApplyView.class,
+            adminSection.addItem(new SideNavItem(getTranslation("mainLayout.nav.applySurveyDefinition"), SurveyDefinitionApplyView.class,
                     VaadinIcon.FILE_PROCESS.create()));
-            adminSection.addItem(new SideNavItem("Export Survey Definition", SurveyDefinitionExportView.class,
+            adminSection.addItem(new SideNavItem(getTranslation("mainLayout.nav.exportSurveyDefinition"), SurveyDefinitionExportView.class,
                     VaadinIcon.DOWNLOAD.create()));
             nav.addItem(adminSection);
         }
-        SideNavItem logoutLink = new SideNavItem("Logout", LogoutView.class,
+        SideNavItem logoutLink = new SideNavItem(getTranslation("mainLayout.nav.logout"), LogoutView.class,
                 VaadinIcon.LOCK.create());
         nav.addItem(logoutLink);
         addToDrawer(nav);

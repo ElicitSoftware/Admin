@@ -133,8 +133,8 @@ public class UsersView extends VerticalLayout {
      */
     private Paragraph createInfoText() {
         String text = authorizationModeConfig.isDatabaseMode()
-                ? "Departments are assigned through this interface. Roles (Admin/User/Importer) are also assigned through this interface, on the Edit User screen."
-                : "Users must be configured in the OpenID Connect (OIDC) authentication system with the roles \"Admin\" or \"User\". Departments are assigned through this interface.";
+                ? getTranslation("usersView.info.databaseMode")
+                : getTranslation("usersView.info.oidcMode");
         Paragraph info = new Paragraph(text);
         info.addClassNames(LumoUtility.Margin.Bottom.MEDIUM, LumoUtility.TextColor.SECONDARY);
         return info;
@@ -172,12 +172,12 @@ public class UsersView extends VerticalLayout {
                     editUser(user.getId())
             );
             return editBtn;
-        }).setHeader("Edit").setAutoWidth(true);
+        }).setHeader(getTranslation("common.edit")).setAutoWidth(true);
 
-        userGrid.addColumn(User::getUsername).setHeader("Username").setAutoWidth(true).setSortable(true);
-        userGrid.addColumn(User::getFirstName).setHeader("First Name").setAutoWidth(true).setSortable(true);
-        userGrid.addColumn(User::getLastName).setHeader("Last Name").setAutoWidth(true).setSortable(true);
-        userGrid.addColumn(user -> user.isActive() ? "Yes" : "No").setHeader("Active").setAutoWidth(true).setSortable(true);
+        userGrid.addColumn(User::getUsername).setHeader(getTranslation("usersView.grid.username")).setAutoWidth(true).setSortable(true);
+        userGrid.addColumn(User::getFirstName).setHeader(getTranslation("usersView.grid.firstName")).setAutoWidth(true).setSortable(true);
+        userGrid.addColumn(User::getLastName).setHeader(getTranslation("usersView.grid.lastName")).setAutoWidth(true).setSortable(true);
+        userGrid.addColumn(user -> user.isActive() ? getTranslation("common.yes") : getTranslation("common.no")).setHeader(getTranslation("usersView.grid.active")).setAutoWidth(true).setSortable(true);
         userGrid.addColumn(user -> {
             if (user.getDepartments() != null && !user.getDepartments().isEmpty()) {
                 return user.getDepartments().stream()
@@ -185,7 +185,7 @@ public class UsersView extends VerticalLayout {
                         .collect(java.util.stream.Collectors.joining(", "));
             }
             return "";
-        }).setHeader("Department").setAutoWidth(true).setSortable(true);
+        }).setHeader(getTranslation("usersView.grid.department")).setAutoWidth(true).setSortable(true);
 
         userGrid.setMultiSort(true);
         userGrid.setWidthFull();
@@ -264,7 +264,7 @@ public class UsersView extends VerticalLayout {
      * @see #addUser()
      */
     private HorizontalLayout createFooter() {
-        Button addUserBtn = new Button("Add User", e -> addUser());
+        Button addUserBtn = new Button(getTranslation("usersView.addUser"), e -> addUser());
         addUserBtn.addThemeVariants(ButtonVariant.LUMO_PRIMARY);
         return new HorizontalLayout(addUserBtn);
     }

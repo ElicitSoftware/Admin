@@ -101,7 +101,7 @@ class SurveyDefinitionApplyViewTest extends QuarkusBrowserlessTest {
     @TestSecurity(user = "apply.admin", roles = {"elicit_admin"})
     void viewRendersUploadControl() {
         assertTrue(find(H3.class, view).all().stream()
-                .anyMatch(h -> "Apply Survey Definition".equals(h.getText())));
+                .anyMatch(h -> view.getTranslation("surveyDefinitionApplyView.title").equals(h.getText())));
 
         Upload upload = find(Upload.class, view).single();
         assertEquals("survey-apply-upload", upload.getId().orElse(null));
@@ -124,7 +124,7 @@ class SurveyDefinitionApplyViewTest extends QuarkusBrowserlessTest {
 
         view.handleUpload(file.getBytes(StandardCharsets.UTF_8), "new.elicit");
 
-        assertEquals("New Survey Installed", openDialog().getHeaderTitle());
+        assertEquals(view.getTranslation("surveyDefinitionApplyView.newSurveyInstalled"), openDialog().getHeaderTitle());
     }
 
     /**
@@ -140,7 +140,7 @@ class SurveyDefinitionApplyViewTest extends QuarkusBrowserlessTest {
 
         view.handleUpload(file.getBytes(StandardCharsets.UTF_8), "upd.elicit");
 
-        assertEquals("Survey Updated", openDialog().getHeaderTitle());
+        assertEquals(view.getTranslation("surveyDefinitionApplyView.surveyUpdated"), openDialog().getHeaderTitle());
     }
 
     /** UC-018 A3: a file that isn't a survey definition is reported, not applied. */
@@ -150,6 +150,6 @@ class SurveyDefinitionApplyViewTest extends QuarkusBrowserlessTest {
     void nonDefinitionFileReportsFailure() {
         view.handleUpload("not an elicit file".getBytes(StandardCharsets.UTF_8), "junk.elicit");
 
-        assertEquals("Apply Failed", openDialog().getHeaderTitle());
+        assertEquals(view.getTranslation("surveyDefinitionApplyView.applyFailed"), openDialog().getHeaderTitle());
     }
 }

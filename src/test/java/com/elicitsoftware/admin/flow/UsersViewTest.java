@@ -83,7 +83,7 @@ class UsersViewTest extends QuarkusBrowserlessTest {
     @Test
     void addUserButtonTriggersNavigation() {
         Button addUserBtn = find(Button.class, view).all().stream()
-                .filter(b -> "Add User".equals(b.getText()))
+                .filter(b -> view.getTranslation("usersView.addUser").equals(b.getText()))
                 .findFirst()
                 .orElseThrow(() -> new AssertionError("No Add User button"));
 

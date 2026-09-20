@@ -196,7 +196,7 @@ class MissingSurveyWarningTest extends QuarkusBrowserlessTest {
 
         List<RouterLink> links = find(RouterLink.class, banner).all();
         assertEquals(1, links.size(), "an administrator should be offered exactly one route");
-        assertEquals("Apply a survey definition", links.get(0).getText());
+        assertEquals(UI.getCurrent().getTranslation("missingSurveyNotice.adminRemedy"), links.get(0).getText());
         assertTrue(links.get(0).getHref().contains("survey-apply"),
                 "the route should lead to Apply Survey Definition, was: " + links.get(0).getHref());
     }

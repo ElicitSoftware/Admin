@@ -138,7 +138,7 @@ class SearchViewTest extends QuarkusBrowserlessTest {
         Status finished = new Status();
         finished.setStatus("Finished");
 
-        assertEquals(List.of("Send Email", "Print Reports", "Export"), view.buildActionOptions(finished));
+        assertEquals(List.of(SearchView.ACTION_SEND_EMAIL, SearchView.ACTION_PRINT_REPORTS, SearchView.ACTION_EXPORT), view.buildActionOptions(finished));
     }
 
     /** UC-011: a non-admin never sees the Export action, regardless of survey status. */
@@ -148,7 +148,7 @@ class SearchViewTest extends QuarkusBrowserlessTest {
         Status finished = new Status();
         finished.setStatus("Finished");
 
-        assertFalse(view.buildActionOptions(finished).contains("Export"),
+        assertFalse(view.buildActionOptions(finished).contains(SearchView.ACTION_EXPORT),
                 "a non-admin must not be offered Export");
     }
 
@@ -159,7 +159,7 @@ class SearchViewTest extends QuarkusBrowserlessTest {
         Status inProgress = new Status();
         inProgress.setStatus("In Progress");
 
-        assertEquals(List.of("Send Email"), view.buildActionOptions(inProgress));
+        assertEquals(List.of(SearchView.ACTION_SEND_EMAIL), view.buildActionOptions(inProgress));
     }
 
     /** UC-011: the export URL is keyed by the respondent id that RespondentExportResource expects. */

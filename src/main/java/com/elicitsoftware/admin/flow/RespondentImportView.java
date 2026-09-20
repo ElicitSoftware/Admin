@@ -47,9 +47,8 @@ public class RespondentImportView extends VerticalLayout {
     public RespondentImportView() {
         setSizeFull();
 
-        add(new H3("Import Respondent"));
-        add(new Paragraph("Upload a respondent export file (.elicit) produced by the \"Export\" "
-                + "action on the Search Subjects grid to import that respondent into this instance."));
+        add(new H3(getTranslation("respondentImportView.title")));
+        add(new Paragraph(getTranslation("respondentImportView.intro")));
 
         Upload upload = new Upload();
         upload.setId("respondent-import-upload");
@@ -57,7 +56,7 @@ public class RespondentImportView extends VerticalLayout {
         upload.setMaxFiles(1);
         upload.setMaxFileSize(5 * 1024 * 1024); // 5MB limit
 
-        Button uploadButton = new Button("Upload");
+        Button uploadButton = new Button(getTranslation("respondentImportView.upload"));
         uploadButton.addThemeVariants(ButtonVariant.LUMO_PRIMARY);
         upload.setUploadButton(uploadButton);
 
@@ -77,21 +76,21 @@ public class RespondentImportView extends VerticalLayout {
             InputStream inputStream = new ByteArrayInputStream(data);
             RespondentImportService.ImportResult result = respondentImportService.importFromFile(inputStream);
             if (result.isSuccess()) {
-                showResultDialog("Import Successful", buildSummary(result), false);
+                showResultDialog(getTranslation("respondentImportView.importSuccessful"), buildSummary(result), false);
             } else {
-                showResultDialog("Import Failed", buildSummary(result), true);
+                showResultDialog(getTranslation("respondentImportView.importFailed"), buildSummary(result), true);
             }
         } catch (Exception e) {
-            showResultDialog("Import Failed", e.getMessage(), true);
+            showResultDialog(getTranslation("respondentImportView.importFailed"), e.getMessage(), true);
         }
     }
 
     private String buildSummary(RespondentImportService.ImportResult result) {
         StringBuilder summary = new StringBuilder();
-        summary.append("Records imported: ").append(result.getRecordsImported()).append("\n");
+        summary.append(getTranslation("respondentImportView.recordsImported", result.getRecordsImported())).append("\n");
         result.getCounts().forEach((table, count) -> summary.append("  ").append(table).append(": ").append(count).append("\n"));
         if (!result.getErrors().isEmpty()) {
-            summary.append("\nErrors:\n");
+            summary.append("\n").append(getTranslation("respondentImportView.errors")).append("\n");
             result.getErrors().forEach(error -> summary.append("  ").append(error).append("\n"));
         }
         return summary.toString();
@@ -109,7 +108,7 @@ public class RespondentImportView extends VerticalLayout {
             messageSpan.addClassName(LumoUtility.TextColor.SUCCESS);
         }
 
-        Button closeButton = new Button("Close", evt -> dialog.close());
+        Button closeButton = new Button(getTranslation("common.close"), evt -> dialog.close());
         closeButton.addThemeVariants(ButtonVariant.LUMO_PRIMARY);
         closeButton.addClassName(LumoUtility.Margin.Top.MEDIUM);
 

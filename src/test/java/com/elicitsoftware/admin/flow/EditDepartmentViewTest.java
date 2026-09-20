@@ -54,7 +54,8 @@ class EditDepartmentViewTest extends QuarkusBrowserlessTest {
         UI.getCurrent().add(view);
     }
 
-    private TextField textField(String label) {
+    private TextField textField(String labelKey) {
+        String label = UI.getCurrent().getTranslation(labelKey);
         return find(TextField.class, view).all().stream()
                 .filter(f -> label.equals(f.getLabel()))
                 .findFirst()
@@ -68,14 +69,14 @@ class EditDepartmentViewTest extends QuarkusBrowserlessTest {
     private Button saveButton() {
         // The button text is "Save" until beforeEnter() relabels it; match on the primary action.
         return find(Button.class, view).all().stream()
-                .filter(b -> !"Cancel".equals(b.getText()))
+                .filter(b -> !UI.getCurrent().getTranslation("common.cancel").equals(b.getText()))
                 .findFirst()
                 .orElseThrow(() -> new AssertionError("No Save button"));
     }
 
     private void fillAllValid() {
-        textField("Department Name").setValue("Cardiology");
-        textField("Default Message ID").setValue("1");
+        textField("editDepartmentView.name").setValue("Cardiology");
+        textField("editDepartmentView.defaultMessageId").setValue("1");
         fromEmail().setValue("dept@example.org");
     }
 
@@ -91,7 +92,7 @@ class EditDepartmentViewTest extends QuarkusBrowserlessTest {
     @Test
     void saveDisabledWhenNameBlank() {
         fillAllValid();
-        textField("Department Name").setValue("");
+        textField("editDepartmentView.name").setValue("");
         assertFalse(saveButton().isEnabled(),
                 "Save must disable when the required department name is cleared");
     }

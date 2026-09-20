@@ -66,13 +66,13 @@ class MainLayoutTest extends QuarkusBrowserlessTest {
 
         MainLayout layout = attachLayout();
 
-        assertTrue(hasNavItem(layout, "Search Subjects"));
-        assertTrue(hasNavItem(layout, "Register Subjects"));
-        assertTrue(hasNavItem(layout, "Admin"), "an admin should see the Admin section");
-        assertTrue(hasNavItem(layout, "Import Respondent"), "an admin should see Import Respondent");
-        assertTrue(hasNavItem(layout, "Apply Survey Definition"), "an admin should see Apply Survey Definition");
-        assertTrue(hasNavItem(layout, "Export Survey Definition"), "an admin should see Export Survey Definition");
-        assertTrue(hasNavItem(layout, "Logout"));
+        assertTrue(hasNavItem(layout, layout.getTranslation("mainLayout.nav.searchSubjects")));
+        assertTrue(hasNavItem(layout, layout.getTranslation("mainLayout.nav.registerSubjects")));
+        assertTrue(hasNavItem(layout, layout.getTranslation("mainLayout.nav.admin")), "an admin should see the Admin section");
+        assertTrue(hasNavItem(layout, layout.getTranslation("mainLayout.nav.importRespondent")), "an admin should see Import Respondent");
+        assertTrue(hasNavItem(layout, layout.getTranslation("mainLayout.nav.applySurveyDefinition")), "an admin should see Apply Survey Definition");
+        assertTrue(hasNavItem(layout, layout.getTranslation("mainLayout.nav.exportSurveyDefinition")), "an admin should see Export Survey Definition");
+        assertTrue(hasNavItem(layout, layout.getTranslation("mainLayout.nav.logout")));
     }
 
     /** UC-001: an authenticated non-admin does not see the Admin section. */
@@ -87,10 +87,10 @@ class MainLayoutTest extends QuarkusBrowserlessTest {
 
         MainLayout layout = attachLayout();
 
-        assertTrue(hasNavItem(layout, "Search Subjects"));
-        assertFalse(hasNavItem(layout, "Admin"), "a non-admin must not see the Admin section");
-        assertFalse(hasNavItem(layout, "Import Respondent"), "a non-admin must not see Import Respondent");
-        assertFalse(hasNavItem(layout, "Export Survey Definition"),
+        assertTrue(hasNavItem(layout, layout.getTranslation("mainLayout.nav.searchSubjects")));
+        assertFalse(hasNavItem(layout, layout.getTranslation("mainLayout.nav.admin")), "a non-admin must not see the Admin section");
+        assertFalse(hasNavItem(layout, layout.getTranslation("mainLayout.nav.importRespondent")), "a non-admin must not see Import Respondent");
+        assertFalse(hasNavItem(layout, layout.getTranslation("mainLayout.nav.exportSurveyDefinition")),
                 "a non-admin must not see Export Survey Definition");
     }
 
@@ -102,9 +102,9 @@ class MainLayoutTest extends QuarkusBrowserlessTest {
 
         MainLayout layout = attachLayout();
 
-        assertFalse(hasNavItem(layout, "Search Subjects"),
+        assertFalse(hasNavItem(layout, layout.getTranslation("mainLayout.nav.searchSubjects")),
                 "with no session user, the full nav must not be built");
-        assertTrue(hasNavItem(layout, "Logout"));
+        assertTrue(hasNavItem(layout, layout.getTranslation("mainLayout.nav.logout")));
         // Exactly one item (Logout) in the fallback nav.
         SideNav nav = find(SideNav.class, layout).single();
         assertTrue(find(SideNavItem.class, nav).all().size() == 1);

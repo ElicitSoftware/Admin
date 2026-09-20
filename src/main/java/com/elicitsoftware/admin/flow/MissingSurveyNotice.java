@@ -11,6 +11,7 @@ package com.elicitsoftware.admin.flow;
  * ***LICENSE_END***
  */
 
+import com.elicitsoftware.admin.i18n.Translations;
 import com.vaadin.flow.component.Component;
 import com.vaadin.flow.component.html.Div;
 import com.vaadin.flow.component.html.Span;
@@ -44,13 +45,6 @@ final class MissingSurveyNotice {
      */
     static final String EMPTY_STATE_ID = "missing-survey-empty-state";
 
-    private static final String HEADLINE = "No survey is installed in this deployment.";
-
-    private static final String ADMIN_REMEDY = "Apply a survey definition";
-
-    private static final String NON_ADMIN_REMEDY =
-            "Ask a system administrator to apply a survey definition before registering subjects.";
-
     private MissingSurveyNotice() {
         // Static factory only
     }
@@ -72,7 +66,7 @@ final class MissingSurveyNotice {
         banner.getElement().setAttribute("role", "status");
 
         banner.add(VaadinIcon.WARNING.create());
-        banner.add(new Span(HEADLINE));
+        banner.add(new Span(Translations.get("missingSurveyNotice.headline")));
         banner.add(remedy(canApplyDefinition));
         return banner;
     }
@@ -90,7 +84,7 @@ final class MissingSurveyNotice {
         emptyState.setSpacing(false);
         emptyState.getElement().setAttribute("role", "status");
 
-        Span headline = new Span(HEADLINE);
+        Span headline = new Span(Translations.get("missingSurveyNotice.headline"));
         headline.addClassName(LumoUtility.FontWeight.SEMIBOLD);
         emptyState.add(headline);
         emptyState.add(remedy(canApplyDefinition));
@@ -103,8 +97,8 @@ final class MissingSurveyNotice {
      */
     private static Component remedy(boolean canApplyDefinition) {
         if (canApplyDefinition) {
-            return new RouterLink(ADMIN_REMEDY, SurveyDefinitionApplyView.class);
+            return new RouterLink(Translations.get("missingSurveyNotice.adminRemedy"), SurveyDefinitionApplyView.class);
         }
-        return new Span(NON_ADMIN_REMEDY);
+        return new Span(Translations.get("missingSurveyNotice.nonAdminRemedy"));
     }
 }

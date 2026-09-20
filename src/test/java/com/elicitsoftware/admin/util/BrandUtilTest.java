@@ -15,8 +15,11 @@ import com.elicitsoftware.admin.util.BrandUtil.BrandInfo;
 import org.junit.jupiter.api.Test;
 
 import java.lang.reflect.Field;
+import java.util.Locale;
+import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * Unit tests for {@link BrandUtil} title and logo-path helpers.
@@ -76,5 +79,32 @@ class BrandUtilTest {
         Field field = BrandUtil.class.getDeclaredField("brandFileSystemPath");
         field.setAccessible(true);
         field.set(util, value);
+    }
+
+    /** UC-020 BR-087: the brand's "localized" block supplies per-language display names. */
+    @Test
+    void localizedBlock_resolvesTagThenLanguageVariantThenBase() throws Exception {
+        String json = "{\"name\": \"Health Test\", \"organization\": \"Health Test Organization\", "
+                + "\"localized\": {\"es-419\": {\"organization\": \"Organizaci\u00f3n de prueba\"}, "
+                + "\"ar\": {\"name\": \"\u0645\u0646\u0638\u0645\u0629\"}}}";
+        Map<String, String> names = BrandUtil.extractLocalizedNames(
+                new com.fasterxml.jackson.databind.ObjectMapper().readTree(json));
+        BrandInfo info = new BrandInfo("health-test", "Health Test Organization", "logo.png", CSS, names);
+
+        assertEquals("Organizaci\u00f3n de prueba", info.getDisplayName(Locale.forLanguageTag("es-419")));
+        assertEquals("Organizaci\u00f3n de prueba", info.getDisplayName(Locale.forLanguageTag("es-GT")), "same-language variant");
+        assertEquals("\u0645\u0646\u0638\u0645\u0629", info.getDisplayName(Locale.forLanguageTag("ar")), "name used when no organization variant");
+        assertEquals("Health Test Organization", info.getDisplayName(Locale.FRENCH), "base name when the language has no variant");
+        assertEquals("Health Test Organization", info.getDisplayName(null));
+    }
+
+    /** UC-020 BR-087: brands without a localized block behave exactly as before. */
+    @Test
+    void withoutLocalizedBlock_localeLookupReturnsBase() throws Exception {
+        Map<String, String> names = BrandUtil.extractLocalizedNames(
+                new com.fasterxml.jackson.databind.ObjectMapper().readTree("{\"name\": \"Plain\"}"));
+        assertTrue(names.isEmpty());
+        assertEquals("Elicit", embeddedBrand("logo.png").getDisplayName(Locale.forLanguageTag("ar")));
+        assertTrue(embeddedBrand("logo.png").isDefaultBrand());
     }
 }

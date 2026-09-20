@@ -58,7 +58,7 @@ class UnauthorizedViewTest extends QuarkusBrowserlessTest {
     void showsAccessRestrictedHeading() {
         UnauthorizedView view = attachView();
         H1 heading = find(H1.class, view).single();
-        assertEquals("Access Restricted", heading.getText());
+        assertEquals(view.getTranslation("unauthorizedView.title"), heading.getText());
     }
 
     /** UC-001 A1: the message tells the user which roles to request. */
@@ -75,6 +75,6 @@ class UnauthorizedViewTest extends QuarkusBrowserlessTest {
     void offersLogoutButton() {
         UnauthorizedView view = attachView();
         Button logout = find(Button.class, view).single();
-        assertEquals("Logout", logout.getText());
+        assertEquals(view.getTranslation("unauthorizedView.logout"), logout.getText());
     }
 }

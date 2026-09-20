@@ -79,22 +79,22 @@ public class EditMessageTemplatesView extends VerticalLayout implements BeforeEn
     private MessageTemplate template;
 
     /** Text field for the message subject. */
-    private final TextField subjectField = new TextField("Subject");
+    private final TextField subjectField = new TextField();
 
     /** Text area for the message body content. */
-    private final TextArea messageField = new TextArea("Body");
+    private final TextArea messageField = new TextArea();
 
     /** Combo box for selecting MIME type (HTML or plain text). */
-    private final ComboBox<String> mimeTypeField = new ComboBox<>("MIME Type");
+    private final ComboBox<String> mimeTypeField = new ComboBox<>();
 
     /** Combo box for selecting the department. */
-    private final ComboBox<Department> departmentField = new ComboBox<>("Department");
+    private final ComboBox<Department> departmentField = new ComboBox<>();
 
     /** Button for saving new message templates. */
-    private final Button saveBtn = new Button("Save");
+    private final Button saveBtn = new Button();
 
     /** Button for updating existing message templates. */
-    private final Button updateBtn = new Button("Update");
+    private final Button updateBtn = new Button();
 
     /** Container div for displaying the message preview. */
     private Div content = new Div();
@@ -120,6 +120,13 @@ public class EditMessageTemplatesView extends VerticalLayout implements BeforeEn
     @PostConstruct
     public void init() {
         user = uiSessionLogin.getUser();
+
+        subjectField.setLabel(getTranslation("editMessageTemplatesView.subject"));
+        messageField.setLabel(getTranslation("editMessageTemplatesView.body"));
+        mimeTypeField.setLabel(getTranslation("editMessageTemplatesView.mimeType"));
+        departmentField.setLabel(getTranslation("editMessageTemplatesView.department"));
+        saveBtn.setText(getTranslation("common.save"));
+        updateBtn.setText(getTranslation("editMessageTemplatesView.btnUpdate"));
 
         // Configure form field styling
         subjectField.addThemeVariants(TextFieldVariant.LUMO_SMALL);
@@ -154,8 +161,10 @@ public class EditMessageTemplatesView extends VerticalLayout implements BeforeEn
         VerticalLayout preview = new VerticalLayout();
         preview.setWidthFull();
         preview.addClassName("template-column");
-        H3 title = new H3("Message Preview");
+        H3 title = new H3(getTranslation("editMessageTemplatesView.preview"));
         content = new Div();
+        // The preview renders the stored template body, not chrome (UC-020 BR-086)
+        content.getElement().setAttribute("data-i18n-content", "");
         content.setWidth("100%");
         content.setHeight("100%");
         // Update content
@@ -181,24 +190,24 @@ public class EditMessageTemplatesView extends VerticalLayout implements BeforeEn
 
         // --- Binder and Validation ---
         binder.forField(subjectField)
-                .asRequired("Subject is required")
+                .asRequired(getTranslation("editMessageTemplatesView.error.subjectRequired"))
                 .withValidator(new StringLengthValidator(
-                        "Subject must be 3-100 characters", 1, 255))
+                        getTranslation("editMessageTemplatesView.error.subjectLength"), 1, 255))
                 .bind("subject");
 
         binder.forField(messageField)
-                .asRequired("Body is required")
+                .asRequired(getTranslation("editMessageTemplatesView.error.bodyRequired"))
                 .withValidator(new StringLengthValidator(
-                        "Body must be at least 5 characters", 1, 6000))
+                        getTranslation("editMessageTemplatesView.error.bodyLength"), 1, 6000))
                 .bind("message");
 
 
         binder.forField(mimeTypeField)
-                .asRequired("MIME Type is required")
+                .asRequired(getTranslation("editMessageTemplatesView.error.mimeTypeRequired"))
                 .bind("mimeType");
 
         binder.forField(departmentField)
-                .asRequired("Department is required")
+                .asRequired(getTranslation("editMessageTemplatesView.error.departmentRequired"))
                 .bind("department");
 
         // Enable/disable buttons based on validation
@@ -304,12 +313,12 @@ public class EditMessageTemplatesView extends VerticalLayout implements BeforeEn
         try {
             binder.writeBean(template);
             template.persistAndFlush();
-            Notification.show("Message Template saved", 1000, Notification.Position.MIDDLE);
+            Notification.show(getTranslation("editMessageTemplatesView.saved"), 1000, Notification.Position.MIDDLE);
             getUI().ifPresent(ui ->
                     ui.navigate("/message-templates")
             );
         } catch (ValidationException e) {
-            Notification.show("Please fix validation errors", 2000, Notification.Position.MIDDLE);
+            Notification.show(getTranslation("editMessageTemplatesView.error.fixValidation"), 2000, Notification.Position.MIDDLE);
         }
     }
 
@@ -326,12 +335,12 @@ public class EditMessageTemplatesView extends VerticalLayout implements BeforeEn
             binder.writeBean(template);
             MessageTemplate.getEntityManager().merge(template);
             MessageTemplate.getEntityManager().flush();
-            Notification.show("Message Template updated", 1000, Notification.Position.MIDDLE);
+            Notification.show(getTranslation("editMessageTemplatesView.updated"), 1000, Notification.Position.MIDDLE);
             getUI().ifPresent(ui ->
                     ui.navigate("/message-templates")
             );
         } catch (ValidationException e) {
-            Notification.show("Please fix validation errors", 2000, Notification.Position.MIDDLE);
+            Notification.show(getTranslation("editMessageTemplatesView.error.fixValidation"), 2000, Notification.Position.MIDDLE);
         }
     }
 

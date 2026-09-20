@@ -103,17 +103,17 @@ public class MessageTemplatesView extends VerticalLayout {
                     editTemplate(template)
             );
             return editBtn;
-        }).setHeader("Edit").setAutoWidth(true);
+        }).setHeader(getTranslation("common.edit")).setAutoWidth(true);
 
-        grid.addColumn(template -> template.id).setHeader("ID");
-        grid.addColumn(template -> template.department.name).setHeader("Department").setSortable(true).setAutoWidth(true);
-        grid.addColumn(template -> template.subject).setHeader("Subject").setSortable(true).setAutoWidth(true);
-        grid.addColumn(template -> template.mimeType).setHeader("MIME Type").setSortable(true).setAutoWidth(true);
+        grid.addColumn(template -> template.id).setHeader(getTranslation("messageTemplatesView.grid.id"));
+        grid.addColumn(template -> template.department.name).setHeader(getTranslation("messageTemplatesView.grid.department")).setSortable(true).setAutoWidth(true);
+        grid.addColumn(template -> template.subject).setHeader(getTranslation("messageTemplatesView.grid.subject")).setSortable(true).setAutoWidth(true);
+        grid.addColumn(template -> template.mimeType).setHeader(getTranslation("messageTemplatesView.grid.mimeType")).setSortable(true).setAutoWidth(true);
         grid.addThemeVariants(GridVariant.LUMO_ROW_STRIPES, GridVariant.LUMO_COMPACT);
 
         add(grid);
 
-        Button addBtn = new Button("New Message Template", e -> {
+        Button addBtn = new Button(getTranslation("messageTemplatesView.newTemplate"), e -> {
             editTemplate(new MessageTemplate());
         });
         addBtn.addThemeVariants(ButtonVariant.LUMO_PRIMARY);

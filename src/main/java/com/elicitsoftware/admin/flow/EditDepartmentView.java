@@ -62,16 +62,16 @@ public class EditDepartmentView extends VerticalLayout implements BeforeEnterObs
     private Department department;
     
     /** Text field for the department name. */
-    private TextField nameField = new TextField("Department Name");
+    private TextField nameField = new TextField();
     
     /** Text field for the department code. */
-    private TextField codeField = new TextField("Department Code");
+    private TextField codeField = new TextField();
     
     /** Text field for the default message ID. */
-    private TextField defaultMessageIdField = new TextField("Default Message ID");
+    private TextField defaultMessageIdField = new TextField();
     
     /** Email field for the from email address. */
-    private EmailField fromEmailField = new EmailField("From Email");
+    private EmailField fromEmailField = new EmailField();
     
     /** Text area for notification emails. */
 //    private TextArea notificationEmailsField = new TextArea("Notification Emails");
@@ -80,10 +80,10 @@ public class EditDepartmentView extends VerticalLayout implements BeforeEnterObs
     private final Binder<Department> binder = new Binder<>(Department.class);
     
     /** Save button for creating or updating the department. */
-    private Button saveBtn = new Button("Save");
+    private Button saveBtn = new Button();
     
     /** Cancel button to return to departments list. */
-    private Button cancelBtn = new Button("Cancel");
+    private Button cancelBtn = new Button();
 
     /**
      * Constructs a new EditDepartmentView.
@@ -101,6 +101,13 @@ public class EditDepartmentView extends VerticalLayout implements BeforeEnterObs
     public EditDepartmentView() {
         setSpacing(true);
         setPadding(true);
+
+        nameField.setLabel(getTranslation("editDepartmentView.name"));
+        codeField.setLabel(getTranslation("editDepartmentView.code"));
+        defaultMessageIdField.setLabel(getTranslation("editDepartmentView.defaultMessageId"));
+        fromEmailField.setLabel(getTranslation("editDepartmentView.fromEmail"));
+        saveBtn.setText(getTranslation("common.save"));
+        cancelBtn.setText(getTranslation("common.cancel"));
         
         // Configure form fields
         nameField.setRequired(true);
@@ -108,20 +115,20 @@ public class EditDepartmentView extends VerticalLayout implements BeforeEnterObs
         nameField.setWidth("300px");
         nameField.addThemeVariants(TextFieldVariant.LUMO_SMALL);
         
-        codeField.setHelperText("Short abbreviation for the department (e.g., 'CARD', 'HR')");
+        codeField.setHelperText(getTranslation("editDepartmentView.code.helper"));
         codeField.setWidth("300px");
         codeField.addThemeVariants(TextFieldVariant.LUMO_SMALL);
         
         defaultMessageIdField.setRequired(true);
         defaultMessageIdField.setRequiredIndicatorVisible(true);
         defaultMessageIdField.setValue("1"); // Default value
-        defaultMessageIdField.setHelperText("Default message template ID");
+        defaultMessageIdField.setHelperText(getTranslation("editDepartmentView.defaultMessageId.helper"));
         defaultMessageIdField.setWidth("300px");
         defaultMessageIdField.addThemeVariants(TextFieldVariant.LUMO_SMALL);
         
         fromEmailField.setRequired(true);
         fromEmailField.setRequiredIndicatorVisible(true);
-        fromEmailField.setHelperText("Email address that appears as sender for department communications");
+        fromEmailField.setHelperText(getTranslation("editDepartmentView.fromEmail.helper"));
         fromEmailField.setWidth("300px");
         
 //        notificationEmailsField.setHelperText("Comma-separated list of emails to notify when respondents finish surveys");
@@ -163,30 +170,30 @@ public class EditDepartmentView extends VerticalLayout implements BeforeEnterObs
     private void setupValidation() {
         // Name field validation (required, unique in DB, max 255 chars)
         binder.forField(nameField)
-                .asRequired("Department name is required")
+                .asRequired(getTranslation("editDepartmentView.error.nameRequired"))
                 .withValidator(new StringLengthValidator(
-                        "Department name must be 1-255 characters", 1, 255))
+                        getTranslation("editDepartmentView.error.nameLength"), 1, 255))
                 .bind("name");
         
         // Code field validation (optional, unique in DB, max 100 chars)
         binder.forField(codeField)
                 .withValidator(new StringLengthValidator(
-                        "Department code must be 100 characters or less", 0, 100))
+                        getTranslation("editDepartmentView.error.codeLength"), 0, 100))
                 .bind("code");
         
         // Default Message ID validation (required, max 100 chars)
         binder.forField(defaultMessageIdField)
-                .asRequired("Default message ID is required")
+                .asRequired(getTranslation("editDepartmentView.error.defaultMessageIdRequired"))
                 .withValidator(new StringLengthValidator(
-                        "Default message ID must be 1-100 characters", 1, 100))
+                        getTranslation("editDepartmentView.error.defaultMessageIdLength"), 1, 100))
                 .bind("defaultMessageId");
         
         // From Email validation (required, valid email, max 50 chars)
         binder.forField(fromEmailField)
-                .asRequired("From email is required")
-                .withValidator(new EmailValidator("Please enter a valid email address"))
+                .asRequired(getTranslation("editDepartmentView.error.fromEmailRequired"))
+                .withValidator(new EmailValidator(getTranslation("editDepartmentView.error.fromEmailInvalid")))
                 .withValidator(new StringLengthValidator(
-                        "From email must be 50 characters or less", 1, 50))
+                        getTranslation("editDepartmentView.error.fromEmailLength"), 1, 50))
                 .bind("fromEmail");
         
         // Notification Emails validation (optional, max 2000 chars)
@@ -230,13 +237,13 @@ public class EditDepartmentView extends VerticalLayout implements BeforeEnterObs
                 binder.setBean(department);
                 
                 // Update page title and button text
-                getUI().ifPresent(ui -> ui.getPage().setTitle("Create New Department"));
-                saveBtn.setText("Create Department");
+                getUI().ifPresent(ui -> ui.getPage().setTitle(getTranslation("editDepartmentView.title.create")));
+                saveBtn.setText(getTranslation("editDepartmentView.btnCreate"));
             } else {
                 // Edit existing department
                 department = Department.findById(id);
                 if (department == null) {
-                    Notification.show("Department not found", 3000, Notification.Position.MIDDLE);
+                    Notification.show(getTranslation("editDepartmentView.error.notFound"), 3000, Notification.Position.MIDDLE);
                     event.forwardTo(DepartmentsView.class);
                     return;
                 }
@@ -244,11 +251,11 @@ public class EditDepartmentView extends VerticalLayout implements BeforeEnterObs
                 binder.setBean(department);
                 
                 // Update page title and button text
-                getUI().ifPresent(ui -> ui.getPage().setTitle("Edit Department: " + department.name));
-                saveBtn.setText("Update Department");
+                getUI().ifPresent(ui -> ui.getPage().setTitle(getTranslation("editDepartmentView.title.edit", department.name)));
+                saveBtn.setText(getTranslation("editDepartmentView.btnUpdate"));
             }
         } catch (NumberFormatException e) {
-            Notification.show("Invalid department ID", 3000, Notification.Position.MIDDLE);
+            Notification.show(getTranslation("editDepartmentView.error.invalidId"), 3000, Notification.Position.MIDDLE);
             event.forwardTo(DepartmentsView.class);
         }
     }
@@ -276,31 +283,31 @@ public class EditDepartmentView extends VerticalLayout implements BeforeEnterObs
             boolean isNew = department.id == 0;
             // Persistence (transaction + insert/merge) lives in the service layer.
             departmentService.save(department);
-            Notification.show(isNew ? "Department created successfully" : "Department updated successfully",
+            Notification.show(isNew ? getTranslation("editDepartmentView.created") : getTranslation("editDepartmentView.updated"),
                     3000, Notification.Position.MIDDLE);
 
             // Navigate back to departments list
             getUI().ifPresent(ui -> ui.navigate(DepartmentsView.class));
 
         } catch (ValidationException e) {
-            Notification.show("Please fix the validation errors before saving", 
+            Notification.show(getTranslation("editDepartmentView.error.fixValidation"),
                     3000, Notification.Position.MIDDLE);
         } catch (Exception e) {
             // Handle potential unique constraint violations or other database errors
             String errorMessage = e.getMessage();
             if (errorMessage != null && errorMessage.contains("unique")) {
                 if (errorMessage.contains("department_name_un")) {
-                    Notification.show("Department name already exists. Please choose a different name.", 
+                    Notification.show(getTranslation("editDepartmentView.error.nameExists"),
                             5000, Notification.Position.MIDDLE);
                 } else if (errorMessage.contains("department_code_un")) {
-                    Notification.show("Department code already exists. Please choose a different code.", 
+                    Notification.show(getTranslation("editDepartmentView.error.codeExists"),
                             5000, Notification.Position.MIDDLE);
                 } else {
-                    Notification.show("A department with this name or code already exists.", 
+                    Notification.show(getTranslation("editDepartmentView.error.nameOrCodeExists"),
                             5000, Notification.Position.MIDDLE);
                 }
             } else {
-                Notification.show("Error saving department: " + errorMessage, 
+                Notification.show(getTranslation("editDepartmentView.error.save", errorMessage),
                         5000, Notification.Position.MIDDLE);
             }
         }

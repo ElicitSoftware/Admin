@@ -32,7 +32,6 @@ import com.elicitsoftware.service.StatusDataSource;
 import com.elicitsoftware.service.StatusQuery;
 import com.vaadin.flow.component.Component;
 import com.vaadin.flow.component.DetachEvent;
-import com.vaadin.flow.component.Direction;
 import com.vaadin.flow.component.UI;
 import com.vaadin.flow.component.button.Button;
 import com.vaadin.flow.component.button.ButtonVariant;
@@ -123,6 +122,11 @@ import jakarta.inject.Inject;
 @RolesAllowed({"elicit_user", "elicit_admin"})
 
 public class SearchView extends VerticalLayout implements HasDynamicTitle, BeforeEnterObserver {
+
+    /** Row action keys; the labels are {@code searchView.action.<key>} (UC-020). */
+    static final String ACTION_SEND_EMAIL = "sendEmail";
+    static final String ACTION_PRINT_REPORTS = "printReports";
+    static final String ACTION_EXPORT = "export";
     /** Tracks the currently active action access code (only one row can have a selection at a time). */
     private String activeActionAccessCode = null;
     /** Tracks the current action value for the active row. */
@@ -299,26 +303,19 @@ public class SearchView extends VerticalLayout implements HasDynamicTitle, Befor
             // Build the message from element components so the untrusted principal name is
             // treated as text, never markup (no innerHTML injection).
             Div errorDiv = new Div();
-            errorDiv.add(new Paragraph("You have successfully logged in to the Open ID connect system."));
+            errorDiv.add(new Paragraph(getTranslation("searchView.noUser.loggedIn")));
 
             Span principal = new Span(identity.getPrincipal().getName());
             principal.addClassName(LumoUtility.FontWeight.BOLD);
-            Paragraph missingUser = new Paragraph(new Span("Unfortunately, there is no user named "),
+            Paragraph missingUser = new Paragraph(new Span(getTranslation("searchView.noUser.before")),
                     principal,
-                    new Span(" in the application or it is set to inactive."));
+                    new Span(getTranslation("searchView.noUser.after")));
             errorDiv.add(missingUser);
 
-            errorDiv.add(new Paragraph("Please ask an Elicit Admin for help."));
+            errorDiv.add(new Paragraph(getTranslation("searchView.noUser.help")));
             add(errorDiv);
         } else {
-            //Set up the I18n
-            final UI ui = UI.getCurrent();
-            if (ui.getLocale().getLanguage().equals("ar")) {
-                ui.setDirection(Direction.RIGHT_TO_LEFT);
-            } else {
-                ui.setDirection(Direction.LEFT_TO_RIGHT);
-            }
-            add(new H5("Subject search"));
+            add(new H5(getTranslation("searchView.heading")));
             createSearchBar();
             createSubjectsTable();
         }
@@ -357,32 +354,32 @@ public class SearchView extends VerticalLayout implements HasDynamicTitle, Befor
         departmentComboBox.setId("department-filter");
         searchBar.add(departmentComboBox);
 
-        accessCodeField = new TextField("Access Code");
+        accessCodeField = new TextField(getTranslation("searchView.filter.accessCode"));
         accessCodeField.setId("access-code-filter");
         accessCodeField.addThemeVariants(TextFieldVariant.LUMO_SMALL);
         searchBar.add(accessCodeField);
 
-        firstNameField = new TextField("First name");
+        firstNameField = new TextField(getTranslation("searchView.filter.firstName"));
         firstNameField.setId("first-name-filter");
         firstNameField.addThemeVariants(TextFieldVariant.LUMO_SMALL);
         searchBar.add(firstNameField);
 
-        lastNameField = new TextField("Last name");
+        lastNameField = new TextField(getTranslation("searchView.filter.lastName"));
         lastNameField.setId("last-name-filter");
         lastNameField.addThemeVariants(TextFieldVariant.LUMO_SMALL);
         searchBar.add(lastNameField);
 
-        emailField = new TextField("Email");
+        emailField = new TextField(getTranslation("searchView.filter.email"));
         emailField.setId("email-filter");
         emailField.addThemeVariants(TextFieldVariant.LUMO_SMALL);
         searchBar.add(emailField);
 
-        phoneField = new TextField("Phone");
+        phoneField = new TextField(getTranslation("searchView.filter.phone"));
         phoneField.setId("phone-filter");
         phoneField.addThemeVariants(TextFieldVariant.LUMO_SMALL);
         searchBar.add(phoneField);
 
-        Button searchButton = new Button("Search");
+        Button searchButton = new Button(getTranslation("common.search"));
         searchButton.setId("search-button");
         searchButton.addThemeVariants(ButtonVariant.LUMO_PRIMARY);
         searchButton.addClickListener(e -> {
@@ -433,12 +430,12 @@ public class SearchView extends VerticalLayout implements HasDynamicTitle, Befor
      */
     private MultiSelectComboBox<Department> getDepartmentComboBox() {
 
-        MultiSelectComboBox<Department> departmentComboBox = new MultiSelectComboBox<>("Deparment(s)");
+        MultiSelectComboBox<Department> departmentComboBox = new MultiSelectComboBox<>(getTranslation("searchView.filter.departments"));
         departmentComboBox.addThemeVariants(MultiSelectComboBoxVariant.LUMO_SMALL);
 
         // Create "All Departments" entry
         Department allDepartments = new Department();
-        allDepartments.name = "All Departments";
+        allDepartments.name = getTranslation("searchView.filter.allDepartments");
         allDepartments.id = -1; // Use a special ID or flag to identify this entry
 
         // Combine "All Departments" with user's departments
@@ -520,15 +517,15 @@ public class SearchView extends VerticalLayout implements HasDynamicTitle, Befor
         subjectGrid = new Grid<>(Status.class, false);
         subjectGrid.setId("subject-grid");
         subjectGrid.setSizeFull();
-        subjectGrid.addColumn(Status::getAccessCode).setHeader("Access Code").setSortable(true).setSortProperty(Status.PROP_ACCESS_CODE).setWidth("150px").setFlexGrow(0);
-        subjectGrid.addColumn(Status::getDepartmentName).setHeader("Department").setSortable(true).setSortProperty(Status.PROP_DEPARTMENT_NAME);
-        subjectGrid.addColumn(Status::getFirstName).setHeader("First name").setSortable(true).setSortProperty(Status.PROP_FIRST_NAME);
-        subjectGrid.addColumn(Status::getMiddleName).setHeader("Middle name").setSortable(true).setSortProperty(Status.PROP_MIDDLE_NAME);
-        subjectGrid.addColumn(Status::getLastName).setHeader("Last name").setSortable(true).setSortProperty(Status.PROP_LAST_NAME);
-        subjectGrid.addColumn(Status::getEmail).setHeader("Email").setSortable(true).setSortProperty(Status.PROP_EMAIL);
-        subjectGrid.addColumn(Status::getPhone).setHeader("Phone").setSortable(true).setSortProperty(Status.PROP_PHONE);
-        subjectGrid.addColumn(Status::getCreated).setHeader("Created").setSortable(true).setSortProperty(Status.PROP_CREATED_DT);
-        subjectGrid.addColumn(Status::getStatus).setHeader("Status").setSortable(true).setSortProperty(Status.PROP_STATUS);
+        subjectGrid.addColumn(Status::getAccessCode).setHeader(getTranslation("searchView.grid.accessCode")).setSortable(true).setSortProperty(Status.PROP_ACCESS_CODE).setWidth("150px").setFlexGrow(0);
+        subjectGrid.addColumn(Status::getDepartmentName).setHeader(getTranslation("searchView.grid.department")).setSortable(true).setSortProperty(Status.PROP_DEPARTMENT_NAME);
+        subjectGrid.addColumn(Status::getFirstName).setHeader(getTranslation("searchView.grid.firstName")).setSortable(true).setSortProperty(Status.PROP_FIRST_NAME);
+        subjectGrid.addColumn(Status::getMiddleName).setHeader(getTranslation("searchView.grid.middleName")).setSortable(true).setSortProperty(Status.PROP_MIDDLE_NAME);
+        subjectGrid.addColumn(Status::getLastName).setHeader(getTranslation("searchView.grid.lastName")).setSortable(true).setSortProperty(Status.PROP_LAST_NAME);
+        subjectGrid.addColumn(Status::getEmail).setHeader(getTranslation("searchView.grid.email")).setSortable(true).setSortProperty(Status.PROP_EMAIL);
+        subjectGrid.addColumn(Status::getPhone).setHeader(getTranslation("searchView.grid.phone")).setSortable(true).setSortProperty(Status.PROP_PHONE);
+        subjectGrid.addColumn(Status::getCreated).setHeader(getTranslation("searchView.grid.created")).setSortable(true).setSortProperty(Status.PROP_CREATED_DT);
+        subjectGrid.addColumn(Status::getStatus).setHeader(getTranslation("searchView.grid.status")).setSortable(true).setSortProperty(Status.PROP_STATUS);
         subjectGrid.setMultiSort(true, Grid.MultiSortPriority.APPEND);
         subjectGrid.addThemeVariants(GridVariant.LUMO_ROW_STRIPES, GridVariant.LUMO_COMPACT);
         HeaderRow headerRow = subjectGrid.appendHeaderRow();
@@ -537,13 +534,13 @@ public class SearchView extends VerticalLayout implements HasDynamicTitle, Befor
         subjectGrid.addComponentColumn(status -> {
             Button editButton = new Button(new Icon(VaadinIcon.EDIT));
             editButton.addThemeVariants(ButtonVariant.LUMO_ICON, ButtonVariant.LUMO_TERTIARY);
-            editButton.getElement().setProperty("title", "Edit");
+            editButton.getElement().setProperty("title", getTranslation("common.edit"));
             editButton.addClickListener(e -> {
                 // Pass the access code as a query parameter (or use another unique identifier)
                 ui.navigate("register", QueryParameters.simple(Map.of("accessCode", status.getAccessCode())));
             });
             return editButton;
-        }).setHeader("Edit").setWidth("80px").setFlexGrow(0);
+        }).setHeader(getTranslation("common.edit")).setWidth("80px").setFlexGrow(0);
 
         // --- Add action column ---
         subjectGrid.addComponentColumn(status -> {
@@ -552,7 +549,8 @@ public class SearchView extends VerticalLayout implements HasDynamicTitle, Befor
             actionLayout.setAlignItems(Alignment.CENTER);
 
             ComboBox<String> actionComboBox = new ComboBox<>();
-            actionComboBox.setPlaceholder("Select action");
+            actionComboBox.setPlaceholder(getTranslation("searchView.action.placeholder"));
+            actionComboBox.setItemLabelGenerator(action -> getTranslation("searchView.action." + action));
             actionComboBox.setWidth("120px");
             actionComboBox.addThemeVariants(ComboBoxVariant.LUMO_SMALL);
 
@@ -564,7 +562,7 @@ public class SearchView extends VerticalLayout implements HasDynamicTitle, Befor
                 actionComboBox.setValue(activeActionValue);
             }
 
-            Button submitButton = new Button("Submit");
+            Button submitButton = new Button(getTranslation("searchView.action.btnSubmit"));
             submitButton.addThemeVariants(ButtonVariant.LUMO_PRIMARY, ButtonVariant.LUMO_SMALL);
 
             // Only add the submit button if a selection exists
@@ -602,27 +600,27 @@ public class SearchView extends VerticalLayout implements HasDynamicTitle, Befor
             submitButton.addClickListener(e -> {
                 String selectedAction = actionComboBox.getValue();
                 if (selectedAction != null) {
-                    if ("Send Email".equals(selectedAction)) {
+                    if (ACTION_SEND_EMAIL.equals(selectedAction)) {
                         try {
                             boolean sent = emailService.sendEmail(status);
                             if (sent) {
-                                Notification.show("Email sent successfully", 3000, Notification.Position.TOP_CENTER);
+                                Notification.show(getTranslation("searchView.action.emailSent"), 3000, Notification.Position.TOP_CENTER);
                             } else {
-                                Notification.show("Failed to send email. Check server logs for details.", 5000, Notification.Position.TOP_CENTER);
+                                Notification.show(getTranslation("searchView.action.emailFailed"), 5000, Notification.Position.TOP_CENTER);
                             }
                         } catch (Exception ex) {
-                            Notification.show("Failed to send email: " + ex.getMessage(), 5000, Notification.Position.TOP_CENTER);
+                            Notification.show(getTranslation("searchView.action.emailError", ex.getMessage()), 5000, Notification.Position.TOP_CENTER);
                         }
-                    } else if ("Print Reports".equals(selectedAction)) {
+                    } else if (ACTION_PRINT_REPORTS.equals(selectedAction)) {
                         try {
                             reportingService.printReports(status);
-                            Notification.show("Reports generated successfully", 3000, Notification.Position.TOP_CENTER);
+                            Notification.show(getTranslation("searchView.action.reportsGenerated"), 3000, Notification.Position.TOP_CENTER);
                         } catch (Exception ex) {
-                            Notification.show("Failed to generate reports: " + ex.getMessage(), 5000, Notification.Position.TOP_CENTER);
+                            Notification.show(getTranslation("searchView.action.reportsError", ex.getMessage()), 5000, Notification.Position.TOP_CENTER);
                         }
-                    } else if ("Export".equals(selectedAction)) {
+                    } else if (ACTION_EXPORT.equals(selectedAction)) {
                         UI.getCurrent().getPage().executeJs("window.open($0, '_blank')", buildExportUrl(status));
-                        Notification.show("Export downloading...", 3000, Notification.Position.TOP_CENTER);
+                        Notification.show(getTranslation("searchView.action.exportDownloading"), 3000, Notification.Position.TOP_CENTER);
                     }
                     // Clear selection and remove submit button after action
                     actionComboBox.clear();
@@ -635,7 +633,7 @@ public class SearchView extends VerticalLayout implements HasDynamicTitle, Befor
             });
 
             return actionLayout;
-        }).setHeader("Action").setWidth("250px").setFlexGrow(0);
+        }).setHeader(getTranslation("searchView.grid.action")).setWidth("250px").setFlexGrow(0);
         // --- End action column ---
 
         // Set the data provider here
@@ -669,16 +667,17 @@ public class SearchView extends VerticalLayout implements HasDynamicTitle, Befor
      * appears for {@code elicit_admin}.
      *
      * @param status the row's status record
-     * @return the action names to offer, in display order
+     * @return the action keys to offer, in display order (labels come from
+     *         {@code searchView.action.<key>})
      */
     List<String> buildActionOptions(Status status) {
         List<String> actionOptions = new ArrayList<>();
-        actionOptions.add("Send Email");
+        actionOptions.add(ACTION_SEND_EMAIL);
         if ("Finished".equals(status.getStatus())) {
-            actionOptions.add("Print Reports");
+            actionOptions.add(ACTION_PRINT_REPORTS);
         }
         if (identity.hasRole("elicit_admin")) {
-            actionOptions.add("Export");
+            actionOptions.add(ACTION_EXPORT);
         }
         return actionOptions;
     }
@@ -751,28 +750,28 @@ public class SearchView extends VerticalLayout implements HasDynamicTitle, Befor
 
         // Department IDs (required). An empty selection yields an empty "in ()" that matches
         // nothing, which is the intended behaviour when the user clears the required filter.
-        where.append(Status.PROP_DEPARTMENT_ID).append(" in :departments");
+        where.append(Status.PROP_DEPARTMENT_ID).append(" in :departments"); // i18n:ignore (SQL)
         params.put("departments", departmentIds);
 
         // Optional filters — values bound as parameters, wildcards added to the value only.
         if (accessCode != null && !accessCode.isBlank()) {
-            where.append(" and lower(").append(Status.PROP_ACCESS_CODE).append(") like :accessCode");
+            where.append(" and lower(").append(Status.PROP_ACCESS_CODE).append(") like :accessCode"); // i18n:ignore (SQL)
             params.put("accessCode", "%" + accessCode.toLowerCase() + "%");
         }
         if (firstName != null && !firstName.isBlank()) {
-            where.append(" and lower(").append(Status.PROP_FIRST_NAME).append(") like :firstName");
+            where.append(" and lower(").append(Status.PROP_FIRST_NAME).append(") like :firstName"); // i18n:ignore (SQL)
             params.put("firstName", "%" + firstName.toLowerCase() + "%");
         }
         if (lastName != null && !lastName.isBlank()) {
-            where.append(" and lower(").append(Status.PROP_LAST_NAME).append(") like :lastName");
+            where.append(" and lower(").append(Status.PROP_LAST_NAME).append(") like :lastName"); // i18n:ignore (SQL)
             params.put("lastName", "%" + lastName.toLowerCase() + "%");
         }
         if (email != null && !email.isBlank()) {
-            where.append(" and lower(").append(Status.PROP_EMAIL).append(") like :email");
+            where.append(" and lower(").append(Status.PROP_EMAIL).append(") like :email"); // i18n:ignore (SQL)
             params.put("email", "%" + email.toLowerCase() + "%");
         }
         if (phone != null && !phone.isBlank()) {
-            where.append(" and ").append(Status.PROP_PHONE).append(" like :phone");
+            where.append(" and ").append(Status.PROP_PHONE).append(" like :phone"); // i18n:ignore (SQL)
             params.put("phone", "%" + phone + "%");
         }
 
@@ -802,7 +801,7 @@ public class SearchView extends VerticalLayout implements HasDynamicTitle, Befor
         List<Long> ids = new ArrayList<>();
         Set<Department> selectedDepartments = departmentComboBox.getSelectedItems();
         if (selectedDepartments.isEmpty()) {
-            Notification.show("Please select one or more departments", 3000, Notification.Position.MIDDLE);
+            Notification.show(getTranslation("searchView.error.selectDepartments"), 3000, Notification.Position.MIDDLE);
         } else {
             for (Department department : selectedDepartments) {
                 if (department.id == -1) {
@@ -843,8 +842,9 @@ public class SearchView extends VerticalLayout implements HasDynamicTitle, Befor
      * @return the page title string
      * @see HasDynamicTitle#getPageTitle()
      */
-    @Override    public String getPageTitle() {
-        return "Elicit Search";
+    @Override
+    public String getPageTitle() {
+        return getTranslation("searchView.pageTitle");
     }
 
     /**
