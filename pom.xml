@@ -107,11 +107,6 @@
                 </exclusion>
             </exclusions>
         </dependency>
-        <dependency>
-            <groupId>com.vaadin</groupId>
-            <artifactId>vaadin-dev</artifactId>
-            <optional>true</optional>
-        </dependency>
         <!-- Container Images -->
         <dependency>
             <groupId>io.quarkus</groupId>
@@ -550,6 +545,27 @@
     </reporting>
 
     <profiles>
+        <profile>
+            <!-- Vaadin dev tools (dev server, Copilot, dev bundle) for dev mode and tests.
+                 Active only when no -Dquarkus.profile is passed on the Maven command line, so
+                 the image build (-Dquarkus.profile=docker) keeps them off the build classpath.
+                 Quarkus packages optional dependencies, and filtering them only at packaging
+                 time breaks startup because augmentation has already generated a bean for
+                 vaadin-dev's DevModeStartupListener. -->
+            <id>vaadin-dev-tools</id>
+            <activation>
+                <property>
+                    <name>!quarkus.profile</name>
+                </property>
+            </activation>
+            <dependencies>
+                <dependency>
+                    <groupId>com.vaadin</groupId>
+                    <artifactId>vaadin-dev</artifactId>
+                    <optional>true</optional>
+                </dependency>
+            </dependencies>
+        </profile>
         <profile>
             <id>native</id>
             <activation>
