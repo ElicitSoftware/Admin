@@ -70,6 +70,8 @@ class MainLayoutTest extends QuarkusBrowserlessTest {
         assertTrue(hasNavItem(layout, "Register Subjects"));
         assertTrue(hasNavItem(layout, "Admin"), "an admin should see the Admin section");
         assertTrue(hasNavItem(layout, "Import Respondent"), "an admin should see Import Respondent");
+        assertTrue(hasNavItem(layout, "Apply Survey Definition"), "an admin should see Apply Survey Definition");
+        assertTrue(hasNavItem(layout, "Export Survey Definition"), "an admin should see Export Survey Definition");
         assertTrue(hasNavItem(layout, "Logout"));
     }
 
@@ -88,6 +90,8 @@ class MainLayoutTest extends QuarkusBrowserlessTest {
         assertTrue(hasNavItem(layout, "Search Subjects"));
         assertFalse(hasNavItem(layout, "Admin"), "a non-admin must not see the Admin section");
         assertFalse(hasNavItem(layout, "Import Respondent"), "a non-admin must not see Import Respondent");
+        assertFalse(hasNavItem(layout, "Export Survey Definition"),
+                "a non-admin must not see Export Survey Definition");
     }
 
     /** UC-001 A1: with no user in the session, the drawer falls back to a Logout-only nav. */

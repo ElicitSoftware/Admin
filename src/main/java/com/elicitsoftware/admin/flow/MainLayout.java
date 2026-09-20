@@ -219,6 +219,8 @@ public class MainLayout extends AppLayout implements AfterNavigationListener {
      *   <li><strong>Message Templates:</strong> Manage communication templates</li>
      *   <li><strong>Users:</strong> Manage user accounts and permissions</li>
      *   <li><strong>Import Respondent:</strong> Import a respondent data file exported from another instance</li>
+     *   <li><strong>Apply Survey Definition:</strong> Install or update a survey from an authored definition file</li>
+     *   <li><strong>Export Survey Definition:</strong> Download an installed survey's definition file</li>
      * </ul>
      *
      * <h4>System Actions (all users):</h4>
@@ -255,6 +257,8 @@ public class MainLayout extends AppLayout implements AfterNavigationListener {
                     VaadinIcon.UPLOAD.create()));
             adminSection.addItem(new SideNavItem("Apply Survey Definition", SurveyDefinitionApplyView.class,
                     VaadinIcon.FILE_PROCESS.create()));
+            adminSection.addItem(new SideNavItem("Export Survey Definition", SurveyDefinitionExportView.class,
+                    VaadinIcon.DOWNLOAD.create()));
             nav.addItem(adminSection);
         }
         SideNavItem logoutLink = new SideNavItem("Logout", LogoutView.class,
