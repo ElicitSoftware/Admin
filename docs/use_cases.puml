@@ -32,6 +32,7 @@ rectangle "Elicit Admin" {
     usecase "UC-017\nUpdate Survey Definition" as UC017
     usecase "UC-018\nApply Survey Definition" as UC018
     usecase "UC-019\nSurface Missing Survey Definition" as UC019
+    usecase "UC-020\nUse the Console in My Language" as UC020
 
     ' --- Shared subflow ---
     usecase "UC-015\nGenerate Survey Access Code" as UC015
@@ -45,6 +46,7 @@ user --> UC004
 user --> UC005
 user --> UC009
 user --> UC019
+user --> UC020
 
 ' Administrator (inherits user goals plus administration and data lifecycle)
 admin --> UC001
@@ -65,6 +67,7 @@ admin --> UC014
 admin --> UC017
 admin --> UC018
 admin --> UC019
+admin --> UC020
 
 ' Integration Client
 importer --> UC010
@@ -82,5 +85,6 @@ UC013 ..> UC018 : <<supplies file>>
 UC018 ..> UC014 : <<include>>
 UC018 ..> UC017 : <<include>>
 UC019 ..> UC018 : <<directs to>>
+UC020 ..> UC001 : <<extend>>\n(language applies to every screen)
 
 @enduml

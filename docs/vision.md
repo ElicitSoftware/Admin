@@ -28,6 +28,9 @@ Authoring tool.
 - Track and display each subject's progress through their survey.
 - Send invitation and reminder emails to subjects.
 - Present results and reports to authorized staff.
+- Present the console itself in each staff member's language (browser or on-page
+  choice), including right-to-left layout, with translations a deployment can
+  mount without rebuilding.
 - Enforce role-based access via an OIDC provider (Keycloak in test; any
   OIDC-compliant server in production).
 - Operate as a Quarkus service deployable via Docker with health, metrics, and
