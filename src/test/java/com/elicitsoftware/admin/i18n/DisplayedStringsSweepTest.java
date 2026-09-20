@@ -21,7 +21,6 @@ import com.elicitsoftware.admin.flow.RespondentImportView;
 import com.elicitsoftware.admin.flow.SearchView;
 import com.elicitsoftware.admin.flow.SurveyDefinitionApplyView;
 import com.elicitsoftware.admin.flow.SurveyDefinitionExportView;
-import com.elicitsoftware.admin.flow.UnauthorizedView;
 import com.elicitsoftware.admin.flow.UsersView;
 import com.elicitsoftware.model.Department;
 import com.elicitsoftware.model.User;
@@ -79,8 +78,8 @@ class DisplayedStringsSweepTest extends QuarkusBrowserlessTest {
         List<Class<? extends Component>> routes = List.of(
                 SearchView.class, RegisterView.class, DepartmentsView.class, EditDepartmentView.class,
                 MessageTemplatesView.class, EditMessageTemplatesView.class, UsersView.class, EditUserView.class,
-                RespondentImportView.class, SurveyDefinitionApplyView.class, SurveyDefinitionExportView.class,
-                UnauthorizedView.class);
+                RespondentImportView.class, SurveyDefinitionApplyView.class, SurveyDefinitionExportView.class);
+        // UnauthorizedView is a layout-less error route the mock router cannot navigate to; UnauthorizedViewTest covers it.
         for (Class<? extends Component> route : routes) {
             navigate(route);
             sweep(route.getSimpleName(), problems);
