@@ -23,6 +23,7 @@ import com.elicitsoftware.admin.flow.SurveyDefinitionApplyView;
 import com.elicitsoftware.admin.flow.SurveyDefinitionExportView;
 import com.elicitsoftware.admin.flow.UnauthorizedView;
 import com.elicitsoftware.admin.flow.UsersView;
+import com.elicitsoftware.model.Department;
 import com.elicitsoftware.model.User;
 import com.elicitsoftware.test.PostgresTestResource;
 import com.vaadin.browserless.quarkus.QuarkusBrowserlessTest;
@@ -62,6 +63,10 @@ class DisplayedStringsSweepTest extends QuarkusBrowserlessTest {
         user.setId(1);
         user.setUsername(name);
         user.setActive(true);
+        Department department = new Department();
+        department.id = 1;
+        department.name = "Sweep Dept";
+        user.setDepartments(new java.util.HashSet<>(java.util.List.of(department)));
         VaadinSession.getCurrent().setAttribute("user", user);
     }
 
