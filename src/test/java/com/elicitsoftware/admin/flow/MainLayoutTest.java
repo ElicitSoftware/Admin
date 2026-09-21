@@ -24,6 +24,8 @@ import io.quarkus.test.security.TestSecurity;
 import jakarta.enterprise.inject.spi.CDI;
 import org.junit.jupiter.api.Test;
 
+import java.util.List;
+
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -72,6 +74,11 @@ class MainLayoutTest extends QuarkusBrowserlessTest {
         assertTrue(hasNavItem(layout, "Import Respondent"), "an admin should see Import Respondent");
         assertTrue(hasNavItem(layout, "Apply Survey Definition"), "an admin should see Apply Survey Definition");
         assertTrue(hasNavItem(layout, "Export Survey Definition"), "an admin should see Export Survey Definition");
+        // UC-020..UC-025 and FR-026: the System section and its six entries.
+        assertTrue(hasNavItem(layout, "System"), "an admin should see the System section");
+        for (String entry : List.of("Overview", "Database", "Branding", "Email", "Connections", "OIDC")) {
+            assertTrue(hasNavItem(layout, entry), "an admin should see System > " + entry);
+        }
         assertTrue(hasNavItem(layout, "Logout"));
     }
 
@@ -89,6 +96,8 @@ class MainLayoutTest extends QuarkusBrowserlessTest {
 
         assertTrue(hasNavItem(layout, "Search Subjects"));
         assertFalse(hasNavItem(layout, "Admin"), "a non-admin must not see the Admin section");
+        assertFalse(hasNavItem(layout, "System"), "a non-admin must not see the System section");
+        assertFalse(hasNavItem(layout, "OIDC"), "a non-admin must not see System > OIDC");
         assertFalse(hasNavItem(layout, "Import Respondent"), "a non-admin must not see Import Respondent");
         assertFalse(hasNavItem(layout, "Export Survey Definition"),
                 "a non-admin must not see Export Survey Definition");

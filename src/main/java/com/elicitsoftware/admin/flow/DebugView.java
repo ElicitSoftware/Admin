@@ -40,7 +40,7 @@ import org.eclipse.microprofile.jwt.JsonWebToken;
  * @version 1.0
  * @since 1.0
  */
-@Route(value = "debug", layout = MainLayout.class)
+@Route(value = "oidc", layout = MainLayout.class)
 @RolesAllowed("elicit_admin")
 public class DebugView extends VerticalLayout implements HasDynamicTitle {
 

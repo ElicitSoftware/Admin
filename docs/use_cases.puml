@@ -33,6 +33,14 @@ rectangle "Elicit Admin" {
     usecase "UC-018\nApply Survey Definition" as UC018
     usecase "UC-019\nSurface Missing Survey Definition" as UC019
 
+    ' --- System setup and diagnostics (admin only) ---
+    usecase "UC-020\nView System Overview" as UC020
+    usecase "UC-021\nWarn About Default Accounts" as UC021
+    usecase "UC-022\nDiagnose Database" as UC022
+    usecase "UC-023\nDiagnose Branding" as UC023
+    usecase "UC-024\nDiagnose Email" as UC024
+    usecase "UC-025\nCheck Connections" as UC025
+
     ' --- Shared subflow ---
     usecase "UC-015\nGenerate Survey Access Code" as UC015
 }
@@ -65,6 +73,12 @@ admin --> UC014
 admin --> UC017
 admin --> UC018
 admin --> UC019
+admin --> UC020
+admin --> UC021
+admin --> UC022
+admin --> UC023
+admin --> UC024
+admin --> UC025
 
 ' Integration Client
 importer --> UC010
@@ -82,5 +96,9 @@ UC013 ..> UC018 : <<supplies file>>
 UC018 ..> UC014 : <<include>>
 UC018 ..> UC017 : <<include>>
 UC019 ..> UC018 : <<directs to>>
+UC020 ..> UC021 : <<include>>
+UC020 ..> UC019 : <<include>>
+UC021 ..> UC008 : <<directs to>>
+UC020 ..> UC009 : <<directs to>>
 
 @enduml

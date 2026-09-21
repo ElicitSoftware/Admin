@@ -13,6 +13,7 @@ package com.elicitsoftware.admin.flow;
 
 import com.elicitsoftware.model.Department;
 import com.elicitsoftware.model.User;
+import com.elicitsoftware.service.DefaultAccountCheck;
 import com.elicitsoftware.service.SurveyDefinitionPresenceCheck;
 import com.elicitsoftware.test.PostgresTestResource;
 import com.vaadin.browserless.quarkus.QuarkusBrowserlessTest;
@@ -73,10 +74,19 @@ class MissingSurveyWarningTest extends QuarkusBrowserlessTest {
 
     private SwitchablePresence presence;
 
+    /** No seeded default accounts, so only the missing-survey banner is in play (UC-021 is tested separately). */
+    static final class NoDefaultAccounts extends DefaultAccountCheck {
+        @Override
+        public List<String> findDefaultAccounts() {
+            return List.of();
+        }
+    }
+
     @BeforeEach
     void installSwitchablePresence() {
         presence = new SwitchablePresence();
         QuarkusMock.installMockForType(presence, SurveyDefinitionPresenceCheck.class);
+        QuarkusMock.installMockForType(new NoDefaultAccounts(), DefaultAccountCheck.class);
     }
 
     private static void seedSessionUser(String username) {

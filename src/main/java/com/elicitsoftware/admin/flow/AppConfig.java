@@ -383,7 +383,10 @@ public class AppConfig implements AppShellConfigurator {
             }
 
         } catch (Exception e) {
-            // Silently handle CSS loading errors
+            // The page still renders without the stylesheet; say so instead of hiding it, since a
+            // mounted brand file that cannot be read is otherwise invisible (UC-023 A2).
+            io.quarkus.logging.Log.warnf("Brand stylesheet %s could not be read from %s or %s: %s", cssPath,
+                    getBrandPath(), getLocalBrandPath(), e.getMessage());
         }
 
         return null;
