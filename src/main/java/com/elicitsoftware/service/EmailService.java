@@ -12,6 +12,7 @@ package com.elicitsoftware.service;
  */
 
 import com.elicitsoftware.model.Department;
+import com.elicitsoftware.diagnostics.CheckResult;
 import com.elicitsoftware.model.Message;
 import com.elicitsoftware.model.MessageTemplate;
 import com.elicitsoftware.model.Status;
@@ -335,6 +336,46 @@ public class EmailService {
      * @see Message#body
      * @see Message#mimeType
      */
+    /**
+     * Sends a short plain-text message to prove the relay works (UC-024).
+     * <p>
+     * Uses the same mailer, sender and timeout as invitations (BR-093), so a passing test means
+     * invitations will send. Attributed in the log to the administrator who asked (BR-095).
+     *
+     * @param to          the recipient
+     * @param requestedBy the administrator's username, for the log
+     * @return the outcome; on failure the detail names the relay host and port and the reason
+     */
+    public CheckResult sendTestEmail(String to, String requestedBy) {
+        String name = "test email to " + LogMasking.maskEmail(to);
+        if (fromEmail == null || fromEmail.isBlank()) {
+            return CheckResult.unknown(name, "no sender address is configured (quarkus.mailer.from)");
+        }
+        String body = "This is a test message from Elicit Admin, sent by " + requestedBy
+                + " to confirm that the mail relay at " + mailerHost + ":" + mailerPort + " accepts mail from "
+                + fromEmail + ". No action is needed.";
+        long start = System.currentTimeMillis();
+        try {
+            Log.infof("sendTestEmail: %s requested a test email to %s via %s:%d", requestedBy,
+                    LogMasking.maskEmail(to), mailerHost, mailerPort);
+            mailer.send(Mail.withText(to, "Elicit Admin test email", body).setFrom(fromEmail))
+                    .await().atMost(Duration.ofSeconds(mailSendTimeoutSeconds));
+            return CheckResult.up(name, "accepted by " + mailerHost + ":" + mailerPort,
+                    System.currentTimeMillis() - start);
+        } catch (Exception ex) {
+            Throwable cause = ex.getCause() != null ? ex.getCause() : ex;
+            String reason;
+            if (cause instanceof TimeoutException) {
+                reason = "no answer from " + mailerHost + ":" + mailerPort + " within " + mailSendTimeoutSeconds + " s";
+            } else {
+                reason = mailerHost + ":" + mailerPort + " " + (cause.getMessage() != null ? cause.getMessage()
+                        : cause.getClass().getSimpleName());
+            }
+            Log.errorf("sendTestEmail: failed for %s: %s", LogMasking.maskEmail(to), reason);
+            return CheckResult.down(name, reason, System.currentTimeMillis() - start);
+        }
+    }
+
     private boolean sendMessage(Message message) {
         Log.debugf("sendMessage: validating message id=%d", message.id);
         try {

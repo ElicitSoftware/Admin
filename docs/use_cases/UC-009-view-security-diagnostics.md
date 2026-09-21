@@ -14,7 +14,7 @@
 
 ## Main Success Scenario
 
-1. The user opens the diagnostics view.
+1. The user opens the diagnostics view, either from the Security entry of the System section (administrators, FR-026) or by its address.
 2. The system displays the current identity's details: principal name, whether the identity is anonymous, the full set of roles, whether roles came from the identity provider or the database, the checks for the admin and user roles, and the raw identity and access tokens.
 3. The user reads the information to diagnose an access issue.
 
@@ -47,4 +47,5 @@ The diagnostics view reports whether the effective roles were supplied by the OI
 
 ## Reference
 
-Derived from `DebugView` and `RoleSecurityIdentityAugmentor`.
+Derived from `DebugView` and `RoleSecurityIdentityAugmentor`. The navigation entry (FR-026) is the Security
+item of the System section built by `MainLayout`; the view itself is unchanged by it.

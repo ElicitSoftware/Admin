@@ -28,6 +28,13 @@
 | FR-017 | Update Survey Definition            | As a system administrator, I want to push a revised survey definition into an existing survey so that a survey authored once can be kept in sync across separate deployments (e.g., institutions) without losing their respondent data. | Medium   | Implemented |
 | FR-018 | Apply Survey Definition             | As a system administrator, I want to upload a survey definition without first deciding whether it is new to this deployment, so that one distributed file can be applied unchanged at every site in a multi-site rollout. | Medium   | Implemented |
 | FR-019 | Surface Missing Survey Definition   | As a survey administrator, I want the console to tell me when no survey is installed so that I understand why subject registration and reporting have nothing to work with, rather than inferring it from empty grids. | Medium   | Implemented |
+| FR-020 | View System Overview                | As a platform operator, I want one screen that shows the version, build time, active profile, uptime, health, and whether every required setting is present so that I can confirm a deployment is wired correctly before handing it over. | High     | Implemented     |
+| FR-021 | Warn About Default Accounts         | As a platform operator, I want the service to warn at startup and in the console while the seeded `admin` and `user` accounts still exist so that I rename them before the deployment goes live. | High     | Implemented     |
+| FR-022 | Diagnose Database                   | As a platform operator, I want to see whether both database connections work and which migration versions each module has applied so that I can tell an ordering or credential problem from a broken schema. | High     | Implemented     |
+| FR-023 | Diagnose Branding                   | As a platform operator, I want to see which brand directory resolved and where each brand asset came from so that a missing or partial brand mount is visible rather than silently falling back to the default theme. | Medium   | Implemented     |
+| FR-024 | Diagnose Email                      | As a platform operator, I want to see the effective mail settings and send myself a test message so that I can prove the SMTP relay works before subjects are invited. | High     | Implemented     |
+| FR-025 | Check Connections                   | As a platform operator, I want to check each outbound dependency (identity provider, report services, post-survey actions, SMTP, telemetry) with a bounded probe so that an unreachable service is named here rather than discovered inside a generated report. | High     | Implemented     |
+| FR-026 | Reach Security Diagnostics From Navigation | As a platform operator, I want the security diagnostics view listed in the System section so that I can find it without knowing its address. | Low      | Implemented     |
 
 ## Non-Functional Requirements
 
@@ -43,6 +50,8 @@
 | NFR-008 | Deployment Portability      | The Admin service must run as a single Docker container configured entirely via environment variables, with no host-specific setup. | Portability | Medium   | Implemented |
 | NFR-009 | Concurrent Admin Users      | The system must support at least 25 concurrent admin users without response times exceeding the NFR-001 threshold.            | Scalability     | Low      | Open        |
 | NFR-010 | Service Availability        | The Admin service must maintain 99.5% uptime during business hours, measured monthly.                                          | Availability    | Medium   | Open        |
+| NFR-011 | Diagnostics Never Leak Secrets | Diagnostic screens must never render a password, client secret, or token value; a secret is reported only as present or absent (tokens may be masked to their last four characters, as UC-009 already does). | Security        | High     | Implemented     |
+| NFR-012 | Bounded Diagnostic Checks    | Every outbound probe started from a diagnostic screen must complete or fail within 5 seconds, so that an unreachable dependency never hangs the console.                    | Availability    | Medium   | Implemented     |
 
 ## Constraints
 
@@ -59,9 +68,11 @@
 | C-009 | PHI Handling             | Subject and respondent records must be treated as potentially containing PHI (e.g., in the FHHS deployment) and handled accordingly. | Regulatory | High     | Open        |
 | C-010 | Accessible Component Usage | UI must be implemented via Vaadin component APIs rather than raw HTML/JS that bypasses framework accessibility support.      | Technical   | Medium   | Verified    |
 | C-011 | Terminology              | The credential a respondent enters to reach a survey is the **access code** (`survey.respondents.access_code`, `Status.accessCode`, the `<ACCESS_CODE>` template placeholder). "Token" is reserved for OIDC/Bearer tokens and the question-text placeholder (`survey.relationships.token`); it must not be used for the respondent credential. | Business    | Medium   | Implemented |
+| C-012 | Runtime Configuration Is Read-Only | Datasource, OIDC, mailer, telemetry and brand-path settings are Quarkus startup configuration and cannot be changed from the console; diagnostic screens show the effective value and test it, they do not edit it. | Technical   | Medium   | Verified     |
 
 ## Traceability
 
-Functional requirements FR-001–FR-019 map one-to-one to `docs/use_cases/UC-001`–`UC-019`. See `docs/use_cases.puml`
-for the actor/use-case diagram and `docs/entity_model.md` for the underlying data model referenced by these
-requirements.
+Functional requirements FR-001–FR-019 map one-to-one to `docs/use_cases/UC-001`–`UC-019`, and FR-020–FR-025 to
+`UC-020`–`UC-025`. FR-026 is satisfied inside UC-009 (the navigation entry). NFR-011, NFR-012 and C-012 govern
+UC-020–UC-025. See `docs/use_cases.puml` for the actor/use-case diagram and `docs/entity_model.md` for the
+underlying data model referenced by these requirements.

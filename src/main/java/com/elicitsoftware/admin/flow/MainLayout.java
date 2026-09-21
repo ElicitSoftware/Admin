@@ -13,6 +13,8 @@ package com.elicitsoftware.admin.flow;
 
 import com.elicitsoftware.admin.util.BrandUtil;
 import com.elicitsoftware.model.User;
+import com.elicitsoftware.security.ElicitRoles;
+import com.elicitsoftware.service.DefaultAccountCheck;
 import com.elicitsoftware.service.SurveyDefinitionPresenceCheck;
 import com.vaadin.flow.component.AttachEvent;
 import com.vaadin.flow.component.Component;
@@ -32,6 +34,8 @@ import io.quarkus.security.identity.SecurityIdentity;
 import jakarta.annotation.PostConstruct;
 import jakarta.annotation.security.PermitAll;
 import jakarta.inject.Inject;
+
+import java.util.List;
 
 /**
  * The main layout component that provides the structural foundation for the entire application.
@@ -89,6 +93,12 @@ public class MainLayout extends AppLayout implements AfterNavigationListener {
      */
     @Inject
     SurveyDefinitionPresenceCheck surveyPresence;
+
+    /**
+     * Answers whether the seeded default accounts still exist, for the console banner (UC-021).
+     */
+    @Inject
+    DefaultAccountCheck defaultAccounts;
 
     /**
      * The current authenticated user.
@@ -260,6 +270,7 @@ public class MainLayout extends AppLayout implements AfterNavigationListener {
             adminSection.addItem(new SideNavItem("Export Survey Definition", SurveyDefinitionExportView.class,
                     VaadinIcon.DOWNLOAD.create()));
             nav.addItem(adminSection);
+            nav.addItem(createSystemSection());
         }
         SideNavItem logoutLink = new SideNavItem("Logout", LogoutView.class,
                 VaadinIcon.LOCK.create());
@@ -277,6 +288,28 @@ public class MainLayout extends AppLayout implements AfterNavigationListener {
      * @param attachEvent the event fired when this component is attached to the UI
      * @see AfterNavigationListener
      */
+    /**
+     * The System section: setup and diagnostics for the administrator or operator wiring up a
+     * deployment (UC-020 to UC-025, and the Security entry for UC-009 / FR-026).
+     */
+    private SideNavItem createSystemSection() {
+        SideNavItem systemSection = new SideNavItem("System");
+        systemSection.setPrefixComponent(VaadinIcon.TOOLS.create());
+        systemSection.addItem(new SideNavItem("Overview", SystemOverviewView.class,
+                VaadinIcon.DASHBOARD.create()));
+        systemSection.addItem(new SideNavItem("Database", SystemDatabaseView.class,
+                VaadinIcon.DATABASE.create()));
+        systemSection.addItem(new SideNavItem("Branding", SystemBrandingView.class,
+                VaadinIcon.PAINTBRUSH.create()));
+        systemSection.addItem(new SideNavItem("Email", SystemEmailView.class,
+                VaadinIcon.PAPERPLANE.create()));
+        systemSection.addItem(new SideNavItem("Connections", SystemConnectionsView.class,
+                VaadinIcon.CONNECT.create()));
+        systemSection.addItem(new SideNavItem("Security", DebugView.class,
+                VaadinIcon.SHIELD.create()));
+        return systemSection;
+    }
+
     @Override
     protected void onAttach(AttachEvent attachEvent) {
         getUI().ifPresent(ui -> ui.addAfterNavigationListener(this));
@@ -316,7 +349,11 @@ public class MainLayout extends AppLayout implements AfterNavigationListener {
      */
     @Override
     public void showRouterLayoutContent(HasElement content) {
-        if (surveyPresence.isSurveyInstalled()) {
+        boolean surveyInstalled = surveyPresence.isSurveyInstalled();
+        // Only an administrator can rename accounts, so only an administrator is warned (UC-021 A2).
+        List<String> seededAccounts = identity.hasRole(ElicitRoles.ADMIN)
+                ? defaultAccounts.findDefaultAccounts() : List.of();
+        if (surveyInstalled && seededAccounts.isEmpty()) {
             super.showRouterLayoutContent(content);
             return;
         }
@@ -325,7 +362,12 @@ public class MainLayout extends AppLayout implements AfterNavigationListener {
         wrapper.setSizeFull();
         wrapper.setPadding(false);
         wrapper.setSpacing(false);
-        wrapper.add(MissingSurveyNotice.banner(identity.hasRole("elicit_admin")));
+        if (!surveyInstalled) {
+            wrapper.add(MissingSurveyNotice.banner(identity.hasRole(ElicitRoles.ADMIN)));
+        }
+        if (!seededAccounts.isEmpty()) {
+            wrapper.add(DefaultAccountNotice.banner(seededAccounts));
+        }
         wrapper.add((Component) content);
         setContent(wrapper);
     }
