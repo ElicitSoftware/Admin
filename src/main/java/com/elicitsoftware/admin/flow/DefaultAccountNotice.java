@@ -17,7 +17,6 @@ import com.vaadin.flow.component.html.Div;
 import com.vaadin.flow.component.html.Span;
 import com.vaadin.flow.component.icon.VaadinIcon;
 import com.vaadin.flow.router.RouterLink;
-import com.vaadin.flow.theme.lumo.LumoUtility;
 
 import java.util.List;
 
@@ -38,14 +37,12 @@ final class DefaultAccountNotice {
         Div banner = new Div();
         banner.setId(BANNER_ID);
         banner.setWidthFull();
-        banner.addClassNames(LumoUtility.Background.CONTRAST_5, LumoUtility.Padding.MEDIUM,
-                LumoUtility.Display.FLEX, LumoUtility.AlignItems.CENTER, LumoUtility.Gap.SMALL);
+        banner.addClassName("console-notice");
         banner.getElement().setAttribute("role", "status");
 
         banner.add(VaadinIcon.WARNING.create());
         banner.add(new Span(DefaultAccountCheck.instruction(accounts) + " "));
         RouterLink remedy = new RouterLink("Open Users", UsersView.class);
-        remedy.addClassName(LumoUtility.Whitespace.NOWRAP);
         banner.add(remedy);
         return banner;
     }

@@ -290,7 +290,7 @@ public class MainLayout extends AppLayout implements AfterNavigationListener {
      */
     /**
      * The System section: setup and diagnostics for the administrator or operator wiring up a
-     * deployment (UC-020 to UC-025, and the Security entry for UC-009 / FR-026).
+     * deployment (UC-020 to UC-025, and the OIDC entry for UC-009 / FR-026).
      */
     private SideNavItem createSystemSection() {
         SideNavItem systemSection = new SideNavItem("System");
@@ -305,7 +305,7 @@ public class MainLayout extends AppLayout implements AfterNavigationListener {
                 VaadinIcon.PAPERPLANE.create()));
         systemSection.addItem(new SideNavItem("Connections", SystemConnectionsView.class,
                 VaadinIcon.CONNECT.create()));
-        systemSection.addItem(new SideNavItem("Security", DebugView.class,
+        systemSection.addItem(new SideNavItem("OIDC", DebugView.class,
                 VaadinIcon.SHIELD.create()));
         return systemSection;
     }
@@ -362,6 +362,9 @@ public class MainLayout extends AppLayout implements AfterNavigationListener {
         wrapper.setSizeFull();
         wrapper.setPadding(false);
         wrapper.setSpacing(false);
+        // Inset the banners from the header and the edges (components/console-notice.css); the
+        // routed view keeps its own padding.
+        wrapper.addClassName("console-notices");
         if (!surveyInstalled) {
             wrapper.add(MissingSurveyNotice.banner(identity.hasRole(ElicitRoles.ADMIN)));
         }

@@ -32,6 +32,7 @@ import com.vaadin.flow.component.html.UnorderedList;
 import com.vaadin.flow.component.orderedlayout.VerticalLayout;
 import com.vaadin.flow.router.HasDynamicTitle;
 import com.vaadin.flow.router.Route;
+import com.vaadin.flow.theme.lumo.LumoUtility;
 import com.vaadin.flow.router.RouterLink;
 import jakarta.annotation.PostConstruct;
 import jakarta.annotation.security.RolesAllowed;
@@ -85,7 +86,10 @@ public class SystemOverviewView extends VerticalLayout implements HasDynamicTitl
     SetupWarnings setupWarnings;
 
     public SystemOverviewView() {
-        setSizeFull();
+        // Size to the content, not the viewport, so the bottom padding follows the last grid.
+        setWidthFull();
+        setPadding(true);
+        addClassName(LumoUtility.Padding.Bottom.XLARGE);
     }
 
     @PostConstruct

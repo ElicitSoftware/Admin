@@ -65,8 +65,7 @@ final class MissingSurveyNotice {
         Div banner = new Div();
         banner.setId(BANNER_ID);
         banner.setWidthFull();
-        banner.addClassNames(LumoUtility.Background.CONTRAST_5, LumoUtility.Padding.MEDIUM,
-                LumoUtility.Display.FLEX, LumoUtility.AlignItems.CENTER, LumoUtility.Gap.SMALL);
+        banner.addClassName("console-notice");
         // role=status rather than alert: the condition is informational and persistent, so a
         // screen reader should announce it without interrupting what the user is doing.
         banner.getElement().setAttribute("role", "status");

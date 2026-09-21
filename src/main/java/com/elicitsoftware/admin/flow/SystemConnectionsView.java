@@ -25,6 +25,7 @@ import com.vaadin.flow.component.html.Span;
 import com.vaadin.flow.component.orderedlayout.VerticalLayout;
 import com.vaadin.flow.router.HasDynamicTitle;
 import com.vaadin.flow.router.Route;
+import com.vaadin.flow.theme.lumo.LumoUtility;
 import jakarta.annotation.PostConstruct;
 import jakarta.annotation.security.RolesAllowed;
 import jakarta.inject.Inject;
@@ -61,7 +62,10 @@ public class SystemConnectionsView extends VerticalLayout implements HasDynamicT
     private final List<TargetRow> rows = new ArrayList<>();
 
     public SystemConnectionsView() {
-        setSizeFull();
+        // Size to the content, not the viewport, so the bottom padding follows the last grid.
+        setWidthFull();
+        setPadding(true);
+        addClassName(LumoUtility.Padding.Bottom.XLARGE);
     }
 
     @PostConstruct

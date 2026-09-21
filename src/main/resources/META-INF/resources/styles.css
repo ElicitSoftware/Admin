@@ -41,6 +41,7 @@
 @import 'components/branded-header.css';
 @import 'components/text-field.css';
 @import 'components/debug-view.css';
+@import 'components/console-notice.css';
 @import 'components/edit-message-templates.css';
 
 /* Brand Integration Architecture */

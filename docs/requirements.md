@@ -34,7 +34,7 @@
 | FR-023 | Diagnose Branding                   | As a platform operator, I want to see which brand directory resolved and where each brand asset came from so that a missing or partial brand mount is visible rather than silently falling back to the default theme. | Medium   | Implemented     |
 | FR-024 | Diagnose Email                      | As a platform operator, I want to see the effective mail settings and send myself a test message so that I can prove the SMTP relay works before subjects are invited. | High     | Implemented     |
 | FR-025 | Check Connections                   | As a platform operator, I want to check each outbound dependency (identity provider, report services, post-survey actions, SMTP, telemetry) with a bounded probe so that an unreachable service is named here rather than discovered inside a generated report. | High     | Implemented     |
-| FR-026 | Reach Security Diagnostics From Navigation | As a platform operator, I want the security diagnostics view listed in the System section so that I can find it without knowing its address. | Low      | Implemented     |
+| FR-026 | Reach Security Diagnostics From Navigation | As a platform operator, I want the security diagnostics view listed as OIDC in the System section so that I can find it without knowing its address. | Low      | Implemented     |
 
 ## Non-Functional Requirements
 
