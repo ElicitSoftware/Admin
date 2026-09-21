@@ -360,6 +360,190 @@ Every row is one key in `translations.properties`. Return a file `translations_<
 | `reporting.error.pdfText` | Report Generation Error - Service: {0} - Error: {1}{2} | Subject report PDF · error paragraph (plain text) | 200 | params: {0} = report name, {1} = error text, {2} = optional hint |
 | `reporting.error.pdfLicenseHint` | - If this is a license error, please ensure your PREMM5 license is valid and properly configured. | Subject report PDF · appended hint; keep the leading " - " | 160 |  |
 | `reporting.error.unknown` | Unknown error | Subject report PDF · fallback error text | 30 |  |
+| `common.listAnd` | {0} and {1} | Any notice · joins two items of a short list | 20 | params: {0} = first item, {1} = second item |
+| `common.none` | none | System screens · value shown when nothing is set | 15 |  |
+| `common.unknown` | unknown | System screens · value shown when a brand field is missing | 15 |  |
+| `mainLayout.nav.system` | System | Navigation drawer · section heading for setup and diagnostics screens | 20 |  |
+| `mainLayout.nav.systemOverview` | Overview | Navigation drawer · menu item | 25 |  |
+| `mainLayout.nav.systemDatabase` | Database | Navigation drawer · menu item | 25 |  |
+| `mainLayout.nav.systemBranding` | Branding | Navigation drawer · menu item | 25 |  |
+| `mainLayout.nav.systemEmail` | Email | Navigation drawer · menu item | 25 |  |
+| `mainLayout.nav.systemConnections` | Connections | Navigation drawer · menu item | 25 |  |
+| `mainLayout.nav.systemOidc` | OIDC | Navigation drawer · menu item (the sign-in diagnostics page; OIDC is a protocol name) | 25 | identical |
+| `system.grid.item` | Item | System screens · grid column header (the name of a row) | 20 |  |
+| `system.grid.value` | Value | System screens · grid column header | 20 |  |
+| `system.grid.state` | State | System screens · grid column header (a status badge) | 20 |  |
+| `system.grid.detail` | Detail | System screens · grid column header | 20 |  |
+| `system.badge.ok` | OK | System screens · status badge for a passed check | 12 | identical |
+| `system.badge.failed` | Failed | System screens · status badge for a failed check | 12 |  |
+| `system.badge.notChecked` | Not checked | System screens · status badge for a check not yet run | 15 |  |
+| `system.badge.present` | Present | System screens · status badge for a setting that is set | 12 |  |
+| `system.badge.absent` | Absent | System screens · status badge for a setting that is missing | 12 |  |
+| `system.milliseconds` | {0} ms | System screens · duration in milliseconds | 12 | params: {0} = number; identical where "ms" is the usual abbreviation |
+| `defaultAccountNotice.instruction.one` | The database migrations seeded the default account {0}. Rename it before this deployment goes live: open Admin > Users and change the username, and when elicit.authorization.mode=DATABASE rename the matching account in the identity provider to the same value. | Console-wide banner · warning that one seeded default account still exists | 400 | params: {0} = the quoted account name; keep Admin > Users and elicit.authorization.mode=DATABASE as they are |
+| `defaultAccountNotice.instruction.many` | The database migrations seeded the default accounts {0}. Rename them before this deployment goes live: open Admin > Users and change the username, and when elicit.authorization.mode=DATABASE rename the matching account in the identity provider to the same value. | Console-wide banner · warning that several seeded default accounts still exist | 400 | params: {0} = the quoted account names joined with common.listAnd; keep Admin > Users and elicit.authorization.mode=DATABASE as they are |
+| `defaultAccountNotice.openUsers` | Open Users | Console-wide banner · link to the Users screen | 20 |  |
+| `systemOverviewView.pageTitle` | System Overview | System overview · browser tab title | 40 |  |
+| `systemOverviewView.title` | System Overview | System overview · page heading | 40 |  |
+| `systemOverviewView.intro` | What this deployment is running, whether it is healthy, and the setup work still outstanding. Settings are shown as present or absent, never by value; they are startup configuration and cannot be changed here. | System overview · introductory paragraph | 300 |  |
+| `systemOverviewView.running` | Running | System overview · section heading (what is running) | 30 |  |
+| `systemOverviewView.row.application` | Application | System overview · row label (application name) | 25 |  |
+| `systemOverviewView.row.version` | Version | System overview · row label | 25 |  |
+| `systemOverviewView.row.built` | Built | System overview · row label (build time) | 25 |  |
+| `systemOverviewView.row.profile` | Profile | System overview · row label (runtime profile) | 25 |  |
+| `systemOverviewView.row.started` | Started | System overview · row label (start time) | 25 |  |
+| `systemOverviewView.row.uptime` | Uptime | System overview · row label | 25 |  |
+| `systemOverviewView.uptime.days` | {0} d {1} h {2} min | System overview · uptime value | 30 | params: {0} = days, {1} = hours, {2} = minutes; identical where the abbreviations are the same |
+| `systemOverviewView.uptime.hours` | {0} h {1} min | System overview · uptime value | 30 | params: {0} = hours, {1} = minutes; identical where the abbreviations are the same |
+| `systemOverviewView.uptime.minutes` | {0} min {1} s | System overview · uptime value | 30 | params: {0} = minutes, {1} = seconds; identical where the abbreviations are the same |
+| `systemOverviewView.health` | Health | System overview · section heading | 30 |  |
+| `systemOverviewView.area.applicationDatabase` | Application database connection | System overview · health row, link to the Database screen | 40 |  |
+| `systemOverviewView.area.ownerDatabase` | Owner database connection | System overview · health row, link to the Database screen | 40 |  |
+| `systemOverviewView.area.branding` | Branding | System overview · health row, link to the Branding screen | 40 |  |
+| `systemOverviewView.area.email` | Email | System overview · health row, link to the Email screen | 40 |  |
+| `systemOverviewView.area.connections` | Connections | System overview · health row, link to the Connections screen | 40 |  |
+| `systemOverviewView.connectionsSummary.one` | {0} outbound target configured; open Connections to check it | System overview · health detail when exactly one outbound target is configured | 80 | params: {0} = the number 1 |
+| `systemOverviewView.connectionsSummary.many` | {0} outbound targets configured; open Connections to check them | System overview · health detail for several (or zero) outbound targets | 80 | params: {0} = count |
+| `systemOverviewView.grid.area` | Area | System overview · grid column header | 20 |  |
+| `systemOverviewView.requiredSettings` | Required settings | System overview · section heading | 30 |  |
+| `systemOverviewView.grid.setting` | Setting | System overview · grid column header (property name) | 20 |  |
+| `systemOverviewView.grid.suppliedBy` | Supplied by | System overview · grid column header (environment variable) | 20 |  |
+| `systemOverviewView.grid.purpose` | Purpose | System overview · grid column header | 20 |  |
+| `systemOverviewView.setting.datasourcePassword` | password of the application database user | System overview · purpose of a required setting | 60 |  |
+| `systemOverviewView.setting.ownerPassword` | password of the owner database user that runs migrations | System overview · purpose of a required setting | 60 |  |
+| `systemOverviewView.setting.oidcSecret` | client secret registered with the identity provider | System overview · purpose of a required setting | 60 |  |
+| `systemOverviewView.setting.mailerFrom` | sender address of every invitation and reminder | System overview · purpose of a required setting | 60 |  |
+| `systemOverviewView.outstanding` | Setup still outstanding | System overview · section heading | 30 |  |
+| `systemOverviewView.nothingOutstanding` | Nothing outstanding. | System overview · text when no setup work remains | 30 |  |
+| `systemOverviewView.warning.noSurvey` | No survey is installed. Apply a survey definition before registering subjects. | System overview · outstanding setup item | 120 |  |
+| `systemOverviewView.warning.noSenderAddress` | No department has a sender address, so invitations have no From address. | System overview · outstanding setup item | 120 |  |
+| `systemOverviewView.warning.noAccessCodeTemplate` | No message template contains the <ACCESS_CODE> placeholder, so no invitation can carry a survey link. | System overview · outstanding setup item | 140 | keep <ACCESS_CODE> as it is |
+| `systemOverviewView.warning.legacySetting` | The setting {0} is configured but no longer read; use {1} instead. | System overview · outstanding setup item | 120 | params: {0} = old property name, {1} = new property name |
+| `systemOverviewView.remedy.users` | Open Users | System overview · link after a setup item | 25 |  |
+| `systemOverviewView.remedy.applySurveyDefinition` | Apply a survey definition | System overview · link after a setup item | 30 |  |
+| `systemOverviewView.remedy.departments` | Open Departments | System overview · link after a setup item | 25 |  |
+| `systemOverviewView.remedy.messageTemplates` | Open Message Templates | System overview · link after a setup item | 30 |  |
+| `systemDatabaseView.pageTitle` | System Database | System database · browser tab title | 40 |  |
+| `systemDatabaseView.title` | Database | System database · page heading | 30 |  |
+| `systemDatabaseView.intro` | The application connection serves the console; the owner connection runs the migrations. Readiness probes only the first, so a wrong owner password shows up here and nowhere else. | System database · introductory paragraph | 300 |  |
+| `systemDatabaseView.connections` | Connections | System database · section heading | 30 |  |
+| `systemDatabaseView.grid.connection` | Connection | System database · grid column header | 20 |  |
+| `systemDatabaseView.grid.configuredUser` | Configured user | System database · grid column header (database user from configuration) | 20 |  |
+| `systemDatabaseView.grid.connectedAs` | Connected as | System database · grid column header (database user reported by the server) | 20 |  |
+| `systemDatabaseView.grid.roundTrip` | Round trip | System database · grid column header (probe duration) | 20 |  |
+| `systemDatabaseView.connection.application` | Application | System database · name of the connection the console reads through | 20 |  |
+| `systemDatabaseView.connection.owner` | Owner | System database · name of the connection that runs migrations | 20 |  |
+| `systemDatabaseView.migrations` | Migrations | System database · section heading | 30 |  |
+| `systemDatabaseView.grid.module` | Module | System database · grid column header | 20 |  |
+| `systemDatabaseView.grid.historyTable` | History table | System database · grid column header | 20 |  |
+| `systemDatabaseView.grid.latestVersion` | Latest version | System database · grid column header | 20 |  |
+| `systemDatabaseView.grid.applied` | Applied | System database · grid column header (when the latest migration ran) | 20 |  |
+| `systemDatabaseView.version.notInstalled` | not installed | System database · version cell when a module has no history table | 20 |  |
+| `systemDatabaseView.version.none` | none | System database · version cell when the history table is empty | 20 |  |
+| `systemDatabaseView.badge.notInstalled` | Not installed | System database · status badge | 15 |  |
+| `systemDatabaseView.badge.empty` | Empty | System database · status badge | 15 |  |
+| `systemDatabaseView.content` | Content | System database · section heading (what is stored) | 30 |  |
+| `systemDatabaseView.row.durableSequences` | Kimball durable-key sequences | System database · row label; Kimball is a data-warehouse design name | 40 |  |
+| `systemDatabaseView.row.surveysInstalled` | Surveys installed | System database · row label | 40 |  |
+| `systemDatabaseView.row.consoleUsers` | Console users | System database · row label | 40 |  |
+| `systemDatabaseView.row.seededAccounts` | Seeded default accounts still present | System database · row label | 40 |  |
+| `systemDatabaseView.seededAccounts.none` | none | System database · value when no seeded account remains | 15 |  |
+| `systemDatabaseView.seededAccounts.present` | {0} (rename them, see Users) | System database · value listing the seeded accounts | 60 | params: {0} = account names |
+| `systemDatabaseView.durableSequences.exists` | survey.{0} exists | System database · detail of a passed check | 60 | params: {0} = sequence name; keep the survey. prefix |
+| `systemDatabaseView.durableSequences.missing` | survey.{0} is missing: the Survey module has not applied its V3 migrations, and the Admin and Family History migrations depend on it | System database · detail of a failed check | 200 | params: {0} = sequence name; keep the survey. prefix; Survey, Admin and Family History are module names |
+| `systemBrandingView.pageTitle` | System Branding | System branding · browser tab title | 40 |  |
+| `systemBrandingView.title` | Branding | System branding · page heading | 30 |  |
+| `systemBrandingView.intro` | The brand resolves from the mounted directory first, then the local directory, then the default packaged with the application. Each asset is listed on its own, because a partial mount renders with the wrong fonts and no error. | System branding · introductory paragraph | 300 |  |
+| `systemBrandingView.reload` | Reload brand | System branding · button | 20 |  |
+| `systemBrandingView.reloaded` | Brand cache discarded; the result below is freshly resolved. | System branding · notification after reloading | 80 |  |
+| `systemBrandingView.resolution` | Resolution | System branding · section heading (how the brand was found) | 30 |  |
+| `systemBrandingView.row.configuredPath` | Configured path (brand.file.system.path) | System branding · row label; keep the property name in parentheses | 50 |  |
+| `systemBrandingView.row.localPath` | Local path (brand.local.path) | System branding · row label; keep the property name in parentheses | 50 |  |
+| `systemBrandingView.path.exists` | {0} (exists) | System branding · path value | 100 | params: {0} = directory path |
+| `systemBrandingView.path.notFound` | {0} (not found) | System branding · path value | 100 | params: {0} = directory path |
+| `systemBrandingView.row.metadataFile` | Metadata file | System branding · row label | 30 |  |
+| `systemBrandingView.row.brandName` | Brand name | System branding · row label | 30 |  |
+| `systemBrandingView.row.organization` | Organization | System branding · row label | 30 |  |
+| `systemBrandingView.row.brandVersion` | Brand version | System branding · row label | 30 |  |
+| `systemBrandingView.row.inUse` | In use (cached) | System branding · row label (the brand currently applied) | 30 |  |
+| `systemBrandingView.inUse` | {0} [{1}] | System branding · value | 60 | params: {0} = brand display name, {1} = brand key; identical (punctuation only) |
+| `systemBrandingView.row.summary` | Summary | System branding · row label | 30 |  |
+| `systemBrandingView.summary.mounted` | Mounted brand at {0} | System branding · summary line | 80 | params: {0} = directory path |
+| `systemBrandingView.summary.mountedNamed` | Mounted brand: {0} at {1} | System branding · summary line | 80 | params: {0} = brand name, {1} = directory path |
+| `systemBrandingView.summary.local` | Local brand directory {0} | System branding · summary line | 80 | params: {0} = directory path |
+| `systemBrandingView.summary.embedded` | Embedded default theme; no brand directory at {0} | System branding · summary line | 80 | params: {0} = directory path |
+| `systemBrandingView.assets` | Assets | System branding · section heading | 30 |  |
+| `systemBrandingView.grid.asset` | Asset | System branding · grid column header | 20 |  |
+| `systemBrandingView.grid.path` | Path | System branding · grid column header | 20 |  |
+| `systemBrandingView.grid.source` | Source | System branding · grid column header (where the asset came from) | 20 |  |
+| `systemBrandingView.grid.location` | Location | System branding · grid column header | 20 |  |
+| `systemBrandingView.source.mounted` | Mounted | System branding · source badge (from the mounted directory) | 15 |  |
+| `systemBrandingView.source.local` | Local | System branding · source badge (from the local directory) | 15 | identical in Romance languages |
+| `systemBrandingView.source.embedded` | Embedded default | System branding · source badge (packaged default) | 20 |  |
+| `systemBrandingView.source.absent` | Absent | System branding · source badge | 15 |  |
+| `systemBrandingView.source.unreadable` | Unreadable | System branding · source badge | 15 |  |
+| `systemBrandingView.asset.colourStylesheet` | colour stylesheet | System branding · what an asset is for | 30 |  |
+| `systemBrandingView.asset.typographyStylesheet` | typography stylesheet | System branding · what an asset is for | 30 |  |
+| `systemBrandingView.asset.themeStylesheet` | theme stylesheet | System branding · what an asset is for | 30 |  |
+| `systemBrandingView.asset.horizontalLogo` | horizontal logo | System branding · what an asset is for | 30 |  |
+| `systemBrandingView.asset.headerIcon` | header icon | System branding · what an asset is for | 30 |  |
+| `systemBrandingView.asset.favicon` | favicon | System branding · what an asset is for (the browser tab icon) | 30 | identical |
+| `systemBrandingView.asset.notFound` | not found in any location | System branding · asset location when nothing was found | 40 |  |
+| `systemBrandingView.asset.unreadable` | {0} exists but cannot be read | System branding · asset location when the file cannot be read | 80 | params: {0} = file path |
+| `systemBrandingView.logoPreview` | Logo preview | System branding · section heading | 30 |  |
+| `systemBrandingView.logoAlt` | Brand logo | System branding · logo image alternative text | 30 |  |
+| `systemEmailView.pageTitle` | System Email | System email · browser tab title | 40 |  |
+| `systemEmailView.title` | Email | System email · page heading | 30 |  |
+| `systemEmailView.intro` | These are the mail settings the service started with; they cannot be changed here. The test message is sent by the same service, sender and timeout that invitations use, so a passing test means invitations will send. | System email · introductory paragraph | 300 |  |
+| `systemEmailView.effectiveSettings` | Effective settings | System email · section heading | 30 |  |
+| `systemEmailView.grid.setting` | Setting | System email · grid column header | 20 |  |
+| `systemEmailView.row.sender` | Sender (quarkus.mailer.from) | System email · row label; keep the property name in parentheses | 50 |  |
+| `systemEmailView.row.host` | Host (quarkus.mailer.host) | System email · row label; keep the property name in parentheses | 50 |  |
+| `systemEmailView.row.port` | Port (quarkus.mailer.port) | System email · row label; keep the property name in parentheses | 50 |  |
+| `systemEmailView.row.tls` | TLS (quarkus.mailer.tls) | System email · row label; TLS is a protocol name; keep the property name in parentheses | 50 | identical |
+| `systemEmailView.row.startTls` | STARTTLS (quarkus.mailer.start-tls) | System email · row label; STARTTLS is a protocol name; keep the property name in parentheses | 50 | identical |
+| `systemEmailView.row.authMethods` | Authentication methods (quarkus.mailer.auth-methods) | System email · row label; keep the property name in parentheses | 60 |  |
+| `systemEmailView.row.username` | Username (quarkus.mailer.username) | System email · row label; keep the property name in parentheses | 50 |  |
+| `systemEmailView.row.password` | Password (quarkus.mailer.password) | System email · row label; keep the property name in parentheses | 50 |  |
+| `systemEmailView.row.mock` | Mocked (quarkus.mailer.mock) | System email · row label (mail is discarded instead of sent); keep the property name in parentheses | 50 |  |
+| `systemEmailView.value.present` | present | System email · value: the setting is set (its value is never shown) | 15 |  |
+| `systemEmailView.value.absent` | absent | System email · value: the setting is missing | 15 |  |
+| `systemEmailView.value.relayDefault` | not set (relay default) | System email · value when no authentication methods are configured | 30 |  |
+| `systemEmailView.summary.noSender` | No sender address configured (quarkus.mailer.from) | System overview · email summary when no sender is configured; keep the property name | 60 |  |
+| `systemEmailView.summary.from` | From {0} via {1} | System overview · email summary | 60 | params: {0} = sender address, {1} = host:port |
+| `systemEmailView.summary.fromTls` | From {0} via {1} with TLS | System overview · email summary, TLS in use | 60 | params: {0} = sender address, {1} = host:port |
+| `systemEmailView.summary.mocked` | {0} (mocked) | System overview · email summary wrapper when mail is mocked | 70 | params: {0} = the summary |
+| `systemEmailView.sendTest` | Send a test message | System email · section heading | 30 |  |
+| `systemEmailView.recipient` | Recipient | System email · email field label | 20 |  |
+| `systemEmailView.recipient.invalid` | Enter a valid email address | System email · email field validation message | 40 |  |
+| `systemEmailView.send` | Send test email | System email · button | 20 |  |
+| `systemEmailView.sendingDisabled` | Sending is disabled because no sender address is configured. Set quarkus.mailer.from and restart the service. | System email · explanation under the disabled button; keep the property name | 150 |  |
+| `systemEmailView.recipientRequired` | Enter a valid recipient address first. | System email · notification | 60 |  |
+| `systemEmailView.sent` | Test email sent to {0} ({1}). | System email · notification | 100 | params: {0} = recipient address, {1} = technical detail |
+| `systemEmailView.failed` | Test email failed: {0} | System email · notification | 100 | params: {0} = technical error text |
+| `systemConnectionsView.pageTitle` | System Connections | System connections · browser tab title | 40 |  |
+| `systemConnectionsView.title` | Connections | System connections · page heading | 30 |  |
+| `systemConnectionsView.intro` | Each outbound dependency this deployment will call, read from the same stored rows and settings the runtime uses. A check sends one read-only request and gives up after {0} seconds; post-survey actions are never invoked and no report is generated. | System connections · introductory paragraph | 300 | params: {0} = timeout in seconds |
+| `systemConnectionsView.empty` | No outbound targets are configured or stored yet. | System connections · text when there is nothing to check | 60 |  |
+| `systemConnectionsView.checkAll` | Check all | System connections · button | 15 |  |
+| `systemConnectionsView.check` | Check | System connections · button in a grid row | 12 |  |
+| `systemConnectionsView.grid.dependency` | Dependency | System connections · grid column header (kind of dependency) | 20 |  |
+| `systemConnectionsView.grid.source` | Source | System connections · grid column header (where the address comes from) | 20 |  |
+| `systemConnectionsView.grid.address` | Address | System connections · grid column header | 20 |  |
+| `systemConnectionsView.grid.time` | Time | System connections · grid column header (probe duration) | 20 |  |
+| `systemConnectionsView.group.identityProvider` | Identity provider | System connections · kind of dependency | 25 |  |
+| `systemConnectionsView.group.reportService` | Report service | System connections · kind of dependency | 25 |  |
+| `systemConnectionsView.group.postSurveyAction` | Post-survey action | System connections · kind of dependency (a webhook called after a survey) | 25 |  |
+| `systemConnectionsView.group.mailRelay` | Mail relay | System connections · kind of dependency | 25 |  |
+| `systemConnectionsView.group.telemetryCollector` | Telemetry collector | System connections · kind of dependency | 25 |  |
+| `systemConnectionsView.result.timedOut` | timed out after {0} s | System connections · check detail | 40 | params: {0} = seconds |
+| `systemConnectionsView.result.interrupted` | interrupted | System connections · check detail | 20 |  |
+| `systemConnectionsView.result.discoveryServed` | discovery document served at {0} | System connections · check detail | 80 | params: {0} = address |
+| `systemConnectionsView.result.notDiscovery` | HTTP {0} from {1} is not an OIDC discovery document; check the realm address | System connections · check detail; OIDC is a protocol name | 120 | params: {0} = HTTP status code, {1} = address |
+| `systemConnectionsView.result.reachableForbidden` | reachable, HTTP 403: license validation may have failed | System connections · check detail | 80 |  |
+| `systemConnectionsView.result.reachable` | reachable, HTTP {0} | System connections · check detail | 40 | params: {0} = HTTP status code |
+| `systemConnectionsView.result.noHostPort` | address {0} has no host and port | System connections · check detail | 60 | params: {0} = address |
+| `systemConnectionsView.result.connected` | connected to {0}:{1} | System connections · check detail | 40 | params: {0} = host, {1} = port |
 
 ## English source file
 
@@ -657,4 +841,188 @@ reporting.error.licenseHint=<p><em>If this is a license error, please ensure you
 reporting.error.pdfText=Report Generation Error - Service: {0} - Error: {1}{2}
 reporting.error.pdfLicenseHint=- If this is a license error, please ensure your PREMM5 license is valid and properly configured.
 reporting.error.unknown=Unknown error
+common.listAnd={0} and {1}
+common.none=none
+common.unknown=unknown
+mainLayout.nav.system=System
+mainLayout.nav.systemOverview=Overview
+mainLayout.nav.systemDatabase=Database
+mainLayout.nav.systemBranding=Branding
+mainLayout.nav.systemEmail=Email
+mainLayout.nav.systemConnections=Connections
+mainLayout.nav.systemOidc=OIDC
+system.grid.item=Item
+system.grid.value=Value
+system.grid.state=State
+system.grid.detail=Detail
+system.badge.ok=OK
+system.badge.failed=Failed
+system.badge.notChecked=Not checked
+system.badge.present=Present
+system.badge.absent=Absent
+system.milliseconds={0} ms
+defaultAccountNotice.instruction.one=The database migrations seeded the default account {0}. Rename it before this deployment goes live: open Admin > Users and change the username, and when elicit.authorization.mode=DATABASE rename the matching account in the identity provider to the same value.
+defaultAccountNotice.instruction.many=The database migrations seeded the default accounts {0}. Rename them before this deployment goes live: open Admin > Users and change the username, and when elicit.authorization.mode=DATABASE rename the matching account in the identity provider to the same value.
+defaultAccountNotice.openUsers=Open Users
+systemOverviewView.pageTitle=System Overview
+systemOverviewView.title=System Overview
+systemOverviewView.intro=What this deployment is running, whether it is healthy, and the setup work still outstanding. Settings are shown as present or absent, never by value; they are startup configuration and cannot be changed here.
+systemOverviewView.running=Running
+systemOverviewView.row.application=Application
+systemOverviewView.row.version=Version
+systemOverviewView.row.built=Built
+systemOverviewView.row.profile=Profile
+systemOverviewView.row.started=Started
+systemOverviewView.row.uptime=Uptime
+systemOverviewView.uptime.days={0} d {1} h {2} min
+systemOverviewView.uptime.hours={0} h {1} min
+systemOverviewView.uptime.minutes={0} min {1} s
+systemOverviewView.health=Health
+systemOverviewView.area.applicationDatabase=Application database connection
+systemOverviewView.area.ownerDatabase=Owner database connection
+systemOverviewView.area.branding=Branding
+systemOverviewView.area.email=Email
+systemOverviewView.area.connections=Connections
+systemOverviewView.connectionsSummary.one={0} outbound target configured; open Connections to check it
+systemOverviewView.connectionsSummary.many={0} outbound targets configured; open Connections to check them
+systemOverviewView.grid.area=Area
+systemOverviewView.requiredSettings=Required settings
+systemOverviewView.grid.setting=Setting
+systemOverviewView.grid.suppliedBy=Supplied by
+systemOverviewView.grid.purpose=Purpose
+systemOverviewView.setting.datasourcePassword=password of the application database user
+systemOverviewView.setting.ownerPassword=password of the owner database user that runs migrations
+systemOverviewView.setting.oidcSecret=client secret registered with the identity provider
+systemOverviewView.setting.mailerFrom=sender address of every invitation and reminder
+systemOverviewView.outstanding=Setup still outstanding
+systemOverviewView.nothingOutstanding=Nothing outstanding.
+systemOverviewView.warning.noSurvey=No survey is installed. Apply a survey definition before registering subjects.
+systemOverviewView.warning.noSenderAddress=No department has a sender address, so invitations have no From address.
+systemOverviewView.warning.noAccessCodeTemplate=No message template contains the <ACCESS_CODE> placeholder, so no invitation can carry a survey link.
+systemOverviewView.warning.legacySetting=The setting {0} is configured but no longer read; use {1} instead.
+systemOverviewView.remedy.users=Open Users
+systemOverviewView.remedy.applySurveyDefinition=Apply a survey definition
+systemOverviewView.remedy.departments=Open Departments
+systemOverviewView.remedy.messageTemplates=Open Message Templates
+systemDatabaseView.pageTitle=System Database
+systemDatabaseView.title=Database
+systemDatabaseView.intro=The application connection serves the console; the owner connection runs the migrations. Readiness probes only the first, so a wrong owner password shows up here and nowhere else.
+systemDatabaseView.connections=Connections
+systemDatabaseView.grid.connection=Connection
+systemDatabaseView.grid.configuredUser=Configured user
+systemDatabaseView.grid.connectedAs=Connected as
+systemDatabaseView.grid.roundTrip=Round trip
+systemDatabaseView.connection.application=Application
+systemDatabaseView.connection.owner=Owner
+systemDatabaseView.migrations=Migrations
+systemDatabaseView.grid.module=Module
+systemDatabaseView.grid.historyTable=History table
+systemDatabaseView.grid.latestVersion=Latest version
+systemDatabaseView.grid.applied=Applied
+systemDatabaseView.version.notInstalled=not installed
+systemDatabaseView.version.none=none
+systemDatabaseView.badge.notInstalled=Not installed
+systemDatabaseView.badge.empty=Empty
+systemDatabaseView.content=Content
+systemDatabaseView.row.durableSequences=Kimball durable-key sequences
+systemDatabaseView.row.surveysInstalled=Surveys installed
+systemDatabaseView.row.consoleUsers=Console users
+systemDatabaseView.row.seededAccounts=Seeded default accounts still present
+systemDatabaseView.seededAccounts.none=none
+systemDatabaseView.seededAccounts.present={0} (rename them, see Users)
+systemDatabaseView.durableSequences.exists=survey.{0} exists
+systemDatabaseView.durableSequences.missing=survey.{0} is missing: the Survey module has not applied its V3 migrations, and the Admin and Family History migrations depend on it
+systemBrandingView.pageTitle=System Branding
+systemBrandingView.title=Branding
+systemBrandingView.intro=The brand resolves from the mounted directory first, then the local directory, then the default packaged with the application. Each asset is listed on its own, because a partial mount renders with the wrong fonts and no error.
+systemBrandingView.reload=Reload brand
+systemBrandingView.reloaded=Brand cache discarded; the result below is freshly resolved.
+systemBrandingView.resolution=Resolution
+systemBrandingView.row.configuredPath=Configured path (brand.file.system.path)
+systemBrandingView.row.localPath=Local path (brand.local.path)
+systemBrandingView.path.exists={0} (exists)
+systemBrandingView.path.notFound={0} (not found)
+systemBrandingView.row.metadataFile=Metadata file
+systemBrandingView.row.brandName=Brand name
+systemBrandingView.row.organization=Organization
+systemBrandingView.row.brandVersion=Brand version
+systemBrandingView.row.inUse=In use (cached)
+systemBrandingView.inUse={0} [{1}]
+systemBrandingView.row.summary=Summary
+systemBrandingView.summary.mounted=Mounted brand at {0}
+systemBrandingView.summary.mountedNamed=Mounted brand: {0} at {1}
+systemBrandingView.summary.local=Local brand directory {0}
+systemBrandingView.summary.embedded=Embedded default theme; no brand directory at {0}
+systemBrandingView.assets=Assets
+systemBrandingView.grid.asset=Asset
+systemBrandingView.grid.path=Path
+systemBrandingView.grid.source=Source
+systemBrandingView.grid.location=Location
+systemBrandingView.source.mounted=Mounted
+systemBrandingView.source.local=Local
+systemBrandingView.source.embedded=Embedded default
+systemBrandingView.source.absent=Absent
+systemBrandingView.source.unreadable=Unreadable
+systemBrandingView.asset.colourStylesheet=colour stylesheet
+systemBrandingView.asset.typographyStylesheet=typography stylesheet
+systemBrandingView.asset.themeStylesheet=theme stylesheet
+systemBrandingView.asset.horizontalLogo=horizontal logo
+systemBrandingView.asset.headerIcon=header icon
+systemBrandingView.asset.favicon=favicon
+systemBrandingView.asset.notFound=not found in any location
+systemBrandingView.asset.unreadable={0} exists but cannot be read
+systemBrandingView.logoPreview=Logo preview
+systemBrandingView.logoAlt=Brand logo
+systemEmailView.pageTitle=System Email
+systemEmailView.title=Email
+systemEmailView.intro=These are the mail settings the service started with; they cannot be changed here. The test message is sent by the same service, sender and timeout that invitations use, so a passing test means invitations will send.
+systemEmailView.effectiveSettings=Effective settings
+systemEmailView.grid.setting=Setting
+systemEmailView.row.sender=Sender (quarkus.mailer.from)
+systemEmailView.row.host=Host (quarkus.mailer.host)
+systemEmailView.row.port=Port (quarkus.mailer.port)
+systemEmailView.row.tls=TLS (quarkus.mailer.tls)
+systemEmailView.row.startTls=STARTTLS (quarkus.mailer.start-tls)
+systemEmailView.row.authMethods=Authentication methods (quarkus.mailer.auth-methods)
+systemEmailView.row.username=Username (quarkus.mailer.username)
+systemEmailView.row.password=Password (quarkus.mailer.password)
+systemEmailView.row.mock=Mocked (quarkus.mailer.mock)
+systemEmailView.value.present=present
+systemEmailView.value.absent=absent
+systemEmailView.value.relayDefault=not set (relay default)
+systemEmailView.summary.noSender=No sender address configured (quarkus.mailer.from)
+systemEmailView.summary.from=From {0} via {1}
+systemEmailView.summary.fromTls=From {0} via {1} with TLS
+systemEmailView.summary.mocked={0} (mocked)
+systemEmailView.sendTest=Send a test message
+systemEmailView.recipient=Recipient
+systemEmailView.recipient.invalid=Enter a valid email address
+systemEmailView.send=Send test email
+systemEmailView.sendingDisabled=Sending is disabled because no sender address is configured. Set quarkus.mailer.from and restart the service.
+systemEmailView.recipientRequired=Enter a valid recipient address first.
+systemEmailView.sent=Test email sent to {0} ({1}).
+systemEmailView.failed=Test email failed: {0}
+systemConnectionsView.pageTitle=System Connections
+systemConnectionsView.title=Connections
+systemConnectionsView.intro=Each outbound dependency this deployment will call, read from the same stored rows and settings the runtime uses. A check sends one read-only request and gives up after {0} seconds; post-survey actions are never invoked and no report is generated.
+systemConnectionsView.empty=No outbound targets are configured or stored yet.
+systemConnectionsView.checkAll=Check all
+systemConnectionsView.check=Check
+systemConnectionsView.grid.dependency=Dependency
+systemConnectionsView.grid.source=Source
+systemConnectionsView.grid.address=Address
+systemConnectionsView.grid.time=Time
+systemConnectionsView.group.identityProvider=Identity provider
+systemConnectionsView.group.reportService=Report service
+systemConnectionsView.group.postSurveyAction=Post-survey action
+systemConnectionsView.group.mailRelay=Mail relay
+systemConnectionsView.group.telemetryCollector=Telemetry collector
+systemConnectionsView.result.timedOut=timed out after {0} s
+systemConnectionsView.result.interrupted=interrupted
+systemConnectionsView.result.discoveryServed=discovery document served at {0}
+systemConnectionsView.result.notDiscovery=HTTP {0} from {1} is not an OIDC discovery document; check the realm address
+systemConnectionsView.result.reachableForbidden=reachable, HTTP 403: license validation may have failed
+systemConnectionsView.result.reachable=reachable, HTTP {0}
+systemConnectionsView.result.noHostPort=address {0} has no host and port
+systemConnectionsView.result.connected=connected to {0}:{1}
 ```

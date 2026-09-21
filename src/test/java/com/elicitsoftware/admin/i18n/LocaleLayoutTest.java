@@ -31,7 +31,7 @@ import java.util.Locale;
 import static org.junit.jupiter.api.Assertions.*;
 
 /**
- * UC-020 BR-084/BR-085: direction and language attributes follow the locale, a {@code ?lang=}
+ * UC-026 BR-084/BR-085: direction and language attributes follow the locale, a {@code ?lang=}
  * query parameter selects a language before the view is built, and the language switcher in the
  * header offers the shipped locales.
  */

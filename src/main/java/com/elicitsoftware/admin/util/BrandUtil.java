@@ -76,7 +76,7 @@ public class BrandUtil {
         }
 
         /**
-         * Constructs a BrandInfo with per-language display names (UC-020 BR-087).
+         * Constructs a BrandInfo with per-language display names (UC-026 BR-087).
          *
          * @param localizedNames display name per lower-case language tag; may be null
          */

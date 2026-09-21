@@ -21,6 +21,11 @@ import com.elicitsoftware.admin.flow.RespondentImportView;
 import com.elicitsoftware.admin.flow.SearchView;
 import com.elicitsoftware.admin.flow.SurveyDefinitionApplyView;
 import com.elicitsoftware.admin.flow.SurveyDefinitionExportView;
+import com.elicitsoftware.admin.flow.SystemBrandingView;
+import com.elicitsoftware.admin.flow.SystemConnectionsView;
+import com.elicitsoftware.admin.flow.SystemDatabaseView;
+import com.elicitsoftware.admin.flow.SystemEmailView;
+import com.elicitsoftware.admin.flow.SystemOverviewView;
 import com.elicitsoftware.admin.flow.UsersView;
 import com.elicitsoftware.model.Department;
 import com.elicitsoftware.model.User;
@@ -43,7 +48,7 @@ import java.util.regex.Pattern;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
- * UC-020 / NFR-011 backstop: with the pseudo-locale every translated text renders as
+ * UC-026 / NFR-013 backstop: with the pseudo-locale every translated text renders as
  * {@code ⟦key⟧}, so any prose-like text on a rendered route that lacks the marker bypassed the
  * provider. Subtrees flagged {@code data-i18n-content} carry stored data and are skipped.
  */
@@ -78,7 +83,9 @@ class DisplayedStringsSweepTest extends QuarkusBrowserlessTest {
         List<Class<? extends Component>> routes = List.of(
                 SearchView.class, RegisterView.class, DepartmentsView.class, EditDepartmentView.class,
                 MessageTemplatesView.class, EditMessageTemplatesView.class, UsersView.class, EditUserView.class,
-                RespondentImportView.class, SurveyDefinitionApplyView.class, SurveyDefinitionExportView.class);
+                RespondentImportView.class, SurveyDefinitionApplyView.class, SurveyDefinitionExportView.class,
+                SystemOverviewView.class, SystemDatabaseView.class, SystemBrandingView.class, SystemEmailView.class,
+                SystemConnectionsView.class);
         // UnauthorizedView is a layout-less error route the mock router cannot navigate to; UnauthorizedViewTest covers it.
         for (Class<? extends Component> route : routes) {
             navigate(route);
@@ -132,6 +139,6 @@ class DisplayedStringsSweepTest extends QuarkusBrowserlessTest {
     }
 
     private static String report(List<String> problems) {
-        return problems.size() + " untranslated text(s) rendered (UC-020 / NFR-011):\n  " + String.join("\n  ", problems);
+        return problems.size() + " untranslated text(s) rendered (UC-026 / NFR-013):\n  " + String.join("\n  ", problems);
     }
 }

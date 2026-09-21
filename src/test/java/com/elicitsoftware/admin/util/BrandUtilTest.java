@@ -81,7 +81,7 @@ class BrandUtilTest {
         field.set(util, value);
     }
 
-    /** UC-020 BR-087: the brand's "localized" block supplies per-language display names. */
+    /** UC-026 BR-087: the brand's "localized" block supplies per-language display names. */
     @Test
     void localizedBlock_resolvesTagThenLanguageVariantThenBase() throws Exception {
         String json = "{\"name\": \"Health Test\", \"organization\": \"Health Test Organization\", "
@@ -98,7 +98,7 @@ class BrandUtilTest {
         assertEquals("Health Test Organization", info.getDisplayName(null));
     }
 
-    /** UC-020 BR-087: brands without a localized block behave exactly as before. */
+    /** UC-026 BR-087: brands without a localized block behave exactly as before. */
     @Test
     void withoutLocalizedBlock_localeLookupReturnsBase() throws Exception {
         Map<String, String> names = BrandUtil.extractLocalizedNames(

@@ -778,7 +778,7 @@ public class RegisterView extends HorizontalLayout implements HasDynamicTitle, B
     }
 
     /**
-     * Month and weekday names for the date picker in the current locale (UC-020), with the
+     * Month and weekday names for the date picker in the current locale (UC-026), with the
      * button labels from the translation bundle.
      */
     private DatePicker.DatePickerI18n datePickerI18n() {
@@ -792,7 +792,7 @@ public class RegisterView extends HorizontalLayout implements HasDynamicTitle, B
         return i18n;
     }
 
-    /** Upload component texts in the current locale (UC-020). */
+    /** Upload component texts in the current locale (UC-026). */
     private UploadI18N uploadI18n() {
         UploadI18N i18n = new UploadI18N();
         i18n.setAddFiles(new UploadI18N.AddFiles()

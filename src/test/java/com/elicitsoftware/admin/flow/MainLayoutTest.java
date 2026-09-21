@@ -24,6 +24,8 @@ import io.quarkus.test.security.TestSecurity;
 import jakarta.enterprise.inject.spi.CDI;
 import org.junit.jupiter.api.Test;
 
+import java.util.List;
+
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -72,6 +74,11 @@ class MainLayoutTest extends QuarkusBrowserlessTest {
         assertTrue(hasNavItem(layout, layout.getTranslation("mainLayout.nav.importRespondent")), "an admin should see Import Respondent");
         assertTrue(hasNavItem(layout, layout.getTranslation("mainLayout.nav.applySurveyDefinition")), "an admin should see Apply Survey Definition");
         assertTrue(hasNavItem(layout, layout.getTranslation("mainLayout.nav.exportSurveyDefinition")), "an admin should see Export Survey Definition");
+        // UC-020..UC-025 and FR-026: the System section and its six entries.
+        assertTrue(hasNavItem(layout, layout.getTranslation("mainLayout.nav.system")), "an admin should see the System section");
+        for (String entry : List.of("systemOverview", "systemDatabase", "systemBranding", "systemEmail", "systemConnections", "systemOidc")) {
+            assertTrue(hasNavItem(layout, layout.getTranslation("mainLayout.nav." + entry)), "an admin should see System > " + entry);
+        }
         assertTrue(hasNavItem(layout, layout.getTranslation("mainLayout.nav.logout")));
     }
 
@@ -89,6 +96,8 @@ class MainLayoutTest extends QuarkusBrowserlessTest {
 
         assertTrue(hasNavItem(layout, layout.getTranslation("mainLayout.nav.searchSubjects")));
         assertFalse(hasNavItem(layout, layout.getTranslation("mainLayout.nav.admin")), "a non-admin must not see the Admin section");
+        assertFalse(hasNavItem(layout, layout.getTranslation("mainLayout.nav.system")), "a non-admin must not see the System section");
+        assertFalse(hasNavItem(layout, layout.getTranslation("mainLayout.nav.systemOidc")), "a non-admin must not see System > OIDC");
         assertFalse(hasNavItem(layout, layout.getTranslation("mainLayout.nav.importRespondent")), "a non-admin must not see Import Respondent");
         assertFalse(hasNavItem(layout, layout.getTranslation("mainLayout.nav.exportSurveyDefinition")),
                 "a non-admin must not see Export Survey Definition");

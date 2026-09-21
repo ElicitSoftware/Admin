@@ -2,7 +2,7 @@
 
 ## Overview
 
-**Use Case ID:** UC-020
+**Use Case ID:** UC-026
 **Use Case Name:** Use the Console in My Language
 **Primary Actor:** Survey Administrator
 **Goal:** See every screen of the admin console — labels, buttons, grid headers, messages, page titles and the organization name — in a language they read, laid out right-to-left when that language requires it, so that they can do their work without understanding English.

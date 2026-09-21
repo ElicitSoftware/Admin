@@ -7,3 +7,6 @@ URL
 OK
 JSON
 Keycloak
+OIDC
+TLS (quarkus.mailer.tls)
+STARTTLS (quarkus.mailer.start-tls)

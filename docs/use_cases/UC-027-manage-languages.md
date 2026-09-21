@@ -2,7 +2,7 @@
 
 ## Overview
 
-**Use Case ID:** UC-021
+**Use Case ID:** UC-027
 **Use Case Name:** Manage Languages
 **Primary Actor:** Survey Administrator (with the `elicit_admin` role)
 **Goal:** Add, replace or remove a language for the admin console and for the survey application by uploading a translation file through the console, so that a site can offer a new language without anyone touching the server.
@@ -11,7 +11,7 @@
 ## Preconditions
 
 - The administrator is authenticated (UC-001) and holds the `elicit_admin` role; administrators without that role do not see the Languages screen.
-- The console and the survey application read their translations from the deployment's translations directory (UC-020), which is writable by the console.
+- The console and the survey application read their translations from the deployment's translations directory (UC-026), which is writable by the console.
 - The console ships English only; every other language is a file in that directory.
 
 ## Main Success Scenario
@@ -103,7 +103,7 @@ For every text, the set of `{n}` placeholders must equal the English set, and a 
 
 ### BR-005: A partial file is an override, not an error
 
-A file that translates only some texts is accepted; the missing texts fall back to English (UC-020 BR-082). The summary makes the count visible before the file is stored.
+A file that translates only some texts is accepted; the missing texts fall back to English (UC-026 BR-082). The summary makes the count visible before the file is stored.
 
 ### BR-006: The file is the unit of change
 

@@ -123,7 +123,7 @@ import jakarta.inject.Inject;
 
 public class SearchView extends VerticalLayout implements HasDynamicTitle, BeforeEnterObserver {
 
-    /** Row action keys; the labels are {@code searchView.action.<key>} (UC-020). */
+    /** Row action keys; the labels are {@code searchView.action.<key>} (UC-026). */
     static final String ACTION_SEND_EMAIL = "sendEmail";
     static final String ACTION_PRINT_REPORTS = "printReports";
     static final String ACTION_EXPORT = "export";

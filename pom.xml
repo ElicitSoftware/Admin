@@ -21,6 +21,8 @@
         <browserless-test.version>1.1.1</browserless-test.version>
         <javadoc-plugin.version>3.12.0</javadoc-plugin.version>
         <site-plugin.version>3.21.0</site-plugin.version>
+        <timestamp>${maven.build.timestamp}</timestamp>
+        <maven.build.timestamp.format>yyyy-MM-dd HH:mm:ss z</maven.build.timestamp.format>
         <!-- license-maven-plugin properties -->
         <license.thirdPartyFilename>Notice.txt</license.thirdPartyFilename>
         <license.includeTransitiveDependencies>false</license.includeTransitiveDependencies>
@@ -300,6 +302,24 @@
         </pluginRepository>
     </pluginRepositories>
     <build>
+        <!-- Filter application.properties only, so @project.version@ and @timestamp@ reach the
+             System overview (UC-020); every other resource is copied verbatim. -->
+        <resources>
+            <resource>
+                <directory>src/main/resources</directory>
+                <filtering>true</filtering>
+                <includes>
+                    <include>application.properties</include>
+                </includes>
+            </resource>
+            <resource>
+                <directory>src/main/resources</directory>
+                <filtering>false</filtering>
+                <excludes>
+                    <exclude>application.properties</exclude>
+                </excludes>
+            </resource>
+        </resources>
         <plugins>
             <plugin>
                 <groupId>${quarkus.platform.group-id}</groupId>

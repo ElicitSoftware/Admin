@@ -163,7 +163,7 @@ public class EditMessageTemplatesView extends VerticalLayout implements BeforeEn
         preview.addClassName("template-column");
         H3 title = new H3(getTranslation("editMessageTemplatesView.preview"));
         content = new Div();
-        // The preview renders the stored template body, not chrome (UC-020 BR-086)
+        // The preview renders the stored template body, not chrome (UC-026 BR-086)
         content.getElement().setAttribute("data-i18n-content", "");
         content.setWidth("100%");
         content.setHeight("100%");

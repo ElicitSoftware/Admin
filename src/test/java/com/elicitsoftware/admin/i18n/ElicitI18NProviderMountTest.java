@@ -24,7 +24,7 @@ import java.util.Locale;
 import static org.junit.jupiter.api.Assertions.*;
 
 /**
- * UC-020 BR-082/BR-083: the provider's three-tier resolution against a real mounted directory.
+ * UC-026 BR-082/BR-083: the provider's three-tier resolution against a real mounted directory.
  * The application ships English only; every other language comes from a mount. The provider's path fields are package-private (the BrandUtilTest pattern) so a @TempDir can
  * stand in for /opt/i18n without CDI.
  */
