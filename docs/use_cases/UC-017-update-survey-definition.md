@@ -26,6 +26,7 @@
    - A file record marked as retired (its validity window closed by the authoring tool when the element was removed) has the target's current version closed as of now, with nothing inserted; a record already retired here, or never installed here, is left alone. Respondents who started earlier keep the element; new respondents do not see it.
    - A target record whose element key no longer appears anywhere in the file is left untouched; this use case never deletes.
 6. The system reports success with per-table counts of records created, versioned (or updated in place), retired, or left unchanged.
+7. The system asks the Survey application to rebuild its reporting schema (Survey UC-008, `POST /api/etl/build`) so renamed steps and sections, new dimensions and newly tagged questions are reportable without a restart, and adds the outcome to its report: "Reporting schema rebuilt." or "Reporting schema not rebuilt: reason".
 
 ## Alternative Flows
 
@@ -79,12 +80,21 @@
 
 1. The system rejects the file and applies no changes. A corrupt revision is not treated as "no revision", because that would silently disable the regression check.
 
+### A8: Reporting schema rebuild fails
+
+**Trigger:** In step 7 the Survey application cannot be reached, does not answer within 60 seconds, has its reporting ETL disabled, or reports that the build failed (see UC-018 A5 for the known cause).
+**Flow:**
+
+1. The system reports the update as successful, with "Reporting schema not rebuilt:" and the reason as the last line of the result, and logs the reason at WARN (UC-018 BR-108).
+2. The administrator fixes the cause and re-applies the same file -- an equal revision passes the regression check (BR-070) and every record reconciles as unchanged -- or restarts Survey.
+
 ## Postconditions
 
 ### Success Postconditions
 
 - The target survey's own attributes reflect the file; changed Type 2 structural children have new effective-dated versions, changed Type 1 tables (reports, post-survey actions, dimensions, ontology, metadata) are updated in place, and unchanged records everywhere are untouched.
 - The target survey's stable key and database identifier are unchanged, so existing respondents, subjects, and reports remain attached to it.
+- The Survey application has been asked to rebuild its reporting schema, and the result says whether it did.
 
 ### Failure Postconditions
 
@@ -130,8 +140,16 @@ A file carrying no revision, or a target with no recorded revision, passes the c
 
 A file for a different survey is reported as a key mismatch (BR-063), not as a revision regression. Comparing revisions is only meaningful once the file is known to belong to the target.
 
+### BR-109: Content is compared by value, and an apply with no differences versions nothing
+
+Once a file record is matched to its target row (BR-067), whether the row is unchanged or must be versioned is decided by comparing each field's *value*, not its representation. Numeric display orders (`steps.display_order`, `sections.display_order`, `steps_sections.step_display_order` / `section_display_order`, `sections_questions.display_order` — decimal columns, so a new element can be slotted between two neighbours without renumbering) compare numerically: `1`, `1.0` and `1.00` are the same order, and `1.5` round-trips as `1.5`. Text compares after the same normalisation the update applies before writing (empty to null, defaulted `dimension_name`, rebased display keys). Consequently re-applying a file that differs from the target in nothing — the retry case of BR-070 — creates no new version in any table, and a file that changes one element versions that element alone.
+
+### BR-107 / BR-108 (UC-018): The reporting schema is rebuilt after a successful update; a failed rebuild does not undo it
+
+After the update has committed, the Survey application is asked once to rebuild its reporting schema; the outcome is reported and never fails the update. The rules are stated in UC-018, which shares this step, and the call is switched off with `elicit.survey.etl-build.enabled=false`.
+
 ---
 
 ## Reference
 
-Implemented by `SurveyDefinitionUpdateResource` / `SurveyDefinitionUpdateService`, alongside `SurveyDefinitionImportService` / `SurveyDefinitionExportService` (shared `ELICIT_SURVEY_EXPORT_V1` format and field-parsing helpers, `SurveyDefinitionFileFields`) — operates on the same shared survey-definition tables as UC-013/UC-014, applying the Type 2 versioning already introduced for select groups/items, steps, sections, steps-sections, questions, sections-questions, and relationships (`docs/research/Kimball_type2.md`). The stable survey key and every table's element key are attributes on tables owned by the sibling Authoring module — adding them required cross-module schema coordination (C-008). Every import/update attempt, success or failure, is audited to `survey.survey_log` (`SurveyLogService`), including the revision of the file it applied — that column is what BR-069's regression check compares against, and what reports which revision this deployment is running. UC-018 wraps this use case and UC-014 behind a single entry point that picks between them by survey key.
+Implemented by `SurveyDefinitionUpdateResource` / `SurveyDefinitionUpdateService`, alongside `SurveyDefinitionImportService` / `SurveyDefinitionExportService` (shared `ELICIT_SURVEY_EXPORT_V1` format and field-parsing helpers, `SurveyDefinitionFileFields`) — operates on the same shared survey-definition tables as UC-013/UC-014, applying the Type 2 versioning already introduced for select groups/items, steps, sections, steps-sections, questions, sections-questions, and relationships (`docs/research/Kimball_type2.md`). The stable survey key and every table's element key are attributes on tables owned by the sibling Authoring module — adding them required cross-module schema coordination (C-008). Every import/update attempt, success or failure, is audited to `survey.survey_log` (`SurveyLogService`), including the revision of the file it applied — that column is what BR-069's regression check compares against, and what reports which revision this deployment is running. UC-018 wraps this use case and UC-014 behind a single entry point that picks between them by survey key. Step 7 is `ReportingSchemaRebuildClient`, called by the resource (or by UC-018's service) after this service's transaction has committed.

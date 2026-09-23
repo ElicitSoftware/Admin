@@ -67,7 +67,7 @@ public class SurveyDefinitionApplyResource {
     public Response applySurvey(MultipartBody multipartBody) {
         if (multipartBody.file == null) {
             return Response.status(Response.Status.BAD_REQUEST)
-                    .entity(new ApplyResponse(false, null, "No file provided in the 'file' field", null))
+                    .entity(new ApplyResponse(false, null, "No file provided in the 'file' field", null, null))
                     .build();
         }
 
@@ -76,7 +76,7 @@ public class SurveyDefinitionApplyResource {
             SurveyDefinitionApplyService.ApplyResult result = applyService.apply(data, multipartBody.fileName);
 
             ApplyResponse response = new ApplyResponse(result.success(), result.action().name(),
-                    result.message(), result.detail());
+                    result.message(), result.detail(), result.reporting());
 
             return result.success()
                     ? Response.ok(response).build()
@@ -84,14 +84,14 @@ public class SurveyDefinitionApplyResource {
 
         } catch (IOException e) {
             return Response.status(Response.Status.BAD_REQUEST)
-                    .entity(new ApplyResponse(false, null, "Failed to read the uploaded file", null))
+                    .entity(new ApplyResponse(false, null, "Failed to read the uploaded file", null, null))
                     .build();
         } catch (Exception e) {
             String correlationId = UUID.randomUUID().toString();
             Log.errorf(e, "Survey definition apply failed [correlationId=%s]", correlationId);
             return Response.status(Response.Status.INTERNAL_SERVER_ERROR)
                     .entity(new ApplyResponse(false, null,
-                            "Apply failed due to an unexpected error. Reference: " + correlationId, null))
+                            "Apply failed due to an unexpected error. Reference: " + correlationId, null, null))
                     .build();
         }
     }
@@ -103,7 +103,11 @@ public class SurveyDefinitionApplyResource {
      * @param action {@code IMPORT}, {@code UPDATE}, or {@code REJECTED}
      * @param message a human-readable summary or the failure reason
      * @param detail the import or update service's own result object, or {@code null}
+     * @param reporting after a successful apply, whether the Survey application rebuilt its
+     *     reporting schema ("Reporting schema rebuilt." or "Reporting schema not rebuilt: ...");
+     *     {@code null} otherwise, or when the rebuild call is disabled
      */
-    public record ApplyResponse(boolean success, String action, String message, Object detail) {
+    public record ApplyResponse(boolean success, String action, String message, Object detail,
+            String reporting) {
     }
 }

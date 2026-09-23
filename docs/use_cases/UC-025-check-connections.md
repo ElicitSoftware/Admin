@@ -15,7 +15,7 @@
 ## Main Success Scenario
 
 1. The administrator opens Connections from the System section.
-2. The system lists every outbound target it knows: the identity provider's discovery document, each report service address stored with a report definition, each post-survey action address stored with a survey, the mail relay, and the telemetry collector.
+2. The system lists every outbound target it knows: the identity provider's discovery document, the Survey application whose reporting schema an apply rebuilds (UC-018 step 7, unless that call is switched off), each report service address stored with a report definition, each post-survey action address stored with a survey, the mail relay, and the telemetry collector.
 3. The administrator chooses Check all, or Check on one row.
 4. For each web target the system issues a harmless read-only request and records whether an answer came back, its status, and how long it took; for each socket target it records whether a connection opened.
 5. The system marks each target reachable or unreachable, with the detail beside it.
@@ -69,7 +69,7 @@ Every probe gives up after five seconds (NFR-012). Checking all targets never ta
 
 ### BR-098: Targets come from where the runtime reads them
 
-Report and post-survey addresses are read from the same stored rows the runtime uses (`survey.reports`, `survey.post_survey_actions`), and the provider, relay and collector addresses from the same configuration, so the screen checks what will actually be called.
+Report and post-survey addresses are read from the same stored rows the runtime uses (`survey.reports`, `survey.post_survey_actions`), and the provider, Survey application (`elicit.survey.url`), relay and collector addresses from the same configuration, so the screen checks what will actually be called. The Survey application is probed at its root, since its rebuild endpoint only accepts POST.
 
 ---
 

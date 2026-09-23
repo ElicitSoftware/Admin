@@ -12,6 +12,7 @@ package com.elicitsoftware.rest;
  */
 
 import com.elicitsoftware.admin.upload.MultipartBody;
+import com.elicitsoftware.service.ReportingSchemaRebuildClient;
 import com.elicitsoftware.service.SurveyDefinitionImportService;
 import io.quarkus.logging.Log;
 import jakarta.annotation.security.RolesAllowed;
@@ -45,6 +46,9 @@ public class SurveyDefinitionImportResource {
 
     @Inject
     SurveyDefinitionImportService surveyDefinitionImportService;
+
+    @Inject
+    ReportingSchemaRebuildClient reportingSchemaRebuildClient;
 
     /**
      * Import a survey definition from an Elicit Survey export file.
@@ -80,6 +84,9 @@ public class SurveyDefinitionImportResource {
             );
 
             if (result.isSuccess()) {
+                // The import has committed (importFromFile is transactional and has returned),
+                // so Survey can see the new survey; the rebuild's outcome never fails the import.
+                response.setReporting(reportingSchemaRebuildClient.rebuild().summaryLine());
                 return Response.ok(response).build();
             } else {
                 return Response.status(Response.Status.BAD_REQUEST)
@@ -109,6 +116,7 @@ public class SurveyDefinitionImportResource {
         private int recordsImported;
         private String message;
         private java.util.Map<String, Integer> counts;
+        private String reporting;
 
         /**
          * Default constructor for JSON serialization.
@@ -167,6 +175,19 @@ public class SurveyDefinitionImportResource {
          * @param message status or error message
          */
         public void setMessage(String message) { this.message = message; }
+
+        /**
+         * After a successful import, whether the Survey application rebuilt its reporting
+         * schema ("Reporting schema rebuilt." or "Reporting schema not rebuilt: ...").
+         * @return the rebuild's summary line, or {@code null} if nothing was imported or the call is disabled
+         */
+        public String getReporting() { return reporting; }
+
+        /**
+         * Sets the reporting schema rebuild's summary line.
+         * @param reporting the rebuild's summary line
+         */
+        public void setReporting(String reporting) { this.reporting = reporting; }
 
         /**
          * Returns the breakdown of records imported by table.

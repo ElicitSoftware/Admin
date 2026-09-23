@@ -19,7 +19,7 @@
 | FR-008 | Manage Users                        | As a system administrator, I want to create, edit, and deactivate admin user accounts so that access to the admin console is controlled.           | High     | Implemented |
 | FR-009 | View Security Diagnostics           | As a platform operator, I want to view security and authentication diagnostics so that I can verify OIDC integration and troubleshoot access issues. | Medium   | Implemented |
 | FR-010 | Register Subjects via Integration API | As an integration client, I want to register subjects programmatically via an API so that subjects can be enrolled from external systems.        | High     | Implemented |
-| FR-011 | Export Respondent Data              | As a researcher/clinician, I want to export respondent data so that I can analyze results outside the admin console.                               | Medium   | Implemented |
+| FR-011 | Export Respondent Data              | As a survey administrator, I want to export a respondent's complete data as a portable file so that it can be transferred to another Elicit instance running the same survey, or kept as a backup. | Medium   | Implemented |
 | FR-012 | Import Respondent Data              | As a survey administrator, I want to import respondent data so that externally collected responses can be loaded into the system.                  | Medium   | Implemented |
 | FR-013 | Export Survey Definition            | As a system administrator, I want to export a survey definition so that it can be backed up or migrated to another environment.                    | Medium   | Implemented |
 | FR-014 | Import Survey Definition            | As a system administrator, I want to import a survey definition so that surveys authored elsewhere can be deployed into this environment.          | Medium   | Implemented |
@@ -27,6 +27,7 @@
 | FR-016 | Manage User Role Assignments        | As a system administrator, I want to assign and revoke roles for admin users so that console access matches each user's responsibilities.          | High     | Implemented |
 | FR-017 | Update Survey Definition            | As a system administrator, I want to push a revised survey definition into an existing survey so that a survey authored once can be kept in sync across separate deployments (e.g., institutions) without losing their respondent data. | Medium   | Implemented |
 | FR-018 | Apply Survey Definition             | As a system administrator, I want to upload a survey definition without first deciding whether it is new to this deployment, so that one distributed file can be applied unchanged at every site in a multi-site rollout. | Medium   | Implemented |
+| FR-027 | Rebuild Reporting Schema After Apply | As a system administrator, I want the Survey application's reporting schema rebuilt automatically after I install or update a survey definition, and to be told whether it was, so that the survey is reportable without anyone restarting Survey and a rebuild that fails is visible rather than silent. | Medium   | Implemented |
 | FR-019 | Surface Missing Survey Definition   | As a survey administrator, I want the console to tell me when no survey is installed so that I understand why subject registration and reporting have nothing to work with, rather than inferring it from empty grids. | Medium   | Implemented |
 | FR-020 | View System Overview                | As a platform operator, I want one screen that shows the version, build time, active profile, uptime, health, and whether every required setting is present so that I can confirm a deployment is wired correctly before handing it over. | High     | Implemented     |
 | FR-021 | Warn About Default Accounts         | As a platform operator, I want the service to warn at startup and in the console while the seeded `admin` and `user` accounts still exist so that I rename them before the deployment goes live. | High     | Implemented     |
@@ -52,6 +53,7 @@
 | NFR-010 | Service Availability        | The Admin service must maintain 99.5% uptime during business hours, measured monthly.                                          | Availability    | Medium   | Open        |
 | NFR-011 | Diagnostics Never Leak Secrets | Diagnostic screens must never render a password, client secret, or token value; a secret is reported only as present or absent (tokens may be masked to their last four characters, as UC-009 already does). | Security        | High     | Implemented     |
 | NFR-012 | Bounded Diagnostic Checks    | Every outbound probe started from a diagnostic screen must complete or fail within 5 seconds, so that an unreachable dependency never hangs the console.                    | Availability    | Medium   | Implemented     |
+| NFR-013 | Reporting Rebuild Never Fails an Apply | The call that asks Survey to rebuild its reporting schema after an apply must give up within 60 seconds and must never change the apply's outcome: the definition is committed first, and an unreachable Survey or a failed build is reported on the result and logged, never thrown. | Availability    | Medium   | Implemented     |
 
 ## Constraints
 
@@ -73,6 +75,7 @@
 ## Traceability
 
 Functional requirements FR-001–FR-019 map one-to-one to `docs/use_cases/UC-001`–`UC-019`, and FR-020–FR-025 to
-`UC-020`–`UC-025`. FR-026 is satisfied inside UC-009 (the navigation entry). NFR-011, NFR-012 and C-012 govern
+`UC-020`–`UC-025`. FR-026 is satisfied inside UC-009 (the navigation entry). FR-027 and NFR-013 are satisfied inside
+UC-014, UC-017 and UC-018 (the reporting schema rebuild step, BR-107 and BR-108), with the Survey application listed by UC-025. NFR-011, NFR-012 and C-012 govern
 UC-020–UC-025. See `docs/use_cases.puml` for the actor/use-case diagram and `docs/entity_model.md` for the
 underlying data model referenced by these requirements.

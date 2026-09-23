@@ -26,6 +26,7 @@ import org.junit.jupiter.api.Test;
 
 import java.io.ByteArrayInputStream;
 import java.io.InputStream;
+import java.math.BigDecimal;
 import java.nio.charset.StandardCharsets;
 import java.time.Instant;
 import java.time.OffsetDateTime;
@@ -33,6 +34,7 @@ import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -130,6 +132,15 @@ class SurveyDefinitionUpdateServiceTest {
      * {@link SurveyLogService}'s {@code REQUIRES_NEW} logging just like {@link #newSurvey}.
      */
     private Survey persistFullDefinitionTree(String token) {
+        return persistFullDefinitionTree(token, BigDecimal.ONE);
+    }
+
+    /**
+     * As {@link #persistFullDefinitionTree(String)}, with every display order of the four Type 2
+     * tables whose order columns are {@code NUMERIC} (steps, sections, steps_sections,
+     * sections_questions) set to {@code displayOrder}.
+     */
+    private Survey persistFullDefinitionTree(String token, BigDecimal displayOrder) {
         return QuarkusTransaction.requiringNew().call(() -> {
             Survey survey = new Survey();
             survey.name = "Full " + token;
@@ -153,22 +164,22 @@ class SurveyDefinitionUpdateServiceTest {
 
             long stepId = nextVal("survey.steps_seq");
             em.createNativeQuery("INSERT INTO survey.steps (id, survey_id, display_order, name, dimension_name) "
-                            + "VALUES (?1, ?2, 1, ?3, 'D')")
-                    .setParameter(1, stepId).setParameter(2, surveyId).setParameter(3, "Step " + token)
+                            + "VALUES (?1, ?2, ?4, ?3, 'D')")
+                    .setParameter(1, stepId).setParameter(2, surveyId).setParameter(3, "Step " + token).setParameter(4, displayOrder)
                     .executeUpdate();
             long stepDurableId = queryLong("SELECT step_id FROM survey.steps WHERE id = ?1", stepId);
 
             long sectionId = nextVal("survey.sections_seq");
             em.createNativeQuery("INSERT INTO survey.sections (id, survey_id, display_order, name, dimension_name) "
-                            + "VALUES (?1, ?2, 1, ?3, 'D')")
-                    .setParameter(1, sectionId).setParameter(2, surveyId).setParameter(3, "Section " + token)
+                            + "VALUES (?1, ?2, ?4, ?3, 'D')")
+                    .setParameter(1, sectionId).setParameter(2, surveyId).setParameter(3, "Section " + token).setParameter(4, displayOrder)
                     .executeUpdate();
             long sectionDurableId = queryLong("SELECT section_id FROM survey.sections WHERE id = ?1", sectionId);
 
             long stepsSectionId = nextVal("survey.steps_sections_seq");
             em.createNativeQuery("INSERT INTO survey.steps_sections "
                             + "(id, survey_id, step_id, step_display_order, section_id, section_display_order, display_key) "
-                            + "VALUES (?1, ?2, ?3, 1, ?4, 1, ?5)")
+                            + "VALUES (?1, ?2, ?3, ?6, ?4, ?6, ?5)")
                     .setParameter(1, stepsSectionId).setParameter(2, surveyId).setParameter(3, stepDurableId)
                     // A realistically shaped display key already carrying THIS survey's id. The
                     // importer/updater rebases the leading component onto the target survey, so a
@@ -176,6 +187,7 @@ class SurveyDefinitionUpdateServiceTest {
                     // re-versioning the row on every apply.
                     .setParameter(4, sectionDurableId)
                     .setParameter(5, String.format("%04d", surveyId) + "-0001-0000-0001-0000-0000-0000")
+                    .setParameter(6, displayOrder)
                     .executeUpdate();
             long stepsSectionDurableId = queryLong("SELECT steps_sections_id FROM survey.steps_sections WHERE id = ?1", stepsSectionId);
 
@@ -189,8 +201,8 @@ class SurveyDefinitionUpdateServiceTest {
 
             long sqId = nextVal("survey.sections_questions_seq");
             em.createNativeQuery("INSERT INTO survey.sections_questions (id, survey_id, question_id, section_id, display_order) "
-                            + "VALUES (?1, ?2, ?3, ?4, 1)")
-                    .setParameter(1, sqId).setParameter(2, surveyId).setParameter(3, questionDurableId).setParameter(4, sectionDurableId)
+                            + "VALUES (?1, ?2, ?3, ?4, ?5)")
+                    .setParameter(1, sqId).setParameter(2, surveyId).setParameter(3, questionDurableId).setParameter(4, sectionDurableId).setParameter(5, displayOrder)
                     .executeUpdate();
             long sqDurableId = queryLong("SELECT sections_question_id FROM survey.sections_questions WHERE id = ?1", sqId);
 
@@ -260,6 +272,98 @@ class SurveyDefinitionUpdateServiceTest {
                 "dimensions", "ontology", "metadata"}) {
             assertEquals(unchangedOne, result.getCounts().get(table), table + " should be entirely unchanged");
         }
+    }
+
+    private static final SurveyDefinitionUpdateService.TableUpdateCounts UNCHANGED_ONE =
+            new SurveyDefinitionUpdateService.TableUpdateCounts(0, 0, 1, 0);
+
+    /** The four Type 2 tables whose display orders are {@code NUMERIC} in the survey schema. */
+    private static final String[] DISPLAY_ORDERED_TABLES = {"steps", "sections", "steps_sections", "sections_questions"};
+
+    private SurveyDefinitionUpdateService.UpdateResult applyTo(Survey survey, String content, String fileName) {
+        SurveyDefinitionUpdateService.UpdateResult result =
+                surveyDefinitionUpdateService.updateFromFile(toStream(content), fileName, survey.id);
+        assertTrue(result.isSuccess(), () -> fileName + " update errors: " + result.getErrors());
+        return result;
+    }
+
+    private void assertAllUnchanged(SurveyDefinitionUpdateService.UpdateResult result, String... tables) {
+        for (String table : tables) {
+            assertEquals(UNCHANGED_ONE, result.getCounts().get(table), table + " should be entirely unchanged");
+        }
+    }
+
+    /** Every row of {@code table} for the survey — one per durable id as seeded, more once versioned. */
+    private long rowsFor(String table, Survey survey) {
+        return queryLong("SELECT count(*) FROM survey." + table + " WHERE survey_id = ?1", survey.id);
+    }
+
+    /**
+     * UC-017 BR-109 regression: {@code steps.display_order}, {@code sections.display_order},
+     * {@code steps_sections.step_display_order}/{@code section_display_order} and
+     * {@code sections_questions.display_order} are {@code NUMERIC} in the survey schema (decimal
+     * midpoint insertion), so the stored value reads back as a {@code BigDecimal}. Comparing it
+     * with the file's value as an {@code Integer} never matched, and one apply re-versioned every
+     * step, section, step-section and question assignment even though nothing had changed.
+     * Re-applying an identical file must version nothing, and a file that changes a single
+     * question's text must version that question alone.
+     */
+    @Test
+    @TestTransaction
+    void reapplyingIdenticalFileVersionsNothingAndAChangedQuestionVersionsOnlyItself() {
+        Survey survey = persistFullDefinitionTree("NUM1");
+        String exported = surveyDefinitionExportService.exportSurvey(survey.id);
+
+        SurveyDefinitionUpdateService.UpdateResult first = applyTo(survey, exported, "first.elicit");
+        SurveyDefinitionUpdateService.UpdateResult second = applyTo(survey, exported, "second.elicit");
+        for (SurveyDefinitionUpdateService.UpdateResult result : new SurveyDefinitionUpdateService.UpdateResult[] {first, second}) {
+            assertAllUnchanged(result, DISPLAY_ORDERED_TABLES);
+            assertAllUnchanged(result, "questions", "relationships", "select_groups", "select_items");
+            for (String table : DISPLAY_ORDERED_TABLES) {
+                assertEquals(0, result.getCounts().get(table).versioned(), table + " must not be versioned by an identical file");
+            }
+        }
+        for (String table : DISPLAY_ORDERED_TABLES) {
+            assertEquals(1L, rowsFor(table, survey), table + " must still hold one row per durable id after two identical applies");
+        }
+
+        String changed = exported.replace("Question NUM1?", "Question NUM1 (revised)?");
+        assertNotEquals(exported, changed, "the fixture's question text must be present in the export");
+        SurveyDefinitionUpdateService.UpdateResult third = applyTo(survey, changed, "third.elicit");
+
+        assertEquals(new SurveyDefinitionUpdateService.TableUpdateCounts(0, 1, 0, 0), third.getCounts().get("questions"),
+                "only the question whose text changed is versioned");
+        assertAllUnchanged(third, DISPLAY_ORDERED_TABLES);
+        assertAllUnchanged(third, "relationships", "select_groups", "select_items");
+        assertEquals(2L, rowsFor("questions", survey), "versioning closes the old question row and inserts a new one");
+        for (String table : DISPLAY_ORDERED_TABLES) {
+            assertEquals(1L, rowsFor(table, survey), table + " must not gain a version because a question's text changed");
+        }
+        assertEquals(1L, queryLong(
+                "SELECT count(*) FROM survey.questions WHERE survey_id = ?1 AND text = 'Question NUM1 (revised)?' "
+                        + "AND version = 1 AND effective_to = '9999-12-31 23:59:59+00'", survey.id));
+    }
+
+    /**
+     * UC-017 BR-109: a decimal display order ({@code 1.5}, the midpoint-insertion case the
+     * {@code NUMERIC} columns exist for) is exported verbatim, parsed as a decimal rather than
+     * dropped to {@code null}, and compares equal to the stored value on re-apply.
+     */
+    @Test
+    @TestTransaction
+    void decimalDisplayOrderRoundTripsUnchanged() {
+        Survey survey = persistFullDefinitionTree("NUM2", new BigDecimal("1.5"));
+        String exported = surveyDefinitionExportService.exportSurvey(survey.id);
+        assertTrue(exported.contains("|1.5|"), () -> "the export must carry the decimal display order verbatim:\n" + exported);
+
+        SurveyDefinitionUpdateService.UpdateResult result = applyTo(survey, exported, "decimal.elicit");
+
+        assertAllUnchanged(result, DISPLAY_ORDERED_TABLES);
+        for (String table : DISPLAY_ORDERED_TABLES) {
+            assertEquals(1L, rowsFor(table, survey), table + " must not be versioned by its own decimal display order");
+        }
+        BigDecimal stored = queryOne("SELECT display_order FROM survey.steps WHERE survey_id = ?1", survey.id);
+        assertEquals(0, new BigDecimal("1.5").compareTo(stored), "the stored decimal display order is untouched: " + stored);
     }
 
     /**
