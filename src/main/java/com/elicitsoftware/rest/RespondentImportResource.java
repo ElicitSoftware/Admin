@@ -84,6 +84,14 @@ public class RespondentImportResource {
                         .build();
             }
 
+        } catch (RespondentImportService.ImportValidationException e) {
+            // A reference in the file (survey key, department code, element key/version, access
+            // code) does not resolve in this instance: the import was rolled back and the message
+            // is written for the administrator, so it is safe to return as-is.
+            Log.infof("Respondent import rejected: %s", e.getMessage());
+            return Response.status(Response.Status.BAD_REQUEST)
+                    .entity(new ImportResponse(false, 0, e.getMessage(), null))
+                    .build();
         } catch (Exception e) {
             // Unexpected (non-validation) failure - log the real cause server-side and
             // return a generic, correlation-id-bearing message rather than leaking

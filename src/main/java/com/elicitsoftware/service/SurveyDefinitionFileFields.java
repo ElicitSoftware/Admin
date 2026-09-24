@@ -14,6 +14,7 @@ package com.elicitsoftware.service;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.Query;
 
+import java.math.BigDecimal;
 import java.time.OffsetDateTime;
 import java.time.format.DateTimeParseException;
 import java.util.ArrayList;
@@ -189,6 +190,42 @@ final class SurveyDefinitionFileFields {
         } catch (NumberFormatException e) {
             return null;
         }
+    }
+
+    /**
+     * Parses a decimal field, returning {@code null} for empty or invalid input. Used for the
+     * {@code NUMERIC} display-order columns ({@code steps.display_order},
+     * {@code sections.display_order}, {@code steps_sections.step_display_order} /
+     * {@code section_display_order}, {@code sections_questions.display_order}), which hold
+     * decimals so a new element can be slotted between two neighbours without renumbering
+     * (e.g. {@code 1.5}); {@link #parseIntOrNull} would silently turn such a value into
+     * {@code null}.
+     */
+    static BigDecimal parseDecimalOrNull(String value) {
+        if (value == null || value.isEmpty()) {
+            return null;
+        }
+        try {
+            return new BigDecimal(value.trim());
+        } catch (NumberFormatException e) {
+            return null;
+        }
+    }
+
+    /**
+     * Null-safe numeric equality between a parsed file value and a value read back from a
+     * {@code NUMERIC} column, compared by value ({@code compareTo == 0}) rather than by
+     * {@link Object#equals}: the driver returns those columns as {@link BigDecimal}, so an
+     * {@code Objects.equals(Integer, BigDecimal)} comparison is never true and would version
+     * every row on every apply (UC-017 BR-109), and {@code BigDecimal.equals} itself treats
+     * {@code 1} and {@code 1.0} as different.
+     */
+    static boolean sameNumber(BigDecimal file, Object stored) {
+        if (file == null || stored == null) {
+            return file == null && stored == null;
+        }
+        BigDecimal storedDecimal = stored instanceof BigDecimal d ? d : new BigDecimal(stored.toString());
+        return file.compareTo(storedDecimal) == 0;
     }
 
     /**

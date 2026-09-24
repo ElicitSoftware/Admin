@@ -38,6 +38,9 @@ import java.util.Map;
  * already has it (update in place, UC-017), and for an update the file's revision must not
  * predate the one already installed here.
  * <p>
+ * After a successful apply the result also says whether the Survey application rebuilt its
+ * reporting schema; a failure there is reported on its own line and does not change the title.
+ * <p>
  * Complements {@link com.elicitsoftware.rest.SurveyDefinitionApplyResource}, which exposes the
  * same capability over REST.
  */
@@ -130,6 +133,10 @@ public class SurveyDefinitionApplyView extends VerticalLayout {
             default -> {
                 // A rejection carries no per-table detail; the message above is the whole story.
             }
+        }
+        if (result.reporting() != null) {
+            // Last, because it happened last: the definition is applied whatever this line says.
+            summary.append("\n").append(result.reporting()).append("\n");
         }
         return summary.toString();
     }

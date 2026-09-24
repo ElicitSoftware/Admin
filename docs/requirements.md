@@ -19,7 +19,7 @@
 | FR-008 | Manage Users                        | As a system administrator, I want to create, edit, and deactivate admin user accounts so that access to the admin console is controlled.           | High     | Implemented |
 | FR-009 | View Security Diagnostics           | As a platform operator, I want to view security and authentication diagnostics so that I can verify OIDC integration and troubleshoot access issues. | Medium   | Implemented |
 | FR-010 | Register Subjects via Integration API | As an integration client, I want to register subjects programmatically via an API so that subjects can be enrolled from external systems.        | High     | Implemented |
-| FR-011 | Export Respondent Data              | As a researcher/clinician, I want to export respondent data so that I can analyze results outside the admin console.                               | Medium   | Implemented |
+| FR-011 | Export Respondent Data              | As a survey administrator, I want to export a respondent's complete data as a portable file so that it can be transferred to another Elicit instance running the same survey, or kept as a backup. | Medium   | Implemented |
 | FR-012 | Import Respondent Data              | As a survey administrator, I want to import respondent data so that externally collected responses can be loaded into the system.                  | Medium   | Implemented |
 | FR-013 | Export Survey Definition            | As a system administrator, I want to export a survey definition so that it can be backed up or migrated to another environment.                    | Medium   | Implemented |
 | FR-014 | Import Survey Definition            | As a system administrator, I want to import a survey definition so that surveys authored elsewhere can be deployed into this environment.          | Medium   | Implemented |
@@ -27,6 +27,7 @@
 | FR-016 | Manage User Role Assignments        | As a system administrator, I want to assign and revoke roles for admin users so that console access matches each user's responsibilities.          | High     | Implemented |
 | FR-017 | Update Survey Definition            | As a system administrator, I want to push a revised survey definition into an existing survey so that a survey authored once can be kept in sync across separate deployments (e.g., institutions) without losing their respondent data. | Medium   | Implemented |
 | FR-018 | Apply Survey Definition             | As a system administrator, I want to upload a survey definition without first deciding whether it is new to this deployment, so that one distributed file can be applied unchanged at every site in a multi-site rollout. | Medium   | Implemented |
+| FR-027 | Rebuild Reporting Schema After Apply | As a system administrator, I want the Survey application's reporting schema rebuilt automatically after I install or update a survey definition, and to be told whether it was, so that the survey is reportable without anyone restarting Survey and a rebuild that fails is visible rather than silent. | Medium   | Implemented |
 | FR-019 | Surface Missing Survey Definition   | As a survey administrator, I want the console to tell me when no survey is installed so that I understand why subject registration and reporting have nothing to work with, rather than inferring it from empty grids. | Medium   | Implemented |
 | FR-020 | View System Overview                | As a platform operator, I want one screen that shows the version, build time, active profile, uptime, health, and whether every required setting is present so that I can confirm a deployment is wired correctly before handing it over. | High     | Implemented     |
 | FR-021 | Warn About Default Accounts         | As a platform operator, I want the service to warn at startup and in the console while the seeded `admin` and `user` accounts still exist so that I rename them before the deployment goes live. | High     | Implemented     |
@@ -35,13 +36,13 @@
 | FR-024 | Diagnose Email                      | As a platform operator, I want to see the effective mail settings and send myself a test message so that I can prove the SMTP relay works before subjects are invited. | High     | Implemented     |
 | FR-025 | Check Connections                   | As a platform operator, I want to check each outbound dependency (identity provider, report services, post-survey actions, SMTP, telemetry) with a bounded probe so that an unreachable service is named here rather than discovered inside a generated report. | High     | Implemented     |
 | FR-026 | Reach Security Diagnostics From Navigation | As a platform operator, I want the security diagnostics view listed as OIDC in the System section so that I can find it without knowing its address. | Low      | Implemented     |
-| FR-027 | Localized Console Chrome            | As a survey administrator, I want every label, button, grid header, message and page title the console itself displays (including brand-supplied names) to appear in my language so that I can work without reading English. | High     | Implemented |
-| FR-028 | Language Selection                  | As a survey administrator, I want the console to open in my browser's language and let me switch languages on any page so that I am never stuck in a language I do not read. | High     | Implemented |
-| FR-029 | Externally Mounted Translations     | As a platform operator, I want to mount translation files for additional languages, or override individual texts, without rebuilding the console so that each site can serve the languages its staff need. | High     | Implemented |
-| FR-030 | Right-to-Left Layout                | As a survey administrator whose language is written right-to-left, I want the whole console laid out right-to-left when that language is selected so that it reads naturally. | High     | Implemented |
-| FR-031 | Translation Handoff Package         | As a platform operator, I want one generated document containing every translatable text with its context and translation rules so that I can hand it to a translator or an AI agent and receive a complete language file back. | Medium   | Implemented |
-| FR-032 | Localized Service Messages          | As a survey administrator, I want error messages produced by import, export and reporting services to appear in my language so that failures are understandable. | Low      | Planned     |
-| FR-033 | Manage Languages from the Console   | As a survey administrator with the `elicit_admin` role, I want to add, replace or remove a language for the console and for the survey application by uploading a validated translation file on a Languages screen so that a site can offer a new language without server access. | Medium   | Planned     |
+| FR-028 | Localized Console Chrome            | As a survey administrator, I want every label, button, grid header, message and page title the console itself displays (including brand-supplied names) to appear in my language so that I can work without reading English. | High     | Implemented |
+| FR-029 | Language Selection                  | As a survey administrator, I want the console to open in my browser's language and let me switch languages on any page so that I am never stuck in a language I do not read. | High     | Implemented |
+| FR-030 | Externally Mounted Translations     | As a platform operator, I want to mount translation files for additional languages, or override individual texts, without rebuilding the console so that each site can serve the languages its staff need. | High     | Implemented |
+| FR-031 | Right-to-Left Layout                | As a survey administrator whose language is written right-to-left, I want the whole console laid out right-to-left when that language is selected so that it reads naturally. | High     | Implemented |
+| FR-032 | Translation Handoff Package         | As a platform operator, I want one generated document containing every translatable text with its context and translation rules so that I can hand it to a translator or an AI agent and receive a complete language file back. | Medium   | Implemented |
+| FR-033 | Localized Service Messages          | As a survey administrator, I want error messages produced by import, export and reporting services to appear in my language so that failures are understandable. | Low      | Planned     |
+| FR-034 | Manage Languages from the Console   | As a survey administrator with the `elicit_admin` role, I want to add, replace or remove a language for the console and for the survey application by uploading a validated translation file on a Languages screen so that a site can offer a new language without server access. | Medium   | Planned     |
 
 ## Non-Functional Requirements
 
@@ -59,8 +60,9 @@
 | NFR-010 | Service Availability        | The Admin service must maintain 99.5% uptime during business hours, measured monthly.                                          | Availability    | Medium   | Open        |
 | NFR-011 | Diagnostics Never Leak Secrets | Diagnostic screens must never render a password, client secret, or token value; a secret is reported only as present or absent (tokens may be masked to their last four characters, as UC-009 already does). | Security        | High     | Implemented     |
 | NFR-012 | Bounded Diagnostic Checks    | Every outbound probe started from a diagnostic screen must complete or fail within 5 seconds, so that an unreachable dependency never hangs the console.                    | Availability    | Medium   | Implemented     |
-| NFR-013 | Displayed-String Coverage   | 100% of user-visible text set by console code must be resolved through the translation mechanism; an automated test that scans the view sources fails on any remaining hard-coded literal. | Maintainability | High     | Implemented |
-| NFR-014 | Missing-Translation Policy  | A text missing from a language file must fall back to the English text; a text missing from every language file must render as a visible `!key!` marker, never blank; a bundle-consistency test must fail when the language files disagree on keys or placeholders. | Usability       | High     | Implemented |
+| NFR-013 | Reporting Rebuild Never Fails an Apply | The call that asks Survey to rebuild its reporting schema after an apply must give up within 60 seconds and must never change the apply's outcome: the definition is committed first, and an unreachable Survey or a failed build is reported on the result and logged, never thrown. | Availability    | Medium   | Implemented     |
+| NFR-014 | Displayed-String Coverage   | 100% of user-visible text set by console code must be resolved through the translation mechanism; an automated test that scans the view sources fails on any remaining hard-coded literal. | Maintainability | High     | Implemented |
+| NFR-015 | Missing-Translation Policy  | A text missing from a language file must fall back to the English text; a text missing from every language file must render as a visible `!key!` marker, never blank; a bundle-consistency test must fail when the language files disagree on keys or placeholders. | Usability       | High     | Implemented |
 
 ## Constraints
 
@@ -85,7 +87,8 @@
 ## Traceability
 
 Functional requirements FR-001–FR-019 map one-to-one to `docs/use_cases/UC-001`–`UC-019`, and FR-020–FR-025 to
-`UC-020`–`UC-025`. FR-026 is satisfied inside UC-009 (the navigation entry). NFR-011, NFR-012 and C-012 govern
-UC-020–UC-025. FR-027–FR-032 (localization) trace to `UC-026`; FR-033 (managing languages) traces to `UC-027`.
+`UC-020`–`UC-025`. FR-026 is satisfied inside UC-009 (the navigation entry). FR-027 and NFR-013 are satisfied inside
+UC-014, UC-017 and UC-018 (the reporting schema rebuild step, BR-107 and BR-108), with the Survey application listed by UC-025. NFR-011, NFR-012 and C-012 govern
+UC-020–UC-025. FR-028–FR-033 (localization) trace to `UC-026`; FR-034 (managing languages) traces to `UC-027`.
 See `docs/use_cases.puml` for the actor/use-case diagram and `docs/entity_model.md` for the underlying data model
 referenced by these requirements.

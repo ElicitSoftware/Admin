@@ -655,7 +655,7 @@ public class SurveyDefinitionImportService {
         query.setParameter(1, newId);
         query.setParameter(2, surveyId);
         query.setParameter(3, elementKey);
-        query.setParameter(4, parseIntOrNull(fields[2]));
+        query.setParameter(4, SurveyDefinitionFileFields.parseDecimalOrNull(fields[2]));
         query.setParameter(5, name);
         query.setParameter(6, dimensionName);
         query.setParameter(7, nullIfEmpty(fields[5]));
@@ -695,7 +695,7 @@ public class SurveyDefinitionImportService {
         query.setParameter(1, newId);
         query.setParameter(2, surveyId);
         query.setParameter(3, elementKey);
-        query.setParameter(4, parseIntOrNull(fields[2]));
+        query.setParameter(4, SurveyDefinitionFileFields.parseDecimalOrNull(fields[2]));
         query.setParameter(5, name);
         query.setParameter(6, dimensionName);
         query.setParameter(7, nullIfEmpty(fields[5]));
@@ -732,9 +732,9 @@ public class SurveyDefinitionImportService {
         query.setParameter(2, surveyId);
         query.setParameter(3, elementKey);
         query.setParameter(4, newStepId);
-        query.setParameter(5, parseIntOrNull(fields[3]));
+        query.setParameter(5, SurveyDefinitionFileFields.parseDecimalOrNull(fields[3]));
         query.setParameter(6, newSectionId);
-        query.setParameter(7, parseIntOrNull(fields[5]));
+        query.setParameter(7, SurveyDefinitionFileFields.parseDecimalOrNull(fields[5]));
         // Rebased onto this deployment's surveyId — see SurveyDefinitionFileFields#rebaseDisplayKey.
         query.setParameter(8, SurveyDefinitionFileFields.rebaseDisplayKey(fields[6], surveyId));
         query.executeUpdate();
@@ -822,7 +822,7 @@ public class SurveyDefinitionImportService {
         query.setParameter(3, elementKey);
         query.setParameter(4, newQuestionId);
         query.setParameter(5, newSectionId);
-        query.setParameter(6, parseIntOrNull(fields[4]));
+        query.setParameter(6, SurveyDefinitionFileFields.parseDecimalOrNull(fields[4]));
         query.executeUpdate();
         return getDurableId("sections_question_id", "survey.sections_questions", newId);
     }

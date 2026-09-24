@@ -143,6 +143,30 @@ class SurveyDefinitionApplyViewTest extends QuarkusBrowserlessTest {
         assertEquals(view.getTranslation("surveyDefinitionApplyView.surveyUpdated"), openDialog().getHeaderTitle());
     }
 
+    /**
+     * UC-018 step 7 / A5: the dialog ends with the reporting schema rebuild's line, and a
+     * rebuild that failed leaves the title "New Survey Installed" -- the apply stood. Nothing
+     * listens on the stub port in this class, so the call fails at once with a refused
+     * connection, which is exactly the failed-rebuild shape.
+     */
+    @Test
+    @TestTransaction
+    @TestSecurity(user = "apply.admin", roles = {"elicit_admin"})
+    void failedReportingRebuildIsShownWithoutChangingTheOutcome() {
+        Survey source = newSurveyWithStep("ApplyViewRebuild");
+        String file = exportService.exportSurvey(source.id)
+                .replace(source.surveyKey.toString(), UUID.randomUUID().toString())
+                .replace("ApplyViewRebuild", "ApplyViewRebuildArrived");
+
+        view.handleUpload(file.getBytes(StandardCharsets.UTF_8), "new.elicit");
+
+        Dialog dialog = openDialog();
+        assertEquals("New Survey Installed", dialog.getHeaderTitle());
+        String text = find(com.vaadin.flow.component.html.Span.class, dialog).single().getText();
+        assertTrue(text.contains("Installed as a new survey"), text);
+        assertTrue(text.contains("\nReporting schema not rebuilt: "), "the rebuild line ends the summary: " + text);
+    }
+
     /** UC-018 A3: a file that isn't a survey definition is reported, not applied. */
     @Test
     @TestTransaction
