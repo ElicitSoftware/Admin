@@ -11,6 +11,7 @@ package com.elicitsoftware.admin.flow;
  * ***LICENSE_END***
  */
 
+import com.elicitsoftware.model.Department;
 import com.elicitsoftware.model.User;
 import com.elicitsoftware.test.PostgresTestResource;
 import com.vaadin.browserless.quarkus.QuarkusBrowserlessTest;
@@ -24,7 +25,9 @@ import jakarta.enterprise.inject.spi.CDI;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * Browserless UI test for {@link UiSessionLogin}, the UI-scoped bridge between Quarkus security
@@ -49,8 +52,18 @@ class UiSessionLoginTest extends QuarkusBrowserlessTest {
 
     @AfterEach
     void cleanup() {
-        QuarkusTransaction.requiringNew().run(() ->
-                User.delete("username like ?1", "uisessionlogin.%"));
+        QuarkusTransaction.requiringNew().run(() -> {
+            // Join rows first: a bulk delete of the users would trip user_departments' FK.
+            User.<User>list("username like ?1", "uisessionlogin.%").forEach(u -> {
+                if (u.getDepartments() != null) {
+                    u.getDepartments().clear();
+                }
+                u.delete();
+            });
+            // Flush the entity deletes (and their join rows) before the bulk delete below runs.
+            User.getEntityManager().flush();
+            Department.delete("code like ?1", "UISL%");
+        });
     }
 
     private UiSessionLogin sessionLogin() {
@@ -79,5 +92,63 @@ class UiSessionLoginTest extends QuarkusBrowserlessTest {
     @TestSecurity(user = "uisessionlogin.unknown", roles = {})
     void noMatchingUserResultsInNullSessionUser() {
         assertNull(sessionLogin().getUser());
+    }
+    /** UC-028 BR-114: refresh() re-reads the record, so a department assigned after sign-in is seen. */
+    @Test
+    @TestSecurity(user = "uisessionlogin.refresh", roles = {"elicit_admin"})
+    void refreshRereadsTheUserFromTheDatabase() {
+        QuarkusTransaction.requiringNew().run(() -> {
+            User user = new User();
+            user.setUsername("uisessionlogin.refresh");
+            user.setFirstName("Re");
+            user.setLastName("Fresh");
+            user.setActive(true);
+            user.persist();
+        });
+        // The UI-scoped bean initialises once per test run, so load this principal's record explicitly.
+        UiSessionLogin login = sessionLogin();
+        login.refresh();
+        assertFalse(login.getUser().hasDepartments(), "signed in with no department");
+
+        QuarkusTransaction.requiringNew().run(() -> {
+            Department department = new Department();
+            department.name = "UISL Refresh Dept";
+            department.code = "UISL-R";
+            department.defaultMessageId = "1";
+            department.fromEmail = "uisl@example.org";
+            department.persist();
+            User user = User.find("username = ?1", "uisessionlogin.refresh").firstResult();
+            user.getDepartments().add(department);
+        });
+        assertFalse(login.getUser().hasDepartments(), "the session copy is stale until refreshed");
+
+        login.refresh();
+
+        assertTrue(login.getUser().hasDepartments(), "refresh() should pick up the new assignment");
+    }
+
+    /** UC-028 BR-114: refresh() applies the same rule as sign-in, so a deactivated record becomes null. */
+    @Test
+    @TestSecurity(user = "uisessionlogin.gone", roles = {"elicit_user"})
+    void refreshStoresNullWhenTheRecordIsDeactivated() {
+        QuarkusTransaction.requiringNew().run(() -> {
+            User user = new User();
+            user.setUsername("uisessionlogin.gone");
+            user.setFirstName("Go");
+            user.setLastName("Ne");
+            user.setActive(true);
+            user.persist();
+        });
+        UiSessionLogin login = sessionLogin();
+        login.refresh();
+        assertTrue(login.getUser() != null, "signed in with an active record");
+
+        QuarkusTransaction.requiringNew().run(() -> {
+            User user = User.find("username = ?1", "uisessionlogin.gone").firstResult();
+            user.setActive(false);
+        });
+        login.refresh();
+
+        assertNull(login.getUser(), "an inactive record is treated as not found, as at sign-in");
     }
 }

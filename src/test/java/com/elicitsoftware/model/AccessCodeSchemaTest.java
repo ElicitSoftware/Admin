@@ -56,13 +56,15 @@ class AccessCodeSchemaTest {
                 + "WHERE table_schema = 'survey' AND table_name = 'status' AND column_name = 'token'"));
     }
 
-    /** UC-004 BR-015: V0.0.18 converts stored templates, including the V0.0.3 seed row. */
+    /**
+     * UC-004 BR-015: V0.0.18 converts stored templates, so no template carries the legacy
+     * placeholder. (No template is seeded any more -- UC-028 C-016 -- so the conversion is
+     * only observable as the absence of the old placeholder.)
+     */
     @Test
     void storedTemplatesUseAccessCodePlaceholder() {
         assertEquals(0, count("SELECT COUNT(*) FROM survey.message_templates "
                 + "WHERE message LIKE '%<TOKEN>%' OR subject LIKE '%<TOKEN>%'"));
-        assertTrue(count("SELECT COUNT(*) FROM survey.message_templates WHERE message LIKE '%<ACCESS_CODE>%'") > 0,
-                "the V0.0.3 seed template should now contain <ACCESS_CODE>");
     }
 
     /** UC-010: the registration response names the respondent credential accessCode. */

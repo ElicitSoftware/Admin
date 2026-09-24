@@ -17,6 +17,7 @@ import java.util.LinkedHashSet;
 import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -47,12 +48,13 @@ class UserTest {
         assertEquals(departments, user.getDepartments());
     }
 
+    /** UC-028: a user with no department is recognised as such; there is no silent fallback. */
     @Test
-    void getDepartmentIdDefaultsToOneWhenNoDepartmentsAssigned() {
+    void hasDepartmentsIsFalseWhenNoneAssigned() {
         User user = new User();
+        assertFalse(user.hasDepartments(), "a transient user has no departments");
         user.setDepartments(Set.of());
-
-        assertEquals(1L, user.getDepartmentId(1));
+        assertFalse(user.hasDepartments());
     }
 
     @Test
@@ -63,8 +65,9 @@ class UserTest {
         assertNull(user.getDepartment(1));
     }
 
+    /** UC-028: an assigned department is reported, and the first one is reachable positionally. */
     @Test
-    void getDepartmentIdAndGetDepartmentReturnFirstAssignedDepartment() {
+    void getDepartmentReturnsFirstAssignedDepartment() {
         User user = new User();
         Department department = new Department();
         department.id = 42;
@@ -72,7 +75,7 @@ class UserTest {
         departments.add(department);
         user.setDepartments(departments);
 
-        assertEquals(42L, user.getDepartmentId(1));
+        assertTrue(user.hasDepartments());
         assertEquals(department, user.getDepartment(1));
     }
 

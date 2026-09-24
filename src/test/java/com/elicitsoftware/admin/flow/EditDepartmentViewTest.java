@@ -11,12 +11,22 @@ package com.elicitsoftware.admin.flow;
  * ***LICENSE_END***
  */
 
+import com.elicitsoftware.model.Department;
+import com.elicitsoftware.model.User;
+import io.quarkus.narayana.jta.QuarkusTransaction;
+import io.quarkus.test.security.TestSecurity;
+import org.junit.jupiter.api.AfterEach;
 import com.elicitsoftware.test.PostgresTestResource;
 import com.vaadin.browserless.quarkus.QuarkusBrowserlessTest;
 import com.vaadin.flow.component.UI;
 import com.vaadin.flow.component.button.Button;
 import com.vaadin.flow.component.textfield.EmailField;
 import com.vaadin.flow.component.textfield.TextField;
+import com.vaadin.flow.router.BeforeEnterEvent;
+import com.vaadin.flow.router.Location;
+import com.vaadin.flow.router.NavigationTrigger;
+import com.vaadin.flow.router.RouteParameters;
+import java.util.Collections;
 import io.quarkus.test.common.QuarkusTestResource;
 import io.quarkus.test.junit.QuarkusTest;
 import jakarta.enterprise.inject.spi.CDI;
@@ -104,5 +114,53 @@ class EditDepartmentViewTest extends QuarkusBrowserlessTest {
         fromEmail().setValue("not-an-email");
         assertFalse(saveButton().isEnabled(),
                 "Save must disable when the from-email is not a valid address");
+    }
+    @AfterEach
+    void cleanup() {
+        QuarkusTransaction.requiringNew().run(() -> {
+            User.<User>list("username like ?1", "uc028.%").forEach(u -> {
+                if (u.getDepartments() != null) {
+                    u.getDepartments().clear();
+                }
+                u.delete();
+            });
+            // Flush the entity deletes (and their join rows) before the bulk delete below runs.
+            User.getEntityManager().flush();
+            Department.delete("code like ?1", "UC028%");
+        });
+    }
+
+    /** UC-028 BR-113 / step 5: saving a new department assigns it to the administrator who created it. */
+    @Test
+    @TestSecurity(user = "uc028.deptadmin", roles = {"elicit_admin"})
+    void savingANewDepartmentAssignsItToTheCreator() {
+        QuarkusTransaction.requiringNew().run(() -> {
+            User user = new User();
+            user.setUsername("uc028.deptadmin");
+            user.setFirstName("Dee");
+            user.setLastName("Admin");
+            user.setActive(true);
+            user.persist();
+        });
+        // Route navigation is unavailable here, so enter create mode the way the router would.
+        UI ui = UI.getCurrent();
+        view.beforeEnter(new BeforeEnterEvent(ui.getInternals().getRouter(), NavigationTrigger.PROGRAMMATIC,
+                new Location(""), EditDepartmentView.class, new RouteParameters("id", "0"), ui, Collections.emptyList()));
+        textField("editDepartmentView.name").setValue("UC028 Created Dept");
+        textField("editDepartmentView.code").setValue("UC028-C");
+        textField("editDepartmentView.defaultMessageId").setValue("1");
+        fromEmail().setValue("uc028@example.org");
+
+        view.saveDepartment();
+
+        QuarkusTransaction.requiringNew().run(() -> {
+            assertTrue(Department.count("code = ?1", "UC028-C") == 1, "the department should have been saved");
+            User reloaded = User.find("username = ?1", "uc028.deptadmin").firstResult();
+            assertTrue(reloaded.getDepartments().stream().anyMatch(d -> "UC028-C".equals(d.code)),
+                    "the creator should be assigned to the department they just created");
+        });
+        User sessionUser = CDI.current().select(UiSessionLogin.class).get().getUser();
+        assertTrue(sessionUser != null && sessionUser.hasDepartments(),
+                "the session record is refreshed so the console notices without a re-login (BR-114)");
     }
 }

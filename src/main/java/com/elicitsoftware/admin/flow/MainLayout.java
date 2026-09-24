@@ -24,6 +24,7 @@ import com.vaadin.flow.component.Component;
 import com.vaadin.flow.component.HasElement;
 import com.vaadin.flow.component.applayout.AppLayout;
 import com.vaadin.flow.component.applayout.DrawerToggle;
+import com.vaadin.flow.component.dialog.Dialog;
 import com.vaadin.flow.component.html.Anchor;
 import com.vaadin.flow.component.html.Div;
 import com.vaadin.flow.component.html.Image;
@@ -117,6 +118,9 @@ public class MainLayout extends AppLayout implements AfterNavigationListener {
      * The current authenticated user.
      */
     User user;
+
+    /** The open no-department dialog, if any, so navigations reuse one overlay (UC-028). */
+    private Dialog missingDepartmentDialog;
 
     /**
      * Default constructor for Vaadin layout component instantiation.
@@ -368,6 +372,7 @@ public class MainLayout extends AppLayout implements AfterNavigationListener {
      */
     @Override
     public void showRouterLayoutContent(HasElement content) {
+        gateOnDepartment(content);
         boolean surveyInstalled = surveyPresence.isSurveyInstalled();
         // Only an administrator can rename accounts, so only an administrator is warned (UC-021 A2).
         List<String> seededAccounts = identity.hasRole(ElicitRoles.ADMIN)
@@ -392,5 +397,64 @@ public class MainLayout extends AppLayout implements AfterNavigationListener {
         }
         wrapper.add((Component) content);
         setContent(wrapper);
+    }
+
+    /**
+     * Opens the blocking no-department dialog when the signed-in user has no department, and
+     * closes it once they have one (UC-028).
+     * <p>
+     * Evaluated on every navigation like the banners above, so an assignment made anywhere --
+     * by creating a department, by another administrator editing this account -- clears the
+     * dialog on the next screen with no restart and no re-login (BR-114). The check is free in
+     * the ordinary case: the session record already carries its departments, and the database
+     * is re-read only when that record shows none. An administrator on Departments or Edit
+     * Department is never blocked, because that is where the remedy lives (BR-111). A principal
+     * with no console record at all is left to UC-001's handling: the dialog would only mislead.
+     *
+     * @param content the routed view about to be shown
+     */
+    private void gateOnDepartment(HasElement content) {
+        boolean administrator = identity.hasRole(ElicitRoles.ADMIN);
+        // instanceof, not class equality: CDI hands the router intercepted subclasses of the views.
+        boolean onRemedyScreen = administrator && isDepartmentRemedyScreen(content);
+        if (onRemedyScreen || !lacksDepartment()) {
+            closeMissingDepartmentDialog();
+            return;
+        }
+        if (missingDepartmentDialog == null || !missingDepartmentDialog.isOpened()) {
+            missingDepartmentDialog = administrator
+                    ? MissingDepartmentDialog.forAdministrator() : MissingDepartmentDialog.forUser();
+            missingDepartmentDialog.open();
+        }
+    }
+
+    /**
+     * Whether the signed-in user has a console record but no department, re-reading the
+     * record when the session copy shows none (UC-028 BR-114).
+     */
+    private boolean lacksDepartment() {
+        User current = uiSessionLogin.getUser();
+        if (current == null || current.hasDepartments()) {
+            return false;
+        }
+        // The session copy may be stale: someone may have assigned a department since sign-in.
+        uiSessionLogin.refresh();
+        current = uiSessionLogin.getUser();
+        return current != null && !current.hasDepartments();
+    }
+
+    /**
+     * The screens an administrator must still reach while blocked for want of a department
+     * (UC-028 BR-111): the blocking notice must not block its own remedy.
+     */
+    private static boolean isDepartmentRemedyScreen(HasElement content) {
+        return content instanceof DepartmentsView || content instanceof EditDepartmentView;
+    }
+
+    private void closeMissingDepartmentDialog() {
+        if (missingDepartmentDialog != null) {
+            missingDepartmentDialog.close();
+            missingDepartmentDialog = null;
+        }
     }
 }

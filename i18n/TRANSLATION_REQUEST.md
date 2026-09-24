@@ -207,7 +207,7 @@ Every row is one key in `translations.properties`. Return a file `translations_<
 | `editDepartmentView.code` | Department code | Edit department · field label | 30 |  |
 | `editDepartmentView.code.helper` | Short abbreviation for the department (e.g. CARD, HR) | Edit department · field helper text | 80 |  |
 | `editDepartmentView.defaultMessageId` | Default message ID | Edit department · field label | 30 |  |
-| `editDepartmentView.defaultMessageId.helper` | Default message template ID | Edit department · field helper text | 60 |  |
+| `editDepartmentView.defaultMessageId.helper` | ID of an existing message template, sent on registration | Edit department · field helper text | 60 |  |
 | `editDepartmentView.fromEmail` | From email | Edit department · field label | 30 |  |
 | `editDepartmentView.fromEmail.helper` | Email address that appears as the sender of department communications | Edit department · field helper text | 100 |  |
 | `editDepartmentView.btnCreate` | Create department | Edit department · primary button in create mode | 25 |  |
@@ -312,6 +312,11 @@ Every row is one key in `translations.properties`. Return a file `translations_<
 | `missingSurveyNotice.headline` | No survey is installed in this deployment. | Banner on every screen when no survey is installed · status text | 80 |  |
 | `missingSurveyNotice.adminRemedy` | Apply a survey definition | Missing-survey banner · link to the Apply Survey Definition screen | 40 |  |
 | `missingSurveyNotice.nonAdminRemedy` | Ask a system administrator to apply a survey definition before registering subjects. | Missing-survey banner · text for users who cannot apply a definition | 120 |  |
+| `missingDepartmentDialog.title` | No department assigned | Blocking dialog shown when the signed-in account has no department · dialog title | 40 |  |
+| `missingDepartmentDialog.admin.message` | Your account is not assigned to a department, so the console has nothing to show you. Create the first department to continue; it will be assigned to you automatically. | No-department dialog · body text for an administrator, who can create one | 200 |  |
+| `missingDepartmentDialog.admin.action` | Add a department | No-department dialog · primary button leading to the Departments screen | 25 |  |
+| `missingDepartmentDialog.user.message` | Your account is not assigned to a department, so the console has nothing to show you. Ask an administrator to assign you to one, then sign in again. | No-department dialog · body text for a user, who must ask an administrator | 200 |  |
+| `missingDepartmentDialog.logout` | Logout | No-department dialog · button that signs the user out | 15 |  |
 | `paginationControls.pageSize` | Page size | Grid pager · label next to the page size selector | 15 |  |
 | `paginationControls.pageOf` | Page {0} of {1} | Grid pager · current page label | 20 | params: {0} = current page, {1} = page count |
 | `paginationControls.firstPage` | Go to first page | Grid pager · accessible name of an icon button | 30 |  |
@@ -418,6 +423,8 @@ Every row is one key in `translations.properties`. Return a file `translations_<
 | `systemOverviewView.warning.noSurvey` | No survey is installed. Apply a survey definition before registering subjects. | System overview · outstanding setup item | 120 |  |
 | `systemOverviewView.warning.noSenderAddress` | No department has a sender address, so invitations have no From address. | System overview · outstanding setup item | 120 |  |
 | `systemOverviewView.warning.noAccessCodeTemplate` | No message template contains the <ACCESS_CODE> placeholder, so no invitation can carry a survey link. | System overview · outstanding setup item | 140 | keep <ACCESS_CODE> as it is |
+| `systemOverviewView.warning.noDepartment` | No department exists. Create one on the Departments screen before registering subjects. | System overview · outstanding setup item | 120 |  |
+| `systemOverviewView.warning.noMessageTemplate` | No message template exists, so registering a subject sends no invitation. Create one on the Message Templates screen. | System overview · outstanding setup item | 140 |  |
 | `systemOverviewView.warning.legacySetting` | The setting {0} is configured but no longer read; use {1} instead. | System overview · outstanding setup item | 120 | params: {0} = old property name, {1} = new property name |
 | `systemOverviewView.remedy.users` | Open Users | System overview · link after a setup item | 25 |  |
 | `systemOverviewView.remedy.applySurveyDefinition` | Apply a survey definition | System overview · link after a setup item | 30 |  |
@@ -688,7 +695,7 @@ editDepartmentView.name=Department name
 editDepartmentView.code=Department code
 editDepartmentView.code.helper=Short abbreviation for the department (e.g. CARD, HR)
 editDepartmentView.defaultMessageId=Default message ID
-editDepartmentView.defaultMessageId.helper=Default message template ID
+editDepartmentView.defaultMessageId.helper=ID of an existing message template, sent on registration
 editDepartmentView.fromEmail=From email
 editDepartmentView.fromEmail.helper=Email address that appears as the sender of department communications
 editDepartmentView.btnCreate=Create department
@@ -793,6 +800,11 @@ messageTemplatesView.newTemplate=New Message Template
 missingSurveyNotice.headline=No survey is installed in this deployment.
 missingSurveyNotice.adminRemedy=Apply a survey definition
 missingSurveyNotice.nonAdminRemedy=Ask a system administrator to apply a survey definition before registering subjects.
+missingDepartmentDialog.title=No department assigned
+missingDepartmentDialog.admin.message=Your account is not assigned to a department, so the console has nothing to show you. Create the first department to continue; it will be assigned to you automatically.
+missingDepartmentDialog.admin.action=Add a department
+missingDepartmentDialog.user.message=Your account is not assigned to a department, so the console has nothing to show you. Ask an administrator to assign you to one, then sign in again.
+missingDepartmentDialog.logout=Logout
 paginationControls.pageSize=Page size
 paginationControls.pageOf=Page {0} of {1}
 paginationControls.firstPage=Go to first page
@@ -899,6 +911,8 @@ systemOverviewView.nothingOutstanding=Nothing outstanding.
 systemOverviewView.warning.noSurvey=No survey is installed. Apply a survey definition before registering subjects.
 systemOverviewView.warning.noSenderAddress=No department has a sender address, so invitations have no From address.
 systemOverviewView.warning.noAccessCodeTemplate=No message template contains the <ACCESS_CODE> placeholder, so no invitation can carry a survey link.
+systemOverviewView.warning.noDepartment=No department exists. Create one on the Departments screen before registering subjects.
+systemOverviewView.warning.noMessageTemplate=No message template exists, so registering a subject sends no invitation. Create one on the Message Templates screen.
 systemOverviewView.warning.legacySetting=The setting {0} is configured but no longer read; use {1} instead.
 systemOverviewView.remedy.users=Open Users
 systemOverviewView.remedy.applySurveyDefinition=Apply a survey definition

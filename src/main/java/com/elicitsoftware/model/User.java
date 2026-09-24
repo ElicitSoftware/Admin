@@ -332,22 +332,17 @@ public class User extends PanacheEntityBase {
     }
 
     /**
-     * Gets the ID of the department at the specified position.
-     * 
-     * <p>This transient method provides positional access to department IDs
-     * for cases where the first assigned department ID is needed. Returns
-     * a default value of 1 if no departments are assigned.</p>
-     * 
-     * @param position the position (1-based) of the department
-     * @return the department ID at the specified position, or 1 if not found
+     * Whether this user is assigned to at least one department (UC-028).
+     *
+     * <p>A console user with no department can see nothing and register nobody; the
+     * layout gates the console on this answer. The set is never {@code null} for a loaded
+     * row (the mapping is eager), but a transient instance may not have one yet.</p>
+     *
+     * @return {@code true} when at least one department is assigned
      */
     @Transient
-    public long getDepartmentId(int position) {
-        if (departments.size() > 0) {
-            Department[] depArray = this.departments.toArray(new Department[departments.size()]);
-            return depArray[position - 1].id;
-        }
-        return 1;
+    public boolean hasDepartments() {
+        return departments != null && !departments.isEmpty();
     }
 
     /**

@@ -232,6 +232,12 @@ public class RegisterView extends HorizontalLayout implements HasDynamicTitle, B
     public void init() {
 
         user = uiSessionLogin.getUser();
+        if (user == null) {
+            // UC-001 A1: no console record for this principal. SearchView explains the same
+            // condition; without this guard the view fails on the first user access below.
+            add(noUserNotice());
+            return;
+        }
 
         FormLayout formLayout = new FormLayout();
         formLayout.setResponsiveSteps(
@@ -456,6 +462,9 @@ public class RegisterView extends HorizontalLayout implements HasDynamicTitle, B
      */
     @Override
     public void beforeEnter(BeforeEnterEvent event) {
+        if (user == null) {
+            return; // no console record: init() already showed the explanation (UC-001 A1)
+        }
         // Authorization is now handled by @RolesAllowed annotation
         refreshMissingSurveyNotice();
 
@@ -1093,5 +1102,19 @@ public class RegisterView extends HorizontalLayout implements HasDynamicTitle, B
             missingSurveyNotice = MissingSurveyNotice.emptyState(identity.hasRole("elicit_admin"));
             addComponentAsFirst(missingSurveyNotice);
         }
+    }
+    /**
+     * The explanation shown instead of the form when the signed-in principal has no console
+     * record (UC-001 A1), worded exactly as SearchView words it.
+     */
+    private Div noUserNotice() {
+        Div errorDiv = new Div();
+        errorDiv.add(new Paragraph(getTranslation("searchView.noUser.loggedIn")));
+        Span principal = new Span(identity.getPrincipal().getName());
+        principal.addClassName(LumoUtility.FontWeight.BOLD);
+        errorDiv.add(new Paragraph(new Span(getTranslation("searchView.noUser.before")), principal,
+                new Span(getTranslation("searchView.noUser.after"))));
+        errorDiv.add(new Paragraph(getTranslation("searchView.noUser.help")));
+        return errorDiv;
     }
 }
