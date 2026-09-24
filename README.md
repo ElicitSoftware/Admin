@@ -230,6 +230,8 @@ The OIDC server can be congifured with enviromental properties.
 Please visit <a href="https://quarkus.io/guides/security-oidc-configuration-properties-reference" target="_blank">Quarkus.io</a> for a list of configuration properties. 
 
 For email configuration including examples for GMail, AWS SES, Mailjet & SendMail visit <a href="https://quarkus.io/guides/mailer-reference" target="_blank">Quarkus.io</a>
+
+After a survey definition is installed or updated (`/api/secured/survey/apply`, `/import`, `/update`, or the Apply Survey Definition page), Admin asks the Survey application to rebuild its reporting star schema by calling `POST {ELICIT_SURVEY_URL}/api/etl/build` (default `http://survey:8080`, the compose service name; `http://localhost:8080` in dev). The outcome is appended to the result ("Reporting schema rebuilt." / "Reporting schema not rebuilt: ...") and never fails the apply; set `ELICIT_SURVEY_ETL_BUILD_ENABLED=false` to skip the call. The Survey application also appears on System > Connections.
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 
 <!-- ROADMAP

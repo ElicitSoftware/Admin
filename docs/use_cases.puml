@@ -7,6 +7,7 @@ actor "Integration Client" as importer
 actor "OIDC Provider" as oidc
 actor "Scheduler" as scheduler
 actor "Report Service" as reportsvc
+actor "Survey Application" as surveyapp
 
 rectangle "Elicit Admin" {
     ' --- Interactive console (user + admin) ---
@@ -87,6 +88,10 @@ importer --> UC010
 oidc --> UC001
 scheduler --> UC004
 reportsvc --> UC005
+UC014 --> surveyapp : rebuild reporting schema\n(POST /api/etl/build)
+UC017 --> surveyapp : rebuild reporting schema
+UC018 --> surveyapp : rebuild reporting schema
+UC025 --> surveyapp : probes reachability
 
 ' Shared subflows
 UC003 ..> UC015 : <<include>>

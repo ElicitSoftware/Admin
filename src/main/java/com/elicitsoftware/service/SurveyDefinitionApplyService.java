@@ -38,9 +38,15 @@ import java.util.UUID;
  * <p>
  * Routing only. It makes no schema changes of its own — the service it delegates to does all the
  * work, inside that service's own transaction, and its result is returned unchanged.
+ * <p>
+ * One thing happens after a successful apply, once that transaction has committed: the Survey
+ * application is asked to rebuild its reporting schema ({@link ReportingSchemaRebuildClient}),
+ * so the survey just installed or updated is reportable without a restart. The outcome is
+ * reported alongside the result and never fails the apply.
  *
  * @see SurveyDefinitionImportService
  * @see SurveyDefinitionUpdateService
+ * @see ReportingSchemaRebuildClient
  */
 @ApplicationScoped
 public class SurveyDefinitionApplyService {
@@ -69,9 +75,28 @@ public class SurveyDefinitionApplyService {
     @Inject
     SurveyDefinitionUpdateService updateService;
 
-    /** Which service a file was routed to, and what that service reported. */
+    @Inject
+    ReportingSchemaRebuildClient reportingSchemaRebuildClient;
+
+    /**
+     * Which service a file was routed to, and what that service reported.
+     *
+     * @param action    the operation selected for the file
+     * @param surveyKey the file's stable survey key, or {@code null} if it was rejected before one was read
+     * @param success   whether the selected service applied the file
+     * @param message   the routing summary or the failure reason
+     * @param detail    the import or update service's own result, or {@code null}
+     * @param reporting the reporting schema rebuild's summary line after a successful apply
+     *                  ("Reporting schema rebuilt." or "Reporting schema not rebuilt: ..."), or
+     *                  {@code null} when nothing was applied or the call is disabled
+     */
     public record ApplyResult(Action action, UUID surveyKey, boolean success, String message,
-            Object detail) {
+            Object detail, String reporting) {
+
+        /** A result with no reporting outcome: a rejection, a failure, or a rebuild that was skipped. */
+        public ApplyResult(Action action, UUID surveyKey, boolean success, String message, Object detail) {
+            this(action, surveyKey, success, message, detail, null);
+        }
 
         /** The operation {@link SurveyDefinitionApplyService} selected for a file. */
         public enum Action {
@@ -127,7 +152,8 @@ public class SurveyDefinitionApplyService {
                     result.isSuccess()
                             ? "Installed as a new survey"
                             : String.join("; ", result.getErrors()),
-                    result);
+                    result,
+                    result.isSuccess() ? rebuildReportingSchema() : null);
         }
 
         SurveyDefinitionUpdateService.UpdateResult result = updateService.updateFromFile(
@@ -136,7 +162,18 @@ public class SurveyDefinitionApplyService {
                 result.isSuccess()
                         ? "Applied to existing survey " + existing.id
                         : String.join("; ", result.getErrors()),
-                result);
+                result,
+                result.isSuccess() ? rebuildReportingSchema() : null);
+    }
+
+    /**
+     * Asks Survey to rebuild its reporting schema now that the definition is committed. Runs
+     * outside the import/update transaction (this method is not transactional and the delegate
+     * has returned), so Survey sees the committed rows. The line comes back for the result and
+     * the apply stands whatever it says.
+     */
+    private String rebuildReportingSchema() {
+        return reportingSchemaRebuildClient.rebuild().summaryLine();
     }
 
     /**

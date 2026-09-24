@@ -12,6 +12,7 @@ package com.elicitsoftware.rest;
  */
 
 import com.elicitsoftware.admin.upload.MultipartBody;
+import com.elicitsoftware.service.ReportingSchemaRebuildClient;
 import com.elicitsoftware.service.SurveyDefinitionUpdateService;
 import io.quarkus.logging.Log;
 import jakarta.annotation.security.RolesAllowed;
@@ -47,6 +48,9 @@ public class SurveyDefinitionUpdateResource {
 
     @Inject
     SurveyDefinitionUpdateService surveyDefinitionUpdateService;
+
+    @Inject
+    ReportingSchemaRebuildClient reportingSchemaRebuildClient;
 
     /**
      * Applies a survey definition file to the survey identified by {@code multipartBody.surveyId}.
@@ -93,6 +97,9 @@ public class SurveyDefinitionUpdateResource {
             );
 
             if (result.isSuccess()) {
+                // The update has committed (updateFromFile is transactional and has returned),
+                // so Survey can see the new versions; the rebuild's outcome never fails the update.
+                response.setReporting(reportingSchemaRebuildClient.rebuild().summaryLine());
                 return Response.ok(response).build();
             } else {
                 boolean notFound = result.getErrors().stream().anyMatch(e -> e.contains("Target survey not found"));
@@ -133,6 +140,7 @@ public class SurveyDefinitionUpdateResource {
         private boolean success;
         private String message;
         private Map<String, SurveyDefinitionUpdateService.TableUpdateCounts> counts;
+        private String reporting;
 
         /**
          * Default constructor for JSON serialization.
@@ -165,6 +173,16 @@ public class SurveyDefinitionUpdateResource {
 
         /** @param message status or error message */
         public void setMessage(String message) { this.message = message; }
+
+        /**
+         * @return after a successful update, whether the Survey application rebuilt its reporting
+         *     schema ("Reporting schema rebuilt." or "Reporting schema not rebuilt: ..."); {@code null}
+         *     if nothing was updated or the call is disabled
+         */
+        public String getReporting() { return reporting; }
+
+        /** @param reporting the reporting schema rebuild's summary line */
+        public void setReporting(String reporting) { this.reporting = reporting; }
 
         /** @return per-table created/versioned/unchanged breakdown */
         public Map<String, SurveyDefinitionUpdateService.TableUpdateCounts> getCounts() { return counts; }

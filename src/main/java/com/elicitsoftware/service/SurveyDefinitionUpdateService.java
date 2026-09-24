@@ -22,6 +22,7 @@ import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.math.BigDecimal;
 import java.nio.charset.StandardCharsets;
 import java.time.OffsetDateTime;
 import java.util.ArrayList;
@@ -671,7 +672,7 @@ public class SurveyDefinitionUpdateService {
             throw new IllegalArgumentException("steps requires 11 fields, got " + fields.length);
         }
         UUID elementKey = requireElementKey(fields[1], "steps");
-        Integer displayOrder = SurveyDefinitionFileFields.parseIntOrNull(fields[2]);
+        BigDecimal displayOrder = SurveyDefinitionFileFields.parseDecimalOrNull(fields[2]);
         String name = SurveyDefinitionFileFields.nullIfEmpty(fields[3]);
         String dimensionName = SurveyDefinitionFileFields.nullIfEmpty(fields[4]);
         // Default dimension_name to step name if empty (NOT NULL constraint). Done before the
@@ -699,7 +700,7 @@ public class SurveyDefinitionUpdateService {
         Long oldSurrogateId = ((Number) current[0]).longValue();
         Long durableId = ((Number) current[1]).longValue();
         int oldVersion = ((Number) current[2]).intValue();
-        boolean unchanged = Objects.equals(displayOrder, current[3]) && Objects.equals(name, current[4])
+        boolean unchanged = SurveyDefinitionFileFields.sameNumber(displayOrder, current[3]) && Objects.equals(name, current[4])
                 && Objects.equals(dimensionName, current[5]) && Objects.equals(description, current[6]);
         if (unchanged) {
             return new UpsertOutcome(durableId, ChangeType.UNCHANGED);
@@ -728,7 +729,7 @@ public class SurveyDefinitionUpdateService {
             throw new IllegalArgumentException("sections requires 11 fields, got " + fields.length);
         }
         UUID elementKey = requireElementKey(fields[1], "sections");
-        Integer displayOrder = SurveyDefinitionFileFields.parseIntOrNull(fields[2]);
+        BigDecimal displayOrder = SurveyDefinitionFileFields.parseDecimalOrNull(fields[2]);
         String name = SurveyDefinitionFileFields.nullIfEmpty(fields[3]);
         String dimensionName = SurveyDefinitionFileFields.nullIfEmpty(fields[4]);
         if (dimensionName == null) {
@@ -753,7 +754,7 @@ public class SurveyDefinitionUpdateService {
         Long oldSurrogateId = ((Number) current[0]).longValue();
         Long durableId = ((Number) current[1]).longValue();
         int oldVersion = ((Number) current[2]).intValue();
-        boolean unchanged = Objects.equals(displayOrder, current[3]) && Objects.equals(name, current[4])
+        boolean unchanged = SurveyDefinitionFileFields.sameNumber(displayOrder, current[3]) && Objects.equals(name, current[4])
                 && Objects.equals(dimensionName, current[5]) && Objects.equals(description, current[6]);
         if (unchanged) {
             return new UpsertOutcome(durableId, ChangeType.UNCHANGED);
@@ -785,10 +786,10 @@ public class SurveyDefinitionUpdateService {
         UUID elementKey = requireElementKey(fields[1], "steps_sections");
         Long newStepId = SurveyDefinitionFileFields.resolveRequired(
                 SurveyDefinitionFileFields.parseLongOrNull(fields[2]), stepIdMap, "step (for steps_sections)");
-        Integer stepDisplayOrder = SurveyDefinitionFileFields.parseIntOrNull(fields[3]);
+        BigDecimal stepDisplayOrder = SurveyDefinitionFileFields.parseDecimalOrNull(fields[3]);
         Long newSectionId = SurveyDefinitionFileFields.resolveRequired(
                 SurveyDefinitionFileFields.parseLongOrNull(fields[4]), sectionIdMap, "section (for steps_sections)");
-        Integer sectionDisplayOrder = SurveyDefinitionFileFields.parseIntOrNull(fields[5]);
+        BigDecimal sectionDisplayOrder = SurveyDefinitionFileFields.parseDecimalOrNull(fields[5]);
         // Rebased before the unchanged-comparison below, for the same reason as the survey's
         // initial_display_key — see SurveyDefinitionFileFields#rebaseDisplayKey.
         String displayKey = SurveyDefinitionFileFields.rebaseDisplayKey(fields[6], surveyId);
@@ -811,8 +812,8 @@ public class SurveyDefinitionUpdateService {
         Long oldSurrogateId = ((Number) current[0]).longValue();
         Long durableId = ((Number) current[1]).longValue();
         int oldVersion = ((Number) current[2]).intValue();
-        boolean unchanged = Objects.equals(newStepId, toLong(current[3])) && Objects.equals(stepDisplayOrder, current[4])
-                && Objects.equals(newSectionId, toLong(current[5])) && Objects.equals(sectionDisplayOrder, current[6])
+        boolean unchanged = Objects.equals(newStepId, toLong(current[3])) && SurveyDefinitionFileFields.sameNumber(stepDisplayOrder, current[4])
+                && Objects.equals(newSectionId, toLong(current[5])) && SurveyDefinitionFileFields.sameNumber(sectionDisplayOrder, current[6])
                 && Objects.equals(displayKey, current[7]);
         if (unchanged) {
             return new UpsertOutcome(durableId, ChangeType.UNCHANGED);
@@ -929,7 +930,7 @@ public class SurveyDefinitionUpdateService {
                 SurveyDefinitionFileFields.parseLongOrNull(fields[2]), questionIdMap, "question (for sections_questions)");
         Long newSectionId = SurveyDefinitionFileFields.resolveRequired(
                 SurveyDefinitionFileFields.parseLongOrNull(fields[3]), sectionIdMap, "section (for sections_questions)");
-        Integer displayOrder = SurveyDefinitionFileFields.parseIntOrNull(fields[4]);
+        BigDecimal displayOrder = SurveyDefinitionFileFields.parseDecimalOrNull(fields[4]);
 
         Object[] current = findCurrentRow("survey.sections_questions", "sections_question_key", elementKey, surveyId,
                 "id, sections_question_id, version, question_id, section_id, display_order");
@@ -950,7 +951,7 @@ public class SurveyDefinitionUpdateService {
         Long durableId = ((Number) current[1]).longValue();
         int oldVersion = ((Number) current[2]).intValue();
         boolean unchanged = Objects.equals(newQuestionId, toLong(current[3])) && Objects.equals(newSectionId, toLong(current[4]))
-                && Objects.equals(displayOrder, current[5]);
+                && SurveyDefinitionFileFields.sameNumber(displayOrder, current[5]);
         if (unchanged) {
             return new UpsertOutcome(durableId, ChangeType.UNCHANGED);
         }

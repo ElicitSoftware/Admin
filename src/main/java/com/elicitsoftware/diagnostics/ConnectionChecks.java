@@ -87,6 +87,14 @@ public class ConnectionChecks {
         value(config, "quarkus.oidc.auth-server-url").ifPresent(url ->
                 targets.add(new Target("Identity provider", "quarkus.oidc.auth-server-url", url, Kind.OIDC_DISCOVERY)));
 
+        // The Survey application, which a survey definition apply asks to rebuild its reporting
+        // schema (UC-018 step 7). Probed at its root: the endpoint itself only takes POST.
+        boolean etlBuild = config.getOptionalValue("elicit.survey.etl-build.enabled", Boolean.class).orElse(true);
+        if (etlBuild) {
+            value(config, "elicit.survey.url").ifPresent(url ->
+                    targets.add(new Target("Survey application", "elicit.survey.url (reporting schema rebuild)", url, Kind.HTTP)));
+        }
+
         for (ReportDefinition report : ReportDefinition.<ReportDefinition>listAll()) {
             if (report.url != null && !report.url.isBlank()) {
                 String survey = report.survey != null ? report.survey.name : "?";

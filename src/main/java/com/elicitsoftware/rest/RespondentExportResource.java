@@ -44,7 +44,8 @@ public class RespondentExportResource {
      *
      * @param id respondent id
      * @param respondentIdAlias optional alias query parameter: respondent_id
-     * @return Export file as a downloadable text file
+     * @return Export file as a downloadable text file; 404 when the respondent does not exist,
+     *         409 when the export is refused because a subject's department has no code (UC-011 A3)
      */
     @GET
     @RolesAllowed("elicit_admin")
@@ -67,6 +68,13 @@ public class RespondentExportResource {
                     .build();
         } catch (IllegalArgumentException e) {
             return Response.status(Response.Status.NOT_FOUND)
+                    .entity(e.getMessage())
+                    .type(MediaType.TEXT_PLAIN)
+                    .build();
+        } catch (IllegalStateException e) {
+            // The respondent exists but cannot be exported portably (e.g. a department without a
+            // code, BR-100); the message tells the administrator what to fix.
+            return Response.status(Response.Status.CONFLICT)
                     .entity(e.getMessage())
                     .type(MediaType.TEXT_PLAIN)
                     .build();
