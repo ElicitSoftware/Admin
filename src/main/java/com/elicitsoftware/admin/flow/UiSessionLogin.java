@@ -18,6 +18,7 @@ import io.quarkus.logging.Log;
 import io.quarkus.security.identity.SecurityIdentity;
 import jakarta.annotation.PostConstruct;
 import jakarta.inject.Inject;
+import jakarta.transaction.Transactional;
 import jakarta.persistence.Transient;
 
 import java.io.Serializable;
@@ -119,19 +120,43 @@ public class UiSessionLogin implements Serializable {
      */
     @PostConstruct
     public void init() {
-        String principalName = identity.getPrincipal().getName();
-        Log.debugf("Initializing UI for principal: %s", principalName);
-
         // This runs once per UI session (browser tab/window)
-        User user = User.find("username = ?1 and active = true", principalName).firstResult(); // i18n:ignore (JPQL)
+        Log.debugf("Initializing UI for principal: %s", identity.getPrincipal().getName());
+        store(lookup());
+    }
 
+    /**
+     * Re-reads the console record for the signed-in principal and replaces the one held in
+     * the session (UC-028 BR-114).
+     *
+     * <p>The session copy is taken once at sign-in, so a department assigned afterwards --
+     * by the administrator creating one, or by another administrator editing their account --
+     * is invisible until the next sign-in. Calling this after such a change lets the console
+     * notice it on the next screen without a restart or a re-login. The same lookup and the
+     * same null handling as {@link #init()} apply, so a record that has since been deactivated
+     * is treated exactly as it would have been at sign-in.</p>
+     */
+    @Transactional
+    public void refresh() {
+        // Transactional so the lookup runs in a session of its own: the query always goes to
+        // the database, but a record already managed by the calling session would come back
+        // with its departments as they were first loaded, not as they are now.
+        store(lookup());
+    }
+
+    private User lookup() {
+        String principalName = identity.getPrincipal().getName();
+        return User.find("username = ?1 and active = true", principalName).firstResult(); // i18n:ignore (JPQL)
+    }
+
+    private void store(User user) {
         if (user != null) {
-            Log.debugf("Found active user for principal: %s", principalName);
+            Log.debugf("Found active user for principal: %s", user.getUsername());
             VaadinSession.getCurrent().setAttribute("user", user);
         } else {
             // User not found or inactive - the UI handles the error state and redirects.
             // Note: we deliberately do not log the roster of active usernames here (info leak).
-            Log.warnf("No active user found for authenticated principal: %s", principalName);
+            Log.warnf("No active user found for authenticated principal: %s", identity.getPrincipal().getName());
             VaadinSession.getCurrent().setAttribute("user", null);
         }
     }

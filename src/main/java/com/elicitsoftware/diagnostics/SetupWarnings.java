@@ -69,11 +69,20 @@ public class SetupWarnings {
             warnings.add(new Warning(Translations.get("systemOverviewView.warning.noSurvey"),
                     Remedy.APPLY_SURVEY_DEFINITION));
         }
-        if (Department.count("fromEmail is not null and fromEmail <> ''") == 0) {
+        // A fresh deployment ships no department (UC-028 C-016); that is the item to fix first,
+        // and the sender-address check only means something once a department exists.
+        if (Department.count() == 0) {
+            warnings.add(new Warning(Translations.get("systemOverviewView.warning.noDepartment"),
+                    Remedy.DEPARTMENTS));
+        } else if (Department.count("fromEmail is not null and fromEmail <> ''") == 0) {
             warnings.add(new Warning(Translations.get("systemOverviewView.warning.noSenderAddress"),
                     Remedy.DEPARTMENTS));
         }
-        if (MessageTemplate.count() > 0 && MessageTemplate.count("message like ?1", "%<ACCESS_CODE>%") == 0) {
+        // Likewise no message template is seeded; without one, registration builds no invitation.
+        if (MessageTemplate.count() == 0) {
+            warnings.add(new Warning(Translations.get("systemOverviewView.warning.noMessageTemplate"),
+                    Remedy.MESSAGE_TEMPLATES));
+        } else if (MessageTemplate.count("message like ?1", "%<ACCESS_CODE>%") == 0) {
             warnings.add(new Warning(Translations.get("systemOverviewView.warning.noAccessCodeTemplate"),
                     Remedy.MESSAGE_TEMPLATES));
         }

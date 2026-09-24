@@ -39,6 +39,7 @@ import com.vaadin.flow.router.Route;
 import com.vaadin.flow.theme.lumo.LumoUtility;
 import jakarta.annotation.PostConstruct;
 import jakarta.annotation.security.RolesAllowed;
+import io.quarkus.security.identity.SecurityIdentity;
 import jakarta.inject.Inject;
 
 import java.util.ArrayList;
@@ -77,6 +78,14 @@ public class EditUserView extends VerticalLayout implements BeforeEnterObserver 
     /** Service that owns the transactional persistence of users. */
     @Inject
     UserService userService;
+
+    /** Re-read when an administrator edits their own account (UC-028 BR-114). */
+    @Inject
+    UiSessionLogin uiSessionLogin;
+
+    /** Tells whether the account being edited is the signed-in administrator's own. */
+    @Inject
+    SecurityIdentity identity;
 
     /** Service that owns the transactional persistence of database role grants. */
     @Inject
@@ -315,6 +324,12 @@ public class EditUserView extends VerticalLayout implements BeforeEnterObserver 
             } else {
                 userRoleService.clearRole(user.getId());
             }
+        }
+
+        // An administrator assigning a department to their own account should see the console
+        // notice it on the next screen, not at the next sign-in (UC-028 BR-114).
+        if (user.getUsername() != null && user.getUsername().equals(identity.getPrincipal().getName())) {
+            uiSessionLogin.refresh();
         }
 
         Notification.show(getTranslation("editUserView.saved"));

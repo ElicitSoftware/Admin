@@ -40,6 +40,7 @@ rectangle "Elicit Admin" {
     usecase "UC-023\nDiagnose Branding" as UC023
     usecase "UC-024\nDiagnose Email" as UC024
     usecase "UC-025\nCheck Connections" as UC025
+    usecase "UC-028\nRequire a Department Assignment" as UC028
 
     ' --- Localization ---
     usecase "UC-026\nUse the Console in My Language" as UC026
@@ -58,6 +59,7 @@ user --> UC005
 user --> UC009
 user --> UC019
 user --> UC026
+user --> UC028
 
 ' Administrator (inherits user goals plus administration and data lifecycle)
 admin --> UC001
@@ -86,6 +88,7 @@ admin --> UC024
 admin --> UC025
 admin --> UC026
 admin --> UC027
+admin --> UC028
 
 ' Integration Client
 importer --> UC010
@@ -111,6 +114,9 @@ UC020 ..> UC021 : <<include>>
 UC020 ..> UC019 : <<include>>
 UC021 ..> UC008 : <<directs to>>
 UC020 ..> UC009 : <<directs to>>
+UC001 ..> UC028 : <<include>>\n(checked on every screen)
+UC028 ..> UC006 : <<directs to>>
+UC020 ..> UC028 : <<include>>
 UC026 ..> UC001 : <<extend>>\n(language applies to every screen)
 UC027 ..> UC026 : <<extend>>\n(adds a language to the selector)
 

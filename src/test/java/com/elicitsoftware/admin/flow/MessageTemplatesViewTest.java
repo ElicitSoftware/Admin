@@ -50,32 +50,43 @@ class MessageTemplatesViewTest extends QuarkusBrowserlessTest {
     @Test
     @TestTransaction
     void gridRendersWithColumnsAndData() {
-        // Department id=1, MessageType id=1, and MessageTemplate id=1 are seeded dev data
-        // (V0.0.3__POPULATE_DEV_DATA.sql); this test adds one more to keep the assertion
-        // independent of that seed's exact row count.
-        Department department = Department.findById(1L);
-        MessageType messageType = MessageType.findById(1L);
-
-        MessageTemplate template = new MessageTemplate();
-        template.department = department;
-        template.messageType = messageType;
-        template.subject = "UC-007 Subject";
-        template.message = "UC-007 body";
-        template.mimeType = "text/plain";
-        template.persist();
+        persistTemplate();
 
         MessageTemplatesView view = new MessageTemplatesView();
         UI.getCurrent().add(view);
 
         // Edit + ID + Department + Subject + MIME Type = 5 columns.
         assertTrue(grid(view).getColumns().size() >= 5);
-        assertTrue(test(grid(view)).size() >= 2, "the seeded and newly-persisted templates should both appear");
+        assertTrue(test(grid(view)).size() >= 1, "the persisted template should appear");
+    }
+
+    /**
+     * MessageType id=1 is seeded dev data (V0.0.3__POPULATE_DEV_DATA.sql); no department or
+     * template is (UC-028 C-016), so each test creates its own department and one template
+     * inside its test transaction.
+     */
+    private static void persistTemplate() {
+        Department department = new Department();
+        department.name = "UC-007 Dept";
+        department.code = "UC007";
+        department.defaultMessageId = "1";
+        department.fromEmail = "uc007@example.org";
+        department.persist();
+
+        MessageTemplate template = new MessageTemplate();
+        template.department = department;
+        template.messageType = MessageType.findById(1L);
+        template.subject = "UC-007 Subject";
+        template.message = "UC-007 body";
+        template.mimeType = "text/plain";
+        template.persist();
     }
 
     /** UC-007: clicking a row's edit icon triggers navigation to that template's edit route. */
     @Test
     @TestTransaction
     void editButtonTriggersNavigation() {
+        persistTemplate();
         MessageTemplatesView view = new MessageTemplatesView();
         UI.getCurrent().add(view);
 

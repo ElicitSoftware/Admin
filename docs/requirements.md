@@ -43,6 +43,7 @@
 | FR-032 | Translation Handoff Package         | As a platform operator, I want one generated document containing every translatable text with its context and translation rules so that I can hand it to a translator or an AI agent and receive a complete language file back. | Medium   | Implemented |
 | FR-033 | Localized Service Messages          | As a survey administrator, I want error messages produced by import, export and reporting services to appear in my language so that failures are understandable. | Low      | Planned     |
 | FR-034 | Manage Languages from the Console   | As a survey administrator with the `elicit_admin` role, I want to add, replace or remove a language for the console and for the survey application by uploading a validated translation file on a Languages screen so that a site can offer a new language without server access. | Medium   | Planned     |
+| FR-035 | Require a Department Assignment     | As a survey administrator or user, I want the console to stop and tell me when my account is not assigned to a department, offering the screen that fixes it if I may use it or telling me to ask an administrator if I may not, so that I am never left in front of empty screens and a form I cannot complete. | High     | Planned     |
 
 ## Non-Functional Requirements
 
@@ -63,6 +64,7 @@
 | NFR-013 | Reporting Rebuild Never Fails an Apply | The call that asks Survey to rebuild its reporting schema after an apply must give up within 60 seconds and must never change the apply's outcome: the definition is committed first, and an unreachable Survey or a failed build is reported on the result and logged, never thrown. | Availability    | Medium   | Implemented     |
 | NFR-014 | Displayed-String Coverage   | 100% of user-visible text set by console code must be resolved through the translation mechanism; an automated test that scans the view sources fails on any remaining hard-coded literal. | Maintainability | High     | Implemented |
 | NFR-015 | Missing-Translation Policy  | A text missing from a language file must fall back to the English text; a text missing from every language file must render as a visible `!key!` marker, never blank; a bundle-consistency test must fail when the language files disagree on keys or placeholders. | Usability       | High     | Implemented |
+| NFR-016 | Blocking Notice Accessibility | A notice that blocks the console must be an ARIA `alertdialog` that traps focus and always offers at least one reachable action, so that a keyboard or screen-reader user is informed and can act or sign out rather than being trapped. | Usability       | High     | Planned     |
 
 ## Constraints
 
@@ -82,13 +84,14 @@
 | C-012 | Runtime Configuration Is Read-Only | Datasource, OIDC, mailer, telemetry and brand-path settings are Quarkus startup configuration and cannot be changed from the console; diagnostic screens show the effective value and test it, they do not edit it. | Technical   | Medium   | Verified     |
 | C-013 | Translation File Layout  | Translation files must use the Vaadin standard layout (`src/main/resources/vaadin-i18n/translations[_tag].properties`, `getTranslation` keys, `{0}` placeholders) so that Vaadin Copilot's internationalization tooling keeps working alongside hand-written extraction. | Technical   | Medium   | Implemented |
 | C-014 | Stored Content Language  | Only console chrome is localized. Subject, department, template and survey data stored in the database (including message templates and survey definitions) is presented as entered; content translation is tracked on a separate branch. | Business    | High     | Verified    |
-| C-015 | Writable Translations Directory | Managing languages from the console (FR-033) requires the translations directory (`i18n.file.system.path`) to be mounted writable for the console; the compose file currently mounts it read-only, and languages are then added on the server as documented in the umbrella `DeploymentScript.md`. | Technical   | Medium   | Planned     |
+| C-015 | Writable Translations Directory | Managing languages from the console (FR-034) requires the translations directory (`i18n.file.system.path`) to be mounted writable for the console; the compose file currently mounts it read-only, and languages are then added on the server as documented in the umbrella `DeploymentScript.md`. | Technical   | Medium   | Planned     |
+| C-016 | No Seeded Department            | A fresh install ships with no department and no message template; the first department is created through the console and is assigned to its creator. The dev-data migration seeds only the two accounts and the `email` message type. | Business    | High     | Planned     |
 
 ## Traceability
 
 Functional requirements FR-001–FR-019 map one-to-one to `docs/use_cases/UC-001`–`UC-019`, and FR-020–FR-025 to
 `UC-020`–`UC-025`. FR-026 is satisfied inside UC-009 (the navigation entry). FR-027 and NFR-013 are satisfied inside
 UC-014, UC-017 and UC-018 (the reporting schema rebuild step, BR-107 and BR-108), with the Survey application listed by UC-025. NFR-011, NFR-012 and C-012 govern
-UC-020–UC-025. FR-028–FR-033 (localization) trace to `UC-026`; FR-034 (managing languages) traces to `UC-027`.
+UC-020–UC-025. FR-028–FR-033 (localization) trace to `UC-026`; FR-034 (managing languages) traces to `UC-027`. FR-035, NFR-016 and C-016 trace to `UC-028`.
 See `docs/use_cases.puml` for the actor/use-case diagram and `docs/entity_model.md` for the underlying data model
 referenced by these requirements.

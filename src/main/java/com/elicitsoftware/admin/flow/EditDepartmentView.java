@@ -30,6 +30,7 @@ import com.vaadin.flow.router.BeforeEnterEvent;
 import com.vaadin.flow.router.BeforeEnterObserver;
 import com.vaadin.flow.router.Route;
 import jakarta.annotation.security.RolesAllowed;
+import io.quarkus.security.identity.SecurityIdentity;
 import jakarta.inject.Inject;
 
 /**
@@ -57,6 +58,14 @@ public class EditDepartmentView extends VerticalLayout implements BeforeEnterObs
     /** Service that owns the transactional persistence of departments. */
     @Inject
     DepartmentService departmentService;
+
+    /** Names the administrator a new department is assigned to (UC-028 BR-113). */
+    @Inject
+    SecurityIdentity identity;
+
+    /** Re-read after a department is created so the console notices the assignment (UC-028 BR-114). */
+    @Inject
+    UiSessionLogin uiSessionLogin;
 
     /** The department entity being edited or created. */
     private Department department;
@@ -282,7 +291,14 @@ public class EditDepartmentView extends VerticalLayout implements BeforeEnterObs
 
             boolean isNew = department.id == 0;
             // Persistence (transaction + insert/merge) lives in the service layer.
-            departmentService.save(department);
+            if (isNew) {
+                // A new department is assigned to its creator in the same transaction
+                // (UC-028 BR-113); the session copy is refreshed only once that has committed.
+                departmentService.create(department, identity.getPrincipal().getName());
+                uiSessionLogin.refresh();
+            } else {
+                departmentService.save(department);
+            }
             Notification.show(isNew ? getTranslation("editDepartmentView.created") : getTranslation("editDepartmentView.updated"),
                     3000, Notification.Position.MIDDLE);
 

@@ -64,7 +64,14 @@ class EditMessageTemplatesViewTest extends QuarkusBrowserlessTest {
     private EditMessageTemplatesView view;
 
     private void setUpWithDepartment() {
-        department = Department.findById(1L);
+        // No department is seeded (UC-028 C-016); every test here runs in a test transaction,
+        // so the one created here is rolled back with everything else.
+        department = new Department();
+        department.name = "UC-007 Edit Dept";
+        department.code = "UC007E";
+        department.defaultMessageId = "1";
+        department.fromEmail = "uc007e@example.org";
+        department.persist();
 
         // UiSessionLogin's own @PostConstruct (triggered by its first method call anywhere in
         // this test run) overwrites the "user" session attribute with its own DB lookup. Force
