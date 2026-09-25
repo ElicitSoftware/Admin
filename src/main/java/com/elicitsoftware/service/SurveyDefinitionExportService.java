@@ -150,6 +150,7 @@ public class SurveyDefinitionExportService {
         List<Object[]> dimensions = getDimensions(surveyId);
         List<Object[]> ontology = getOntology(surveyId);
         List<Object[]> metadata = getMetadata(surveyId);
+        List<Object[]> translations = getTranslations(surveyId);
 
         StringBuilder out = new StringBuilder();
 
@@ -172,6 +173,7 @@ public class SurveyDefinitionExportService {
         out.append("# dimensions: ").append(dimensions.size()).append("\n");
         out.append("# ontology: ").append(ontology.size()).append("\n");
         out.append("# metadata: ").append(metadata.size()).append("\n");
+        out.append("# translations: ").append(translations.size()).append("\n");
         OffsetDateTime exportedAt = OffsetDateTime.now();
         out.append("# generated: ").append(exportedAt).append("\n");
         out.append("# survey_revision: ").append(exportedAt).append("\n");
@@ -189,6 +191,8 @@ public class SurveyDefinitionExportService {
         out.append(FIELD_DELIMITER).append(escapeField(survey[7]));            // post_survey_url
         out.append(FIELD_DELIMITER).append(escapeField(survey[8]));            // published_by
         out.append(FIELD_DELIMITER).append(escapeField(survey[9]));            // published_comment
+        out.append(FIELD_DELIMITER).append(escapeField(survey[10]));           // base_language (V019)
+        out.append(FIELD_DELIMITER).append(escapeField(survey[11]));           // content_languages (V019)
         out.append("\n");
 
         // select_groups: source_id(=select_group_id)|element_key|name|description|data_type|version|effective_from|effective_to|published_by|published_comment
@@ -405,6 +409,29 @@ public class SurveyDefinitionExportService {
             out.append("\n");
         }
 
+        // translations: source_id(=translation_id)|translation_key|element_type|element_key|field|
+        //               language|value|source_hash|version|effective_from|effective_to|published_by|published_comment
+        // Last, because a translation references another table's element key. source_text is not
+        // exported: it is Author's snapshot for the out-of-date diff, on the same footing as a
+        // question's sample.
+        for (Object[] tr : translations) {
+            out.append("translations: ");
+            out.append(escapeField(tr[0]));                                    // source_id (durable translation_id)
+            out.append(FIELD_DELIMITER).append(escapeField(tr[1]));            // translation_key
+            out.append(FIELD_DELIMITER).append(escapeField(tr[2]));            // element_type
+            out.append(FIELD_DELIMITER).append(escapeField(tr[3]));            // element_key (of the translated element)
+            out.append(FIELD_DELIMITER).append(escapeField(tr[4]));            // field
+            out.append(FIELD_DELIMITER).append(escapeField(tr[5]));            // language
+            out.append(FIELD_DELIMITER).append(escapeField(tr[6]));            // value
+            out.append(FIELD_DELIMITER).append(escapeField(tr[7]));            // source_hash
+            out.append(FIELD_DELIMITER).append(escapeField(tr[8]));            // version
+            out.append(FIELD_DELIMITER).append(escapeField(tr[9]));            // effective_from
+            out.append(FIELD_DELIMITER).append(escapeField(tr[10]));           // effective_to
+            out.append(FIELD_DELIMITER).append(escapeField(tr[11]));           // published_by
+            out.append(FIELD_DELIMITER).append(escapeField(tr[12]));           // published_comment
+            out.append("\n");
+        }
+
         return out.toString();
     }
 
@@ -421,7 +448,7 @@ public class SurveyDefinitionExportService {
     private Object[] getSurvey(Integer surveyId) {
         Query query = em.createNativeQuery(
                 "SELECT id, survey_key, name, display_order, title, description, initial_display_key, post_survey_url, " +
-                "published_by, published_comment " +
+                "published_by, published_comment, base_language, content_languages " +
                 "FROM survey.surveys WHERE id = :surveyId");
         query.setParameter("surveyId", surveyId);
         List<Object[]> results = toObjectArrayRows(query.getResultList(), "surveys");
@@ -529,6 +556,29 @@ public class SurveyDefinitionExportService {
      * @param surveyId source survey ID
      * @return ordered rows from {@code survey.questions}
      */
+    /**
+     * Loads the survey's content translations (Survey V019).
+     * <p>
+     * Same "current, or the last version when none is current" predicate as the structural tables,
+     * so a translation retired in Author travels as retired and the receiving site closes its own
+     * row rather than being left with a live translation of a dead string.
+     *
+     * @param surveyId source survey ID
+     * @return ordered rows from {@code survey.translations}
+     */
+    private List<Object[]> getTranslations(Integer surveyId) {
+        Query query = em.createNativeQuery(
+                "SELECT translation_id, translation_key, element_type, element_key, field, language, value, source_hash, " +
+                "version, effective_from, effective_to, published_by, published_comment " +
+                "FROM survey.translations t " +
+                "WHERE survey_id = :surveyId AND (effective_to = '9999-12-31 23:59:59+00' " +
+                "   OR (NOT EXISTS (SELECT 1 FROM survey.translations c WHERE c.translation_id = t.translation_id AND c.effective_to = '9999-12-31 23:59:59+00') " +
+                "       AND version = (SELECT MAX(l.version) FROM survey.translations l WHERE l.translation_id = t.translation_id))) " +
+                "ORDER BY element_type, element_key, field, language");
+        query.setParameter("surveyId", surveyId);
+        return toObjectArrayRows(query.getResultList(), "translations");
+    }
+
     private List<Object[]> getQuestions(Integer surveyId) {
         Query query = em.createNativeQuery(
                 "SELECT question_id, question_key, type_id, text, short_text, tool_tip, required, min_value, max_value, " +
