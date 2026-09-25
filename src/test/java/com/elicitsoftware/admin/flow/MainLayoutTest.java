@@ -79,6 +79,10 @@ class MainLayoutTest extends QuarkusBrowserlessTest {
         for (String entry : List.of("systemOverview", "systemDatabase", "systemBranding", "systemEmail", "systemConnections", "systemOidc")) {
             assertTrue(hasNavItem(layout, layout.getTranslation("mainLayout.nav." + entry)), "an admin should see System > " + entry);
         }
+        // UC-029 BR-006: the manual is offered to both console roles, so it sits outside the
+        // administrator-only sections asserted above.
+        assertTrue(hasNavItem(layout, layout.getTranslation("mainLayout.nav.manual")),
+                "an admin should be offered the manual (UC-029)");
         assertTrue(hasNavItem(layout, layout.getTranslation("mainLayout.nav.logout")));
     }
 
@@ -101,6 +105,10 @@ class MainLayoutTest extends QuarkusBrowserlessTest {
         assertFalse(hasNavItem(layout, layout.getTranslation("mainLayout.nav.importRespondent")), "a non-admin must not see Import Respondent");
         assertFalse(hasNavItem(layout, layout.getTranslation("mainLayout.nav.exportSurveyDefinition")),
                 "a non-admin must not see Export Survey Definition");
+        // UC-029 BR-006: one manual serves both roles -- this is the entry that must NOT follow
+        // the Admin section out of the drawer.
+        assertTrue(hasNavItem(layout, layout.getTranslation("mainLayout.nav.manual")),
+                "a non-admin should still be offered the manual (UC-029 BR-006)");
     }
 
     /** UC-001 A1: with no user in the session, the drawer falls back to a Logout-only nav. */

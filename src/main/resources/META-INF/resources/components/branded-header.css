@@ -112,14 +112,73 @@
     outline-offset: 2px;
 }
 
-/* Language switcher (UC-007). A Select in the header would otherwise keep Lumo's
-   page-level tokens (dark body text on a translucent dark tint), so scope the
-   tokens it reads to the brand's header text colour. The overlay renders outside
-   the header and keeps the normal page styling. */
+/* Language switcher (UC-026). A Select in the header would otherwise keep Lumo's
+   page-level tokens (dark body text on a translucent dark tint), so the field is
+   painted in the brand's header text colour.
+
+   The parts are addressed one by one rather than by redefining --lumo-body-text-color
+   on the host: Vaadin 25 renders a Select's overlay inside the component, so a token
+   set here inherits into it and every option in the dropdown is drawn in the header's
+   colour — white on the overlay's white, which is invisible. The overlay must keep the
+   page's own styling. */
 .branded-header .language-switcher {
-    --lumo-body-text-color: var(--brand-header-text);
-    --lumo-secondary-text-color: var(--brand-header-text);
-    --lumo-contrast-60pct: var(--brand-header-text);
-    --lumo-contrast-10pct: color-mix(in srgb, var(--brand-header-text) 15%, transparent);
     margin-inline-start: auto;
+}
+
+.branded-header .language-switcher::part(input-field) {
+    background: color-mix(in srgb, var(--brand-header-text) 15%, transparent);
+}
+
+.branded-header .language-switcher::part(label),
+.branded-header .language-switcher::part(toggle-button),
+.branded-header .language-switcher vaadin-select-value-button,
+.branded-header .language-switcher vaadin-select-value-button > vaadin-select-item::part(content) {
+    color: var(--brand-header-text);
+}
+
+/* Manual link (UC-029): sits at the far right of the header, in the header's own text colour
+   so it works on a light or a dark brand. Hidden on narrow viewports, where header space is
+   scarce and the drawer carries the same entry. */
+.branded-header .header-manual-link {
+    margin-inline-start: auto;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    padding: 0.25rem 0.6rem;
+    border: 1px solid currentColor;
+    border-radius: var(--lumo-border-radius-m, 4px);
+    font-family: var(--brand-font-primary, -apple-system, BlinkMacSystemFont, "Roboto", "Segoe UI", sans-serif);
+    font-size: var(--lumo-font-size-s);
+    font-weight: 600;
+    text-decoration: none;
+    color: var(--brand-header-text);
+    opacity: 0.85;
+    white-space: nowrap;
+}
+
+.branded-header .header-manual-link:hover,
+.branded-header .header-manual-link:focus-visible {
+    opacity: 1;
+    text-decoration: none;
+}
+
+.branded-header .header-manual-link vaadin-icon {
+    width: 1em;
+    height: 1em;
+}
+
+.branded-header .header-manual-link:focus {
+    outline: 2px solid var(--brand-secondary);
+    outline-offset: 2px;
+}
+
+@media (max-width: 767px) {
+    .branded-header .header-manual-link {
+        display: none;
+    }
+}
+
+/* When the manual link is present it already takes the free space; keep the switcher beside it. */
+.branded-header .header-manual-link + .language-switcher {
+    margin-inline-start: 0.75rem;
 }

@@ -1,0 +1,46 @@
+# ELICIT_EXPORT_V2
+# respondent_id: 4
+# survey_key: 71d6f40a-1f09-4f96-a9d1-299f9aedddb2
+# survey_name: Household Survey
+# access_code: 7787h2skK
+# answers: 16
+# dependents: 14
+# subjects: 1
+# messages: 1
+# respondent_psa: 0
+# timezone: America/Detroit
+# generated: 2026-09-24T16:30:19.104186847-04:00
+
+respondents: 71d6f40a-1f09-4f96-a9d1-299f9aedddb2|7787h2skK|false|1|2026-09-24T16:28:59.183-04:00|2026-09-24T16:29:01.667325-04:00|2026-09-24T16:29:15.624067-04:00
+answers: 1|0|1|0||0|||||0002-0001-0000-0001-0000-0000-0000|The house||false|2026-09-24T16:29:01.714-04:00|
+answers: 1|0|1|0||0|ae0c6bee-aec7-4216-b83c-dfad8c1eedd2|0|b40a1bdb-3d5a-417f-ae44-48053f7d048d|0|0002-0001-0000-0001-0000-0001-0000|How many people live in your house?|2|false|2026-09-24T16:29:01.736-04:00|2026-09-24T16:29:02.155-04:00
+answers: 1|0|1|0||1|17244bf9-2ca5-44cb-8d2a-a540ba3bf9e6|0|0abca41d-9540-44b2-8871-59e52d72aa15|0|0002-0001-0000-0001-0000-0002-0001|Name of person 1|Alice|false|2026-09-24T16:29:02.179-04:00|2026-09-24T16:29:03.381-04:00
+answers: 1|0|1|0||2|17244bf9-2ca5-44cb-8d2a-a540ba3bf9e6|0|0abca41d-9540-44b2-8871-59e52d72aa15|0|0002-0001-0000-0001-0000-0002-0002|Name of person 2|Bob|false|2026-09-24T16:29:02.193-04:00|2026-09-24T16:29:04.002-04:00
+answers: 2|1||0||0|||||0002-0002-0001-0000-0000-0000-0000|Household member||false|2026-09-24T16:29:03.411-04:00|
+answers: 2|1|1|0||0|||||0002-0002-0001-0001-0000-0000-0000|About Alice||false|2026-09-24T16:29:03.431-04:00|
+answers: 2|1|1|0||0|20127bbc-631e-4084-b56b-03e189c33461|0|0722bbb5-a277-435b-a637-3afd269cf90d|0|0002-0002-0001-0001-0000-0001-0000|How old is Alice?|41|false|2026-09-24T16:29:03.444-04:00|2026-09-24T16:29:09.298-04:00
+answers: 2|1|1|0||0|25395212-5ee3-48c3-99ab-3695615f2963|0|a1fcc8e7-5d9d-44e3-923f-fc4106670c74|0|0002-0002-0001-0001-0000-0002-0000|What is Alice's sex?|com.elicitsoftware.model.SelectItem@523f78a8|false|2026-09-24T16:29:03.457-04:00|2026-09-24T16:29:09.794-04:00
+answers: 2|1|1|0||0|85007e06-79c5-469f-aab2-8f8ea81df34e|0|bfbc8107-9b6f-4a40-9332-03b544e609f3|0|0002-0002-0001-0001-0000-0003-0000|How is Alice related to you?|spouse|false|2026-09-24T16:29:03.469-04:00|2026-09-24T16:29:11.313-04:00
+answers: 2|1|1|0||0|caaccb6b-29cb-4c89-a128-ea3b7d24d0ea|0|af4d31c9-d638-41c9-8a03-e9964ecf6bb4|0|0002-0002-0001-0001-0000-0004-0000|How many children does Alice have?|2|false|2026-09-24T16:29:03.482-04:00|2026-09-24T16:29:11.354-04:00
+answers: 2|2||0||0|||||0002-0002-0002-0000-0000-0000-0000|Household member||false|2026-09-24T16:29:04.033-04:00|
+answers: 2|2|1|0||0|||||0002-0002-0002-0001-0000-0000-0000|About Bob||false|2026-09-24T16:29:04.059-04:00|
+answers: 2|2|1|0||0|20127bbc-631e-4084-b56b-03e189c33461|0|0722bbb5-a277-435b-a637-3afd269cf90d|0|0002-0002-0002-0001-0000-0001-0000|How old is Bob?|12|false|2026-09-24T16:29:04.078-04:00|2026-09-24T16:29:12.816-04:00
+answers: 2|2|1|0||0|25395212-5ee3-48c3-99ab-3695615f2963|0|a1fcc8e7-5d9d-44e3-923f-fc4106670c74|0|0002-0002-0002-0001-0000-0002-0000|What is Bob's sex?|com.elicitsoftware.model.SelectItem@533767d0|false|2026-09-24T16:29:04.095-04:00|2026-09-24T16:29:13.307-04:00
+answers: 2|2|1|0||0|85007e06-79c5-469f-aab2-8f8ea81df34e|0|bfbc8107-9b6f-4a40-9332-03b544e609f3|0|0002-0002-0002-0001-0000-0003-0000|How is Bob related to you?|son|false|2026-09-24T16:29:04.110-04:00|2026-09-24T16:29:14.823-04:00
+answers: 2|2|1|0||0|caaccb6b-29cb-4c89-a128-ea3b7d24d0ea|0|af4d31c9-d638-41c9-8a03-e9964ecf6bb4|0|0002-0002-0002-0001-0000-0004-0000|How many children does Bob have?|0|false|2026-09-24T16:29:04.127-04:00|2026-09-24T16:29:14.855-04:00
+dependents: 0002-0001-0000-0001-0000-0001-0000|0002-0001-0000-0001-0000-0002-0001|32f485d5-6055-449e-a8d0-5fc248e8bfb4|0|false
+dependents: 0002-0001-0000-0001-0000-0001-0000|0002-0001-0000-0001-0000-0002-0002|32f485d5-6055-449e-a8d0-5fc248e8bfb4|0|false
+dependents: 0002-0001-0000-0001-0000-0002-0001|0002-0002-0001-0000-0000-0000-0000|ee9a6206-97a3-486e-9d72-f62d5efcee66|0|false
+dependents: 0002-0001-0000-0001-0000-0002-0001|0002-0002-0001-0001-0000-0000-0000|ee9a6206-97a3-486e-9d72-f62d5efcee66|0|false
+dependents: 0002-0001-0000-0001-0000-0002-0001|0002-0002-0001-0001-0000-0001-0000|ee9a6206-97a3-486e-9d72-f62d5efcee66|0|false
+dependents: 0002-0001-0000-0001-0000-0002-0001|0002-0002-0001-0001-0000-0002-0000|ee9a6206-97a3-486e-9d72-f62d5efcee66|0|false
+dependents: 0002-0001-0000-0001-0000-0002-0001|0002-0002-0001-0001-0000-0003-0000|ee9a6206-97a3-486e-9d72-f62d5efcee66|0|false
+dependents: 0002-0001-0000-0001-0000-0002-0001|0002-0002-0001-0001-0000-0004-0000|ee9a6206-97a3-486e-9d72-f62d5efcee66|0|false
+dependents: 0002-0001-0000-0001-0000-0002-0002|0002-0002-0002-0000-0000-0000-0000|ee9a6206-97a3-486e-9d72-f62d5efcee66|0|false
+dependents: 0002-0001-0000-0001-0000-0002-0002|0002-0002-0002-0001-0000-0000-0000|ee9a6206-97a3-486e-9d72-f62d5efcee66|0|false
+dependents: 0002-0001-0000-0001-0000-0002-0002|0002-0002-0002-0001-0000-0001-0000|ee9a6206-97a3-486e-9d72-f62d5efcee66|0|false
+dependents: 0002-0001-0000-0001-0000-0002-0002|0002-0002-0002-0001-0000-0002-0000|ee9a6206-97a3-486e-9d72-f62d5efcee66|0|false
+dependents: 0002-0001-0000-0001-0000-0002-0002|0002-0002-0002-0001-0000-0003-0000|ee9a6206-97a3-486e-9d72-f62d5efcee66|0|false
+dependents: 0002-0001-0000-0001-0000-0002-0002|0002-0002-0002-0001-0000-0004-0000|ee9a6206-97a3-486e-9d72-f62d5efcee66|0|false
+subjects: 0||Theo|Lindqvist|||theo.lindqvist@example.org||MANUAL|2026-09-24T16:28:58.192-04:00
+messages: 0|1|text/html|Family History Request from Testing Department (Dev)|Hello,<br>You are receiving this notice because you have an upcoming appointment in the Test Department office.<br><br>Our practice, in collaboration with the Michigan Oncology Quality Consortium (MOQC) and the University of Michigan, is testing a new way for patients to easily share their family history with their healthcare team. This no-cost MiGHT Family Cancer History Tool is designed to help you gather information about your family history of cancer.<br>\nUsing this tool may benefit you and your family because the information you share:<br>\n•	Could impact treatment decisions<br>\n•	Could impact plans to monitor your health<br>\n•	Can help inform family members of their cancer risk<br>\n•	Provides a pedigree (drawing) of your family history<br>\n<br>\nThis tool will ask questions about your blood-related family members (parents, siblings, children, grandparents, aunts and uncles) and their:<br>\n•	Current age (if alive) or age at death<br>\n•	Cancer diagnoses and ages at diagnosis<br>\n<br>\nAccess Instructions for the Family Cancer History Tool:<br>\n•	Use this personalized link to access the tool:<br>\n• http://localhost/#/login/7787h2skK<br>\n•	We ask that you complete the tool before your visit, if possible. The amount of time needed varies based on the size of your family, but it takes most people about 15 minutes.<br>\n•	If you cannot finish the tool in one sitting, you can stop at any time and your responses will save automatically. Use the link above to go back to your partially completed form.<br>\n•	Please fill out as much as you can, even if you don’t know all the details.<br>\n<br>\nPlease note that this tool is under development and results should be reviewed with your medical provider for accuracy. Your results will only be used by your medical care team to assist in providing your care.<br>\nIf you have any questions, please email <YOUR EMAIL>, or visit <YOUR WEBSITE>.<br>\nWe appreciate you taking the time to help us evaluate how we can use this tool to take better care of patients and families. Thank you for trusting us with your clinical care.<br><br>\nTest Department|2026-09-24T16:28:59.193-04:00|

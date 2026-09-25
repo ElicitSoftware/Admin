@@ -46,6 +46,9 @@ rectangle "Elicit Admin" {
     usecase "UC-026\nUse the Console in My Language" as UC026
     usecase "UC-027\nManage Languages" as UC027
 
+    ' --- Documentation ---
+    usecase "UC-029\nConsult the Administrator's Manual" as UC029
+
     ' --- Shared subflow ---
     usecase "UC-015\nGenerate Survey Access Code" as UC015
 }
@@ -60,6 +63,7 @@ user --> UC009
 user --> UC019
 user --> UC026
 user --> UC028
+user --> UC029
 
 ' Administrator (inherits user goals plus administration and data lifecycle)
 admin --> UC001
@@ -89,6 +93,7 @@ admin --> UC025
 admin --> UC026
 admin --> UC027
 admin --> UC028
+admin --> UC029
 
 ' Integration Client
 importer --> UC010
@@ -119,5 +124,7 @@ UC028 ..> UC006 : <<directs to>>
 UC020 ..> UC028 : <<include>>
 UC026 ..> UC001 : <<extend>>\n(language applies to every screen)
 UC027 ..> UC026 : <<extend>>\n(adds a language to the selector)
+UC029 ..> UC001 : <<extend>>\n(printable form of the console's procedures)
+UC028 ..> UC029 : <<offers>>\n(the notice links the manual)
 
 @enduml

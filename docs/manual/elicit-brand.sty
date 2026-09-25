@@ -1,0 +1,145 @@
+%% elicit-brand.sty — the Elicit default brand, as LaTeX.
+%%
+%% UC-029 BR-005: the manual is typeset in the Elicit default brand regardless of which brand
+%% a deployment mounts, so one document serves every site. The colours below are the same
+%% values as src/main/resources/META-INF/brand/colors/brand-colors.css; the typefaces are the
+%% same IBM Plex families brand-typography.css asks for.
+
+\NeedsTeXFormat{LaTeX2e}
+\ProvidesPackage{elicit-brand}[2026/09/24 Elicit default brand]
+
+\RequirePackage{xcolor}
+\RequirePackage{fontspec}
+\RequirePackage{graphicx}
+\RequirePackage{fancyhdr}
+\RequirePackage{titlesec}
+\RequirePackage{tcolorbox}
+\tcbuselibrary{skins, breakable}
+\RequirePackage{enumitem}
+\RequirePackage{caption}
+\RequirePackage{float}
+
+%% ---------------------------------------------------------------- colours
+\definecolor{elicitInk}{HTML}{1B629C}
+\definecolor{elicitInkDark}{HTML}{154C79}
+\definecolor{elicitInkDarkest}{HTML}{0A3D62}
+\definecolor{elicitVerdigris}{HTML}{22775D}
+\definecolor{elicitVerdigrisPale}{HTML}{E3F3EE}
+\definecolor{elicitPaper}{HTML}{FDFCFA}
+\definecolor{elicitLedger}{HTML}{E8E4DC}
+\definecolor{elicitLedgerLight}{HTML}{F0EDE6}
+\definecolor{elicitSlate}{HTML}{4A5A6A}
+\definecolor{elicitCharcoal}{HTML}{1A2229}
+\definecolor{elicitAmberText}{HTML}{8C6A1D}
+
+\pagecolor{elicitPaper}
+\color{elicitCharcoal}
+
+%% ---------------------------------------------------------------- typefaces
+%% IBM Plex ships with TeX Live as plex-otf. A TeX installation without it still builds;
+%% it just falls back to the default families rather than failing the whole manual.
+\IfFontExistsTF{IBMPlexSans}{%
+  \setmainfont{IBMPlexSans}[
+    UprightFont = *-Regular,
+    ItalicFont = *-Italic,
+    BoldFont = *-SemiBold,
+    BoldItalicFont = *-SemiBoldItalic,
+  ]%
+  \setsansfont{IBMPlexSans}[UprightFont = *-Regular, BoldFont = *-SemiBold]%
+}{}
+\IfFontExistsTF{IBMPlexMono}{%
+  \setmonofont{IBMPlexMono}[UprightFont = *-Regular, BoldFont = *-SemiBold, Scale = 0.92]%
+}{}
+
+%% ---------------------------------------------------------------- build stamp
+%% UC-029 BR-003: the version and build date appear on the title page and in every footer.
+%% A build that supplies neither leaves both as "unknown" rather than omitting them (A3).
+\IfFileExists{build-info.tex}{\input{build-info.tex}}{}
+\providecommand{\elicitVersion}{unknown}
+\providecommand{\elicitBuildDate}{unknown}
+
+%% ---------------------------------------------------------------- page furniture
+\setlength{\headheight}{16pt}
+\renewcommand{\headrulewidth}{0pt}
+\renewcommand{\footrulewidth}{0.4pt}
+\newcommand{\footrulecolor}{elicitLedger}
+
+\fancypagestyle{elicit}{%
+  \fancyhf{}%
+  \fancyhead[L]{\footnotesize\color{elicitSlate}\leftmark}%
+  \fancyfoot[L]{\footnotesize\color{elicitSlate}Elicit Admin \elicitVersion\ \textperiodcentered\ built \elicitBuildDate}%
+  \fancyfoot[R]{\footnotesize\color{elicitSlate}\thepage}%
+}
+\pagestyle{elicit}
+
+\fancypagestyle{plain}{%
+  \fancyhf{}%
+  \fancyfoot[L]{\footnotesize\color{elicitSlate}Elicit Admin \elicitVersion\ \textperiodcentered\ built \elicitBuildDate}%
+  \fancyfoot[R]{\footnotesize\color{elicitSlate}\thepage}%
+  \renewcommand{\headrulewidth}{0pt}%
+}
+
+%% ---------------------------------------------------------------- headings
+\titleformat{\section}
+  {\normalfont\Large\bfseries\color{elicitInkDarkest}}{\thesection}{0.6em}{}
+\titleformat{\subsection}
+  {\normalfont\large\bfseries\color{elicitInkDark}}{\thesubsection}{0.6em}{}
+\titleformat{\subsubsection}
+  {\normalfont\normalsize\bfseries\color{elicitSlate}}{}{0em}{}
+\titlespacing*{\section}{0pt}{1.6\baselineskip}{0.7\baselineskip}
+\titlespacing*{\subsection}{0pt}{1.2\baselineskip}{0.5\baselineskip}
+
+%% ---------------------------------------------------------------- figures
+\captionsetup{
+  font = {small, color = elicitSlate},
+  labelfont = {bf, color = elicitInkDark},
+  labelsep = period,
+  skip = 8pt,
+}
+
+%% \screenshot{file}{caption} — a captured screen, ruled so it reads as a screen rather
+%% than as part of the page (UC-029 BR-002: every stage is shown as well as told).
+\newcommand{\screenshot}[2]{%
+  \begin{figure}[H]
+    \centering
+    \setlength{\fboxsep}{0pt}%
+    \setlength{\fboxrule}{0.6pt}%
+    \textcolor{elicitLedger}{\fbox{\includegraphics[width=\linewidth]{images/#1}}}%
+    \caption{#2}
+  \end{figure}%
+}
+
+%% ---------------------------------------------------------------- call-outs
+\newtcolorbox{elicitnote}[1][Note]{%
+  enhanced, breakable,
+  colback = elicitLedgerLight, colframe = elicitInk,
+  boxrule = 0pt, leftrule = 3pt,
+  arc = 0pt, outer arc = 0pt,
+  left = 10pt, right = 10pt, top = 8pt, bottom = 8pt,
+  fonttitle = \bfseries\footnotesize,
+  coltitle = elicitInkDarkest,
+  title = {#1}, attach title to upper = {\par\medskip},
+}
+
+\newtcolorbox{elicitcaution}[1][Careful]{%
+  enhanced, breakable,
+  colback = elicitLedgerLight, colframe = elicitAmberText,
+  boxrule = 0pt, leftrule = 3pt,
+  arc = 0pt, outer arc = 0pt,
+  left = 10pt, right = 10pt, top = 8pt, bottom = 8pt,
+  fonttitle = \bfseries\footnotesize,
+  coltitle = elicitAmberText,
+  title = {#1}, attach title to upper = {\par\medskip},
+}
+
+%% \term{word} — a piece of the survey vocabulary, the first time it is used
+%% (UC-029 BR-001: the manual uses only names the application shows).
+\newcommand{\term}[1]{\textcolor{elicitVerdigris}{\textbf{#1}}}
+
+%% \ui{Label} — something the reader clicks or reads on screen.
+\newcommand{\ui}[1]{\textcolor{elicitInkDark}{\textsf{#1}}}
+
+\setlist[itemize]{leftmargin = 1.2em, itemsep = 2pt, topsep = 4pt}
+\setlist[enumerate]{leftmargin = 1.4em, itemsep = 4pt, topsep = 4pt}
+
+\endinput

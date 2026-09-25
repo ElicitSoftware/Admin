@@ -14,6 +14,7 @@ package com.elicitsoftware.admin.flow;
 import com.elicitsoftware.admin.i18n.ElicitI18NProvider;
 import com.elicitsoftware.admin.i18n.LanguageSwitcher;
 import com.elicitsoftware.admin.i18n.LocaleSelection;
+import com.elicitsoftware.admin.manual.AdminManual;
 import com.elicitsoftware.admin.util.BrandUtil;
 import com.elicitsoftware.model.User;
 import com.elicitsoftware.security.ElicitRoles;
@@ -26,6 +27,7 @@ import com.vaadin.flow.component.applayout.AppLayout;
 import com.vaadin.flow.component.applayout.DrawerToggle;
 import com.vaadin.flow.component.dialog.Dialog;
 import com.vaadin.flow.component.html.Anchor;
+import com.vaadin.flow.component.html.AnchorTarget;
 import com.vaadin.flow.component.html.Div;
 import com.vaadin.flow.component.html.Image;
 import com.vaadin.flow.component.icon.VaadinIcon;
@@ -115,12 +117,22 @@ public class MainLayout extends AppLayout implements AfterNavigationListener {
     DefaultAccountCheck defaultAccounts;
 
     /**
+     * The administrator's manual packaged in this image, offered in the header and the drawer
+     * when the build carries one (UC-029).
+     */
+    @Inject
+    AdminManual manual;
+
+    /**
      * The current authenticated user.
      */
     User user;
 
     /** The open no-department dialog, if any, so navigations reuse one overlay (UC-028). */
     private Dialog missingDepartmentDialog;
+
+    /** Where the packaged manual is served (UC-029); outside the Vaadin router, hence router-ignored. */
+    private static final String MANUAL_PATH = "/api/manual";
 
     /**
      * Default constructor for Vaadin layout component instantiation.
@@ -228,11 +240,58 @@ public class MainLayout extends AppLayout implements AfterNavigationListener {
         title.addClassName("brand-title");
         headerContainer.add(title);
 
+        addManualLink(headerContainer);
+
         // Language selector (UC-026): every screen offers the shipped and mounted languages.
         headerContainer.add(new LanguageSwitcher(localeSelection, i18nProvider));
 
         // Add header to navbar
         addToNavbar(headerContainer);
+    }
+
+    /**
+     * The manual (UC-029): a link in the header opening the packaged PDF in a new tab. A build
+     * that carries no manual simply does not offer it (UC-029 A1). Unlike Author's, this link is
+     * offered to both console roles, because one manual serves them both and marks the
+     * administrator-only procedures where they appear (BR-006).
+     *
+     * @param headerContainer the branded header being assembled
+     */
+    private void addManualLink(Div headerContainer) {
+        if (!manualAvailable()) {
+            return;
+        }
+        Anchor manualLink = new Anchor(MANUAL_PATH, getTranslation("mainLayout.header.manual"));
+        // The Vaadin router intercepts relative hrefs; /api/manual is served outside the router.
+        manualLink.setRouterIgnore(true);
+        manualLink.setTarget(AnchorTarget.BLANK);
+        manualLink.setTitle(getTranslation("mainLayout.header.manualTitle"));
+        manualLink.addClassName("header-manual-link");
+        manualLink.getElement().insertChild(0, VaadinIcon.FILE_TEXT_O.create().getElement());
+        headerContainer.add(manualLink);
+    }
+
+    /**
+     * The manual's drawer entry (UC-029), placed with the items every signed-in reader sees
+     * rather than inside the administrator's sections: both roles may read it (BR-006).
+     *
+     * @param nav the drawer navigation being assembled
+     */
+    private void addManualNavItem(SideNav nav) {
+        if (!manualAvailable()) {
+            return;
+        }
+        SideNavItem manualItem = new SideNavItem(getTranslation("mainLayout.nav.manual"), MANUAL_PATH,
+                VaadinIcon.FILE_TEXT_O.create());
+        // As above: without this the router would swallow the /api path and show "page not found".
+        manualItem.setRouterIgnore(true);
+        manualItem.setOpenInNewBrowserTab(true);
+        nav.addItem(manualItem);
+    }
+
+    /** Whether this image carries a manual to link to (UC-029 A1). */
+    private boolean manualAvailable() {
+        return manual != null && manual.isAvailable();
     }
 
     /**
@@ -258,6 +317,8 @@ public class MainLayout extends AppLayout implements AfterNavigationListener {
      *
      * <h4>System Actions (all users):</h4>
      * <ul>
+     *   <li><strong>Manual:</strong> Open the packaged administrator's manual in a new tab,
+     *       when the image carries one (UC-029)</li>
      *   <li><strong>Logout:</strong> Terminate the current session</li>
      * </ul>
      *
@@ -295,6 +356,7 @@ public class MainLayout extends AppLayout implements AfterNavigationListener {
             nav.addItem(adminSection);
             nav.addItem(createSystemSection());
         }
+        addManualNavItem(nav);
         SideNavItem logoutLink = new SideNavItem(getTranslation("mainLayout.nav.logout"), LogoutView.class,
                 VaadinIcon.LOCK.create());
         nav.addItem(logoutLink);
@@ -423,7 +485,8 @@ public class MainLayout extends AppLayout implements AfterNavigationListener {
         }
         if (missingDepartmentDialog == null || !missingDepartmentDialog.isOpened()) {
             missingDepartmentDialog = administrator
-                    ? MissingDepartmentDialog.forAdministrator() : MissingDepartmentDialog.forUser();
+                    ? MissingDepartmentDialog.forAdministrator(manualAvailable())
+                    : MissingDepartmentDialog.forUser(manualAvailable());
             missingDepartmentDialog.open();
         }
     }
