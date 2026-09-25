@@ -44,6 +44,7 @@
 | FR-033 | Localized Service Messages          | As a survey administrator, I want error messages produced by import, export and reporting services to appear in my language so that failures are understandable. | Low      | Planned     |
 | FR-034 | Manage Languages from the Console   | As a survey administrator with the `elicit_admin` role, I want to add, replace or remove a language for the console and for the survey application by uploading a validated translation file on a Languages screen so that a site can offer a new language without server access. | Medium   | Planned     |
 | FR-035 | Require a Department Assignment     | As a survey administrator or user, I want the console to stop and tell me when my account is not assigned to a department, offering the screen that fixes it if I may use it or telling me to ask an administrator if I may not, so that I am never left in front of empty screens and a form I cannot complete. | High     | Planned     |
+| FR-036 | Consult the Administrator's Manual | As a survey administrator or user, I want a printable, illustrated manual of the console — signing in, departments, users and roles, message templates, registering subjects, inviting and reminding them, monitoring progress, reports, moving respondents and survey definitions between deployments, and the System screens — reachable from the console and shipped inside the running application, so that I can follow a procedure away from the screen and know the instructions match the version I am using. | Medium   | Planned     |
 
 ## Non-Functional Requirements
 
@@ -65,6 +66,7 @@
 | NFR-014 | Displayed-String Coverage   | 100% of user-visible text set by console code must be resolved through the translation mechanism; an automated test that scans the view sources fails on any remaining hard-coded literal. | Maintainability | High     | Implemented |
 | NFR-015 | Missing-Translation Policy  | A text missing from a language file must fall back to the English text; a text missing from every language file must render as a visible `!key!` marker, never blank; a bundle-consistency test must fail when the language files disagree on keys or placeholders. | Usability       | High     | Implemented |
 | NFR-016 | Blocking Notice Accessibility | A notice that blocks the console must be an ARIA `alertdialog` that traps focus and always offers at least one reachable action, so that a keyboard or screen-reader user is informed and can act or sign out rather than being trapped. | Usability       | High     | Planned     |
+| NFR-017 | Manual Version Stamping      | The administrator's manual carries the application version and build date of the image it ships in, on the title page and in the footer of every page, so that a printed or downloaded copy is always attributable to one build. | Maintainability | Medium   | Planned     |
 
 ## Constraints
 
@@ -86,12 +88,13 @@
 | C-014 | Stored Content Language  | Only console chrome is localized. Subject, department, template and survey data stored in the database (including message templates and survey definitions) is presented as entered; content translation is tracked on a separate branch. | Business    | High     | Verified    |
 | C-015 | Writable Translations Directory | Managing languages from the console (FR-034) requires the translations directory (`i18n.file.system.path`) to be mounted writable for the console; the compose file currently mounts it read-only, and languages are then added on the server as documented in the umbrella `DeploymentScript.md`. | Technical   | Medium   | Planned     |
 | C-016 | No Seeded Department            | A fresh install ships with no department and no message template; the first department is created through the console and is assigned to its creator. The dev-data migration seeds only the two accounts and the `email` message type. | Business    | High     | Planned     |
+| C-017 | Manual Scope Is the Console | The administrator's manual documents what a console user does on an installed system. Provisioning the deployment — the database, the identity provider, the Survey, Admin and Author services, and making a language available (UC-027) — is the subject of the umbrella installation manual, which the administrator's manual refers to rather than repeats. Choosing a language for one's own session (UC-026) is a user action and stays in the administrator's manual. | Business    | Medium   | Planned     |
 
 ## Traceability
 
 Functional requirements FR-001–FR-019 map one-to-one to `docs/use_cases/UC-001`–`UC-019`, and FR-020–FR-025 to
 `UC-020`–`UC-025`. FR-026 is satisfied inside UC-009 (the navigation entry). FR-027 and NFR-013 are satisfied inside
 UC-014, UC-017 and UC-018 (the reporting schema rebuild step, BR-107 and BR-108), with the Survey application listed by UC-025. NFR-011, NFR-012 and C-012 govern
-UC-020–UC-025. FR-028–FR-033 (localization) trace to `UC-026`; FR-034 (managing languages) traces to `UC-027`. FR-035, NFR-016 and C-016 trace to `UC-028`.
+UC-020–UC-025. FR-028–FR-033 (localization) trace to `UC-026`; FR-034 (managing languages) traces to `UC-027`. FR-035, NFR-016 and C-016 trace to `UC-028`. FR-036, NFR-017 and C-017 trace to `UC-029`.
 See `docs/use_cases.puml` for the actor/use-case diagram and `docs/entity_model.md` for the underlying data model
 referenced by these requirements.

@@ -17,7 +17,10 @@ import com.vaadin.flow.component.UI;
 import com.vaadin.flow.component.button.Button;
 import com.vaadin.flow.component.button.ButtonVariant;
 import com.vaadin.flow.component.dialog.Dialog;
+import com.vaadin.flow.component.html.Anchor;
+import com.vaadin.flow.component.html.AnchorTarget;
 import com.vaadin.flow.component.html.Paragraph;
+import com.vaadin.flow.component.icon.VaadinIcon;
 
 /**
  * The blocking notice shown when the signed-in console user has no department (UC-028).
@@ -35,6 +38,14 @@ import com.vaadin.flow.component.html.Paragraph;
  * Both variants offer Logout, so nobody is ever trapped in a signed-in session they cannot
  * end (BR-112). The dialog takes no close button (nothing is added to its header), no Escape
  * and no click outside.
+ * <p>
+ * Both variants also offer the administrator's manual when the image carries one (UC-029 A7).
+ * This modal holds the whole console for an account with no department, and the manual is the
+ * document that explains the very procedure the notice demands -- creating the first department
+ * and having it assigned -- so it has to stay reachable from behind the modal. It is a link out
+ * to {@code /api/manual} in a new tab, not a navigation, so it neither dismisses the notice nor
+ * reaches a screen the notice is blocking; a build with no manual simply does not offer it
+ * (UC-029 A1).
  */
 final class MissingDepartmentDialog {
 
@@ -47,21 +58,37 @@ final class MissingDepartmentDialog {
     /** Element id of the Logout button present in both variants. */
     static final String LOGOUT_BUTTON_ID = "missing-department-logout";
 
+    /** Element id of the manual link, present in both variants when a manual is packaged (UC-029). */
+    static final String MANUAL_LINK_ID = "missing-department-manual";
+
+    /** Where the packaged manual is served (UC-029); outside the Vaadin router, hence router-ignored. */
+    private static final String MANUAL_PATH = "/api/manual";
+
     private MissingDepartmentDialog() {
         // Static factory only
     }
 
-    /** The variant for an administrator: explanation, Add a department, Logout. */
-    static Dialog forAdministrator() {
-        return build(true);
+    /**
+     * The variant for an administrator: explanation, Add a department, Logout.
+     *
+     * @param manualAvailable whether this image carries the administrator's manual (UC-029 A1)
+     * @return the configured dialog
+     */
+    static Dialog forAdministrator(boolean manualAvailable) {
+        return build(true, manualAvailable);
     }
 
-    /** The variant for a user: explanation and Logout only (UC-028 A1). */
-    static Dialog forUser() {
-        return build(false);
+    /**
+     * The variant for a user: explanation and Logout only (UC-028 A1).
+     *
+     * @param manualAvailable whether this image carries the administrator's manual (UC-029 A1)
+     * @return the configured dialog
+     */
+    static Dialog forUser(boolean manualAvailable) {
+        return build(false, manualAvailable);
     }
 
-    private static Dialog build(boolean administrator) {
+    private static Dialog build(boolean administrator, boolean manualAvailable) {
         Dialog dialog = new Dialog();
         dialog.setId(DIALOG_ID);
         dialog.setHeaderTitle(Translations.get("missingDepartmentDialog.title"));
@@ -76,6 +103,18 @@ final class MissingDepartmentDialog {
         dialog.setRole("alertdialog");
         dialog.add(new Paragraph(Translations.get(administrator
                 ? "missingDepartmentDialog.admin.message" : "missingDepartmentDialog.user.message")));
+
+        // First in the footer, so the action the notice demands stays the rightmost, primary one.
+        if (manualAvailable) {
+            Anchor manualLink = new Anchor(MANUAL_PATH, Translations.get("missingDepartmentDialog.manual"));
+            manualLink.setId(MANUAL_LINK_ID);
+            // The Vaadin router intercepts relative hrefs; /api/manual is served outside the router.
+            manualLink.setRouterIgnore(true);
+            manualLink.setTarget(AnchorTarget.BLANK);
+            manualLink.addClassName("dialog-manual-link");
+            manualLink.getElement().insertChild(0, VaadinIcon.FILE_TEXT_O.create().getElement());
+            dialog.getFooter().add(manualLink);
+        }
 
         if (administrator) {
             Button add = new Button(Translations.get("missingDepartmentDialog.admin.action"), event -> {

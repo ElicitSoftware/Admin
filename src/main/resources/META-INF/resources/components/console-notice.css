@@ -31,3 +31,21 @@
 .console-notice a {
     white-space: nowrap;
 }
+
+/* The manual link in the no-department dialog's footer (UC-029 A7). The footer right-aligns its
+   buttons; this pushes the link to the opposite end so the remedy button stays the primary,
+   rightmost action. */
+vaadin-dialog-overlay .dialog-manual-link {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--lumo-space-xs);
+    margin-inline-end: auto;
+    font-size: var(--lumo-font-size-s);
+    color: var(--lumo-primary-text-color);
+    white-space: nowrap;
+}
+
+vaadin-dialog-overlay .dialog-manual-link vaadin-icon {
+    width: 1em;
+    height: 1em;
+}

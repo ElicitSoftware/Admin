@@ -1,0 +1,45 @@
+# ELICIT_SURVEY_EXPORT_V1
+# survey_id: 1
+# survey_key: 71d6f40a-1f09-4f96-a9d1-299f9aedddb2
+# survey_name: Household Survey
+# surveys: 1
+# select_groups: 1
+# select_items: 2
+# steps: 2
+# sections: 2
+# steps_sections: 2
+# questions: 6
+# sections_questions: 6
+# relationships: 2
+# reports: 0
+# post_survey_actions: 0
+# dimensions: 0
+# ontology: 0
+# metadata: 0
+# generated: 2026-09-24T16:27:23.874947662-04:00
+# survey_revision: 2026-09-24T16:27:23.874947662-04:00
+
+surveys: 1|71d6f40a-1f09-4f96-a9d1-299f9aedddb2|Household Survey|1|Household Survey||0001-0001-0000-0001-0000-0000-0000||author|Household v1
+select_groups: 1|50ac1f2d-2470-4389-8e4b-71477438e1a6|Sex||Text|0|1970-01-01T00:00:00Z|9999-12-31T23:59:59Z||
+select_items: 1|f581fc99-c12f-4e98-90d0-795a15c52bf9|1|Female|1|Female|0|1970-01-01T00:00:00Z|9999-12-31T23:59:59Z||
+select_items: 2|90aa5fa7-936a-4027-8e48-5a8096cad5aa|1|Male|2|Male|0|1970-01-01T00:00:00Z|9999-12-31T23:59:59Z||
+steps: 1|9471733e-8bb1-4054-9678-c5a570cac262|1|The house|The house||0|1970-01-01T00:00:00Z|9999-12-31T23:59:59Z||
+steps: 2|617cbb44-b41d-4c2b-bacf-9ec155f39a03|2|Household member|Household member||0|1970-01-01T00:00:00Z|9999-12-31T23:59:59Z||
+sections: 1|8d698f09-ac14-4ef5-bc4f-8ac18740ee2a|1|The house|The house||0|1970-01-01T00:00:00Z|9999-12-31T23:59:59Z||
+sections: 2|87621969-66be-432d-b92f-1bd515cb0860|2|About {NAME\|this person}|About {NAME\|this person}||0|1970-01-01T00:00:00Z|9999-12-31T23:59:59Z||
+steps_sections: 1|714e4eb8-7f37-480d-bab5-ebf1599a6e1b|1|1|1|1|0001-0001-0000-0001-0000-0000-0000|0|1970-01-01T00:00:00Z|9999-12-31T23:59:59Z||
+steps_sections: 2|819a84a7-380d-4286-8b06-8c4978d5aa52|2|2|2|1|0001-0002-0000-0001-0000-0000-0000|0|1970-01-01T00:00:00Z|9999-12-31T23:59:59Z||
+questions: 1|b40a1bdb-3d5a-417f-ae44-48053f7d048d|5|How many people live in your house?|||false|1|10|||||||0|1970-01-01T00:00:00Z|9999-12-31T23:59:59Z||
+questions: 2|0abca41d-9540-44b2-8871-59e52d72aa15|8|Name of person {Q#}|||false|||||||||0|1970-01-01T00:00:00Z|9999-12-31T23:59:59Z||
+questions: 3|0722bbb5-a277-435b-a637-3afd269cf90d|5|How old is {NAME\|this person}?|||false|0|120|||||||0|1970-01-01T00:00:00Z|9999-12-31T23:59:59Z||
+questions: 4|a1fcc8e7-5d9d-44e3-923f-fc4106670c74|3|What is {NAME\|this person}'s sex?|||false||||1|||||0|1970-01-01T00:00:00Z|9999-12-31T23:59:59Z||
+questions: 5|bfbc8107-9b6f-4a40-9332-03b544e609f3|8|How is {NAME\|this person} related to you?|||false|||||||||0|1970-01-01T00:00:00Z|9999-12-31T23:59:59Z||
+questions: 6|af4d31c9-d638-41c9-8a03-e9964ecf6bb4|5|How many children does {NAME\|this person} have?|||false|0|30|||||||0|1970-01-01T00:00:00Z|9999-12-31T23:59:59Z||
+sections_questions: 1|ae0c6bee-aec7-4216-b83c-dfad8c1eedd2|1|1|1|0|1970-01-01T00:00:00Z|9999-12-31T23:59:59Z||
+sections_questions: 2|17244bf9-2ca5-44cb-8d2a-a540ba3bf9e6|2|1|2|0|1970-01-01T00:00:00Z|9999-12-31T23:59:59Z||
+sections_questions: 3|20127bbc-631e-4084-b56b-03e189c33461|3|2|1|0|1970-01-01T00:00:00Z|9999-12-31T23:59:59Z||
+sections_questions: 4|25395212-5ee3-48c3-99ab-3695615f2963|4|2|2|0|1970-01-01T00:00:00Z|9999-12-31T23:59:59Z||
+sections_questions: 5|85007e06-79c5-469f-aab2-8f8ea81df34e|5|2|3|0|1970-01-01T00:00:00Z|9999-12-31T23:59:59Z||
+sections_questions: 6|caaccb6b-29cb-4c89-a128-ea3b7d24d0ea|6|2|4|0|1970-01-01T00:00:00Z|9999-12-31T23:59:59Z||
+relationships: 1|32f485d5-6055-449e-a8d0-5fc248e8bfb4||1|||2|2|2|> 0||0|||0|1970-01-01T00:00:00Z|9999-12-31T23:59:59Z||
+relationships: 2|ee9a6206-97a3-486e-9d72-f62d5efcee66|1|2|2|||5|1|exists {NAME}|NAME||||0|1970-01-01T00:00:00Z|9999-12-31T23:59:59Z||

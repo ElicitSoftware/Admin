@@ -284,6 +284,9 @@ Every row is one key in `translations.properties`. Return a file `translations_<
 | `mainLayout.nav.importRespondent` | Import Respondent | Navigation drawer · menu item | 30 |  |
 | `mainLayout.nav.applySurveyDefinition` | Apply Survey Definition | Navigation drawer · menu item | 30 |  |
 | `mainLayout.nav.exportSurveyDefinition` | Export Survey Definition | Navigation drawer · menu item | 30 |  |
+| `mainLayout.nav.manual` | Manual (PDF) | Navigation drawer · menu item opening the administrator's manual PDF in a new tab; PDF stays | 25 | identical |
+| `mainLayout.header.manual` | Manual | Header · link opening the administrator's manual PDF in a new tab | 15 | identical |
+| `mainLayout.header.manualTitle` | Open the administrator's manual (PDF) in a new tab | Header · tooltip of the manual link; PDF stays | 60 |  |
 | `mainLayout.nav.logout` | Logout | Navigation drawer · menu item | 20 |  |
 | `debugView.pageTitle` | Debug - Elicit Admin | Debug page (diagnostics, admins only) · browser tab title | 40 |  |
 | `debugView.title` | Debug Information | Debug page (diagnostics) · heading | 40 |  |
@@ -317,6 +320,7 @@ Every row is one key in `translations.properties`. Return a file `translations_<
 | `missingDepartmentDialog.admin.action` | Add a department | No-department dialog · primary button leading to the Departments screen | 25 |  |
 | `missingDepartmentDialog.user.message` | Your account is not assigned to a department, so the console has nothing to show you. Ask an administrator to assign you to one, then sign in again. | No-department dialog · body text for a user, who must ask an administrator | 200 |  |
 | `missingDepartmentDialog.logout` | Logout | No-department dialog · button that signs the user out | 15 |  |
+| `missingDepartmentDialog.manual` | Open the manual | No-department dialog · link opening the administrator's manual PDF in a new tab | 25 |  |
 | `paginationControls.pageSize` | Page size | Grid pager · label next to the page size selector | 15 |  |
 | `paginationControls.pageOf` | Page {0} of {1} | Grid pager · current page label | 20 | params: {0} = current page, {1} = page count |
 | `paginationControls.firstPage` | Go to first page | Grid pager · accessible name of an icon button | 30 |  |
@@ -772,6 +776,9 @@ mainLayout.nav.users=Users
 mainLayout.nav.importRespondent=Import Respondent
 mainLayout.nav.applySurveyDefinition=Apply Survey Definition
 mainLayout.nav.exportSurveyDefinition=Export Survey Definition
+mainLayout.nav.manual=Manual (PDF)
+mainLayout.header.manual=Manual
+mainLayout.header.manualTitle=Open the administrator's manual (PDF) in a new tab
 mainLayout.nav.logout=Logout
 debugView.pageTitle=Debug - Elicit Admin
 debugView.title=Debug Information
@@ -805,6 +812,7 @@ missingDepartmentDialog.admin.message=Your account is not assigned to a departme
 missingDepartmentDialog.admin.action=Add a department
 missingDepartmentDialog.user.message=Your account is not assigned to a department, so the console has nothing to show you. Ask an administrator to assign you to one, then sign in again.
 missingDepartmentDialog.logout=Logout
+missingDepartmentDialog.manual=Open the manual
 paginationControls.pageSize=Page size
 paginationControls.pageOf=Page {0} of {1}
 paginationControls.firstPage=Go to first page
