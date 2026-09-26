@@ -32,6 +32,8 @@ concise, gender-neutral language and the formal register where the language dist
 | message template | Stored invitation or reminder email text | Translate consistently |
 | survey definition | The authored survey installed into this console (the `.elicit` file) | Translate consistently; "apply" installs or updates it |
 | role, administrator, user | Access levels | Translate consistently |
+| content language | A language a survey's own questions and options are published in, as opposed to the language of the console itself | Translate consistently; keep it distinct from the console's language |
+| base language | The language a survey's content is written in, and the one every untranslated string falls back to | Translate consistently |
 | PDF, CSV, JSON, HTTP, OIDC, API, ID, URL | Technical names | Keep as written |
 
 ## Rules for the translation
