@@ -368,7 +368,7 @@ public class User extends PanacheEntityBase {
      * Compares this user to another based on its primary key.
      *
      * <p>ID-based identity is required for correct {@code Grid} selection tracking and
-     * {@code refreshItem} behaviour in the Vaadin data-provider layer (see the
+     * {@code refreshItem} behavior in the Vaadin data-provider layer (see the
      * {@code data-providers} skill).</p>
      *
      * @param o the object to compare with

@@ -45,7 +45,7 @@ final class SurveyDefinitionFileFields {
      * A file written before this header existed simply has no such line, and every consumer
      * treats a {@code null} revision as "unknown" rather than an error — the header is additive
      * to {@code ELICIT_SURVEY_EXPORT_V1}, not a new format version, since both parsers already
-     * skip every {@code #} line they don't recognise.
+     * skip every {@code #} line they don't recognize.
      *
      * @param line one trimmed line from the file
      * @return the parsed revision, or {@code null} if this line is not the revision header
@@ -95,7 +95,7 @@ final class SurveyDefinitionFileFields {
      * What is absent is as deliberate as what is present. A survey's {@code name} is an identifier
      * used in file names and console lists; {@code dimension_name} and ontology tags are reporting
      * identifiers; a question's {@code default_value} is written into {@code answers.text_value}
-     * and analysed, so translating it would fork stored data by language; {@code coded_value},
+     * and analyzed, so translating it would fork stored data by language; {@code coded_value},
      * {@code url}, {@code mask}, {@code variant}, {@code sample}, {@code token} and
      * {@code reference_value} are read by machines. {@code override_upstream_value} has no runtime
      * reader.
@@ -208,7 +208,7 @@ final class SurveyDefinitionFileFields {
         int firstSeparator = value.indexOf('-');
         if (firstSeparator < 0) {
             // Not a structured display key. Leave it exactly as the file had it rather than
-            // guess at a format this code does not recognise.
+            // guess at a format this code does not recognize.
             return value;
         }
         return String.format("%04d", surveyId.longValue()) + value.substring(firstSeparator);
@@ -233,7 +233,7 @@ final class SurveyDefinitionFileFields {
      * {@code NUMERIC} display-order columns ({@code steps.display_order},
      * {@code sections.display_order}, {@code steps_sections.step_display_order} /
      * {@code section_display_order}, {@code sections_questions.display_order}), which hold
-     * decimals so a new element can be slotted between two neighbours without renumbering
+     * decimals so a new element can be slotted between two neighbors without renumbering
      * (e.g. {@code 1.5}); {@link #parseIntOrNull} would silently turn such a value into
      * {@code null}.
      */

@@ -495,7 +495,7 @@ Every row is one key in `translations.properties`. Return a file `translations_<
 | `systemBrandingView.source.embedded` | Embedded default | System branding · source badge (packaged default) | 20 |  |
 | `systemBrandingView.source.absent` | Absent | System branding · source badge | 15 |  |
 | `systemBrandingView.source.unreadable` | Unreadable | System branding · source badge | 15 |  |
-| `systemBrandingView.asset.colourStylesheet` | colour stylesheet | System branding · what an asset is for | 30 |  |
+| `systemBrandingView.asset.colorStylesheet` | color stylesheet | System branding · what an asset is for | 30 |  |
 | `systemBrandingView.asset.typographyStylesheet` | typography stylesheet | System branding · what an asset is for | 30 |  |
 | `systemBrandingView.asset.themeStylesheet` | theme stylesheet | System branding · what an asset is for | 30 |  |
 | `systemBrandingView.asset.horizontalLogo` | horizontal logo | System branding · what an asset is for | 30 |  |
@@ -987,7 +987,7 @@ systemBrandingView.source.local=Local
 systemBrandingView.source.embedded=Embedded default
 systemBrandingView.source.absent=Absent
 systemBrandingView.source.unreadable=Unreadable
-systemBrandingView.asset.colourStylesheet=colour stylesheet
+systemBrandingView.asset.colorStylesheet=color stylesheet
 systemBrandingView.asset.typographyStylesheet=typography stylesheet
 systemBrandingView.asset.themeStylesheet=theme stylesheet
 systemBrandingView.asset.horizontalLogo=horizontal logo

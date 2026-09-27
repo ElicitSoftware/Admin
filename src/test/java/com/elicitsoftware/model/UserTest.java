@@ -48,7 +48,7 @@ class UserTest {
         assertEquals(departments, user.getDepartments());
     }
 
-    /** UC-028: a user with no department is recognised as such; there is no silent fallback. */
+    /** UC-028: a user with no department is recognized as such; there is no silent fallback. */
     @Test
     void hasDepartmentsIsFalseWhenNoneAssigned() {
         User user = new User();

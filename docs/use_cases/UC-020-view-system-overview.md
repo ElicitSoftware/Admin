@@ -32,7 +32,7 @@
 1. The system marks the setting absent and explains which environment variable or property supplies it.
 2. Use case continues at step 5; the screen still renders.
 
-### A2: A diagnostic area cannot be summarised
+### A2: A diagnostic area cannot be summarized
 
 **Trigger:** A summary check in step 3 fails or times out (step 3).
 **Flow:**

@@ -87,7 +87,7 @@ class EditUserViewRoleAssignmentTest extends QuarkusBrowserlessTest {
         return find(TextField.class, view).all().stream()
                 .filter(f -> label.equals(f.getLabel()))
                 .findFirst()
-                .orElseThrow(() -> new AssertionError("No TextField labelled '" + label + "'"));
+                .orElseThrow(() -> new AssertionError("No TextField labeled '" + label + "'"));
     }
 
     private Button saveButton() {

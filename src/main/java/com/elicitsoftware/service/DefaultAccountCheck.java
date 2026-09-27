@@ -25,7 +25,7 @@ import java.util.List;
  * {@code V0.0.3__POPULATE_DEV_DATA.sql} seeds {@code admin} and {@code user} in
  * {@code survey.users} so that a fresh deployment can be signed into, and
  * {@code V0.0.11__Seed_Admin_And_User_Roles.sql} grants their roles by looking them up by
- * username. This check recognises them the same way (BR-085): by username, whether or not
+ * username. This check recognizes them the same way (BR-085): by username, whether or not
  * the row is active.
  */
 @ApplicationScoped

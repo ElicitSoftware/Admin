@@ -98,7 +98,7 @@ class MissingDepartmentDialogTest extends QuarkusBrowserlessTest {
     /**
      * A real console record with no department, loaded into the session as sign-in would load
      * it, so the gate's re-read finds it too (BR-114). The UI-scoped {@code UiSessionLogin}
-     * initialises once per test run, so the load is explicit rather than left to its
+     * initializes once per test run, so the load is explicit rather than left to its
      * {@code @PostConstruct}.
      */
     private static void persistUserWithoutDepartment(String username) {

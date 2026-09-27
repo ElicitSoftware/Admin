@@ -32,7 +32,7 @@ is a reader's action, so it stays — one short chapter, no upload, no directory
 | Path | Committed? | What it is |
 | --- | --- | --- |
 | `docs/manual/elicit-admin-manual.tex` | yes | the manual |
-| `docs/manual/elicit-brand.sty` | yes | copied verbatim from Author — colours, IBM Plex, page furniture, `\screenshot`, `\ui`, `\term` (BR-005) |
+| `docs/manual/elicit-brand.sty` | yes | copied verbatim from Author — colors, IBM Plex, page furniture, `\screenshot`, `\ui`, `\term` (BR-005) |
 | `docs/manual/images/` | yes | the captured screens, plus `elicit-logo.png` |
 | `docs/manual/capture/` | yes | `capture-screenshots.mjs` + its own `package.json`, kept out of the Vaadin-managed root one |
 | `docs/manual/build-manual.sh` | yes | typesets the PDF into `src/main/resources/manual/` |
@@ -106,7 +106,7 @@ so the PDF is on the classpath when Quarkus builds the image and carries this im
   Vaadin router would otherwise swallow `/api/manual`) and opening in a new tab. Shown only when
   `AdminManual.isAvailable()` (A1). `VaadinIcon.FILE_TEXT_O`, as Author uses.
 - `MissingDepartmentDialog` — add the manual link beside its existing action (A7), guarded the same
-  way. This is the only behavioural change to an existing screen, and it keeps the notice's promise
+  way. This is the only behavioral change to an existing screen, and it keeps the notice's promise
   of a reachable action (NFR-016) pointing at the document that explains the fix.
 
 ## Translations

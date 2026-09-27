@@ -31,7 +31,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  *
  * <p>Traceability: UC-009 (Manage Users). Code-review finding #6 converted this view to use a
  * {@link com.vaadin.flow.data.binder.Binder} with required/length validators and made the Save
- * button track validity. This test exercises that behaviour from the user's perspective:
+ * button track validity. This test exercises that behavior from the user's perspective:
  * required fields left blank keep Save disabled; filling them all in enables it; clearing one
  * disables it again.</p>
  *
@@ -59,7 +59,7 @@ class EditUserViewTest extends QuarkusBrowserlessTest {
         return find(TextField.class, view).all().stream()
                 .filter(f -> label.equals(f.getLabel()))
                 .findFirst()
-                .orElseThrow(() -> new AssertionError("No TextField labelled '" + label + "'"));
+                .orElseThrow(() -> new AssertionError("No TextField labeled '" + label + "'"));
     }
 
     private Button saveButton() {

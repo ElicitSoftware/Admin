@@ -35,7 +35,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  *
  * <p>Traceability: UC-014 (Import Survey Definition) and UC-017 (Update Survey Definition) —
  * this service chooses between them by {@code survey_key} rather than requiring the operator to.
- * The routing decision is what's under test here; the behaviour of each destination service is
+ * The routing decision is what's under test here; the behavior of each destination service is
  * covered by {@code SurveyDefinitionImportServiceTest} and
  * {@code SurveyDefinitionUpdateServiceTest}.</p>
  */

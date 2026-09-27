@@ -76,7 +76,7 @@ class TranslatableFieldsParityTest {
     void fieldsThatWouldForkStoredDataAreNotTranslatable() {
         // Each of these was considered and rejected; a regression here is a data defect, not a typo.
         assertTrue(!SurveyDefinitionFileFields.isTranslatable("questions", "default_value"),
-                "default_value is written into answers.text_value and analysed");
+                "default_value is written into answers.text_value and analyzed");
         assertTrue(!SurveyDefinitionFileFields.isTranslatable("select_items", "coded_value"),
                 "coded_value is the stored answer");
         assertTrue(!SurveyDefinitionFileFields.isTranslatable("surveys", "name"),
