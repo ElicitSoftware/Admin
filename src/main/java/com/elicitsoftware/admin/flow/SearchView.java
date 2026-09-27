@@ -149,7 +149,7 @@ public class SearchView extends VerticalLayout implements HasDynamicTitle, Befor
     /** Scheduled executor for automatic data refresh functionality. */
     private final ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(1);
 
-    /** Handle to the scheduled refresh task so it can be cancelled on detach. */
+    /** Handle to the scheduled refresh task so it can be canceled on detach. */
     private ScheduledFuture<?> refreshTask;
 
     /** Security identity for user authentication and role checking. */
@@ -642,7 +642,7 @@ public class SearchView extends VerticalLayout implements HasDynamicTitle, Befor
         paginationControls.onPageChanged(() -> subjectGrid.getDataProvider().refreshAll());
 
         // Schedule data refresh every 10 seconds. The handle is retained so the task can be
-        // cancelled in onDetach, preventing a leaked thread pool that keeps calling
+        // canceled in onDetach, preventing a leaked thread pool that keeps calling
         // ui.access() on a detached UI after navigation.
         refreshTask = scheduler.scheduleAtFixedRate(() -> {
             if (ui != null) {
@@ -749,7 +749,7 @@ public class SearchView extends VerticalLayout implements HasDynamicTitle, Befor
         Map<String, Object> params = new HashMap<>();
 
         // Department IDs (required). An empty selection yields an empty "in ()" that matches
-        // nothing, which is the intended behaviour when the user clears the required filter.
+        // nothing, which is the intended behavior when the user clears the required filter.
         where.append(Status.PROP_DEPARTMENT_ID).append(" in :departments"); // i18n:ignore (SQL)
         params.put("departments", departmentIds);
 

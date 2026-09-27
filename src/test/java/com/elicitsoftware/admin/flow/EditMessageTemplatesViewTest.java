@@ -135,7 +135,7 @@ class EditMessageTemplatesViewTest extends QuarkusBrowserlessTest {
         return find(Button.class, view).all().stream()
                 .filter(b -> text.equals(b.getText()))
                 .findFirst()
-                .orElseThrow(() -> new AssertionError("No visible button labelled '" + text + "'"));
+                .orElseThrow(() -> new AssertionError("No visible button labeled '" + text + "'"));
     }
 
     private Div previewContent() {

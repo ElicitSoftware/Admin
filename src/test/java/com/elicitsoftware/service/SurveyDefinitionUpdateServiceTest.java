@@ -629,7 +629,7 @@ class SurveyDefinitionUpdateServiceTest {
         return out.toString();
     }
 
-    /** Reads back the logged revision, normalising whatever temporal type the driver returns. */
+    /** Reads back the logged revision, normalizing whatever temporal type the driver returns. */
     private Instant loggedRevision(UUID surveyKey) {
         Object value = em.createNativeQuery(
                         "SELECT MAX(revision) FROM survey.survey_log WHERE survey_key = ?1 AND outcome = 'SUCCESS'")

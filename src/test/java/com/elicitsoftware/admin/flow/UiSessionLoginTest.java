@@ -105,7 +105,7 @@ class UiSessionLoginTest extends QuarkusBrowserlessTest {
             user.setActive(true);
             user.persist();
         });
-        // The UI-scoped bean initialises once per test run, so load this principal's record explicitly.
+        // The UI-scoped bean initializes once per test run, so load this principal's record explicitly.
         UiSessionLogin login = sessionLogin();
         login.refresh();
         assertFalse(login.getUser().hasDepartments(), "signed in with no department");

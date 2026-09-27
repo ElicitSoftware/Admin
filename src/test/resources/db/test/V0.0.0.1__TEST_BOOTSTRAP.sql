@@ -68,6 +68,11 @@ CREATE TABLE IF NOT EXISTS survey.surveys
     description         character varying(2000),
     initial_display_key character varying(255),
     post_survey_url     character varying(2000),
+    -- Content language, Survey V019: the language the survey's content is written in, and
+    -- the comma-separated set it is published in. Both are carried by the definition file
+    -- and updated in place by the update service.
+    base_language       character varying(35) NOT NULL DEFAULT 'en',
+    content_languages   character varying(255),
     -- Kimball Type 2 (SCD Type 1 for surveys — in-place change tracking only).
     published_by        text,
     published_comment   text,
@@ -504,6 +509,10 @@ CREATE TABLE IF NOT EXISTS survey.answers
     question_id            integer,
     display_key            character varying(34)    NOT NULL,
     display_text           character varying(8000)  NOT NULL,
+    -- Survey V019: the same label in the language the respondent was reading, and that
+    -- language. Null when the label was shown in the survey's base language.
+    display_text_local     text,
+    display_language       character varying(35),
     text_value             character varying(255),
     deleted                boolean                  NOT NULL DEFAULT false,
     created_dt             timestamptz              NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -615,6 +624,49 @@ CREATE TABLE IF NOT EXISTS survey.respondent_psa
     CONSTRAINT respondent_psa_respondent_fk FOREIGN KEY (respondent_id) REFERENCES survey.respondents (id),
     CONSTRAINT respondent_psa_un UNIQUE (respondent_id, post_survey_action_id)
 );
+
+-- survey.translations (Survey V019): content translations carried by the definition file and
+-- upserted by the update service (UC-014 BR-110, UC-017 BR-110). As with the structural tables
+-- above, the translation key gets a DEFAULT here (unlike production) so raw-SQL test helpers that
+-- do not mention it keep working. The scd_close_predecessor trigger is not reproduced in this
+-- bootstrap, as it is not for the other Type 2 tables: the update service closes the predecessor
+-- explicitly and the tests assert on that.
+CREATE SEQUENCE IF NOT EXISTS survey.translations_seq START WITH 1 INCREMENT BY 1;
+CREATE SEQUENCE IF NOT EXISTS survey.translations_durable_seq START WITH 1 INCREMENT BY 1;
+CREATE TABLE IF NOT EXISTS survey.translations
+(
+    id                 integer NOT NULL,
+    survey_id          integer NOT NULL,
+    element_type       character varying(32) NOT NULL,
+    element_key        uuid NOT NULL,
+    field              character varying(32) NOT NULL,
+    language           character varying(35) NOT NULL,
+    value              text NOT NULL,
+    source_hash        character varying(64) NOT NULL,
+    source_text        text,
+    translation_id     integer NOT NULL DEFAULT nextval('survey.translations_durable_seq'),
+    translation_key    uuid NOT NULL DEFAULT (md5(random()::text || clock_timestamp()::text))::uuid,
+    version            integer NOT NULL DEFAULT 0,
+    effective_from     timestamptz DEFAULT '1970-01-01 00:00:00+00',
+    effective_to       timestamptz DEFAULT '9999-12-31 23:59:59+00',
+    published_by       text,
+    published_comment  text,
+    CONSTRAINT translations_pk PRIMARY KEY (id),
+    CONSTRAINT translations_surveys_fk FOREIGN KEY (survey_id) REFERENCES survey.surveys (id),
+    CONSTRAINT translations_id_version_un UNIQUE (translation_id, version),
+    CONSTRAINT translations_key_version_un UNIQUE (translation_key, version),
+    CONSTRAINT translations_element_type_ck
+        CHECK (element_type IN ('surveys','steps','sections','questions','select_items','relationships','reports'))
+);
+CREATE UNIQUE INDEX IF NOT EXISTS translations_one_current_un
+    ON survey.translations (translation_id)
+    WHERE effective_to = '9999-12-31 23:59:59+00';
+CREATE UNIQUE INDEX IF NOT EXISTS translations_target_current_un
+    ON survey.translations (survey_id, language, element_key, field)
+    WHERE effective_to = '9999-12-31 23:59:59+00';
+CREATE INDEX IF NOT EXISTS translations_key_current_idx
+    ON survey.translations (translation_key)
+    WHERE effective_to = '9999-12-31 23:59:59+00';
 
 -- -----------------------------------------------------------------------------
 -- 8. surveyreport.fact_respondents — GRANT target only (V0.0.6/V0.0.8).

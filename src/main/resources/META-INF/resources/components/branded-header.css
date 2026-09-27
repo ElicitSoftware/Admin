@@ -114,12 +114,12 @@
 
 /* Language switcher (UC-026). A Select in the header would otherwise keep Lumo's
    page-level tokens (dark body text on a translucent dark tint), so the field is
-   painted in the brand's header text colour.
+   painted in the brand's header text color.
 
    The parts are addressed one by one rather than by redefining --lumo-body-text-color
    on the host: Vaadin 25 renders a Select's overlay inside the component, so a token
    set here inherits into it and every option in the dropdown is drawn in the header's
-   colour — white on the overlay's white, which is invisible. The overlay must keep the
+   color — white on the overlay's white, which is invisible. The overlay must keep the
    page's own styling. */
 .branded-header .language-switcher {
     margin-inline-start: auto;
@@ -136,7 +136,7 @@
     color: var(--brand-header-text);
 }
 
-/* Manual link (UC-029): sits at the far right of the header, in the header's own text colour
+/* Manual link (UC-029): sits at the far right of the header, in the header's own text color
    so it works on a light or a dark brand. Hidden on narrow viewports, where header space is
    scarce and the drawer carries the same entry. */
 .branded-header .header-manual-link {

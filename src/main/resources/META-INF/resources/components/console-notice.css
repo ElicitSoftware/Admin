@@ -10,7 +10,7 @@
  */
 
 /* Console-wide notices (missing survey, seeded default accounts) shown by MainLayout above
-   the routed view. Spacing and colours use Lumo tokens so a mounted brand can re-skin them. */
+   the routed view. Spacing and colors use Lumo tokens so a mounted brand can re-skin them. */
 .console-notices {
     padding: var(--lumo-space-m) var(--lumo-space-m) 0;
     gap: var(--lumo-space-s);

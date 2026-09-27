@@ -9,7 +9,7 @@ respondent between deployments, applying and exporting a survey definition, and
 the System screens.
 
 See [`../use_cases/UC-029-consult-the-administrators-manual.md`](../use_cases/UC-029-consult-the-administrators-manual.md)
-for the behaviour this implements, [`../plan/UC-029-administrators-manual.md`](../plan/UC-029-administrators-manual.md)
+for the behavior this implements, [`../plan/UC-029-administrators-manual.md`](../plan/UC-029-administrators-manual.md)
 for the plan it follows, and FR-036 / NFR-017 / C-017 in
 [`../requirements.md`](../requirements.md).
 
@@ -29,7 +29,7 @@ than shipping a placeholder.
 | Path | Committed? | What it is |
 | --- | --- | --- |
 | `elicit-admin-manual.tex` | yes | the manual |
-| `elicit-brand.sty` | yes | the Elicit default brand as LaTeX — colours, IBM Plex, the page furniture, `\screenshot`, `\ui`, `\term` (UC-029 BR-005) |
+| `elicit-brand.sty` | yes | the Elicit default brand as LaTeX — colors, IBM Plex, the page furniture, `\screenshot`, `\ui`, `\term` (UC-029 BR-005) |
 | `images/` | yes | the captured screens, plus `elicit-logo.png` for the title page |
 | `capture/` | yes | `capture-screenshots.mjs`, its own `package.json`, and `fixtures/` — the survey definition and the three finished respondents the walk installs; regenerates `images/` from a running Admin |
 | `build-manual.sh` | yes | typesets the PDF and puts it where the application packages it |

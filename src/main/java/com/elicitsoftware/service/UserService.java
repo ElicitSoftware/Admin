@@ -20,7 +20,7 @@ import jakarta.transaction.Transactional;
  *
  * <p>Keeping the transactional data-access logic here (rather than in the Vaadin view) lets the
  * UI layer stay focused on presentation, and gives a single, testable seam for user
- * create/update behaviour.</p>
+ * create/update behavior.</p>
  *
  * @author Elicit Software
  * @version 1.0

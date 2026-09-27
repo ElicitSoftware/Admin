@@ -118,7 +118,7 @@ public class SurveyLogService {
         query.setParameter(1, surveyKey);
         Object result = query.getSingleResult();
         // A native query over timestamptz hands back Instant, OffsetDateTime, or
-        // java.sql.Timestamp depending on driver/dialect; normalise to UTC in every case, since
+        // java.sql.Timestamp depending on driver/dialect; normalize to UTC in every case, since
         // callers only ever compare instants. Unknown types throw rather than silently
         // returning null, which would quietly disable the regression check.
         return switch (result) {

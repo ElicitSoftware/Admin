@@ -241,7 +241,7 @@ public class MessageTemplate extends PanacheEntityBase {
      * Compares this message template to another based on primary key equality.
      * <p>
      * ID-based identity is required for correct {@code Grid} selection tracking and
-     * {@code refreshItem} behaviour in the Vaadin data-provider layer (see the
+     * {@code refreshItem} behavior in the Vaadin data-provider layer (see the
      * {@code data-providers} skill) - {@code MessageTemplatesView} displays these in a
      * {@code Grid<MessageTemplate>}.
      *
