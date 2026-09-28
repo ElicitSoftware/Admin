@@ -14,21 +14,19 @@ package com.elicitsoftware.admin.flow;
 import com.elicitsoftware.service.SurveyDefinitionApplyService;
 import com.elicitsoftware.service.SurveyDefinitionImportService;
 import com.elicitsoftware.service.SurveyDefinitionUpdateService;
-import com.vaadin.flow.component.ModalityMode;
 import com.vaadin.flow.component.button.Button;
 import com.vaadin.flow.component.button.ButtonVariant;
-import com.vaadin.flow.component.dialog.Dialog;
 import com.vaadin.flow.component.html.H3;
 import com.vaadin.flow.component.html.Paragraph;
-import com.vaadin.flow.component.html.Span;
 import com.vaadin.flow.component.orderedlayout.VerticalLayout;
 import com.vaadin.flow.component.upload.Upload;
 import com.vaadin.flow.router.Route;
 import com.vaadin.flow.server.streams.UploadHandler;
-import com.vaadin.flow.theme.lumo.LumoUtility;
 import jakarta.annotation.security.RolesAllowed;
 import jakarta.inject.Inject;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -91,9 +89,10 @@ public class SurveyDefinitionApplyView extends VerticalLayout {
     void handleUpload(byte[] data, String fileName) {
         try {
             SurveyDefinitionApplyService.ApplyResult result = applyService.apply(data, fileName);
-            showResultDialog(titleFor(result), buildSummary(result), !result.success());
+            new ResultDialog(titleFor(result), buildSummary(result), !result.success()).open();
         } catch (Exception e) {
-            showResultDialog("Apply Failed", e.getMessage(), true);
+            String message = e.getMessage() != null ? e.getMessage() : e.toString();
+            new ResultDialog("Apply Failed", message, true).open();
         }
     }
 
@@ -109,30 +108,41 @@ public class SurveyDefinitionApplyView extends VerticalLayout {
     /**
      * Renders the routing decision first — which operation happened is the thing an administrator
      * could not have predicted from the file alone — then the per-table detail beneath it.
+     * <p>
+     * Returns the summary as sections of lines rather than as one newline-separated string, so
+     * {@link ResultDialog} can lay each line out as its own element; see that class for why a
+     * pre-formatted string did not survive rendering.
      */
-    private String buildSummary(SurveyDefinitionApplyService.ApplyResult result) {
-        StringBuilder summary = new StringBuilder();
-        summary.append(result.message()).append("\n");
+    private List<ResultDialog.Section> buildSummary(SurveyDefinitionApplyService.ApplyResult result) {
+        List<ResultDialog.Section> sections = new ArrayList<>();
+
+        List<ResultDialog.Line> outcome = new ArrayList<>();
+        outcome.add(ResultDialog.Line.message(result.message()));
         if (result.surveyKey() != null) {
-            summary.append("Survey key: ").append(result.surveyKey()).append("\n");
+            outcome.add(ResultDialog.Line.message("Survey key: " + result.surveyKey()));
         }
+        sections.add(new ResultDialog.Section(outcome));
 
         switch (result.detail()) {
             case SurveyDefinitionImportService.ImportResult imported -> {
-                summary.append("\nRecords installed: ").append(imported.getRecordsImported()).append("\n");
+                List<ResultDialog.Line> installed = new ArrayList<>();
+                installed.add(ResultDialog.Line.heading("Records installed: " + imported.getRecordsImported()));
                 imported.getCounts().forEach((table, count) ->
-                        summary.append("  ").append(table).append(": ").append(count).append("\n"));
-                appendErrors(summary, imported.getErrors());
+                        installed.add(ResultDialog.Line.detail(table + ": " + count)));
+                sections.add(new ResultDialog.Section(installed));
+                addErrors(sections, imported.getErrors());
             }
             case SurveyDefinitionUpdateService.UpdateResult updated -> {
                 Map<String, SurveyDefinitionUpdateService.TableUpdateCounts> counts = updated.getCounts();
                 if (counts != null) {
-                    summary.append("\ncreated / versioned / unchanged / retired:\n");
-                    counts.forEach((table, c) -> summary.append("  ").append(table).append(": ")
-                            .append(c.created()).append(" / ").append(c.versioned())
-                            .append(" / ").append(c.unchanged()).append(" / ").append(c.retired()).append("\n"));
+                    List<ResultDialog.Line> reconciled = new ArrayList<>();
+                    reconciled.add(ResultDialog.Line.heading("created / versioned / unchanged / retired:"));
+                    counts.forEach((table, c) -> reconciled.add(ResultDialog.Line.detail(
+                            table + ": " + c.created() + " / " + c.versioned()
+                                    + " / " + c.unchanged() + " / " + c.retired())));
+                    sections.add(new ResultDialog.Section(reconciled));
                 }
-                appendErrors(summary, updated.getErrors());
+                addErrors(sections, updated.getErrors());
             }
             default -> {
                 // A rejection carries no per-table detail; the message above is the whole story.
@@ -140,41 +150,17 @@ public class SurveyDefinitionApplyView extends VerticalLayout {
         }
         if (result.reporting() != null) {
             // Last, because it happened last: the definition is applied whatever this line says.
-            summary.append("\n").append(result.reporting()).append("\n");
+            sections.add(ResultDialog.Section.of(ResultDialog.Line.message(result.reporting())));
         }
-        return summary.toString();
+        return sections;
     }
 
-    private void appendErrors(StringBuilder summary, java.util.List<String> errors) {
+    private void addErrors(List<ResultDialog.Section> sections, List<String> errors) {
         if (errors != null && !errors.isEmpty()) {
-            summary.append("\nErrors:\n");
-            errors.forEach(error -> summary.append("  ").append(error).append("\n"));
+            List<ResultDialog.Line> lines = new ArrayList<>();
+            lines.add(ResultDialog.Line.heading("Errors:"));
+            errors.forEach(error -> lines.add(ResultDialog.Line.error(error)));
+            sections.add(new ResultDialog.Section(lines));
         }
-    }
-
-    private void showResultDialog(String title, String message, boolean isError) {
-        Dialog dialog = new Dialog();
-        dialog.setHeaderTitle(title);
-
-        Span messageSpan = new Span(message);
-        messageSpan.addClassName(LumoUtility.Whitespace.PRE_WRAP);
-        messageSpan.addClassName(isError ? LumoUtility.TextColor.ERROR : LumoUtility.TextColor.SUCCESS);
-
-        Button closeButton = new Button("Close", evt -> dialog.close());
-        closeButton.addThemeVariants(ButtonVariant.LUMO_PRIMARY);
-        closeButton.addClassName(LumoUtility.Margin.Top.MEDIUM);
-
-        VerticalLayout dialogLayout = new VerticalLayout(messageSpan, closeButton);
-        dialogLayout.setAlignItems(Alignment.CENTER);
-        dialogLayout.setSpacing(true);
-
-        dialog.add(dialogLayout);
-        dialog.setModality(ModalityMode.STRICT);
-        dialog.setDraggable(false);
-        dialog.setResizable(true);
-        dialog.setWidth("600px");
-        dialog.setMaxWidth("90vw");
-
-        dialog.open();
     }
 }
