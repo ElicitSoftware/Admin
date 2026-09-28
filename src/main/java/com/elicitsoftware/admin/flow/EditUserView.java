@@ -36,7 +36,6 @@ import com.vaadin.flow.data.validator.StringLengthValidator;
 import com.vaadin.flow.router.BeforeEnterEvent;
 import com.vaadin.flow.router.BeforeEnterObserver;
 import com.vaadin.flow.router.Route;
-import com.vaadin.flow.theme.lumo.LumoUtility;
 import jakarta.annotation.PostConstruct;
 import jakarta.annotation.security.RolesAllowed;
 import io.quarkus.security.identity.SecurityIdentity;
@@ -164,7 +163,9 @@ public class EditUserView extends VerticalLayout implements BeforeEnterObserver 
         roleBox.setClearButtonVisible(true);
         roleBox.setWidthFull();
         Paragraph roleSectionInfo = new Paragraph(getTranslation("editUserView.role.info"));
-        roleSectionInfo.addClassNames(LumoUtility.Margin.NONE, LumoUtility.TextColor.SECONDARY);
+        // The role section supplies its own spacing, so the paragraph's native margin has to go:
+        // view-intro-flush in components/view-text.css.
+        roleSectionInfo.addClassName("view-intro-flush");
         roleSection.add(new H4(getTranslation("editUserView.role.heading")), roleSectionInfo, roleBox);
         roleSection.setPadding(false);
         roleSection.setSpacing(false);

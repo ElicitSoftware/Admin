@@ -11,9 +11,14 @@ package com.elicitsoftware.admin.flow;
  * ***LICENSE_END***
  */
 
+import com.vaadin.flow.component.Component;
 import org.junit.jupiter.api.Test;
 
+import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
+
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
@@ -74,5 +79,31 @@ class PaginationControlsTest {
         controls.recalculatePageCount(0);
         assertEquals(0, controls.calculateOffset());
         assertEquals(10, controls.getPageSize());
+    }
+
+    /** Every component in the control's subtree, the root included. */
+    private List<Component> subtreeOf(Component root) {
+        return java.util.stream.Stream.concat(java.util.stream.Stream.of(root),
+                root.getChildren().flatMap(child -> subtreeOf(child).stream())).toList();
+    }
+
+    /**
+     * UC-002 (#85): the labels carry the classes {@code components/pagination-controls.css}
+     * styles them with. They used to ask for {@code LumoUtility.FontSize.SMALL} and
+     * {@code LumoUtility.Padding.Horizontal.SMALL}, which are inert in Admin, so the page label
+     * rendered at body size and flush against the arrows.
+     */
+    @Test
+    void labelsCarryTheStylingClasses() {
+        PaginationControls controls = new PaginationControls();
+        List<Component> subtree = subtreeOf(controls);
+
+        assertTrue(subtree.stream().anyMatch(c -> c.getElement().getClassList().contains("pagination-page-label")),
+                "the page label should carry pagination-page-label");
+        assertEquals(2, subtree.stream()
+                        .filter(c -> c.getElement().getClassList().contains("pagination-label")).count(),
+                "both the page-size and page labels should carry pagination-label");
+        assertFalse(subtree.stream().anyMatch(c -> c.getElement().getClassList().contains("text-s")),
+                "the inert Lumo utility classes should be gone");
     }
 }

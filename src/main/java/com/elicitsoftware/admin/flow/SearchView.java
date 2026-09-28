@@ -61,7 +61,6 @@ import com.vaadin.flow.router.BeforeEnterObserver;
 import com.vaadin.flow.router.HasDynamicTitle;
 import com.vaadin.flow.router.QueryParameters;
 import com.vaadin.flow.router.Route;
-import com.vaadin.flow.theme.lumo.LumoUtility;
 
 import io.quarkus.panache.common.Sort;
 import io.quarkus.security.identity.SecurityIdentity;
@@ -306,7 +305,7 @@ public class SearchView extends VerticalLayout implements HasDynamicTitle, Befor
             errorDiv.add(new Paragraph(getTranslation("searchView.noUser.loggedIn")));
 
             Span principal = new Span(identity.getPrincipal().getName());
-            principal.addClassName(LumoUtility.FontWeight.BOLD);
+            principal.addClassName("inline-name");
             Paragraph missingUser = new Paragraph(new Span(getTranslation("searchView.noUser.before")),
                     principal,
                     new Span(getTranslation("searchView.noUser.after")));

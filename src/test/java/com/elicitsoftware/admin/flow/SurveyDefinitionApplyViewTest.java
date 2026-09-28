@@ -17,9 +17,7 @@ import com.elicitsoftware.test.PostgresTestResource;
 import com.vaadin.browserless.quarkus.QuarkusBrowserlessTest;
 import com.vaadin.flow.component.UI;
 import com.vaadin.flow.component.dialog.Dialog;
-import com.vaadin.flow.component.html.Div;
 import com.vaadin.flow.component.html.H3;
-import com.vaadin.flow.component.html.ListItem;
 import com.vaadin.flow.component.upload.Upload;
 import io.quarkus.narayana.jta.QuarkusTransaction;
 import io.quarkus.test.TestTransaction;
@@ -37,6 +35,9 @@ import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.UUID;
 
+import static com.elicitsoftware.admin.flow.ResultDialogSupport.detailsIn;
+import static com.elicitsoftware.admin.flow.ResultDialogSupport.headingsIn;
+import static com.elicitsoftware.admin.flow.ResultDialogSupport.messagesIn;
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
@@ -88,23 +89,6 @@ class SurveyDefinitionApplyViewTest extends QuarkusBrowserlessTest {
 
     private Dialog openDialog() {
         return find(Dialog.class).single();
-    }
-
-    /** The summary's sentences, in the order they read, one element per line. */
-    private List<String> messagesIn(Dialog dialog) {
-        return find(Div.class, dialog).withClassName("elicit-result-message").all()
-                .stream().map(Div::getText).toList();
-    }
-
-    /** The summary's sub-headings ("Records installed: 128", "Errors:"). */
-    private List<String> headingsIn(Dialog dialog) {
-        return find(Div.class, dialog).withClassName("elicit-result-heading").all()
-                .stream().map(Div::getText).toList();
-    }
-
-    /** The indented detail lines beneath a heading, each its own list item. */
-    private List<String> detailsIn(Dialog dialog) {
-        return find(ListItem.class, dialog).all().stream().map(ListItem::getText).toList();
     }
 
     /** UC-018: the view is restricted to elicit_admin. */

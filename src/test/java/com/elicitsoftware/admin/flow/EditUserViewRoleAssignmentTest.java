@@ -19,6 +19,7 @@ import com.vaadin.browserless.quarkus.QuarkusBrowserlessTest;
 import com.vaadin.flow.component.UI;
 import com.vaadin.flow.component.button.Button;
 import com.vaadin.flow.component.combobox.ComboBox;
+import com.vaadin.flow.component.html.Paragraph;
 import com.vaadin.flow.component.textfield.TextField;
 import com.vaadin.flow.router.BeforeEnterEvent;
 import com.vaadin.flow.router.Location;
@@ -161,5 +162,21 @@ class EditUserViewRoleAssignmentTest extends QuarkusBrowserlessTest {
 
         User saved = User.find("username", "uc016.clear@example.org").firstResult();
         assertEquals(0, UserRole.count("id.userId", saved.getId()));
+    }
+
+    /**
+     * UC-016 (#85): the role section's explanation is styled as a flush intro line by
+     * {@code components/view-text.css}. It used to ask for {@code LumoUtility.Margin.NONE} and
+     * {@code TextColor.SECONDARY}, which are inert in Admin, so the paragraph kept its native
+     * margin inside a section that deliberately sets spacing off.
+     */
+    @Test
+    void roleSectionInfoCarriesTheFlushIntroClass() {
+        Paragraph info = find(Paragraph.class, view).all().stream()
+                .filter(paragraph -> paragraph.getText().contains("database role"))
+                .findFirst()
+                .orElseThrow(() -> new AssertionError("No role-section explanation"));
+        assertTrue(info.getClassNames().contains("view-intro-flush"),
+                "the role-section explanation should carry view-intro-flush but had: " + info.getClassNames());
     }
 }

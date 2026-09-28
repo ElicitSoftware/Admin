@@ -22,7 +22,6 @@ import com.vaadin.flow.component.html.Paragraph;
 import com.vaadin.flow.component.orderedlayout.VerticalLayout;
 import com.vaadin.flow.router.HasDynamicTitle;
 import com.vaadin.flow.router.Route;
-import com.vaadin.flow.theme.lumo.LumoUtility;
 import jakarta.annotation.PostConstruct;
 import jakarta.annotation.security.RolesAllowed;
 import jakarta.inject.Inject;
@@ -52,9 +51,10 @@ public class SystemDatabaseView extends VerticalLayout implements HasDynamicTitl
 
     public SystemDatabaseView() {
         // Size to the content, not the viewport, so the bottom padding follows the last grid.
+        // The padding itself lives in components/system-views.css.
         setWidthFull();
         setPadding(true);
-        addClassName(LumoUtility.Padding.Bottom.XLARGE);
+        addClassName("system-view");
     }
 
     @PostConstruct

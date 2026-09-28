@@ -28,7 +28,6 @@ import com.vaadin.flow.component.orderedlayout.VerticalLayout;
 import com.vaadin.flow.component.textfield.EmailField;
 import com.vaadin.flow.router.HasDynamicTitle;
 import com.vaadin.flow.router.Route;
-import com.vaadin.flow.theme.lumo.LumoUtility;
 import io.quarkus.oidc.IdToken;
 import io.quarkus.security.identity.SecurityIdentity;
 import jakarta.annotation.PostConstruct;
@@ -71,9 +70,10 @@ public class SystemEmailView extends VerticalLayout implements HasDynamicTitle {
 
     public SystemEmailView() {
         // Size to the content, not the viewport, so the bottom padding follows the last grid.
+        // The padding itself lives in components/system-views.css.
         setWidthFull();
         setPadding(true);
-        addClassName(LumoUtility.Padding.Bottom.XLARGE);
+        addClassName("system-view");
     }
 
     @PostConstruct

@@ -10,15 +10,15 @@
  */
 
 /*
-   Elicit Admin Application Theme - Vaadin 25 with Lumo Theme
+   Elicit Admin Application Theme - Vaadin 25, Aura
 
    This is the master stylesheet loaded via @StyleSheet annotation.
-   It imports the Lumo theme for consistency with Vaadin 24 look and feel.
+   Vaadin supplies the Aura theme (AppConfig declares it); this file does not import a theme.
 
    This theme provides:
    - Application-specific component styling
    - Brand integration architecture via CSS custom properties
-   - Base Vaadin Lumo theme integration (Vaadin 24 compatible styling)
+   - The --lumo-* custom properties the components style themselves with
 
    Brand colors and typography are provided by:
    - Default: ./brand/ directory (copied into Docker image)
@@ -27,11 +27,12 @@
    Visit https://vaadin.com/docs/latest/styling/application-theme for more information.
 */
 
-/* Import Vaadin Lumo theme (Vaadin 24 compatible) */
-@import 'lumo/lumo.css';
-
-/* Import Lumo utility classes (optional, but recommended) */
-@import 'lumo/lumo-utility.css';
+/* No Lumo import here on purpose. This file used to import 'lumo/lumo.css' and
+   'lumo/lumo-utility.css'; neither is served from META-INF/resources, so both 404ed, and the
+   Lumo utility classes need the Lumo theme in any case while AppConfig declares Aura. Every
+   LumoUtility class name the views asked for was therefore inert (issues #80, #85). Views style
+   themselves from the component stylesheets below, using the --lumo-* custom properties the
+   brand contract further down maps onto the brand. */
 
 /* Brand theme integration */
 /* Note: Brand CSS is loaded dynamically via AppConfig during runtime */
@@ -43,6 +44,10 @@
 @import 'components/debug-view.css';
 @import 'components/console-notice.css';
 @import 'components/edit-message-templates.css';
+@import 'components/pagination-controls.css';
+@import 'components/system-views.css';
+@import 'components/unauthorized-view.css';
+@import 'components/view-text.css';
 
 /* Brand Integration Architecture */
 /* These CSS custom properties provide the contract between brands and the application */

@@ -105,7 +105,10 @@ class ResultDialog extends Dialog {
         for (Section section : sections) {
             Div group = renderSection(section, isError);
             if (!first) {
-                group.getStyle().set("margin-top", "var(--lumo-space-m)");
+                // Aura's own spacing token: --lumo-space-* does not resolve in Admin (styles.css
+                // defines only the color and font-family --lumo-* properties), so a declaration
+                // written against it is as inert as the utility classes #85 removed.
+                group.getStyle().set("margin-top", "var(--vaadin-gap-m, 12px)");
             }
             first = false;
             summary.add(group);
@@ -158,7 +161,7 @@ class ResultDialog extends Dialog {
                 ListItem item = new ListItem(line.text());
                 if (line.kind() == Kind.ERROR) {
                     item.addClassName("elicit-result-error");
-                    item.getStyle().set("color", "var(--lumo-error-text-color)");
+                    item.getStyle().set("color", "var(--lumo-error-text-color, hsl(3, 85%, 48%))");
                 }
                 list.add(item);
             } else {
@@ -179,8 +182,8 @@ class ResultDialog extends Dialog {
                 ? "elicit-result-heading"
                 : "elicit-result-message");
         sentence.getStyle().set("color", isError
-                ? "var(--lumo-error-text-color)"
-                : "var(--lumo-success-text-color)");
+                ? "var(--lumo-error-text-color, hsl(3, 85%, 48%))"
+                : "var(--lumo-success-text-color, hsl(145, 72%, 30%))");
         if (line.kind() == Kind.HEADING) {
             sentence.getStyle().set("font-weight", "600");
         }

@@ -79,6 +79,19 @@ class UsersViewTest extends QuarkusBrowserlessTest {
                 "OIDC mode should explain that roles are configured in the OIDC provider");
     }
 
+    /**
+     * UC-008 (#85): the info text is styled as an intro line by
+     * {@code components/view-text.css}. It used to ask for {@code LumoUtility.TextColor.SECONDARY}
+     * and {@code Margin.Bottom.MEDIUM}, which are inert in Admin, so it read as body text sitting
+     * flush against the grid.
+     */
+    @Test
+    void infoTextCarriesTheIntroClass() {
+        Paragraph info = find(Paragraph.class, view).single();
+        assertTrue(info.getClassNames().contains("view-intro"),
+                "the intro line should carry view-intro but had: " + info.getClassNames());
+    }
+
     /** UC-008: clicking "Add User" triggers navigation to the create-mode EditUserView route. */
     @Test
     void addUserButtonTriggersNavigation() {

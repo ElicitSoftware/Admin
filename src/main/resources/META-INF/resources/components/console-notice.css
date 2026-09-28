@@ -10,22 +10,30 @@
  */
 
 /* Console-wide notices (missing survey, seeded default accounts) shown by MainLayout above
-   the routed view. Spacing and colors use Lumo tokens so a mounted brand can re-skin them. */
+   the routed view.
+
+   Spacing, radius and surface colors come from Aura's own --vaadin-* tokens, which is the theme
+   Admin renders with. These rules were originally written against --lumo-space-*,
+   --lumo-contrast-*pct and --lumo-border-radius-*, none of which resolve here (styles.css defines
+   only the color and font-family --lumo-* properties), so the notices rendered with no padding,
+   no gap, no background and square corners -- inert for the same reason as the LumoUtility
+   classes #85 removed. Every var() carries a literal fallback so a missing token cannot silently
+   drop the declaration again. */
 .console-notices {
-    padding: var(--lumo-space-m) var(--lumo-space-m) 0;
-    gap: var(--lumo-space-s);
+    padding: var(--vaadin-padding-m, 12px) var(--vaadin-padding-m, 12px) 0;
+    gap: var(--vaadin-gap-s, 8px);
 }
 
 .console-notice {
     display: flex;
     align-items: center;
-    gap: var(--lumo-space-s);
+    gap: var(--vaadin-gap-s, 8px);
     box-sizing: border-box;
     width: 100%;
-    padding: var(--lumo-space-s) var(--lumo-space-m);
-    background-color: var(--lumo-contrast-5pct);
-    border: 1px solid var(--lumo-contrast-10pct);
-    border-radius: var(--lumo-border-radius-m);
+    padding: var(--vaadin-padding-s, 8px) var(--vaadin-padding-m, 12px);
+    background-color: var(--vaadin-background-container, #f5f5f5);
+    border: 1px solid var(--vaadin-border-color, rgba(0, 0, 0, 0.16));
+    border-radius: var(--vaadin-radius-m, 6px);
 }
 
 .console-notice a {
@@ -38,14 +46,20 @@
 vaadin-dialog-overlay .dialog-manual-link {
     display: inline-flex;
     align-items: center;
-    gap: var(--lumo-space-xs);
+    gap: var(--vaadin-gap-xs, 6px);
     margin-inline-end: auto;
-    font-size: var(--lumo-font-size-s);
-    color: var(--lumo-primary-text-color);
+    font-size: var(--brand-font-size-sm, 0.875rem);
+    color: var(--lumo-primary-text-color, hsl(214, 90%, 52%));
     white-space: nowrap;
 }
 
 vaadin-dialog-overlay .dialog-manual-link vaadin-icon {
     width: 1em;
     height: 1em;
+}
+
+/* MissingSurveyNotice's empty state — the headline above the remedy link (UC-019). Asked for
+   with LumoUtility.FontWeight.SEMIBOLD, which is inert here (#85). */
+.console-empty-state-headline {
+    font-weight: 600;
 }

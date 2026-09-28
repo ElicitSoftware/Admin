@@ -116,8 +116,14 @@ Every row is one key in `translations.properties`. Return a file `translations_<
 | `registerView.upload.error.wrongType` | Only .csv files can be uploaded | Register subjects page · upload error | 60 |  |
 | `registerView.upload.error.tooMany` | Upload one file at a time | Register subjects page · upload error | 60 |  |
 | `registerView.csvImport.successTitle` | CSV import succeeded | Register subjects page · success dialog title | 30 |  |
-| `registerView.csvImport.success` | Successfully imported subjects:  {0} | Register subjects page · success dialog text | 120 | params: {0} = multi-line import summary |
 | `registerView.csvImport.errorTitle` | CSV import error | Register subjects page · error dialog title | 30 |  |
+| `registerView.csvImport.summary.heading` | Successfully imported {0} subjects: | Register subjects page · CSV import result dialog, heading above the per-subject list | 60 | params: {0} = number of subjects, always 2 or more |
+| `registerView.csvImport.summary.headingOne` | Successfully imported 1 subject: | Register subjects page · CSV import result dialog, heading above a single-subject list | 60 |  |
+| `registerView.csvImport.summary.subject` | {0} — {1} | Register subjects page · CSV import result dialog, one line per imported row | 100 | params: {0} = import outcome from the service, left in English; {1} = the subject's name, external id and access code; the value is punctuation only, so it is identical in most languages |
+| `registerView.csvImport.summary.xid` | xid {0} | Register subjects page · CSV import result dialog, the subject's external id inside a result line | 30 | params: {0} = the external id itself |
+| `registerView.csvImport.summary.accessCode` | access code {0} | Register subjects page · CSV import result dialog, the subject's access code inside a result line | 40 | params: {0} = the access code itself |
+| `registerView.csvImport.errorsHeading` | Errors: | Register subjects page · CSV import result dialog, heading above the list of errors the service returned | 30 |  |
+| `registerView.csvImport.lineErrorsHeading` | Import completed with errors: | Register subjects page · CSV import error dialog, heading above the list of rejected rows | 60 |  |
 | `registerView.apiDoc.title` | REST API instructions | Register subjects page · collapsible section title | 40 |  |
 | `registerView.error.subjectNotFound` | Subject not found for access code: {0} | Register subjects page · notification | 80 | params: {0} = access code |
 | `registerView.unknownDepartment` | Unknown | Register subjects page · department name fallback | 20 |  |
@@ -599,10 +605,14 @@ registerView.upload.error.tooBig=The file is too big (5 MB maximum)
 registerView.upload.error.wrongType=Only .csv files can be uploaded
 registerView.upload.error.tooMany=Upload one file at a time
 registerView.csvImport.successTitle=CSV import succeeded
-registerView.csvImport.success=Successfully imported subjects:
-
-{0}
 registerView.csvImport.errorTitle=CSV import error
+registerView.csvImport.summary.heading=Successfully imported {0} subjects:
+registerView.csvImport.summary.headingOne=Successfully imported 1 subject:
+registerView.csvImport.summary.subject={0} — {1}
+registerView.csvImport.summary.xid=xid {0}
+registerView.csvImport.summary.accessCode=access code {0}
+registerView.csvImport.errorsHeading=Errors:
+registerView.csvImport.lineErrorsHeading=Import completed with errors:
 registerView.apiDoc.title=REST API instructions
 registerView.error.subjectNotFound=Subject not found for access code: {0}
 registerView.unknownDepartment=Unknown
