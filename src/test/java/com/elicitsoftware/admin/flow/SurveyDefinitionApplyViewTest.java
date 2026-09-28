@@ -17,7 +17,9 @@ import com.elicitsoftware.test.PostgresTestResource;
 import com.vaadin.browserless.quarkus.QuarkusBrowserlessTest;
 import com.vaadin.flow.component.UI;
 import com.vaadin.flow.component.dialog.Dialog;
+import com.vaadin.flow.component.html.Div;
 import com.vaadin.flow.component.html.H3;
+import com.vaadin.flow.component.html.ListItem;
 import com.vaadin.flow.component.upload.Upload;
 import io.quarkus.narayana.jta.QuarkusTransaction;
 import io.quarkus.test.TestTransaction;
@@ -88,6 +90,23 @@ class SurveyDefinitionApplyViewTest extends QuarkusBrowserlessTest {
         return find(Dialog.class).single();
     }
 
+    /** The summary's sentences, in the order they read, one element per line. */
+    private List<String> messagesIn(Dialog dialog) {
+        return find(Div.class, dialog).withClassName("elicit-result-message").all()
+                .stream().map(Div::getText).toList();
+    }
+
+    /** The summary's sub-headings ("Records installed: 128", "Errors:"). */
+    private List<String> headingsIn(Dialog dialog) {
+        return find(Div.class, dialog).withClassName("elicit-result-heading").all()
+                .stream().map(Div::getText).toList();
+    }
+
+    /** The indented detail lines beneath a heading, each its own list item. */
+    private List<String> detailsIn(Dialog dialog) {
+        return find(ListItem.class, dialog).all().stream().map(ListItem::getText).toList();
+    }
+
     /** UC-018: the view is restricted to elicit_admin. */
     @Test
     void viewRequiresAdminRole() {
@@ -145,7 +164,7 @@ class SurveyDefinitionApplyViewTest extends QuarkusBrowserlessTest {
 
     /**
      * UC-018 step 7 / A5: the dialog ends with the reporting schema rebuild's line, and a
-     * rebuild that failed leaves the title "New Survey Installed" -- the apply stood. Nothing
+     * rebuild that failed leaves the title "New Survey Installed" — the apply stood. Nothing
      * listens on the stub port in this class, so the call fails at once with a refused
      * connection, which is exactly the failed-rebuild shape.
      */
@@ -162,9 +181,43 @@ class SurveyDefinitionApplyViewTest extends QuarkusBrowserlessTest {
 
         Dialog dialog = openDialog();
         assertEquals("New Survey Installed", dialog.getHeaderTitle());
-        String text = find(com.vaadin.flow.component.html.Span.class, dialog).single().getText();
-        assertTrue(text.contains("Installed as a new survey"), text);
-        assertTrue(text.contains("\nReporting schema not rebuilt: "), "the rebuild line ends the summary: " + text);
+        List<String> messages = messagesIn(dialog);
+        assertTrue(messages.stream().anyMatch(m -> m.contains("Installed as a new survey")), messages.toString());
+        assertTrue(messages.get(messages.size() - 1).startsWith("Reporting schema not rebuilt: "),
+                "the rebuild line ends the summary: " + messages);
+    }
+
+    /**
+     * Issue #80: the summary is laid out as structure, not as one pre-formatted string. The
+     * routing message and the survey key are separate elements, the records-installed line is a
+     * heading, and every per-table count is its own list item — so none of it depends on
+     * {@code white-space: pre-wrap} arriving from a stylesheet that is not there.
+     */
+    @Test
+    @TestTransaction
+    @TestSecurity(user = "apply.admin", roles = {"elicit_admin"})
+    void summaryLinesAreSeparateElements() {
+        Survey source = newSurveyWithStep("ApplyViewLines");
+        String file = exportService.exportSurvey(source.id)
+                .replace(source.surveyKey.toString(), UUID.randomUUID().toString())
+                .replace("ApplyViewLines", "ApplyViewLinesArrived");
+
+        view.handleUpload(file.getBytes(StandardCharsets.UTF_8), "new.elicit");
+
+        Dialog dialog = openDialog();
+        List<String> messages = messagesIn(dialog);
+        assertTrue(messages.stream().anyMatch(m -> m.startsWith("Survey key: ")),
+                "the survey key is its own line: " + messages);
+        assertTrue(messages.stream().noneMatch(m -> m.contains("\n")),
+                "no line carries a newline of its own: " + messages);
+
+        assertTrue(headingsIn(dialog).stream().anyMatch(h -> h.startsWith("Records installed: ")),
+                "the records-installed header is a heading: " + headingsIn(dialog));
+
+        List<String> details = detailsIn(dialog);
+        assertTrue(details.size() > 1, "each per-table count is its own list item: " + details);
+        assertTrue(details.stream().anyMatch(d -> d.startsWith("surveys: ")),
+                "the per-table counts are listed: " + details);
     }
 
     /** UC-018 A3: a file that isn't a survey definition is reported, not applied. */
