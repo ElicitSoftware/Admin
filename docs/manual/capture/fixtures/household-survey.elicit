@@ -13,9 +13,9 @@
 # relationships: 2
 # reports: 0
 # post_survey_actions: 0
-# dimensions: 0
-# ontology: 0
-# metadata: 0
+# dimensions: 1
+# ontology: 4
+# metadata: 4
 # generated: 2026-09-24T16:27:23.874947662-04:00
 # survey_revision: 2026-09-24T16:27:23.874947662-04:00
 
@@ -23,10 +23,10 @@ surveys: 1|71d6f40a-1f09-4f96-a9d1-299f9aedddb2|Household Survey|1|Household Sur
 select_groups: 1|50ac1f2d-2470-4389-8e4b-71477438e1a6|Sex||Text|0|1970-01-01T00:00:00Z|9999-12-31T23:59:59Z||
 select_items: 1|f581fc99-c12f-4e98-90d0-795a15c52bf9|1|Female|1|Female|0|1970-01-01T00:00:00Z|9999-12-31T23:59:59Z||
 select_items: 2|90aa5fa7-936a-4027-8e48-5a8096cad5aa|1|Male|2|Male|0|1970-01-01T00:00:00Z|9999-12-31T23:59:59Z||
-steps: 1|9471733e-8bb1-4054-9678-c5a570cac262|1|The house|The house||0|1970-01-01T00:00:00Z|9999-12-31T23:59:59Z||
-steps: 2|617cbb44-b41d-4c2b-bacf-9ec155f39a03|2|Household member|Household member||0|1970-01-01T00:00:00Z|9999-12-31T23:59:59Z||
-sections: 1|8d698f09-ac14-4ef5-bc4f-8ac18740ee2a|1|The house|The house||0|1970-01-01T00:00:00Z|9999-12-31T23:59:59Z||
-sections: 2|87621969-66be-432d-b92f-1bd515cb0860|2|About {<NAME>\|this person}|About {<NAME>\|this person}||0|1970-01-01T00:00:00Z|9999-12-31T23:59:59Z||
+steps: 1|9471733e-8bb1-4054-9678-c5a570cac262|1|The house|Household Home||0|1970-01-01T00:00:00Z|9999-12-31T23:59:59Z||
+steps: 2|617cbb44-b41d-4c2b-bacf-9ec155f39a03|2|Household member|Household Member||0|1970-01-01T00:00:00Z|9999-12-31T23:59:59Z||
+sections: 1|8d698f09-ac14-4ef5-bc4f-8ac18740ee2a|1|The house|Household Home||0|1970-01-01T00:00:00Z|9999-12-31T23:59:59Z||
+sections: 2|87621969-66be-432d-b92f-1bd515cb0860|2|About {<NAME>\|Household Member|About {<NAME>\|this person}||0|1970-01-01T00:00:00Z|9999-12-31T23:59:59Z||
 steps_sections: 1|714e4eb8-7f37-480d-bab5-ebf1599a6e1b|1|1|1|1|0001-0001-0000-0001-0000-0000-0000|0|1970-01-01T00:00:00Z|9999-12-31T23:59:59Z||
 steps_sections: 2|819a84a7-380d-4286-8b06-8c4978d5aa52|2|2|2|1|0001-0002-0000-0001-0000-0000-0000|0|1970-01-01T00:00:00Z|9999-12-31T23:59:59Z||
 questions: 1|b40a1bdb-3d5a-417f-ae44-48053f7d048d|5|How many people live in your house?|||false|1|10|||||||0|1970-01-01T00:00:00Z|9999-12-31T23:59:59Z||
@@ -43,3 +43,12 @@ sections_questions: 5|85007e06-79c5-469f-aab2-8f8ea81df34e|5|2|3|0|1970-01-01T00
 sections_questions: 6|caaccb6b-29cb-4c89-a128-ea3b7d24d0ea|6|2|4|0|1970-01-01T00:00:00Z|9999-12-31T23:59:59Z||
 relationships: 1|32f485d5-6055-449e-a8d0-5fc248e8bfb4||1|||2|2|2|> 0||0|||0|1970-01-01T00:00:00Z|9999-12-31T23:59:59Z||
 relationships: 2|ee9a6206-97a3-486e-9d72-f62d5efcee66|1|2|2|||5|1|exists {NAME}|NAME||||0|1970-01-01T00:00:00Z|9999-12-31T23:59:59Z||
+dimensions: 1|c2d66a99-b68b-57cb-85a2-b045c5dcb060|age
+ontology: 1|fe93b5cf-17b3-5d75-8b4a-8d1d720b0e82|household|Household Size|
+ontology: 2|8c86ea9c-d680-5f2e-acb3-fe14d133889e|household|Member Age|1
+ontology: 3|7ac2eb59-90a8-5c7b-8440-127f5cda3851|household|Member Sex|
+ontology: 4|59e7a536-29a7-59cb-a498-3e002c5e12f4|household|Member Children|
+metadata: 1|0f101dc5-0415-5549-9a1b-0d8c8567ebae||1||1|
+metadata: 2|5d35849d-8e10-5bd2-95f4-10ddfbbb3de0||3||2|
+metadata: 3|011282c8-1d67-51f2-9a01-8a03c09bece5||4||3|
+metadata: 4|f1ba6f54-2d72-5209-a0a8-65c5172263e6||6||4|
