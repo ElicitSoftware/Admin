@@ -172,4 +172,23 @@ class SystemViewsRenderTest extends QuarkusBrowserlessTest {
             assertTrue(containsId(view, SystemConnectionsView.GRID_ID));
         }
     }
+
+    /**
+     * UC-020/022/023/024/025 (#85): every System screen carries the class
+     * {@code components/system-views.css} gives its bottom padding. The padding was asked for
+     * with {@code LumoUtility.Padding.Bottom.XLARGE}, which is inert in Admin, so the last grid
+     * ran to the bottom edge of the viewport.
+     */
+    @Test
+    void everySystemViewCarriesTheBottomPaddingClass() {
+        for (Class<? extends Component> type : java.util.List.of(
+                SystemOverviewView.class, SystemConnectionsView.class, SystemDatabaseView.class,
+                SystemEmailView.class, SystemBrandingView.class)) {
+            Component view = attach(type);
+            assertTrue(view.getElement().getClassList().contains("system-view"),
+                    type.getSimpleName() + " should carry the system-view class");
+            assertFalse(view.getElement().getClassList().contains("pb-xl"),
+                    type.getSimpleName() + " should no longer ask for the inert Lumo utility class");
+        }
+    }
 }

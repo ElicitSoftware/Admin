@@ -20,7 +20,6 @@ import com.vaadin.flow.component.icon.VaadinIcon;
 import com.vaadin.flow.component.orderedlayout.HorizontalLayout;
 import com.vaadin.flow.component.select.Select;
 import com.vaadin.flow.component.select.SelectVariant;
-import com.vaadin.flow.theme.lumo.LumoUtility;
 
 /**
  * A reusable pagination control component for navigating through large datasets.
@@ -122,7 +121,7 @@ public class PaginationControls extends HorizontalLayout {
     private Component createPageSizeField() {
         Select<Integer> select = new Select<>();
         select.addThemeVariants(SelectVariant.LUMO_SMALL);
-        select.getStyle().set("--vaadin-input-field-value-font-size", "var(--lumo-font-size-s)");
+        select.addClassName("pagination-page-size");
         select.setWidth("4.8rem");
         select.setItems(5, 10, 15, 25, 50, 100);
         select.setValue(pageSize);
@@ -132,7 +131,7 @@ public class PaginationControls extends HorizontalLayout {
         });
         var label = new Span("Page size");
         label.setId("page-size-label");
-        label.addClassName(LumoUtility.FontSize.SMALL);
+        label.addClassName("pagination-label");
         select.setAriaLabelledBy("page-size-label");
         final HorizontalLayout layout = new HorizontalLayout(Alignment.CENTER, label, select);
         layout.setSpacing(false);
@@ -281,17 +280,14 @@ public class PaginationControls extends HorizontalLayout {
      * Creates and configures the current page information label.
      * 
      * <p>This method creates a span element that displays the current page information
-     * in the format "Page X of Y". The label is styled with:</p>
-     * <ul>
-     *   <li>Small font size for compact display</li>
-     *   <li>Horizontal padding for proper spacing</li>
-     * </ul>
-     * 
+     * in the format "Page X of Y". Its small font size and the horizontal padding that keeps
+     * it off the arrows come from {@code components/pagination-controls.css}.</p>
+     *
      * @return a Span component for displaying current page information
      */
     private Span currentPageLabel() {
         var label = new Span();
-        label.addClassNames(LumoUtility.FontSize.SMALL, LumoUtility.Padding.Horizontal.SMALL);
+        label.addClassNames("pagination-label", "pagination-page-label");
         return label;
     }
 

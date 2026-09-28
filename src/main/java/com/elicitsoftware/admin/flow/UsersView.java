@@ -23,7 +23,6 @@ import com.vaadin.flow.component.icon.VaadinIcon;
 import com.vaadin.flow.component.orderedlayout.HorizontalLayout;
 import com.vaadin.flow.component.orderedlayout.VerticalLayout;
 import com.vaadin.flow.router.Route;
-import com.vaadin.flow.theme.lumo.LumoUtility;
 import jakarta.annotation.PostConstruct;
 import jakarta.annotation.security.RolesAllowed;
 import jakarta.inject.Inject;
@@ -136,7 +135,7 @@ public class UsersView extends VerticalLayout {
                 ? "Departments are assigned through this interface. Roles (Admin/User/Importer) are also assigned through this interface, on the Edit User screen."
                 : "Users must be configured in the OpenID Connect (OIDC) authentication system with the roles \"Admin\" or \"User\". Departments are assigned through this interface.";
         Paragraph info = new Paragraph(text);
-        info.addClassNames(LumoUtility.Margin.Bottom.MEDIUM, LumoUtility.TextColor.SECONDARY);
+        info.addClassName("view-intro");
         return info;
     }
 

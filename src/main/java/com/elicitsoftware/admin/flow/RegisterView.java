@@ -15,6 +15,8 @@ import com.elicitsoftware.exception.AccessCodeGenerationError;
 import com.elicitsoftware.model.*;
 import io.quarkus.panache.common.Sort;
 import com.elicitsoftware.response.AddResponse;
+import com.elicitsoftware.response.AddResponseStatus;
+import com.elicitsoftware.service.CsvImportException;
 import com.elicitsoftware.service.CsvImportService;
 import com.elicitsoftware.rest.AccessCodeService;
 import com.elicitsoftware.service.SurveyDefinitionPresenceCheck;
@@ -26,8 +28,6 @@ import com.vaadin.flow.component.combobox.ComboBoxVariant;
 import com.vaadin.flow.component.datepicker.DatePicker;
 import com.vaadin.flow.component.datepicker.DatePickerVariant;
 import com.vaadin.flow.component.details.Details;
-import com.vaadin.flow.component.dialog.Dialog;
-import com.vaadin.flow.component.ModalityMode;
 import com.vaadin.flow.component.formlayout.FormLayout;
 import com.vaadin.flow.component.html.*;
 import com.vaadin.flow.component.notification.Notification;
@@ -45,7 +45,6 @@ import com.vaadin.flow.router.BeforeEnterEvent;
 import com.vaadin.flow.router.BeforeEnterObserver;
 import com.vaadin.flow.router.HasDynamicTitle;
 import com.vaadin.flow.router.Route;
-import com.vaadin.flow.theme.lumo.LumoUtility;
 import io.quarkus.security.identity.SecurityIdentity;
 import jakarta.annotation.PostConstruct;
 import jakarta.annotation.security.RolesAllowed;
@@ -351,7 +350,7 @@ public class RegisterView extends HorizontalLayout implements HasDynamicTitle, B
                 Notification.show("Duplicate entry: A subject with this External ID " + subject.getXid() + " already exists for this department.", 5000, Notification.Position.MIDDLE);
                 subject = new Subject();
             } catch (Exception e) {
-                showErrorDialog("Database Error", "Database error: " + e.getMessage());
+                new ResultDialog("Database Error", "Database error: " + e.getMessage(), true).open();
                 subject = new Subject();
             }
         });
@@ -364,7 +363,7 @@ public class RegisterView extends HorizontalLayout implements HasDynamicTitle, B
                 // Navigate back to the search view after update
                 getUI().ifPresent(ui -> ui.navigate(""));
             } catch (Exception e) {
-                showErrorDialog("Database Error", "Database error: " + e.getMessage());
+                new ResultDialog("Database Error", "Database error: " + e.getMessage(), true).open();
             }
         });
         updateButton.setId("register-update-button");
@@ -392,16 +391,7 @@ public class RegisterView extends HorizontalLayout implements HasDynamicTitle, B
         csvUpload.setUploadButton(uploadButton);
 
         // Use modern InMemoryUploadHandler instead of deprecated MemoryBuffer
-        csvUpload.setUploadHandler(UploadHandler.inMemory((metadata, data) -> {
-            try {
-                CsvImportService importService = new CsvImportService(accessCodeService);
-                InputStream inputStream = new java.io.ByteArrayInputStream(data);
-                AddResponse response = importService.importSubjects(inputStream);
-                showSuccessDialog("CSV Import Success", "Successfully imported subjects:\n\n" + response.toString());
-            } catch (Exception e) {
-                showErrorDialog("CSV Import Error", e.getMessage());
-            }
-        }));
+        csvUpload.setUploadHandler(UploadHandler.inMemory((metadata, data) -> handleCsvUpload(data)));
 
         // Create REST API instructions accordion
         Details restApiDetails = new Details("REST API Instructions", createRestApiContent());
@@ -764,7 +754,7 @@ public class RegisterView extends HorizontalLayout implements HasDynamicTitle, B
      */
     private ListItem columnDescription(String label, String description) {
         Span name = new Span(label);
-        name.addClassName(LumoUtility.FontWeight.BOLD);
+        name.addClassName("inline-name");
         return new ListItem(name, new Span(description));
     }
 
@@ -951,73 +941,107 @@ public class RegisterView extends HorizontalLayout implements HasDynamicTitle, B
     }
 
     /**
-     * Displays an error dialog with proper formatting for line breaks and detailed error messages.
+     * Imports an uploaded CSV and shows the outcome in a result dialog (UC-003 A6).
+     * Package-private so tests can drive it directly without simulating a real file upload,
+     * the same way {@code RespondentImportView.handleUpload} is.
      *
-     * <p>This method creates a modal dialog that can properly display multi-line error messages,
-     * including formatted toString() output from response objects. The dialog uses pre-wrap
-     * white-space styling to preserve line breaks and formatting.</p>
-     *
-     * @param title   the title to display in the dialog header
-     * @param message the error message to display, which may contain line breaks
+     * @param data the raw bytes of the uploaded file
      */
-    private void showErrorDialog(String title, String message) {
-        Dialog errorDialog = new Dialog();
-        errorDialog.setHeaderTitle(title);
-
-        Span errorMessage = new Span(message);
-        errorMessage.addClassName(LumoUtility.Whitespace.PRE_WRAP);
-
-        Button closeButton = new Button("Close", evt -> errorDialog.close());
-        closeButton.addThemeVariants(ButtonVariant.LUMO_PRIMARY);
-        closeButton.addClassName(LumoUtility.Margin.Top.MEDIUM);
-
-        VerticalLayout dialogLayout = new VerticalLayout(errorMessage, closeButton);
-        dialogLayout.setAlignItems(Alignment.CENTER);
-        dialogLayout.setSpacing(true);
-
-        errorDialog.add(dialogLayout);
-        errorDialog.setModality(ModalityMode.STRICT);
-        errorDialog.setDraggable(false);
-        errorDialog.setResizable(true);
-        errorDialog.setWidth("600px");
-        errorDialog.setMaxWidth("90vw");
-
-        errorDialog.open();
+    void handleCsvUpload(byte[] data) {
+        try {
+            CsvImportService importService = new CsvImportService(accessCodeService);
+            InputStream inputStream = new java.io.ByteArrayInputStream(data);
+            AddResponse response = importService.importSubjects(inputStream);
+            new ResultDialog("CSV Import Success", importSummary(response), false).open();
+        } catch (CsvImportException e) {
+            new ResultDialog("CSV Import Error", rejectedLines(e), true).open();
+        } catch (Exception e) {
+            String message = e.getMessage() != null ? e.getMessage() : e.toString();
+            new ResultDialog("CSV Import Error", message, true).open();
+        }
     }
 
     /**
-     * Displays a success dialog with proper formatting for line breaks and detailed success messages.
+     * Lays a finished CSV import out as the {@link ResultDialog} sections an administrator reads
+     * (UC-003 A6): a heading, then one line per row saying what became of it.
      *
-     * <p>This method creates a modal dialog that can properly display multi-line success messages,
-     * including formatted toString() output from response objects. The dialog uses pre-wrap
-     * white-space styling to preserve line breaks and formatting.</p>
+     * <p>This used to hand {@code AddResponse.toString()} — a Java debug dump — to a single
+     * {@code Span} that relied on {@code LumoUtility.Whitespace.PRE_WRAP} to break its lines.
+     * Admin's Lumo utility classes are inert (issue #85), so the whole summary collapsed into one
+     * run-on paragraph. Structure survives a missing stylesheet; a pre-formatted string does
+     * not.</p>
      *
-     * @param title   the title to display in the dialog header
-     * @param message the success message to display, which may contain line breaks
+     * @param response the import's outcome
+     * @return the summary, in the order it should read
      */
-    private void showSuccessDialog(String title, String message) {
-        Dialog successDialog = new Dialog();
-        successDialog.setHeaderTitle(title);
+    private List<ResultDialog.Section> importSummary(AddResponse response) {
+        List<AddResponseStatus> subjects = response.getSubjects() != null
+                ? response.getSubjects()
+                : List.of();
 
-        Span successMessage = new Span(message);
-        successMessage.addClassNames(LumoUtility.Whitespace.PRE_WRAP, LumoUtility.TextColor.SUCCESS);
+        List<ResultDialog.Line> lines = new ArrayList<>();
+        lines.add(ResultDialog.Line.heading(subjects.size() == 1
+                ? "Successfully imported 1 subject:"
+                : "Successfully imported " + subjects.size() + " subjects:"));
+        for (AddResponseStatus subject : subjects) {
+            lines.add(ResultDialog.Line.detail(describe(subject)));
+        }
 
-        Button closeButton = new Button("Close", evt -> successDialog.close());
-        closeButton.addThemeVariants(ButtonVariant.LUMO_PRIMARY);
-        closeButton.addClassName(LumoUtility.Margin.Top.MEDIUM);
+        List<ResultDialog.Section> sections = new ArrayList<>();
+        sections.add(new ResultDialog.Section(lines));
 
-        VerticalLayout dialogLayout = new VerticalLayout(successMessage, closeButton);
-        dialogLayout.setAlignItems(Alignment.CENTER);
-        dialogLayout.setSpacing(true);
+        List<String> errors = response.getErrors() != null ? response.getErrors() : List.of();
+        if (!errors.isEmpty()) {
+            List<ResultDialog.Line> errorLines = new ArrayList<>();
+            errorLines.add(ResultDialog.Line.heading("Errors:"));
+            errors.forEach(error -> errorLines.add(ResultDialog.Line.error(error)));
+            sections.add(new ResultDialog.Section(errorLines));
+        }
+        return sections;
+    }
 
-        successDialog.add(dialogLayout);
-        successDialog.setModality(ModalityMode.STRICT);
-        successDialog.setDraggable(false);
-        successDialog.setResizable(true);
-        successDialog.setWidth("600px");
-        successDialog.setMaxWidth("90vw");
+    /**
+     * Describes one imported row: what became of it, and enough of the subject to recognize.
+     *
+     * <p>An excluded row carries an empty {@code Status}, so every field here is optional and the
+     * line falls back to the import status on its own.</p>
+     *
+     * @param subject one row's outcome
+     * @return a single line of text
+     */
+    private String describe(AddResponseStatus subject) {
+        String outcome = subject.getImportStatus() != null ? subject.getImportStatus() : "Processed";
+        Status status = subject.getStatus();
+        if (status == null) {
+            return outcome;
+        }
 
-        successDialog.open();
+        StringBuilder who = new StringBuilder();
+        String name = ((status.getFirstName() != null ? status.getFirstName() : "") + " "
+                + (status.getLastName() != null ? status.getLastName() : "")).trim();
+        if (!name.isEmpty()) {
+            who.append(name);
+        }
+        if (status.getXid() != null && !status.getXid().isBlank()) {
+            who.append(who.isEmpty() ? "" : " ").append("(xid ").append(status.getXid()).append(")");
+        }
+        if (status.getAccessCode() != null && !status.getAccessCode().isBlank()) {
+            who.append(who.isEmpty() ? "" : ", ").append("access code ").append(status.getAccessCode());
+        }
+        return who.isEmpty() ? outcome : outcome + " \u2014 " + who;
+    }
+
+    /**
+     * Lays the rows a CSV import rejected out as one list item each (UC-003 A6).
+     *
+     * @param failure the import failure, which carries one message per rejected line
+     * @return the summary, in the order it should read
+     */
+    private List<ResultDialog.Section> rejectedLines(CsvImportException failure) {
+        List<ResultDialog.Line> lines = new ArrayList<>();
+        lines.add(ResultDialog.Line.heading(CsvImportException.HEADLINE));
+        failure.getLineErrors().forEach(error -> lines.add(ResultDialog.Line.error(error)));
+        return List.of(new ResultDialog.Section(lines));
     }
 
     /**

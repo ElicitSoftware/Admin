@@ -17,7 +17,6 @@ import com.vaadin.flow.component.html.Span;
 import com.vaadin.flow.component.icon.VaadinIcon;
 import com.vaadin.flow.component.orderedlayout.VerticalLayout;
 import com.vaadin.flow.router.RouterLink;
-import com.vaadin.flow.theme.lumo.LumoUtility;
 
 /**
  * On-screen notices for a deployment that has no survey installed (UC-019).
@@ -90,7 +89,7 @@ final class MissingSurveyNotice {
         emptyState.getElement().setAttribute("role", "status");
 
         Span headline = new Span(HEADLINE);
-        headline.addClassName(LumoUtility.FontWeight.SEMIBOLD);
+        headline.addClassName("console-empty-state-headline");
         emptyState.add(headline);
         emptyState.add(remedy(canApplyDefinition));
         return emptyState;

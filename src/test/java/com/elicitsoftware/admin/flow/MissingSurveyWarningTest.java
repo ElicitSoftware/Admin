@@ -234,6 +234,21 @@ class MissingSurveyWarningTest extends QuarkusBrowserlessTest {
         assertEquals("status", MissingSurveyNotice.emptyState(false).getElement().getAttribute("role"));
     }
 
+    /**
+     * UC-019 (#85): the empty state's headline is emphasized by
+     * {@code components/console-notice.css}, the same stylesheet that styles the banner beside
+     * it. It used to ask for {@code LumoUtility.FontWeight.SEMIBOLD}, which is inert in Admin, so
+     * the headline read exactly like the sentence under it.
+     */
+    @Test
+    void emptyStateHeadlineCarriesItsStylingClass() {
+        Component emptyState = MissingSurveyNotice.emptyState(false);
+        assertTrue(emptyState.getChildren()
+                        .anyMatch(child -> child.getElement().getClassList()
+                                .contains("console-empty-state-headline")),
+                "the empty state's headline should carry console-empty-state-headline");
+    }
+
     // --- Per-view empty states ------------------------------------------------------------
 
     /** UC-019 step 5: with no survey installed, subject search explains its empty state. */
