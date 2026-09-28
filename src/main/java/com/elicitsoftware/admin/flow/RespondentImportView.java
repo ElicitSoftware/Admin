@@ -12,23 +12,21 @@ package com.elicitsoftware.admin.flow;
  */
 
 import com.elicitsoftware.service.RespondentImportService;
-import com.vaadin.flow.component.ModalityMode;
 import com.vaadin.flow.component.button.Button;
 import com.vaadin.flow.component.button.ButtonVariant;
-import com.vaadin.flow.component.dialog.Dialog;
 import com.vaadin.flow.component.html.H3;
 import com.vaadin.flow.component.html.Paragraph;
-import com.vaadin.flow.component.html.Span;
 import com.vaadin.flow.component.orderedlayout.VerticalLayout;
 import com.vaadin.flow.component.upload.Upload;
 import com.vaadin.flow.router.Route;
 import com.vaadin.flow.server.streams.UploadHandler;
-import com.vaadin.flow.theme.lumo.LumoUtility;
 import jakarta.annotation.security.RolesAllowed;
 import jakarta.inject.Inject;
 
 import java.io.ByteArrayInputStream;
 import java.io.InputStream;
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  * Admin-only view for importing a respondent data file previously produced by the
@@ -76,54 +74,34 @@ public class RespondentImportView extends VerticalLayout {
         try {
             InputStream inputStream = new ByteArrayInputStream(data);
             RespondentImportService.ImportResult result = respondentImportService.importFromFile(inputStream);
-            if (result.isSuccess()) {
-                showResultDialog("Import Successful", buildSummary(result), false);
-            } else {
-                showResultDialog("Import Failed", buildSummary(result), true);
-            }
+            String title = result.isSuccess() ? "Import Successful" : "Import Failed";
+            new ResultDialog(title, buildSummary(result), !result.isSuccess()).open();
         } catch (Exception e) {
-            showResultDialog("Import Failed", e.getMessage(), true);
+            String message = e.getMessage() != null ? e.getMessage() : e.toString();
+            new ResultDialog("Import Failed", message, true).open();
         }
     }
 
-    private String buildSummary(RespondentImportService.ImportResult result) {
-        StringBuilder summary = new StringBuilder();
-        summary.append("Records imported: ").append(result.getRecordsImported()).append("\n");
-        result.getCounts().forEach((table, count) -> summary.append("  ").append(table).append(": ").append(count).append("\n"));
+    /**
+     * Returns the summary as sections of lines rather than as one newline-separated string, so
+     * {@link ResultDialog} can lay each line out as its own element; see that class for why a
+     * pre-formatted string did not survive rendering.
+     */
+    private List<ResultDialog.Section> buildSummary(RespondentImportService.ImportResult result) {
+        List<ResultDialog.Section> sections = new ArrayList<>();
+
+        List<ResultDialog.Line> imported = new ArrayList<>();
+        imported.add(ResultDialog.Line.heading("Records imported: " + result.getRecordsImported()));
+        result.getCounts().forEach((table, count) ->
+                imported.add(ResultDialog.Line.detail(table + ": " + count)));
+        sections.add(new ResultDialog.Section(imported));
+
         if (!result.getErrors().isEmpty()) {
-            summary.append("\nErrors:\n");
-            result.getErrors().forEach(error -> summary.append("  ").append(error).append("\n"));
+            List<ResultDialog.Line> errors = new ArrayList<>();
+            errors.add(ResultDialog.Line.heading("Errors:"));
+            result.getErrors().forEach(error -> errors.add(ResultDialog.Line.error(error)));
+            sections.add(new ResultDialog.Section(errors));
         }
-        return summary.toString();
-    }
-
-    private void showResultDialog(String title, String message, boolean isError) {
-        Dialog dialog = new Dialog();
-        dialog.setHeaderTitle(title);
-
-        Span messageSpan = new Span(message);
-        messageSpan.addClassName(LumoUtility.Whitespace.PRE_WRAP);
-        if (isError) {
-            messageSpan.addClassName(LumoUtility.TextColor.ERROR);
-        } else {
-            messageSpan.addClassName(LumoUtility.TextColor.SUCCESS);
-        }
-
-        Button closeButton = new Button("Close", evt -> dialog.close());
-        closeButton.addThemeVariants(ButtonVariant.LUMO_PRIMARY);
-        closeButton.addClassName(LumoUtility.Margin.Top.MEDIUM);
-
-        VerticalLayout dialogLayout = new VerticalLayout(messageSpan, closeButton);
-        dialogLayout.setAlignItems(Alignment.CENTER);
-        dialogLayout.setSpacing(true);
-
-        dialog.add(dialogLayout);
-        dialog.setModality(ModalityMode.STRICT);
-        dialog.setDraggable(false);
-        dialog.setResizable(true);
-        dialog.setWidth("600px");
-        dialog.setMaxWidth("90vw");
-
-        dialog.open();
+        return sections;
     }
 }
