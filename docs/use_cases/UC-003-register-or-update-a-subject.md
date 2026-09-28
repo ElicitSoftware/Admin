@@ -74,8 +74,9 @@
 **Trigger:** The user uploads a CSV file of subjects.
 **Flow:**
 
-1. The system imports each row through the single-subject flow and shows a per-subject result summary (registered, already existing, or excluded).
-2. See UC-010 for the underlying registration and validation rules.
+1. The system imports each row through the single-subject flow and shows a per-subject result summary (registered, already existing, or excluded), one line per row.
+2. If any row fails validation, the system reports each rejected row on its own line, named by its line number, and the rows that were accepted are still registered.
+3. See UC-010 for the underlying registration and validation rules.
 
 ## Postconditions
 

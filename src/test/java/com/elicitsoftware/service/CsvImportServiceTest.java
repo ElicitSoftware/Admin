@@ -26,6 +26,7 @@ import org.junit.jupiter.api.Test;
 import java.io.ByteArrayInputStream;
 import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
+import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
@@ -121,9 +122,14 @@ class CsvImportServiceTest {
                 dept.id + ",Erin,Evans,,1991-05-05,erin@example.org,555-010-0104,CSV-XID-5",
                 dept.id + ",NoLastName,,,1991-05-05,,555-010-0105,CSV-XID-6");
 
-        Exception ex = assertThrows(Exception.class, () -> csvImportService.importSubjects(toStream(csv)));
+        CsvImportException ex = assertThrows(CsvImportException.class,
+                () -> csvImportService.importSubjects(toStream(csv)));
 
         assertTrue(ex.getMessage().contains("Line 2: Last name is required"), ex.getMessage());
+        // The failures are carried as a list as well, so RegisterView can lay each one out as its
+        // own element (#85), while the joined message the REST path answers with is unchanged.
+        assertEquals(List.of("Line 2: Last name is required"), ex.getLineErrors());
+        assertEquals("Import completed with errors:\nLine 2: Last name is required", ex.getMessage());
         assertNotNull(Status.findByXidAndDepartmentId("CSV-XID-5", (int) dept.id),
                 "the valid row before the bad line should still have been committed");
     }

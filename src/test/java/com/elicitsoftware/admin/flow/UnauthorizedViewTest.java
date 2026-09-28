@@ -15,6 +15,7 @@ import com.elicitsoftware.test.PostgresTestResource;
 import com.vaadin.browserless.quarkus.QuarkusBrowserlessTest;
 import com.vaadin.flow.component.UI;
 import com.vaadin.flow.component.button.Button;
+import com.vaadin.flow.component.html.Div;
 import com.vaadin.flow.component.html.H1;
 import com.vaadin.flow.component.html.Paragraph;
 import io.quarkus.test.common.QuarkusTestResource;
@@ -76,5 +77,19 @@ class UnauthorizedViewTest extends QuarkusBrowserlessTest {
         UnauthorizedView view = attachView();
         Button logout = find(Button.class, view).single();
         assertEquals("Logout", logout.getText());
+    }
+
+    /**
+     * UC-001 A1 (#85): the message sits in a card. The background, corner radius and padding were
+     * asked for with Lumo utility classes, which are inert in Admin, so the view rendered a bare
+     * Div; they now come from {@code components/unauthorized-view.css} via this class.
+     */
+    @Test
+    void messageSitsInACard() {
+        UnauthorizedView view = attachView();
+        Div card = find(Div.class, view).withClassName("unauthorized-card").single();
+        assertEquals("400px", card.getWidth());
+        assertTrue(card.getClassNames().stream().noneMatch(name -> name.startsWith("bg-")),
+                "the inert Lumo utility classes should be gone: " + card.getClassNames());
     }
 }

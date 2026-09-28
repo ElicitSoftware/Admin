@@ -18,6 +18,7 @@ import com.elicitsoftware.test.PostgresTestResource;
 import com.vaadin.browserless.quarkus.QuarkusBrowserlessTest;
 import com.vaadin.flow.component.UI;
 import com.vaadin.flow.component.grid.Grid;
+import com.vaadin.flow.component.html.Span;
 import com.vaadin.flow.data.provider.SortDirection;
 import com.vaadin.flow.server.VaadinSession;
 import io.quarkus.test.common.QuarkusTestResource;
@@ -170,5 +171,23 @@ class SearchViewTest extends QuarkusBrowserlessTest {
         status.setRespondentId(42L);
 
         assertEquals("/api/secured/respondent/export?id=42", view.buildExportUrl(status));
+    }
+
+    /**
+     * UC-002 (#85): when the signed-in principal has no Elicit account, the notice emphasizes the
+     * principal's name through {@code components/view-text.css}. It used to ask for
+     * {@code LumoUtility.FontWeight.BOLD}, which is inert in Admin, so the name it tells an
+     * administrator to look up read exactly like the sentence around it.
+     */
+    @Test
+    @TestSecurity(user = "search.tester", roles = {"elicit_user"})
+    void noUserNoticeEmphasizesThePrincipal() {
+        // No "user" in the session is what the view treats as "no Elicit account for this login".
+        VaadinSession.getCurrent().setAttribute("user", null);
+        SearchView noUserView = CDI.current().select(SearchView.class).get();
+        UI.getCurrent().add(noUserView);
+
+        Span principal = find(Span.class, noUserView).withClassName("inline-name").single();
+        assertEquals("search.tester", principal.getText());
     }
 }

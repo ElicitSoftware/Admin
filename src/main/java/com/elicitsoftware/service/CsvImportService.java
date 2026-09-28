@@ -167,7 +167,9 @@ public class CsvImportService {
      * @param csvInputStream The input stream containing CSV data to import
      *                       //     * @param user The user performing the import (used for department permission validation)
      * @return The number of successfully imported participants
-     * @throws Exception If the import fails with aggregated error messages from all failed lines
+     * @throws CsvImportException If any line was rejected; it carries one message per rejected
+     *                            line as well as the aggregated message
+     * @throws Exception If the file itself cannot be read
      *                   //     * @see #parseCsvLine(String, User)
      * @see #parseCsvLine(String)
      * @see #splitCsvLine(String)
@@ -221,7 +223,7 @@ public class CsvImportService {
         }
 
         if (!errors.isEmpty()) {
-            throw new Exception("Import completed with errors:\n" + String.join("\n", errors));
+            throw new CsvImportException(errors);
         }
 
         return response;

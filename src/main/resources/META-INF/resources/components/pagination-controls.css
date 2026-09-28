@@ -1,0 +1,35 @@
+/*-
+ * ***LICENSE_START***
+ * Elicit Survey
+ * %%
+ * Copyright (C) 2025 - 2026 The Regents of the University of Michigan - Rogel Cancer Center
+ * %%
+ * PolyForm Noncommercial License 1.0.0
+ * <https://polyformproject.org/licenses/noncommercial/1.0.0>
+ * ***LICENSE_END***
+ */
+
+/* Spacing, radius and surface colors come from Aura's own --vaadin-* tokens, which is the theme
+   Admin renders with (AppConfig declares Aura; there is no @Theme and no Lumo import). The
+   --lumo-space-*, --lumo-contrast-*pct and --lumo-border-radius-* tokens do NOT resolve here, so
+   a declaration written against them is as inert as the LumoUtility classes #85 removed. Text
+   colors stay on the --lumo-*-text-color properties, which styles.css does define and maps onto
+   the brand. Every var() carries a literal fallback so a missing token can never silently drop
+   the whole declaration again.
+
+   PaginationControls -- the two labels either side of a grid's pager. Both are a step down from
+   body text, and the page label needs breathing room between the arrows. Asked for with Lumo
+   utility classes, which are inert here (#85). */
+.pagination-label {
+    font-size: var(--brand-font-size-sm, 0.875rem);
+}
+
+.pagination-page-label {
+    padding-inline: var(--vaadin-padding-s, 8px);
+}
+
+/* The page-size Select renders its value through the input-field part, which the font-size above
+   does not reach; the component's own custom property is the way in. */
+.pagination-page-size {
+    --vaadin-input-field-value-font-size: var(--brand-font-size-sm, 0.875rem);
+}
