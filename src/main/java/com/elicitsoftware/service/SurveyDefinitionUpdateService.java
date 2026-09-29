@@ -25,6 +25,7 @@ import java.io.InputStreamReader;
 import java.math.BigDecimal;
 import java.nio.charset.StandardCharsets;
 import java.time.OffsetDateTime;
+import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
@@ -471,7 +472,7 @@ public class SurveyDefinitionUpdateService {
             return null;
         }
         OffsetDateTime applied = surveyLogService.findLatestAppliedRevision(surveyKey);
-        if (applied == null || !fileRevision.isBefore(applied)) {
+        if (applied == null || !asStored(fileRevision).isBefore(asStored(applied))) {
             return null;
         }
         return "This file's revision (" + fileRevision + ") predates the newest revision already "
@@ -479,6 +480,27 @@ public class SurveyDefinitionUpdateService {
                 + "versions carrying older content rather than reverting anything. Apply the "
                 + "newer file instead; reverting this deployment to the earlier revision is an "
                 + "operational restore (prior database backup plus the prior image), not an update.";
+    }
+
+    /**
+     * An instant at the precision the database keeps, so a file cannot outrank itself.
+     * <p>
+     * The revision in a file header carries whatever precision the exporting JVM's clock had.
+     * {@code timestamptz} keeps microseconds and <em>rounds</em> to them, so a revision written as
+     * {@code …118452955Z} comes back as {@code …118453Z} — later than the file that produced it.
+     * Comparing the two raw made re-applying a file fail as a regression, and told the operator to
+     * perform a database restore instead.
+     * <p>
+     * Truncating is not enough for the same reason: it would answer {@code …118452Z} and leave the
+     * file looking earlier still. This rounds as the column does, so a revision and its stored form
+     * are one instant.
+     * <p>
+     * Only ever seen on Linux. A macOS JVM's {@code Instant.now()} is a microsecond clock, so the
+     * nanosecond digits are zero and the round trip is lossless on a developer's machine.
+     */
+    static OffsetDateTime asStored(OffsetDateTime instant) {
+        return instant == null ? null
+                : instant.plus(500, ChronoUnit.NANOS).truncatedTo(ChronoUnit.MICROS);
     }
 
     // -------------------------------------------------------------------------
