@@ -12,6 +12,13 @@
 /* Branded Header Component Styles */
 /* Supports multiple brands: um-brand, test-brand, default-brand */
 
+/* Font sizes come from the brand's own scale (--brand-font-size-*) and geometry from Aura's
+   --vaadin-* tokens, each with a literal fallback. They were written against --lumo-font-size-*,
+   --lumo-border-radius-* and --lumo-icon-size-*, none of which resolve here: Admin declares Aura
+   and styles.css defines only the color and font-family --lumo-* properties, so the brand title
+   rendered at inherited body size and the drawer toggle ignored its icon size entirely -- inert
+   for the same reason as the LumoUtility classes #85 removed. */
+
 .branded-header {
     display: flex;
     align-items: center;
@@ -45,8 +52,7 @@
 
 /* Brand title styling */
 .branded-header .brand-title {
-    font-family: var(--lumo-font-family);
-    font-size: var(--lumo-font-size-xl);
+    font-size: var(--brand-font-size-xl, 1.25rem);
     font-weight: 600;
     text-decoration: none;
     color: inherit;
@@ -69,7 +75,7 @@
 /* Navigation toggle button styling */
 .branded-header vaadin-drawer-toggle {
     color: var(--brand-header-text);
-    --lumo-icon-size-s: 1.5rem;
+    --vaadin-icon-size: 1.5rem;
 }
 
 /* Responsive behavior */
@@ -85,7 +91,7 @@
     }
 
     .branded-header .brand-title {
-        font-size: var(--lumo-font-size-l);
+        font-size: var(--brand-font-size-lg, 1.125rem);
     }
 }
 
@@ -101,7 +107,7 @@
     }
 
     .branded-header .brand-title {
-        font-size: var(--lumo-font-size-m);
+        font-size: var(--brand-font-size-base, 1rem);
     }
 }
 
@@ -146,9 +152,9 @@
     gap: 0.35rem;
     padding: 0.25rem 0.6rem;
     border: 1px solid currentColor;
-    border-radius: var(--lumo-border-radius-m, 4px);
+    border-radius: var(--vaadin-radius-m, 6px);
     font-family: var(--brand-font-primary, -apple-system, BlinkMacSystemFont, "Roboto", "Segoe UI", sans-serif);
-    font-size: var(--lumo-font-size-s);
+    font-size: var(--brand-font-size-sm, 0.875rem);
     font-weight: 600;
     text-decoration: none;
     color: var(--brand-header-text);
