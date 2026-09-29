@@ -116,7 +116,7 @@ NFR-014 fails the build on a hard-coded literal, so the three entries are keys, 
 `missingDepartmentDialog.manual` for the dialog link (which resolves through `Translations.get`, as the rest of that dialog does). Each needs a line in
 `src/main/resources/vaadin-i18n/translations.properties` **and** in
 `translations.context.properties` (screen | purpose | max length | note), then Spanish and Arabic
-in `elicit-i18n/admin/translations_es_419.properties` and `…_ar.properties`, and a regenerated
+in `i18n/translations_es_419.properties` and `…_ar.properties`, and a regenerated
 `i18n/TRANSLATION_REQUEST.md`. The manual itself stays English (BR-009).
 
 ## Tests

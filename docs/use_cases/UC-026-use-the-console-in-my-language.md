@@ -11,8 +11,8 @@
 ## Preconditions
 
 - The administrator is authenticated and has reached the admin console (UC-001).
-- The console ships English texts only; the deployment's translations directory supplies every other language (Latin American Spanish and Arabic in the reference deployment).
-- The deployment may have mounted further language files or text overrides; if so, those languages are also available.
+- The console ships its own texts in every language it supports (English, Latin American Spanish and Arabic), packaged inside the release.
+- The site may offer fewer than the console ships; the languages it offers are the ones in the selector.
 
 ## Main Success Scenario
 
@@ -34,24 +34,7 @@
 1. The system shows the English text for that item and the chosen language for everything else.
 2. Use case continues at step 4.
 
-### A2: Deployment mounted an additional language
-
-**Trigger:** The platform operator has mounted a language file the console does not ship (step 4).
-**Flow:**
-
-1. The system lists the mounted language in the language selector alongside the shipped ones.
-2. The administrator chooses the mounted language.
-3. Use case continues at step 5.
-
-### A3: Deployment overrides individual texts
-
-**Trigger:** The platform operator has mounted a language file containing only some texts for a shipped language (step 3).
-**Flow:**
-
-1. The system shows the mounted text for the overridden items and the shipped text for all others.
-2. Use case continues at step 4.
-
-### A4: The sign-in screen is shown by the identity provider
+### A2: The sign-in screen is shown by the identity provider
 
 **Trigger:** The administrator is not yet authenticated when opening the console (step 1).
 **Flow:**
@@ -76,9 +59,11 @@
 
 English is the default language and the fallback for any text missing from another language file. A text missing from every language file is shown as a visible marker (`!key!`) rather than blank, so the omission is noticed and fixed.
 
-### BR-083: Available languages are shipped plus mounted
+### BR-083: Available languages are the ones the release carries, less any the site withholds
 
-The languages offered are the union of the languages shipped with the console and the language files present in the deployment's mounted translations directory. A mounted file for a shipped language overrides only the texts it contains.
+Every language the console offers is packaged inside the release, so the wording an administrator reads is the wording that version was built and tested with. A site cannot add a language or change one; it can only offer fewer than the release carries, and a language it withholds is unreachable — absent from the selector and refused in a link.
+
+Languages are curated and arrive in a release, which is what keeps a translation and the code that renders it at the same version.
 
 ### BR-084: Language precedence
 
@@ -86,7 +71,7 @@ Session choice, then browser preference, then English. A language that is not av
 
 ### BR-085: Layout direction follows the language
 
-Languages written right-to-left (Arabic, Hebrew, Persian, Urdu and similar) mirror the whole screen layout; all other languages are laid out left-to-right. A deployment may declare the direction of a mounted language explicitly.
+Languages written right-to-left (Arabic, Hebrew, Persian, Urdu and similar) mirror the whole screen layout; all other languages are laid out left-to-right. The release declares the direction of any language whose script does not follow from its language alone, and a site may override that for one language by configuration.
 
 ### BR-086: Stored data keeps its entered language
 
@@ -102,4 +87,4 @@ The choice is held for the browser session only; nothing about the administrator
 
 ### BR-089: Text size may follow the language
 
-A script whose letters look smaller than Latin at the same size reads smaller, however faithful the translation — Arabic is the case this rule exists for. A deployment may therefore declare a font scale for a mounted language, and every console page shown in that language is rendered at that multiple of the administrator's own text size. A language with no declared scale is rendered exactly as it was before any scale existed, and a scale outside what a layout can absorb is refused rather than applied.
+A script whose letters look smaller than Latin at the same size reads smaller, however faithful the translation — Arabic is the case this rule exists for. The release may therefore declare a font scale for a language, and a site may override it by configuration; every console page shown in that language is rendered at that multiple of the administrator's own text size. A language with no declared scale is rendered exactly as it was before any scale existed, and a scale outside what a layout can absorb is refused rather than applied.
