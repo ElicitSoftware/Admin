@@ -40,7 +40,6 @@
 
 /* Import component styles */
 @import 'components/branded-header.css';
-@import 'components/text-field.css';
 @import 'components/debug-view.css';
 @import 'components/console-notice.css';
 @import 'components/edit-message-templates.css';
@@ -65,8 +64,11 @@ html {
     /* Question/field-label text. Pinned to --brand-text-secondary rather than
        Lumo's default derivation from --lumo-contrast-70pct/--lumo-shade, which
        tracks whatever a brand sets --lumo-shade to and can drop below WCAG AA
-       (4.5:1) on light brand backgrounds (see Survey's brand-colors.css). */
-    --lumo-secondary-text-color: var(--brand-text-secondary, var(--lumo-contrast-70pct));
+       (4.5:1) on light brand backgrounds (see Survey's brand-colors.css). The fallback is
+       the literal the consumers in view-text.css already agreed on, not --lumo-contrast-70pct:
+       that token never resolves under Aura, so a brand omitting --brand-text-secondary
+       (test-partial-brand does) left this property invalid and every rule reading it dropped. */
+    --lumo-secondary-text-color: var(--brand-text-secondary, #4a5a6a);
 
     /* Primary color variants */
     --lumo-primary-color-50pct: var(--brand-primary-50pct, hsla(214, 90%, 52%, 0.5));
@@ -90,6 +92,24 @@ html {
     --lumo-warning-text-color: var(--brand-warning-text, var(--brand-warning, hsl(43, 100%, 48%)));
     --lumo-warning-color-50pct: var(--brand-warning-50pct, hsla(43, 100%, 48%, 0.5));
     --lumo-warning-color-10pct: var(--brand-warning-10pct, hsla(43, 100%, 48%, 0.1));
+}
+
+/* Placed after the brand contract on purpose: StylesheetTokenConsistencyTest reads the FIRST
+   `html {` block in this file as the set of --lumo-* properties that resolve here, so a second
+   html block above it would silently take that role and fail the gate. */
+/* Per-language font scale (UC-026 BR-089) */
+/* LocaleLayout writes --elicit-font-scale onto the document element from the mounted
+   i18n-config.json when a locale declares one; it is absent, and so 1, for every other
+   locale and for a mount that declares none. Scaling the ROOT font size is what makes one
+   property enough: Aura's font sizes, spacing and control sizes,
+   the brand typography tokens and this application's own rules are all expressed in rem, so
+   the whole page grows in proportion and nothing clips. 100% is the reader's own browser
+   default -- a scale multiplies that rather than replacing it, so a user who has enlarged
+   text keeps the enlargement. Arabic is the case this exists for: its apparent x-height is
+   smaller than Latin's in the system font stack, so it reads small at a size that is
+   comfortable in English. */
+html {
+    font-size: calc(100% * var(--elicit-font-scale, 1));
 }
 
 /* Application-specific styling (customize for Admin app) */
