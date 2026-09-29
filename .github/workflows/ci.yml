@@ -40,16 +40,32 @@ jobs:
       - name: Fetch the deployment translations from the umbrella repository
         # The language tests read ../elicit-i18n, exactly as the dev and test profiles do in a
         # local umbrella checkout (the application itself ships English only). Prefer the umbrella
-        # branch with the same name as this one, so a cross-repo change can be tested before merge.
+        # branch with the same name as this one, so a cross-repo change can be tested before merge,
+        # then fall back to the base branch, then to the umbrella's default.
+        #
+        # The base branch matters: elicit-i18n lives only on the umbrella's i18n branch, not on
+        # its default main. Without that fallback every pull request whose head branch the umbrella
+        # has never heard of -- which is most of them -- cloned umbrella main, sparse-checked out
+        # nothing, and died on the ls below before compiling a line of Java. That went unnoticed
+        # while only main was gated, because pull requests into i18n ran no workflow at all.
         run: |
           UMBRELLA=https://github.com/ElicitSoftware/Elicit.git
-          BRANCH="${GITHUB_HEAD_REF:-$GITHUB_REF_NAME}"
           REF=()
-          if git ls-remote --exit-code --heads "$UMBRELLA" "$BRANCH" >/dev/null 2>&1; then
-            REF=(--branch "$BRANCH")
-          fi
+          for BRANCH in "$GITHUB_HEAD_REF" "$GITHUB_BASE_REF" "$GITHUB_REF_NAME"; do
+            [ -n "$BRANCH" ] || continue
+            if git ls-remote --exit-code --heads "$UMBRELLA" "$BRANCH" >/dev/null 2>&1; then
+              REF=(--branch "$BRANCH")
+              break
+            fi
+          done
           git clone --depth 1 --filter=blob:none --sparse "${REF[@]}" "$UMBRELLA" "$RUNNER_TEMP/elicit"
           git -C "$RUNNER_TEMP/elicit" sparse-checkout set elicit-i18n
+          if [ ! -d "$RUNNER_TEMP/elicit/elicit-i18n" ]; then
+            echo "::error::The umbrella branch ${REF[1]:-<default>} carries no elicit-i18n directory," \
+                 "so the language tests have nothing to read. Merge the umbrella's translations" \
+                 "to that branch, or point this build at one that has them."
+            exit 1
+          fi
           ln -s "$RUNNER_TEMP/elicit/elicit-i18n" ../elicit-i18n
           ls ../elicit-i18n/
 
