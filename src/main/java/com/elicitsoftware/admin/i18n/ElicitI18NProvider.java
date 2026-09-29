@@ -151,7 +151,7 @@ public class ElicitI18NProvider implements I18NProvider {
         reportedMissing.clear();
     }
 
-    /** True when the locale (or its language) has a translation file on any tier. */
+    /** True when this site offers the locale, or its language. */
     public boolean isProvided(Locale locale) {
         return getProvidedLocales().contains(locale);
     }
