@@ -94,6 +94,24 @@ html {
     --lumo-warning-color-10pct: var(--brand-warning-10pct, hsla(43, 100%, 48%, 0.1));
 }
 
+/* Placed after the brand contract on purpose: StylesheetTokenConsistencyTest reads the FIRST
+   `html {` block in this file as the set of --lumo-* properties that resolve here, so a second
+   html block above it would silently take that role and fail the gate. */
+/* Per-language font scale (UC-026 BR-089) */
+/* LocaleLayout writes --elicit-font-scale onto the document element from the mounted
+   i18n-config.json when a locale declares one; it is absent, and so 1, for every other
+   locale and for a mount that declares none. Scaling the ROOT font size is what makes one
+   property enough: Aura's font sizes, spacing and control sizes,
+   the brand typography tokens and this application's own rules are all expressed in rem, so
+   the whole page grows in proportion and nothing clips. 100% is the reader's own browser
+   default -- a scale multiplies that rather than replacing it, so a user who has enlarged
+   text keeps the enlargement. Arabic is the case this exists for: its apparent x-height is
+   smaller than Latin's in the system font stack, so it reads small at a size that is
+   comfortable in English. */
+html {
+    font-size: calc(100% * var(--elicit-font-scale, 1));
+}
+
 /* Application-specific styling (customize for Admin app) */
 .main-layout {
     background-color: var(--lumo-base-color);

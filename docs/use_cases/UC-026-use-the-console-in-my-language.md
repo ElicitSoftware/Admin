@@ -99,3 +99,7 @@ The organization name and description supplied by the mounted brand may carry pe
 ### BR-088: The language choice never crosses sessions
 
 The choice is held for the browser session only; nothing about the administrator's language is stored with their user record.
+
+### BR-089: Text size may follow the language
+
+A script whose letters look smaller than Latin at the same size reads smaller, however faithful the translation — Arabic is the case this rule exists for. A deployment may therefore declare a font scale for a mounted language, and every console page shown in that language is rendered at that multiple of the administrator's own text size. A language with no declared scale is rendered exactly as it was before any scale existed, and a scale outside what a layout can absorb is refused rather than applied.
