@@ -849,4 +849,35 @@ class SurveyDefinitionUpdateServiceTest {
         assertFalse(SurveyDefinitionFileFields.isRetired("steps", SurveyDefinitionFileFields.parseFields(kept.substring("steps: ".length()))));
         assertEquals(1L, queryLong("SELECT count(*) FROM survey.steps WHERE id = ?1", keptId));
     }
+
+    // ---- revision precision (the file must not outrank itself) ----
+
+    @Test
+    void asStored_roundsToTheMicrosecondTheColumnKeeps() {
+        // timestamptz keeps microseconds and rounds, so a revision exported as ...118452955Z is
+        // read back as ...118453Z. Comparing the raw values made re-applying a file look like a
+        // regression and told the operator to restore a database backup instead.
+        OffsetDateTime exported = OffsetDateTime.parse("2026-09-29T21:21:58.118452955Z");
+        OffsetDateTime readBack = OffsetDateTime.parse("2026-09-29T21:21:58.118453Z");
+
+        assertTrue(exported.isBefore(readBack), "raw, the file looks older than its own stored form");
+        assertEquals(SurveyDefinitionUpdateService.asStored(readBack),
+                SurveyDefinitionUpdateService.asStored(exported),
+                "normalized, a revision and its stored form are one instant");
+    }
+
+    @Test
+    void asStored_keepsAGenuinelyEarlierRevisionEarlier() {
+        // The guard must still catch a real regression: this is not a tolerance window, it is the
+        // storage precision. A revision a millisecond older is still older.
+        OffsetDateTime older = OffsetDateTime.parse("2026-09-29T21:21:58.117453000Z");
+        OffsetDateTime newer = OffsetDateTime.parse("2026-09-29T21:21:58.118453000Z");
+        assertTrue(SurveyDefinitionUpdateService.asStored(older)
+                .isBefore(SurveyDefinitionUpdateService.asStored(newer)));
+    }
+
+    @Test
+    void asStored_toleratesNoRevision() {
+        assertNull(SurveyDefinitionUpdateService.asStored(null), "a file may carry no revision header");
+    }
 }
