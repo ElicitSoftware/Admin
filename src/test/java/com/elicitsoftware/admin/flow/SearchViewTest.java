@@ -35,6 +35,7 @@ import java.util.stream.Collectors;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
@@ -189,5 +190,22 @@ class SearchViewTest extends QuarkusBrowserlessTest {
 
         Span principal = find(Span.class, noUserView).withClassName("inline-name").single();
         assertEquals("search.tester", principal.getText());
+    }
+
+    /**
+     * UC-002 (#26): the grid is sized to its rows, not to the viewport, so a large page size
+     * shows every row instead of hiding them in a scrolling box inside the grid. A defined
+     * height would silently disable that -- Vaadin ignores {@code setAllRowsVisible} on a grid
+     * that also has one -- so the height must stay undefined too.
+     */
+    @Test
+    @TestSecurity(user = "search.tester", roles = {"elicit_user"})
+    void gridShowsAllRowsOfThePageWithoutAnInnerScrollbar() {
+        Grid<Status> grid = grid();
+        assertTrue(grid.isAllRowsVisible(),
+                "the subject grid should size itself to the rows of the current page");
+        assertNull(grid.getHeight(),
+                "a defined height would make Vaadin ignore setAllRowsVisible and restore the "
+                        + "grid's own scrollbar");
     }
 }

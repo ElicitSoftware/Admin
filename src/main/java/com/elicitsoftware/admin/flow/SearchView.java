@@ -293,8 +293,11 @@ public class SearchView extends VerticalLayout implements HasDynamicTitle, Befor
         // Safe to call getCurrent here
         this.ui = UI.getCurrent();
 
-        // Make the root SearchView fill the available space
-        setSizeFull();
+        // The view is as tall as its contents: the grid shows every row of the current page
+        // (#26), so the scrolling belongs to the app layout's content area, not to a box inside
+        // the grid. The class pins flex-shrink; components/search-view.css says why.
+        setWidthFull();
+        addClassName("search-view");
 
         user = uiSessionLogin.getUser();
 
@@ -394,12 +397,12 @@ public class SearchView extends VerticalLayout implements HasDynamicTitle, Befor
      * Creates the main subjects table layout and initializes the grid component.
      *
      * <p>This method sets up the container layout for the subjects grid and
-     * calls the grid initialization method. The layout is configured to use
-     * the full available space for optimal data display.</p>
+     * calls the grid initialization method. The layout spans the full width and is as tall
+     * as the grid it holds, so the page scrolls rather than the grid (#26).</p>
      */
     private void createSubjectsTable() {
         VerticalLayout respondentsLayout = new VerticalLayout();
-        respondentsLayout.setSizeFull();
+        respondentsLayout.setWidthFull();
         respondentsLayout.setPadding(false);
         respondentsLayout.setSpacing(false);
         add(respondentsLayout);
@@ -515,7 +518,12 @@ public class SearchView extends VerticalLayout implements HasDynamicTitle, Befor
     private void getSubjectGrid(VerticalLayout respondentsLayout) {
         subjectGrid = new Grid<>(Status.class, false);
         subjectGrid.setId("subject-grid");
-        subjectGrid.setSizeFull();
+        subjectGrid.setWidthFull();
+        // Size to the rows rather than to the viewport, so a large page size does not bury the
+        // data in a scrolling box (#26). Bounded by the largest page size PaginationControls
+        // offers, so the grid never renders more than that many rows. No height may be set
+        // alongside this -- Vaadin ignores setAllRowsVisible when the grid also has one.
+        subjectGrid.setAllRowsVisible(true);
         subjectGrid.addColumn(Status::getAccessCode).setHeader(getTranslation("searchView.grid.accessCode")).setSortable(true).setSortProperty(Status.PROP_ACCESS_CODE).setWidth("150px").setFlexGrow(0);
         subjectGrid.addColumn(Status::getDepartmentName).setHeader(getTranslation("searchView.grid.department")).setSortable(true).setSortProperty(Status.PROP_DEPARTMENT_NAME);
         subjectGrid.addColumn(Status::getFirstName).setHeader(getTranslation("searchView.grid.firstName")).setSortable(true).setSortProperty(Status.PROP_FIRST_NAME);
@@ -652,11 +660,10 @@ public class SearchView extends VerticalLayout implements HasDynamicTitle, Befor
             }
         }, 0, 10, TimeUnit.SECONDS);
 
-        // Add the grid and pagination controls to a layout that fills the parent
+        // Add the grid and pagination controls to a layout as tall as they are
         VerticalLayout gridWithPaginationLayout = wrapWithVerticalLayout(subjectGrid, paginationControls);
-        gridWithPaginationLayout.setSizeFull();
+        gridWithPaginationLayout.setWidthFull();
         respondentsLayout.add(gridWithPaginationLayout);
-        respondentsLayout.setFlexGrow(1, gridWithPaginationLayout);
     }
 
     /**
