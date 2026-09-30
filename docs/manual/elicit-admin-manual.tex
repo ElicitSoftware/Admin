@@ -90,9 +90,10 @@ the margin, so that a user knows what to ask for rather than looking for a scree
 there.
 
 It describes the console of an installed system. Installing Elicit — the database, the identity
-provider, and the Survey, Admin and Author services — and provisioning it with a brand or a
-further language is the subject of the \emph{installation manual}. Building a survey is the
-subject of the \emph{author's manual}. This manual points at both rather than repeating them.
+provider, and the Survey and Admin services — and provisioning it with a brand, or choosing which
+of the shipped languages it offers, is the subject of the \emph{installation manual}. Building a
+survey is the subject of the \emph{author's manual}. This manual points at both rather than
+repeating them.
 
 \subsection{The vocabulary}
 
@@ -622,8 +623,9 @@ shown in English rather than left blank, so a partly translated console is still
 
 \begin{elicitnote}[Only English?]
 The selector is hidden when English is the only language available, because there would be
-nothing to choose. Making a further language available is an installation procedure, not a
-console one: it is in the installation manual.
+nothing to choose. Which languages a deployment offers is set when it is installed, not from the
+console: it is one setting in the installation manual. A language the release did not build into
+the console cannot be added there either — that is a request to Elicit Software.
 \end{elicitnote}
 
 The survey's own questions are not translated by this selector. What a respondent reads is part
@@ -634,8 +636,9 @@ of the survey definition and is the author's to write.
 
 \begin{itemize}
   \item The \textbf{installation manual} covers everything this one does not: bringing up the
-        database, the identity provider and the three services, the configuration reference, and
-        provisioning a brand or a further language.
+        database, the identity provider and the two services, the configuration reference,
+        provisioning a brand, and choosing which of the shipped languages this deployment
+        offers.
   \item The \textbf{author's manual}, \emph{Building a Survey}, covers the Author tool — writing
         questions, rules and reports, and exporting the definition that chapter~11 applies.
   \item \ui{System} $>$ \ui{Overview} is the first place to look when something is wrong here.
