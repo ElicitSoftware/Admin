@@ -100,7 +100,7 @@ final class MissingDepartmentDialog {
         dialog.setResizable(false);
         // alertdialog rather than dialog: the condition needs the user's attention before
         // anything else, and focus is trapped inside until an action is taken (NFR-016).
-        dialog.setRole("alertdialog");
+        dialog.setAriaRole("alertdialog");
         dialog.add(new Paragraph(Translations.get(administrator
                 ? "missingDepartmentDialog.admin.message" : "missingDepartmentDialog.user.message")));
 
@@ -112,7 +112,7 @@ final class MissingDepartmentDialog {
             manualLink.setRouterIgnore(true);
             manualLink.setTarget(AnchorTarget.BLANK);
             manualLink.addClassName("dialog-manual-link");
-            manualLink.getElement().insertChild(0, VaadinIcon.FILE_TEXT_O.create().getElement());
+            manualLink.getElement().insertChild(0, VaadinIcon.FILE_TEXT.create().getElement());
             dialog.getFooter().add(manualLink);
         }
 
