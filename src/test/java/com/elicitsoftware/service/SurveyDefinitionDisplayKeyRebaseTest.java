@@ -70,7 +70,7 @@ class SurveyDefinitionDisplayKeyRebaseTest {
     @Test
     void leavesAValueWithNoSeparatorUntouched() {
         // Nothing here is a survey component, so there is nothing to replace. Returning the value
-        // as-is beats guessing at a format this code does not recognise.
+        // as-is beats guessing at a format this code does not recognize.
         assertEquals("garbage", SurveyDefinitionFileFields.rebaseDisplayKey("garbage", 3));
     }
 

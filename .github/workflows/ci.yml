@@ -1,7 +1,12 @@
 # Runs the regression suite (unit + booted @QuarkusTest, JaCoCo coverage gate) on every
-# pull request and every push to main. This is the gate that actually enforces tests pass
-# before code merges — the release workflow (maven.yml) skips tests entirely and only runs
-# at tag-push time, so without this workflow nothing ever ran the suite in CI.
+# pull request into a long-lived branch and every push to one. This is the gate that actually
+# enforces tests pass before code merges — the release workflow (maven.yml) skips tests
+# entirely and only runs at tag-push time, so without this workflow nothing ever ran the suite
+# in CI.
+#
+# Both main and i18n are gated. i18n is a long-lived line many commits ahead of main, and it is
+# where the current work merges; while only main was gated, every pull request into i18n was
+# merged without being compiled, let alone tested.
 
 name: CI
 
@@ -9,9 +14,11 @@ on:
   push:
     branches:
       - main
+      - i18n
   pull_request:
     branches:
       - main
+      - i18n
 
 jobs:
   test:

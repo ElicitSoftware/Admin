@@ -88,7 +88,7 @@ class DepartmentsViewTest extends QuarkusBrowserlessTest {
         UI.getCurrent().add(view);
 
         Button newDepartmentBtn = find(Button.class, view).all().stream()
-                .filter(b -> "New Department".equals(b.getText()))
+                .filter(b -> view.getTranslation("departmentsView.newDepartment").equals(b.getText()))
                 .findFirst()
                 .orElseThrow(() -> new AssertionError("No New Department button"));
 

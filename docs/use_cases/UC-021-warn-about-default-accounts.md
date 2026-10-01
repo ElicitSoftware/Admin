@@ -65,7 +65,7 @@
 
 ### BR-085: The check is by username, not by id
 
-The seeded accounts are recognised by the usernames `admin` and `user` exactly, whether or not the rows are active, because the migration looks them up the same way. Renaming is the remedy; deactivating them leaves the warning in place.
+The seeded accounts are recognized by the usernames `admin` and `user` exactly, whether or not the rows are active, because the migration looks them up the same way. Renaming is the remedy; deactivating them leaves the warning in place.
 
 ### BR-086: The warning reflects what is stored now
 

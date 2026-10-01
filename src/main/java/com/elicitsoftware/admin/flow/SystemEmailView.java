@@ -66,7 +66,7 @@ public class SystemEmailView extends VerticalLayout implements HasDynamicTitle {
     @IdToken
     Instance<JsonWebToken> idTokenInstance;
 
-    final EmailField recipient = new EmailField("Recipient");
+    final EmailField recipient = new EmailField();
 
     public SystemEmailView() {
         // Size to the content, not the viewport, so the bottom padding follows the last grid.
@@ -78,50 +78,50 @@ public class SystemEmailView extends VerticalLayout implements HasDynamicTitle {
 
     @PostConstruct
     void init() {
-        add(new H3("Email"));
-        add(new Paragraph("These are the mail settings the service started with; they cannot be changed "
-                + "here. The test message is sent by the same service, sender and timeout that "
-                + "invitations use, so a passing test means invitations will send."));
+        add(new H3(getTranslation("systemEmailView.title")));
+        add(new Paragraph(getTranslation("systemEmailView.intro")));
 
         MailerDiagnostics.MailerReport report = mailer.report();
 
-        add(new H4("Effective settings"));
+        add(new H4(getTranslation("systemEmailView.effectiveSettings")));
         Grid<Row> settings = new Grid<>();
         settings.setId(SETTINGS_GRID_ID);
         settings.setItems(List.of(
-                new Row("Sender (quarkus.mailer.from)", report.from() != null ? report.from() : "absent"),
-                new Row("Host (quarkus.mailer.host)", report.host()),
-                new Row("Port (quarkus.mailer.port)", Integer.toString(report.port())),
-                new Row("TLS (quarkus.mailer.tls)", Boolean.toString(report.tls())),
-                new Row("STARTTLS (quarkus.mailer.start-tls)", report.startTls()),
-                new Row("Authentication methods (quarkus.mailer.auth-methods)",
-                        report.authMethods() != null ? report.authMethods() : "not set (relay default)"),
-                new Row("Username (quarkus.mailer.username)", report.usernamePresent() ? "present" : "absent"),
-                new Row("Password (quarkus.mailer.password)", report.passwordPresent() ? "present" : "absent"),
-                new Row("Mocked (quarkus.mailer.mock)", Boolean.toString(report.mock()))));
-        settings.addColumn(Row::label).setHeader("Setting").setAutoWidth(true);
-        settings.addColumn(Row::value).setHeader("Value").setFlexGrow(1);
+                new Row(getTranslation("systemEmailView.row.sender"),
+                        report.from() != null ? report.from() : getTranslation("systemEmailView.value.absent")),
+                new Row(getTranslation("systemEmailView.row.host"), report.host()),
+                new Row(getTranslation("systemEmailView.row.port"), Integer.toString(report.port())),
+                new Row(getTranslation("systemEmailView.row.tls"), yesNo(report.tls())),
+                new Row(getTranslation("systemEmailView.row.startTls"), report.startTls()),
+                new Row(getTranslation("systemEmailView.row.authMethods"),
+                        report.authMethods() != null ? report.authMethods()
+                                : getTranslation("systemEmailView.value.relayDefault")),
+                new Row(getTranslation("systemEmailView.row.username"), presence(report.usernamePresent())),
+                new Row(getTranslation("systemEmailView.row.password"), presence(report.passwordPresent())),
+                new Row(getTranslation("systemEmailView.row.mock"), yesNo(report.mock()))));
+        settings.addColumn(Row::label).setHeader(getTranslation("systemEmailView.grid.setting")).setAutoWidth(true);
+        settings.addColumn(Row::value).setHeader(getTranslation("system.grid.value")).setFlexGrow(1);
         settings.setAllRowsVisible(true);
         settings.addThemeVariants(GridVariant.LUMO_COMPACT, GridVariant.LUMO_WRAP_CELL_CONTENT);
         add(settings);
 
-        add(new H4("Send a test message"));
+        add(new H4(getTranslation("systemEmailView.sendTest")));
+        recipient.setLabel(getTranslation("systemEmailView.recipient"));
         recipient.setId(RECIPIENT_ID);
         recipient.setWidth("24em");
         recipient.setClearButtonVisible(true);
-        recipient.setErrorMessage("Enter a valid email address");
+        recipient.setErrorMessage(getTranslation("systemEmailView.recipient.invalid"));
         String own = ownEmail();
         if (own != null) {
             recipient.setValue(own);
         }
 
-        Button send = new Button("Send test email", e -> send());
+        Button send = new Button(getTranslation("systemEmailView.send"), e -> send());
         send.setId(SEND_BUTTON_ID);
         send.addThemeVariants(ButtonVariant.LUMO_PRIMARY);
         if (!report.canSend()) {
             send.setEnabled(false);
-            add(new Paragraph("Sending is disabled because no sender address is configured. Set "
-                    + "quarkus.mailer.from and restart the service."));
+            add(new Paragraph(getTranslation("systemEmailView.sendingDisabled")));
         }
         HorizontalLayout form = new HorizontalLayout(recipient, send);
         form.setAlignItems(Alignment.BASELINE);
@@ -132,16 +132,25 @@ public class SystemEmailView extends VerticalLayout implements HasDynamicTitle {
         String to = recipient.getValue();
         if (to == null || to.isBlank() || recipient.isInvalid()) {
             recipient.setInvalid(true);
-            Notification.show("Enter a valid recipient address first.", 5000, Notification.Position.MIDDLE);
+            Notification.show(getTranslation("systemEmailView.recipientRequired"), 5000, Notification.Position.MIDDLE);
             return;
         }
         CheckResult result = emailService.sendTestEmail(to.trim(), identity.getPrincipal().getName());
         if (result.isUp()) {
-            Notification.show("Test email sent to " + to.trim() + " (" + result.detail() + ").", 3000,
+            Notification.show(getTranslation("systemEmailView.sent", to.trim(), result.detail()), 3000,
                     Notification.Position.MIDDLE);
         } else {
-            Notification.show("Test email failed: " + result.detail(), 5000, Notification.Position.MIDDLE);
+            Notification.show(getTranslation("systemEmailView.failed", result.detail()), 5000,
+                    Notification.Position.MIDDLE);
         }
+    }
+
+    private String yesNo(boolean value) {
+        return getTranslation(value ? "common.yes" : "common.no");
+    }
+
+    private String presence(boolean present) {
+        return getTranslation(present ? "systemEmailView.value.present" : "systemEmailView.value.absent");
     }
 
     /** The administrator's own address from the ID token, when the identity provider supplied one. */
@@ -162,6 +171,6 @@ public class SystemEmailView extends VerticalLayout implements HasDynamicTitle {
 
     @Override
     public String getPageTitle() {
-        return "System Email";
+        return getTranslation("systemEmailView.pageTitle");
     }
 }

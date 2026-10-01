@@ -28,7 +28,7 @@
 Admin owns two distinct responsibilities that both touch the survey structural tables
 directly:
 
-1. **Survey Definition Export/Import** — Admin serialises every structural table
+1. **Survey Definition Export/Import** — Admin serializes every structural table
    (`surveys`, `select_groups`, `select_items`, `steps`, `sections`, `steps_sections`,
    `questions`, `sections_questions`, `relationships`, `reports`, `post_survey_actions`,
    `dimensions`, `ontology`, `metadata`) to a pipe-delimited text file and re-creates
@@ -77,7 +77,7 @@ range columns).
 
 ### What must change
 
-The export currently serialises each table's content rows using surrogate `id` values as
+The export currently serializes each table's content rows using surrogate `id` values as
 cross-table references (`source_id`). After Kimball Type 2, the canonical cross-table
 reference for structural tables is the **durable integer key** (`question_id`,
 `section_id`, etc.), not the surrogate `id`. The file format version must be bumped to

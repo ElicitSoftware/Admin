@@ -13,6 +13,7 @@ package com.elicitsoftware.diagnostics;
 
 import com.elicitsoftware.model.Department;
 import com.elicitsoftware.model.MessageTemplate;
+import com.elicitsoftware.admin.i18n.Translations;
 import com.elicitsoftware.service.DefaultAccountCheck;
 import com.elicitsoftware.service.SurveyDefinitionPresenceCheck;
 import jakarta.enterprise.context.ApplicationScoped;
@@ -62,24 +63,44 @@ public class SetupWarnings {
 
         List<String> accounts = defaultAccounts.findDefaultAccounts();
         if (!accounts.isEmpty()) {
-            warnings.add(new Warning(DefaultAccountCheck.instruction(accounts), Remedy.USERS));
+            warnings.add(new Warning(instruction(accounts), Remedy.USERS));
         }
         if (!surveyPresence.isSurveyInstalled()) {
-            warnings.add(new Warning("No survey is installed. Apply a survey definition before registering subjects.",
+            warnings.add(new Warning(Translations.get("systemOverviewView.warning.noSurvey"),
                     Remedy.APPLY_SURVEY_DEFINITION));
         }
-        if (Department.count("fromEmail is not null and fromEmail <> ''") == 0) {
-            warnings.add(new Warning("No department has a sender address, so invitations have no From address.",
+        // A fresh deployment ships no department (UC-028 C-016); that is the item to fix first,
+        // and the sender-address check only means something once a department exists.
+        if (Department.count() == 0) {
+            warnings.add(new Warning(Translations.get("systemOverviewView.warning.noDepartment"),
+                    Remedy.DEPARTMENTS));
+        } else if (Department.count("fromEmail is not null and fromEmail <> ''") == 0) {
+            warnings.add(new Warning(Translations.get("systemOverviewView.warning.noSenderAddress"),
                     Remedy.DEPARTMENTS));
         }
-        if (MessageTemplate.count() > 0 && MessageTemplate.count("message like ?1", "%<ACCESS_CODE>%") == 0) {
-            warnings.add(new Warning("No message template contains the <ACCESS_CODE> placeholder, so no invitation"
-                    + " can carry a survey link.", Remedy.MESSAGE_TEMPLATES));
+        // Likewise no message template is seeded; without one, registration builds no invitation.
+        if (MessageTemplate.count() == 0) {
+            warnings.add(new Warning(Translations.get("systemOverviewView.warning.noMessageTemplate"),
+                    Remedy.MESSAGE_TEMPLATES));
+        } else if (MessageTemplate.count("message like ?1", "%<ACCESS_CODE>%") == 0) {
+            warnings.add(new Warning(Translations.get("systemOverviewView.warning.noAccessCodeTemplate"),
+                    Remedy.MESSAGE_TEMPLATES));
         }
         for (RequiredConfigCheck.LegacySetting legacy : requiredConfig.legacySettingsInUse()) {
-            warnings.add(new Warning("The setting " + legacy.property() + " is configured but no longer read; use "
-                    + legacy.replacement() + " instead.", Remedy.NONE));
+            warnings.add(new Warning(Translations.get("systemOverviewView.warning.legacySetting",
+                    legacy.property(), legacy.replacement()), Remedy.NONE));
         }
         return warnings;
+    }
+
+    /**
+     * The seeded-account instruction in the current language; the English wording the startup
+     * log uses stays in {@link DefaultAccountCheck#instruction(List)}.
+     */
+    public static String instruction(List<String> accounts) {
+        String names = accounts.stream().map(a -> "'" + a + "'")
+                .reduce((a, b) -> Translations.get("common.listAnd", a, b)).orElse("");
+        return Translations.get(accounts.size() > 1
+                ? "defaultAccountNotice.instruction.many" : "defaultAccountNotice.instruction.one", names);
     }
 }

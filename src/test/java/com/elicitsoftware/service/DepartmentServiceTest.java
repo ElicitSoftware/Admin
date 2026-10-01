@@ -12,6 +12,7 @@ package com.elicitsoftware.service;
  */
 
 import com.elicitsoftware.model.Department;
+import com.elicitsoftware.model.User;
 import com.elicitsoftware.test.PostgresTestResource;
 import io.quarkus.test.TestTransaction;
 import io.quarkus.test.common.QuarkusTestResource;
@@ -20,6 +21,7 @@ import jakarta.inject.Inject;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -77,5 +79,56 @@ class DepartmentServiceTest {
         assertEquals("UC006 Dept edited", reloaded.name);
         assertEquals(1, Department.count("code = ?1", "UC006-edit"),
                 "update must not create a duplicate row");
+    }
+    private static User persistUser(String username) {
+        User user = new User();
+        user.setUsername(username);
+        user.setFirstName("Cee");
+        user.setLastName("Creator");
+        user.setActive(true);
+        user.persist();
+        return user;
+    }
+
+    /** UC-028 BR-113: creating a department assigns it to the creating administrator, in one transaction. */
+    @Test
+    @TestTransaction
+    void createAssignsTheNewDepartmentToItsCreator() {
+        persistUser("uc028.creator");
+
+        Department created = departmentService.create(newDepartment("create"), "uc028.creator");
+        assertTrue(created.id > 0, "the department should be persisted");
+
+        // Read the join table back rather than the set the service mutated.
+        User.getEntityManager().flush();
+        User.getEntityManager().clear();
+        User reloaded = User.find("username = ?1", "uc028.creator").firstResult();
+        assertTrue(reloaded.getDepartments().stream().anyMatch(d -> d.id == created.id),
+                "the creator should be assigned to the department they created");
+    }
+
+    /** UC-028: an unknown principal still gets the department; only the assignment is skipped. */
+    @Test
+    @TestTransaction
+    void createWithAnUnknownPrincipalStillPersistsTheDepartment() {
+        Department created = departmentService.create(newDepartment("orphan"), "uc028.nobody");
+
+        assertNotNull(Department.findById(created.id), "the department is persisted regardless");
+    }
+
+    /** UC-028 BR-113 is about creation only: updating a department assigns nobody. */
+    @Test
+    @TestTransaction
+    void saveDoesNotAssignOnUpdate() {
+        persistUser("uc028.editor");
+        Department saved = departmentService.save(newDepartment("update"));
+
+        saved.name = "UC006 Dept renamed";
+        departmentService.save(saved);
+
+        User.getEntityManager().flush();
+        User.getEntityManager().clear();
+        User reloaded = User.find("username = ?1", "uc028.editor").firstResult();
+        assertFalse(reloaded.hasDepartments(), "save() must not assign departments to anyone");
     }
 }

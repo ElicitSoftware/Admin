@@ -12,7 +12,6 @@ package com.elicitsoftware.model;
  */
 
 import io.quarkus.hibernate.orm.panache.PanacheEntityBase;
-import io.quarkus.panache.common.Parameters;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.*;
 
@@ -20,6 +19,7 @@ import java.text.SimpleDateFormat;
 import java.time.LocalDate;
 import java.util.Date;
 import java.util.List;
+import java.util.Map;
 import java.util.TimeZone;
 
 /**
@@ -74,10 +74,10 @@ import java.util.TimeZone;
  * // Find subjects by department and date range
  * List<Subject> subjects = Subject.find(
  *     "AppointmentView.findByDateDeptAndXidList",
- *     Parameters.with("departmentId", 456L)
- *               .and("startDate", startDate)
- *               .and("endDate", endDate)
- *               .and("xids", xidList)
+ *     Map.of("departmentId", 456L,
+ *            "startDate", startDate,
+ *            "endDate", endDate,
+ *            "xids", xidList)
  * ).list();
  * }</pre>
  *
@@ -253,7 +253,9 @@ public class Subject extends PanacheEntityBase {
      */
     @Transient
     public static List<Subject> findByDepartmentXidDates(long department_id, List<String> xids, Date startDate, Date endDate) {
-        return find("#AppointmentView.findByDateDeptAndXidList", Parameters.with("departmentId", department_id).and("startDate", startDate).and("endDate", endDate).and("xid", "(" + String.join("','", xids) + ")")).list();
+        return find("#AppointmentView.findByDateDeptAndXidList",
+                Map.of("departmentId", department_id, "startDate", startDate, "endDate", endDate,
+                        "xid", "(" + String.join("','", xids) + ")")).list();
     }
 
     /**

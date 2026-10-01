@@ -65,12 +65,12 @@ public class DepartmentsView extends VerticalLayout {
                 editDepartment(department.id)
             );
             return editBtn;
-        }).setHeader("Edit").setWidth("80px").setFlexGrow(0);
+        }).setHeader(getTranslation("common.edit")).setWidth("80px").setFlexGrow(0);
 
-        grid.addColumn(Department::getName).setHeader("Department Name").setSortable(true).setAutoWidth(true);
-        grid.addColumn(Department::getCode).setHeader("Code").setSortable(true).setAutoWidth(true);
-        grid.addColumn(Department::getDefaultMessageId).setHeader("Default Message ID").setSortable(true).setAutoWidth(true);
-        grid.addColumn(Department::getFromEmail).setHeader("From Email").setSortable(true).setAutoWidth(true);
+        grid.addColumn(Department::getName).setHeader(getTranslation("departmentsView.grid.name")).setSortable(true).setAutoWidth(true);
+        grid.addColumn(Department::getCode).setHeader(getTranslation("departmentsView.grid.code")).setSortable(true).setAutoWidth(true);
+        grid.addColumn(Department::getDefaultMessageId).setHeader(getTranslation("departmentsView.grid.defaultMessageId")).setSortable(true).setAutoWidth(true);
+        grid.addColumn(Department::getFromEmail).setHeader(getTranslation("departmentsView.grid.fromEmail")).setSortable(true).setAutoWidth(true);
         //To be uncommented after notification email system is in place.
 //        grid.addColumn(department -> {
 //            String emails = department.getNotificationEmails();
@@ -86,7 +86,7 @@ public class DepartmentsView extends VerticalLayout {
         List<Department> departments = Department.findAll().list();
         grid.setItems(departments);
         grid.addThemeVariants(GridVariant.LUMO_ROW_STRIPES, GridVariant.LUMO_COMPACT);
-        Button newDepartmentButton = new Button("New Department", event ->
+        Button newDepartmentButton = new Button(getTranslation("departmentsView.newDepartment"), event ->
             getUI().ifPresent(ui -> ui.navigate("edit-department/0"))
         );
         newDepartmentButton.addThemeVariants(ButtonVariant.LUMO_PRIMARY);

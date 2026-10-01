@@ -94,47 +94,52 @@ public class SystemOverviewView extends VerticalLayout implements HasDynamicTitl
 
     @PostConstruct
     void init() {
-        add(new H3("System Overview"));
-        add(new Paragraph("What this deployment is running, whether it is healthy, and the setup work "
-                + "still outstanding. Settings are shown as present or absent, never by value; they are "
-                + "startup configuration and cannot be changed here."));
+        add(new H3(getTranslation("systemOverviewView.title")));
+        add(new Paragraph(getTranslation("systemOverviewView.intro")));
 
-        add(new H4("Running"));
+        add(new H4(getTranslation("systemOverviewView.running")));
         add(rows(BUILD_GRID_ID, List.of(
-                new Row("Application", buildInfo.applicationName()),
-                new Row("Version", buildInfo.version()),
-                new Row("Built", buildInfo.buildTimestamp()),
-                new Row("Profile", String.join(", ", buildInfo.profiles())),
-                new Row("Started", buildInfo.startedAt().toString()),
-                new Row("Uptime", formatUptime(buildInfo.uptime())))));
+                new Row(getTranslation("systemOverviewView.row.application"), buildInfo.applicationName()),
+                new Row(getTranslation("systemOverviewView.row.version"), buildInfo.version()),
+                new Row(getTranslation("systemOverviewView.row.built"), buildInfo.buildTimestamp()),
+                new Row(getTranslation("systemOverviewView.row.profile"), String.join(", ", buildInfo.profiles())),
+                new Row(getTranslation("systemOverviewView.row.started"), buildInfo.startedAt().toString()),
+                new Row(getTranslation("systemOverviewView.row.uptime"), formatUptime(buildInfo.uptime())))));
 
-        add(new H4("Health"));
+        add(new H4(getTranslation("systemOverviewView.health")));
         add(areas(List.of(
-                new Area("Application database connection", database.checkApplicationConnection().result(), SystemDatabaseView.class),
-                new Area("Owner database connection", database.checkOwnerConnection().result(), SystemDatabaseView.class),
-                new Area("Branding", brandSummary(), SystemBrandingView.class),
-                new Area("Email", mailerSummary(), SystemEmailView.class),
-                new Area("Connections", connectionsSummary(), SystemConnectionsView.class))));
+                new Area(getTranslation("systemOverviewView.area.applicationDatabase"),
+                        database.checkApplicationConnection().result(), SystemDatabaseView.class),
+                new Area(getTranslation("systemOverviewView.area.ownerDatabase"),
+                        database.checkOwnerConnection().result(), SystemDatabaseView.class),
+                new Area(getTranslation("systemOverviewView.area.branding"), brandSummary(), SystemBrandingView.class),
+                new Area(getTranslation("systemOverviewView.area.email"), mailerSummary(), SystemEmailView.class),
+                new Area(getTranslation("systemOverviewView.area.connections"), connectionsSummary(),
+                        SystemConnectionsView.class))));
 
-        add(new H4("Required settings"));
+        add(new H4(getTranslation("systemOverviewView.requiredSettings")));
         Grid<RequiredConfigCheck.RequiredSetting> config = new Grid<>();
         config.setId(CONFIG_GRID_ID);
         config.setItems(requiredConfig.requiredSettings());
-        config.addColumn(RequiredConfigCheck.RequiredSetting::property).setHeader("Setting").setAutoWidth(true);
-        config.addColumn(RequiredConfigCheck.RequiredSetting::envVar).setHeader("Supplied by").setAutoWidth(true);
-        config.addColumn(RequiredConfigCheck.RequiredSetting::purpose).setHeader("Purpose").setFlexGrow(1);
-        config.addComponentColumn(s -> SystemBadges.presence(s.present())).setHeader("State").setAutoWidth(true);
+        config.addColumn(RequiredConfigCheck.RequiredSetting::property)
+                .setHeader(getTranslation("systemOverviewView.grid.setting")).setAutoWidth(true);
+        config.addColumn(RequiredConfigCheck.RequiredSetting::envVar)
+                .setHeader(getTranslation("systemOverviewView.grid.suppliedBy")).setAutoWidth(true);
+        config.addColumn(RequiredConfigCheck.RequiredSetting::purpose)
+                .setHeader(getTranslation("systemOverviewView.grid.purpose")).setFlexGrow(1);
+        config.addComponentColumn(s -> SystemBadges.presence(s.present()))
+                .setHeader(getTranslation("system.grid.state")).setAutoWidth(true);
         config.setAllRowsVisible(true);
         config.addThemeVariants(GridVariant.LUMO_COMPACT, GridVariant.LUMO_WRAP_CELL_CONTENT);
         add(config);
 
-        add(new H4("Setup still outstanding"));
+        add(new H4(getTranslation("systemOverviewView.outstanding")));
         add(renderWarnings(setupWarnings.warnings()));
     }
 
     Component renderWarnings(List<SetupWarnings.Warning> warnings) {
         if (warnings.isEmpty()) {
-            Paragraph done = new Paragraph("Nothing outstanding.");
+            Paragraph done = new Paragraph(getTranslation("systemOverviewView.nothingOutstanding"));
             done.setId(NO_WARNINGS_ID);
             return done;
         }
@@ -151,79 +156,84 @@ public class SystemOverviewView extends VerticalLayout implements HasDynamicTitl
         return list;
     }
 
-    private static Component remedy(SetupWarnings.Remedy remedy) {
+    private Component remedy(SetupWarnings.Remedy remedy) {
         return switch (remedy) {
-            case USERS -> new RouterLink("Open Users", UsersView.class);
-            case APPLY_SURVEY_DEFINITION -> new RouterLink("Apply a survey definition", SurveyDefinitionApplyView.class);
-            case DEPARTMENTS -> new RouterLink("Open Departments", DepartmentsView.class);
-            case MESSAGE_TEMPLATES -> new RouterLink("Open Message Templates", MessageTemplatesView.class);
+            case USERS -> new RouterLink(getTranslation("systemOverviewView.remedy.users"), UsersView.class);
+            case APPLY_SURVEY_DEFINITION -> new RouterLink(getTranslation("systemOverviewView.remedy.applySurveyDefinition"),
+                    SurveyDefinitionApplyView.class);
+            case DEPARTMENTS -> new RouterLink(getTranslation("systemOverviewView.remedy.departments"), DepartmentsView.class);
+            case MESSAGE_TEMPLATES -> new RouterLink(getTranslation("systemOverviewView.remedy.messageTemplates"),
+                    MessageTemplatesView.class);
             case NONE -> null;
         };
     }
 
     private CheckResult brandSummary() {
         try {
-            return CheckResult.up("Branding", brand.report().summary(), 0);
+            return CheckResult.up("Branding", brand.report().summary(), 0); // i18n:ignore
         } catch (RuntimeException e) {
-            return CheckResult.down("Branding", e.getMessage(), 0);
+            return CheckResult.down("Branding", e.getMessage(), 0); // i18n:ignore
         }
     }
 
     private CheckResult mailerSummary() {
         MailerDiagnostics.MailerReport report = mailer.report();
         return report.canSend()
-                ? CheckResult.up("Email", report.summary(), 0)
-                : CheckResult.down("Email", report.summary(), 0);
+                ? CheckResult.up("Email", report.summary(), 0) // i18n:ignore
+                : CheckResult.down("Email", report.summary(), 0); // i18n:ignore
     }
 
     private CheckResult connectionsSummary() {
         try {
             int count = connections.targets().size();
-            return CheckResult.unknown("Connections", count + " outbound target" + (count == 1 ? "" : "s")
-                    + " configured; open Connections to check them");
+            return CheckResult.unknown("Connections", getTranslation(count == 1 // i18n:ignore
+                    ? "systemOverviewView.connectionsSummary.one" : "systemOverviewView.connectionsSummary.many",
+                    Integer.toString(count)));
         } catch (RuntimeException e) {
-            return CheckResult.down("Connections", e.getMessage(), 0);
+            return CheckResult.down("Connections", e.getMessage(), 0); // i18n:ignore
         }
     }
 
-    private static Grid<Row> rows(String id, List<Row> rows) {
+    private Grid<Row> rows(String id, List<Row> rows) {
         Grid<Row> grid = new Grid<>();
         grid.setId(id);
         grid.setItems(rows);
-        grid.addColumn(Row::label).setHeader("Item").setAutoWidth(true);
-        grid.addColumn(Row::value).setHeader("Value").setFlexGrow(1);
+        grid.addColumn(Row::label).setHeader(getTranslation("system.grid.item")).setAutoWidth(true);
+        grid.addColumn(Row::value).setHeader(getTranslation("system.grid.value")).setFlexGrow(1);
         grid.setAllRowsVisible(true);
         grid.addThemeVariants(GridVariant.LUMO_COMPACT, GridVariant.LUMO_WRAP_CELL_CONTENT);
         return grid;
     }
 
-    private static Grid<Area> areas(List<Area> areas) {
+    private Grid<Area> areas(List<Area> areas) {
         Grid<Area> grid = new Grid<>();
         grid.setId(HEALTH_GRID_ID);
         grid.setItems(areas);
-        grid.addComponentColumn(a -> new RouterLink(a.name(), a.screen())).setHeader("Area").setAutoWidth(true);
-        grid.addComponentColumn(a -> SystemBadges.status(a.result())).setHeader("State").setAutoWidth(true);
-        grid.addColumn(a -> a.result().detail()).setHeader("Detail").setFlexGrow(1);
+        grid.addComponentColumn(a -> new RouterLink(a.name(), a.screen()))
+                .setHeader(getTranslation("systemOverviewView.grid.area")).setAutoWidth(true);
+        grid.addComponentColumn(a -> SystemBadges.status(a.result()))
+                .setHeader(getTranslation("system.grid.state")).setAutoWidth(true);
+        grid.addColumn(a -> a.result().detail()).setHeader(getTranslation("system.grid.detail")).setFlexGrow(1);
         grid.setAllRowsVisible(true);
         grid.addThemeVariants(GridVariant.LUMO_COMPACT, GridVariant.LUMO_WRAP_CELL_CONTENT);
         return grid;
     }
 
-    static String formatUptime(Duration uptime) {
-        long days = uptime.toDays();
-        long hours = uptime.toHoursPart();
-        long minutes = uptime.toMinutesPart();
-        if (days > 0) {
-            return days + " d " + hours + " h " + minutes + " min";
+    String formatUptime(Duration uptime) {
+        String days = Long.toString(uptime.toDays());
+        String hours = Long.toString(uptime.toHoursPart());
+        String minutes = Long.toString(uptime.toMinutesPart());
+        if (uptime.toDays() > 0) {
+            return getTranslation("systemOverviewView.uptime.days", days, hours, minutes);
         }
-        if (hours > 0) {
-            return hours + " h " + minutes + " min";
+        if (uptime.toHoursPart() > 0) {
+            return getTranslation("systemOverviewView.uptime.hours", hours, minutes);
         }
-        return minutes + " min " + uptime.toSecondsPart() + " s";
+        return getTranslation("systemOverviewView.uptime.minutes", minutes, Integer.toString(uptime.toSecondsPart()));
     }
 
     @Override
     public String getPageTitle() {
-        return "System Overview";
+        return getTranslation("systemOverviewView.pageTitle");
     }
 }

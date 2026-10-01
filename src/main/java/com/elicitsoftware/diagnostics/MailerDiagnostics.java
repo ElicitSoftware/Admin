@@ -11,6 +11,7 @@ package com.elicitsoftware.diagnostics;
  * ***LICENSE_END***
  */
 
+import com.elicitsoftware.admin.i18n.Translations;
 import jakarta.enterprise.context.ApplicationScoped;
 import org.eclipse.microprofile.config.Config;
 import org.eclipse.microprofile.config.ConfigProvider;
@@ -46,9 +47,11 @@ public class MailerDiagnostics {
 
         public String summary() {
             if (!canSend()) {
-                return "No sender address configured (quarkus.mailer.from)";
+                return Translations.get("systemEmailView.summary.noSender");
             }
-            return "From " + from + " via " + host + ":" + port + (tls ? " with TLS" : "") + (mock ? " (mocked)" : "");
+            String summary = Translations.get(tls ? "systemEmailView.summary.fromTls" : "systemEmailView.summary.from",
+                    from, host + ":" + port);
+            return mock ? Translations.get("systemEmailView.summary.mocked", summary) : summary;
         }
     }
 

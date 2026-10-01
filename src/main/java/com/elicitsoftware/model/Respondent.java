@@ -13,11 +13,11 @@ package com.elicitsoftware.model;
 
 
 import io.quarkus.hibernate.orm.panache.PanacheEntityBase;
-import io.quarkus.panache.common.Parameters;
 import jakarta.persistence.*;
 
 import java.text.SimpleDateFormat;
 import java.util.Date;
+import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -274,7 +274,8 @@ public class Respondent extends PanacheEntityBase {
      */
     @Transient
     public static Respondent findBySurveyAndAccessCode(Integer survey_id, String accessCode) {
-        return find("#Respondent.findBySurveyAndAccessCode", Parameters.with("survey_id", survey_id).and("accessCode", accessCode)).firstResult();
+        return find("#Respondent.findBySurveyAndAccessCode",
+                Map.of("survey_id", survey_id, "accessCode", accessCode)).firstResult();
     }
 
     /**
@@ -299,7 +300,7 @@ public class Respondent extends PanacheEntityBase {
      */
     @Transient
     public static Respondent findActiveByAccessCode(String accessCode) {
-        return find("#Respondent.findActiveByAccessCode", Parameters.with("accessCode", accessCode)).firstResult();
+        return find("#Respondent.findActiveByAccessCode", Map.of("accessCode", accessCode)).firstResult();
     }
 
     /**

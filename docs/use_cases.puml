@@ -33,7 +33,6 @@ rectangle "Elicit Admin" {
     usecase "UC-017\nUpdate Survey Definition" as UC017
     usecase "UC-018\nApply Survey Definition" as UC018
     usecase "UC-019\nSurface Missing Survey Definition" as UC019
-
     ' --- System setup and diagnostics (admin only) ---
     usecase "UC-020\nView System Overview" as UC020
     usecase "UC-021\nWarn About Default Accounts" as UC021
@@ -41,6 +40,14 @@ rectangle "Elicit Admin" {
     usecase "UC-023\nDiagnose Branding" as UC023
     usecase "UC-024\nDiagnose Email" as UC024
     usecase "UC-025\nCheck Connections" as UC025
+    usecase "UC-028\nRequire a Department Assignment" as UC028
+
+    ' --- Localization ---
+    usecase "UC-026\nUse the Console in My Language" as UC026
+    usecase "UC-027\nManage Languages" as UC027
+
+    ' --- Documentation ---
+    usecase "UC-029\nConsult the Administrator's Manual" as UC029
 
     ' --- Shared subflow ---
     usecase "UC-015\nGenerate Survey Access Code" as UC015
@@ -54,6 +61,9 @@ user --> UC004
 user --> UC005
 user --> UC009
 user --> UC019
+user --> UC026
+user --> UC028
+user --> UC029
 
 ' Administrator (inherits user goals plus administration and data lifecycle)
 admin --> UC001
@@ -80,6 +90,10 @@ admin --> UC022
 admin --> UC023
 admin --> UC024
 admin --> UC025
+admin --> UC026
+admin --> UC027
+admin --> UC028
+admin --> UC029
 
 ' Integration Client
 importer --> UC010
@@ -105,5 +119,12 @@ UC020 ..> UC021 : <<include>>
 UC020 ..> UC019 : <<include>>
 UC021 ..> UC008 : <<directs to>>
 UC020 ..> UC009 : <<directs to>>
+UC001 ..> UC028 : <<include>>\n(checked on every screen)
+UC028 ..> UC006 : <<directs to>>
+UC020 ..> UC028 : <<include>>
+UC026 ..> UC001 : <<extend>>\n(language applies to every screen)
+UC027 ..> UC026 : <<extend>>\n(adds a language to the selector)
+UC029 ..> UC001 : <<extend>>\n(printable form of the console's procedures)
+UC028 ..> UC029 : <<offers>>\n(the notice links the manual)
 
 @enduml

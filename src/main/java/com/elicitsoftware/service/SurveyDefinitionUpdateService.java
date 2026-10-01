@@ -25,6 +25,7 @@ import java.io.InputStreamReader;
 import java.math.BigDecimal;
 import java.nio.charset.StandardCharsets;
 import java.time.OffsetDateTime;
+import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
@@ -197,7 +198,8 @@ public class SurveyDefinitionUpdateService {
         Map<String, MutableCounts> counts = new LinkedHashMap<>();
         for (String table : List.of("surveys", "select_groups", "select_items", "steps", "sections",
                 "steps_sections", "questions", "sections_questions", "relationships",
-                "reports", "post_survey_actions", "dimensions", "ontology", "metadata")) {
+                "reports", "post_survey_actions", "dimensions", "ontology", "metadata",
+                "translations")) {
             counts.put(table, new MutableCounts());
         }
 
@@ -394,6 +396,13 @@ public class SurveyDefinitionUpdateService {
                             counts.get("metadata").record(outcome);
                             break;
                         }
+                        case "translations": {
+                            UpsertOutcome outcome = SurveyDefinitionFileFields.isRetired("translations", fields)
+                                    ? retireCurrentRow("survey.translations", "translation_key", "translation_id", fields, target.id)
+                                    : upsertTranslation(fields, target.id);
+                            counts.get("translations").record(outcome.changeType());
+                            break;
+                        }
                         default:
                             errors.add("Line " + lineNumber + ": Unknown table: " + tableName);
                     }
@@ -463,7 +472,7 @@ public class SurveyDefinitionUpdateService {
             return null;
         }
         OffsetDateTime applied = surveyLogService.findLatestAppliedRevision(surveyKey);
-        if (applied == null || !fileRevision.isBefore(applied)) {
+        if (applied == null || !asStored(fileRevision).isBefore(asStored(applied))) {
             return null;
         }
         return "This file's revision (" + fileRevision + ") predates the newest revision already "
@@ -471,6 +480,27 @@ public class SurveyDefinitionUpdateService {
                 + "versions carrying older content rather than reverting anything. Apply the "
                 + "newer file instead; reverting this deployment to the earlier revision is an "
                 + "operational restore (prior database backup plus the prior image), not an update.";
+    }
+
+    /**
+     * An instant at the precision the database keeps, so a file cannot outrank itself.
+     * <p>
+     * The revision in a file header carries whatever precision the exporting JVM's clock had.
+     * {@code timestamptz} keeps microseconds and <em>rounds</em> to them, so a revision written as
+     * {@code …118452955Z} comes back as {@code …118453Z} — later than the file that produced it.
+     * Comparing the two raw made re-applying a file fail as a regression, and told the operator to
+     * perform a database restore instead.
+     * <p>
+     * Truncating is not enough for the same reason: it would answer {@code …118452Z} and leave the
+     * file looking earlier still. This rounds as the column does, so a revision and its stored form
+     * are one instant.
+     * <p>
+     * Only ever seen on Linux. A macOS JVM's {@code Instant.now()} is a microsecond clock, so the
+     * nanosecond digits are zero and the round trip is lossless on a developer's machine.
+     */
+    static OffsetDateTime asStored(OffsetDateTime instant) {
+        return instant == null ? null
+                : instant.plus(500, ChronoUnit.NANOS).truncatedTo(ChronoUnit.MICROS);
     }
 
     // -------------------------------------------------------------------------
@@ -527,20 +557,30 @@ public class SurveyDefinitionUpdateService {
         String postSurveyUrl = SurveyDefinitionFileFields.nullIfEmpty(fields[7]);
         String publishedBy = SurveyDefinitionFileFields.nullIfEmpty(fields[8]);
         String publishedComment = SurveyDefinitionFileFields.nullIfEmpty(fields[9]);
+        // V019 (BR-111). The author's publishable set, not this site's offered set: a site never
+        // edits either, and what its respondents are actually offered is the intersection of
+        // content_languages with the languages mounted for the chrome here.
+        String rawBaseLanguage = fields.length > 10 ? SurveyDefinitionFileFields.nullIfEmpty(fields[10]) : null;
+        String baseLanguage = rawBaseLanguage != null ? rawBaseLanguage : "en";
+        String contentLanguages = fields.length > 11 ? SurveyDefinitionFileFields.nullIfEmpty(fields[11]) : null;
+        Object[] languages = currentSurveyLanguages(target.id);
 
         boolean unchanged = Objects.equals(name, target.name)
                 && Objects.equals(title, target.title)
                 && Objects.equals(description, target.description)
                 && Objects.equals(initialDisplayKey, target.initialDisplayKey)
-                && Objects.equals(postSurveyUrl, target.postSurveyURL);
+                && Objects.equals(postSurveyUrl, target.postSurveyURL)
+                && Objects.equals(baseLanguage, languages[0])
+                && Objects.equals(contentLanguages, languages[1]);
         // published_by/published_comment are not modeled on the Survey entity's current fields
         // (kept NULL by import); an update file is the one path that legitimately sets them.
 
         Query query = em.createNativeQuery("""
                 UPDATE survey.surveys
                 SET name = ?1, title = ?2, description = ?3, initial_display_key = ?4,
-                    post_survey_url = ?5, published_by = ?6, published_comment = ?7
-                WHERE id = ?8
+                    post_survey_url = ?5, published_by = ?6, published_comment = ?7,
+                    base_language = ?8, content_languages = ?9
+                WHERE id = ?10
                 """);
         query.setParameter(1, name);
         query.setParameter(2, title);
@@ -549,10 +589,21 @@ public class SurveyDefinitionUpdateService {
         query.setParameter(5, postSurveyUrl);
         query.setParameter(6, publishedBy);
         query.setParameter(7, publishedComment);
-        query.setParameter(8, target.id);
+        query.setParameter(8, baseLanguage);
+        query.setParameter(9, contentLanguages);
+        query.setParameter(10, target.id);
         query.executeUpdate();
 
         return unchanged ? ChangeType.UNCHANGED : ChangeType.VERSIONED;
+    }
+
+    /** The target's stored {@code base_language} and {@code content_languages}, for the comparison above. */
+    private Object[] currentSurveyLanguages(Integer surveyId) {
+        Query query = em.createNativeQuery(
+                "SELECT base_language, content_languages FROM survey.surveys WHERE id = ?1");
+        query.setParameter(1, surveyId);
+        List<?> rows = query.getResultList();
+        return rows.isEmpty() ? new Object[]{null, null} : (Object[]) rows.get(0);
     }
 
     // -------------------------------------------------------------------------
@@ -913,6 +964,87 @@ public class SurveyDefinitionUpdateService {
                 .setParameter(10, maxValue).setParameter(11, validationText).setParameter(12, newSelectGroupId)
                 .setParameter(13, mask).setParameter(14, placeholder).setParameter(15, defaultValue)
                 .setParameter(16, variant).setParameter(17, durableId).setParameter(18, oldVersion + 1)
+                .executeUpdate();
+        return new UpsertOutcome(durableId, ChangeType.VERSIONED);
+    }
+
+    /**
+     * Fields: source_id|translation_key|element_type|element_key|field|language|value|source_hash|
+     * version|effective_from|effective_to|published_by|published_comment
+     * <p>
+     * A copy of {@link #upsertQuestion} in shape (UC-017 BR-110), matched by {@code translation_key}
+     * rather than by an element key, because a translation's own identity is not the identity of
+     * what it translates. The value and the source hash are the compared content: a corrected
+     * translation versions the row, and a translation re-exported unchanged after its base text
+     * moved still versions it, because the hash differs and that is what tells this site to stop
+     * serving it.
+     * <p>
+     * {@code source_hash} is stored exactly as the file gives it and is never recomputed here. The
+     * hash belongs to the base text the translator worked from, which lives at the authoring
+     * instance; recomputing it against this site's row would mark a stale translation fresh.
+     */
+    private UpsertOutcome upsertTranslation(String[] fields, Integer surveyId) {
+        if (fields.length < 13) {
+            throw new IllegalArgumentException("translations requires 13 fields, got " + fields.length);
+        }
+        UUID translationKey = requireElementKey(fields[1], "translations");
+        String elementType = SurveyDefinitionFileFields.nullIfEmpty(fields[2]);
+        UUID targetKey = requireElementKey(fields[3], "translations (element_key)");
+        String field = SurveyDefinitionFileFields.nullIfEmpty(fields[4]);
+        if (!SurveyDefinitionFileFields.isTranslatable(elementType, field)) {
+            throw new IllegalArgumentException("translations row targets a field that carries no "
+                    + "respondent-facing text: " + elementType + "." + field);
+        }
+        String language = SurveyDefinitionFileFields.nullIfEmpty(fields[5]);
+        String value = SurveyDefinitionFileFields.nullIfEmpty(fields[6]);
+        if (value == null) {
+            throw new IllegalArgumentException("translations row for " + elementType + "." + field
+                    + " has an empty value; a removed translation is a closed effective_to, not a blank");
+        }
+        String sourceHash = SurveyDefinitionFileFields.nullIfEmpty(fields[7]);
+
+        Object[] current = findCurrentRow("survey.translations", "translation_key", translationKey, surveyId,
+                "id, translation_id, version, element_type, element_key, field, language, value, source_hash");
+        if (current == null) {
+            Long newId = nextval("survey.translations_seq");
+            em.createNativeQuery("""
+                    INSERT INTO survey.translations
+                        (id, survey_id, translation_key, element_type, element_key, field, language, value, source_hash)
+                    VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9)
+                    """)
+                    .setParameter(1, newId).setParameter(2, surveyId).setParameter(3, translationKey)
+                    .setParameter(4, elementType).setParameter(5, targetKey).setParameter(6, field)
+                    .setParameter(7, language).setParameter(8, value).setParameter(9, sourceHash)
+                    .executeUpdate();
+            return new UpsertOutcome(SurveyDefinitionFileFields.getDurableId(em, "translation_id", "survey.translations", newId),
+                    ChangeType.CREATED);
+        }
+
+        Long oldSurrogateId = ((Number) current[0]).longValue();
+        Long durableId = ((Number) current[1]).longValue();
+        int oldVersion = ((Number) current[2]).intValue();
+        boolean unchanged = Objects.equals(elementType, current[3])
+                && Objects.equals(targetKey, current[4])
+                && Objects.equals(field, current[5])
+                && Objects.equals(language, current[6])
+                && Objects.equals(value, current[7])
+                && Objects.equals(sourceHash, current[8]);
+        if (unchanged) {
+            return new UpsertOutcome(durableId, ChangeType.UNCHANGED);
+        }
+
+        closeCurrentVersion("survey.translations", oldSurrogateId);
+        Long newId = nextval("survey.translations_seq");
+        em.createNativeQuery("""
+                INSERT INTO survey.translations
+                    (id, survey_id, translation_key, element_type, element_key, field, language, value, source_hash,
+                     translation_id, version, effective_from, effective_to)
+                VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, NOW(), '9999-12-31 23:59:59+00')
+                """)
+                .setParameter(1, newId).setParameter(2, surveyId).setParameter(3, translationKey)
+                .setParameter(4, elementType).setParameter(5, targetKey).setParameter(6, field)
+                .setParameter(7, language).setParameter(8, value).setParameter(9, sourceHash)
+                .setParameter(10, durableId).setParameter(11, oldVersion + 1)
                 .executeUpdate();
         return new UpsertOutcome(durableId, ChangeType.VERSIONED);
     }
@@ -1280,6 +1412,7 @@ public class SurveyDefinitionUpdateService {
         Object[] current = findCurrentRow(table, keyColumn, elementKey, surveyId, "id, " + durableColumn);
         if (current != null) {
             closeCurrentVersion(table, ((Number) current[0]).longValue());
+            closeTranslationsOf(table, elementKey, surveyId);
             return new UpsertOutcome(toLong(current[1]), ChangeType.RETIRED);
         }
         Query latest = em.createNativeQuery("SELECT " + durableColumn + " FROM " + table
@@ -1288,6 +1421,33 @@ public class SurveyDefinitionUpdateService {
         latest.setParameter(2, elementKey);
         List<?> rows = latest.getResultList();
         return new UpsertOutcome(rows.isEmpty() ? null : toLong(rows.get(0)), ChangeType.UNCHANGED);
+    }
+
+    /**
+     * Closes every still-current translation of a structural element being retired (UC-017 BR-110).
+     * <p>
+     * Belt and braces. Author retires an element's translations with it and the file carries them
+     * as retired, so this usually closes nothing. But a translation is linked to its element by
+     * that element's key alone, with no foreign key behind it, so a hand-edited or partial file
+     * could otherwise leave a live translation of a string no respondent can reach. Skipped when
+     * the retired row is itself a translation: {@code fields[1]} is then the translation's own key,
+     * not an element's.
+     *
+     * @param table      the table whose row was just retired
+     * @param elementKey the retired element's key
+     * @param surveyId   the survey being updated
+     */
+    private void closeTranslationsOf(String table, UUID elementKey, Integer surveyId) {
+        if ("survey.translations".equals(table)) {
+            return;
+        }
+        em.createNativeQuery("""
+                UPDATE survey.translations SET effective_to = NOW()
+                WHERE survey_id = ?1 AND element_key = ?2 AND effective_to = '9999-12-31 23:59:59+00'
+                """)
+                .setParameter(1, surveyId)
+                .setParameter(2, elementKey)
+                .executeUpdate();
     }
 
     /**

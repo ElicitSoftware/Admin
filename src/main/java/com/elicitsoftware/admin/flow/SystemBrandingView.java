@@ -62,15 +62,12 @@ public class SystemBrandingView extends VerticalLayout implements HasDynamicTitl
 
     @PostConstruct
     void init() {
-        add(new H3("Branding"));
-        add(new Paragraph("The brand resolves from the mounted directory first, then the local directory, "
-                + "then the default packaged with the application. Each asset is listed on its own, because "
-                + "a partial mount renders with the wrong fonts and no error."));
-        Button reload = new Button("Reload brand", e -> {
+        add(new H3(getTranslation("systemBrandingView.title")));
+        add(new Paragraph(getTranslation("systemBrandingView.intro")));
+        Button reload = new Button(getTranslation("systemBrandingView.reload"), e -> {
             brand.reload();
             render();
-            Notification.show("Brand cache discarded; the result below is freshly resolved.", 3000,
-                    Notification.Position.MIDDLE);
+            Notification.show(getTranslation("systemBrandingView.reloaded"), 3000, Notification.Position.MIDDLE);
         });
         reload.setId(RELOAD_BUTTON_ID);
         add(reload);
@@ -82,57 +79,66 @@ public class SystemBrandingView extends VerticalLayout implements HasDynamicTitl
         body.removeAll();
         BrandDiagnostics.BrandReport report = brand.report();
 
-        body.add(new H4("Resolution"));
+        body.add(new H4(getTranslation("systemBrandingView.resolution")));
         Grid<Row> summary = new Grid<>();
         summary.setId(SUMMARY_GRID_ID);
         summary.setItems(List.of(
-                new Row("Configured path (brand.file.system.path)", report.configuredPath()
-                        + (report.externalExists() ? " (exists)" : " (not found)")),
-                new Row("Local path (brand.local.path)", report.localPath()
-                        + (report.localExists() ? " (exists)" : " (not found)")),
-                new Row("Metadata file", report.metadataFile() != null ? report.metadataFile() : "none"),
-                new Row("Brand name", valueOrUnknown(report.brandName())),
-                new Row("Organization", valueOrUnknown(report.organization())),
-                new Row("Brand version", valueOrUnknown(report.version())),
-                new Row("In use (cached)", report.inUse().getDisplayName() + " [" + report.inUse().getBrandKey() + "]"),
-                new Row("Summary", report.summary())));
-        summary.addColumn(Row::label).setHeader("Item").setAutoWidth(true);
-        summary.addColumn(Row::value).setHeader("Value").setFlexGrow(1);
+                new Row(getTranslation("systemBrandingView.row.configuredPath"),
+                        pathState(report.configuredPath(), report.externalExists())),
+                new Row(getTranslation("systemBrandingView.row.localPath"),
+                        pathState(report.localPath(), report.localExists())),
+                new Row(getTranslation("systemBrandingView.row.metadataFile"),
+                        report.metadataFile() != null ? report.metadataFile() : getTranslation("common.none")),
+                new Row(getTranslation("systemBrandingView.row.brandName"), valueOrUnknown(report.brandName())),
+                new Row(getTranslation("systemBrandingView.row.organization"), valueOrUnknown(report.organization())),
+                new Row(getTranslation("systemBrandingView.row.brandVersion"), valueOrUnknown(report.version())),
+                new Row(getTranslation("systemBrandingView.row.inUse"), getTranslation("systemBrandingView.inUse",
+                        report.inUse().getDisplayName(getLocale()), report.inUse().getBrandKey())),
+                new Row(getTranslation("systemBrandingView.row.summary"), report.summary())));
+        summary.addColumn(Row::label).setHeader(getTranslation("system.grid.item")).setAutoWidth(true);
+        summary.addColumn(Row::value).setHeader(getTranslation("system.grid.value")).setFlexGrow(1);
         summary.setAllRowsVisible(true);
         summary.addThemeVariants(GridVariant.LUMO_COMPACT, GridVariant.LUMO_WRAP_CELL_CONTENT);
         body.add(summary);
 
-        body.add(new H4("Assets"));
+        body.add(new H4(getTranslation("systemBrandingView.assets")));
         Grid<BrandDiagnostics.AssetReport> assets = new Grid<>();
         assets.setId(ASSETS_GRID_ID);
         assets.setItems(report.assets());
-        assets.addColumn(BrandDiagnostics.AssetReport::role).setHeader("Asset").setAutoWidth(true);
-        assets.addColumn(BrandDiagnostics.AssetReport::path).setHeader("Path").setAutoWidth(true);
+        assets.addColumn(BrandDiagnostics.AssetReport::role)
+                .setHeader(getTranslation("systemBrandingView.grid.asset")).setAutoWidth(true);
+        assets.addColumn(BrandDiagnostics.AssetReport::path)
+                .setHeader(getTranslation("systemBrandingView.grid.path")).setAutoWidth(true);
         assets.addComponentColumn(a -> switch (a.source()) {
-            case EXTERNAL -> SystemBadges.badge("Mounted", "badge success");
-            case LOCAL -> SystemBadges.badge("Local", "badge success");
-            case EMBEDDED -> SystemBadges.badge("Embedded default", "badge contrast");
-            case ABSENT -> SystemBadges.badge("Absent", "badge error");
-            case UNREADABLE -> SystemBadges.badge("Unreadable", "badge error");
-        }).setHeader("Source").setAutoWidth(true);
-        assets.addColumn(BrandDiagnostics.AssetReport::detail).setHeader("Location").setFlexGrow(1);
+            case EXTERNAL -> SystemBadges.badge(getTranslation("systemBrandingView.source.mounted"), "success");
+            case LOCAL -> SystemBadges.badge(getTranslation("systemBrandingView.source.local"), "success");
+            case EMBEDDED -> SystemBadges.badge(getTranslation("systemBrandingView.source.embedded"), "contrast");
+            case ABSENT -> SystemBadges.badge(getTranslation("systemBrandingView.source.absent"), "error");
+            case UNREADABLE -> SystemBadges.badge(getTranslation("systemBrandingView.source.unreadable"), "error");
+        }).setHeader(getTranslation("systemBrandingView.grid.source")).setAutoWidth(true);
+        assets.addColumn(BrandDiagnostics.AssetReport::detail)
+                .setHeader(getTranslation("systemBrandingView.grid.location")).setFlexGrow(1);
         assets.setAllRowsVisible(true);
         assets.addThemeVariants(GridVariant.LUMO_COMPACT, GridVariant.LUMO_WRAP_CELL_CONTENT);
         body.add(assets);
 
-        body.add(new H4("Logo preview"));
-        Image logo = new Image("/api/brand/images/HorizontalLogo.png", "Brand logo");
+        body.add(new H4(getTranslation("systemBrandingView.logoPreview")));
+        Image logo = new Image("/api/brand/images/HorizontalLogo.png", getTranslation("systemBrandingView.logoAlt"));
         logo.setId(LOGO_ID);
         logo.setMaxHeight("80px");
         body.add(logo);
     }
 
-    private static String valueOrUnknown(String value) {
-        return value != null ? value : "unknown";
+    private String pathState(String path, boolean exists) {
+        return getTranslation(exists ? "systemBrandingView.path.exists" : "systemBrandingView.path.notFound", path);
+    }
+
+    private String valueOrUnknown(String value) {
+        return value != null ? value : getTranslation("common.unknown");
     }
 
     @Override
     public String getPageTitle() {
-        return "System Branding";
+        return getTranslation("systemBrandingView.pageTitle");
     }
 }

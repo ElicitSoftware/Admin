@@ -39,7 +39,7 @@ class RandomStringTest {
 
     /** UC-015: the static helper produces a string of the requested length. */
     @Test
-    void generateHelperHonoursLength() {
+    void generateHelperHonorsLength() {
         assertEquals(16, RandomString.generate(16).length());
     }
 

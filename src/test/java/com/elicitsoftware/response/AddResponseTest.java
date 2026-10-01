@@ -61,7 +61,7 @@ class AddResponseTest {
         assertEquals("Existing Subject: EXT002", response.getSubjects().get(1).getImportStatus());
     }
 
-    /** UC-010: toString summarises the response for logging/diagnostics. */
+    /** UC-010: toString summarizes the response for logging/diagnostics. */
     @Test
     void toStringIncludesSubjectSummary() {
         AddResponse response = new AddResponse();

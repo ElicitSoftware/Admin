@@ -11,6 +11,7 @@ package com.elicitsoftware.diagnostics;
  * ***LICENSE_END***
  */
 
+import com.elicitsoftware.admin.i18n.Translations;
 import com.elicitsoftware.admin.util.BrandUtil;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -84,24 +85,30 @@ public class BrandDiagnostics {
         /** A one-line summary for the overview (UC-020 step 3). */
         public String summary() {
             if (externalExists) {
-                return "Mounted brand" + (brandName != null ? ": " + brandName : "") + " at " + configuredPath;
+                return brandName != null
+                        ? Translations.get("systemBrandingView.summary.mountedNamed", brandName, configuredPath)
+                        : Translations.get("systemBrandingView.summary.mounted", configuredPath);
             }
             if (localExists) {
-                return "Local brand directory " + localPath;
+                return Translations.get("systemBrandingView.summary.local", localPath);
             }
-            return "Embedded default theme; no brand directory at " + configuredPath;
+            return Translations.get("systemBrandingView.summary.embedded", configuredPath);
         }
     }
 
-    private record Expected(String path, String role) {
+    /** {@code roleKey} is the suffix of the {@code systemBrandingView.asset.*} translation (UC-026). */
+    private record Expected(String path, String roleKey) {
+        String role() {
+            return Translations.get("systemBrandingView.asset." + roleKey);
+        }
     }
 
     static final List<Expected> EXPECTED = List.of(
-            new Expected("colors/brand-colors.css", "colour stylesheet"),
-            new Expected("typography/brand-typography.css", "typography stylesheet"),
-            new Expected("theme.css", "theme stylesheet"),
-            new Expected("images/HorizontalLogo.png", "horizontal logo"),
-            new Expected("images/icon-white.png", "header icon"),
+            new Expected("colors/brand-colors.css", "colorStylesheet"),
+            new Expected("typography/brand-typography.css", "typographyStylesheet"),
+            new Expected("theme.css", "themeStylesheet"),
+            new Expected("images/HorizontalLogo.png", "horizontalLogo"),
+            new Expected("images/icon-white.png", "headerIcon"),
             new Expected("images/favicon.ico", "favicon"));
 
     @ConfigProperty(name = "brand.file.system.path", defaultValue = "/brand")
@@ -175,7 +182,8 @@ public class BrandDiagnostics {
         } catch (IOException e) {
             return new AssetReport(expected.path(), expected.role(), Source.UNREADABLE, e.getMessage());
         }
-        return new AssetReport(expected.path(), expected.role(), Source.ABSENT, "not found in any location");
+        return new AssetReport(expected.path(), expected.role(), Source.ABSENT,
+                Translations.get("systemBrandingView.asset.notFound"));
     }
 
     private static AssetReport readable(Expected expected, Source source, Path file) {
@@ -183,7 +191,7 @@ public class BrandDiagnostics {
             return new AssetReport(expected.path(), expected.role(), source, file.toAbsolutePath().toString());
         }
         return new AssetReport(expected.path(), expected.role(), Source.UNREADABLE,
-                file.toAbsolutePath() + " exists but cannot be read");
+                Translations.get("systemBrandingView.asset.unreadable", file.toAbsolutePath().toString()));
     }
 
     private static String text(JsonNode json, String field) {

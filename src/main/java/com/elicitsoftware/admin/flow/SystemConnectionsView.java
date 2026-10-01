@@ -70,36 +70,38 @@ public class SystemConnectionsView extends VerticalLayout implements HasDynamicT
 
     @PostConstruct
     void init() {
-        add(new H3("Connections"));
-        add(new Paragraph("Each outbound dependency this deployment will call, read from the same stored "
-                + "rows and settings the runtime uses. A check sends one read-only request and gives up "
-                + "after " + ConnectionChecks.TIMEOUT.toSeconds() + " seconds; post-survey actions are "
-                + "never invoked and no report is generated."));
+        add(new H3(getTranslation("systemConnectionsView.title")));
+        add(new Paragraph(getTranslation("systemConnectionsView.intro",
+                Long.toString(ConnectionChecks.TIMEOUT.toSeconds()))));
 
         for (ConnectionChecks.Target target : connections.targets()) {
             rows.add(new TargetRow(target));
         }
         if (rows.isEmpty()) {
-            Paragraph empty = new Paragraph("No outbound targets are configured or stored yet.");
+            Paragraph empty = new Paragraph(getTranslation("systemConnectionsView.empty"));
             empty.setId(EMPTY_ID);
             add(empty);
             return;
         }
 
-        Button checkAll = new Button("Check all", e -> checkAll());
+        Button checkAll = new Button(getTranslation("systemConnectionsView.checkAll"), e -> checkAll());
         checkAll.setId(CHECK_ALL_ID);
         checkAll.addThemeVariants(ButtonVariant.LUMO_PRIMARY);
         add(checkAll);
 
         grid.setId(GRID_ID);
         grid.setItems(rows);
-        grid.addColumn(r -> r.target.group()).setHeader("Dependency").setAutoWidth(true).setFlexGrow(0);
-        grid.addColumn(r -> r.target.name()).setHeader("Source").setFlexGrow(2);
-        grid.addColumn(r -> r.target.address()).setHeader("Address").setFlexGrow(3);
-        grid.addComponentColumn(this::state).setHeader("State").setAutoWidth(true);
-        grid.addColumn(r -> r.result != null ? r.result.detail() : "").setHeader("Detail").setFlexGrow(3);
-        grid.addColumn(r -> r.result != null ? r.result.durationMs() + " ms" : "").setHeader("Time").setAutoWidth(true);
-        grid.addComponentColumn(r -> new Button("Check", e -> check(r))).setHeader("").setAutoWidth(true);
+        grid.addColumn(r -> r.target.group())
+                .setHeader(getTranslation("systemConnectionsView.grid.dependency")).setAutoWidth(true).setFlexGrow(0);
+        grid.addColumn(r -> r.target.name()).setHeader(getTranslation("systemConnectionsView.grid.source")).setFlexGrow(2);
+        grid.addColumn(r -> r.target.address()).setHeader(getTranslation("systemConnectionsView.grid.address")).setFlexGrow(3);
+        grid.addComponentColumn(this::state).setHeader(getTranslation("system.grid.state")).setAutoWidth(true);
+        grid.addColumn(r -> r.result != null ? r.result.detail() : "")
+                .setHeader(getTranslation("system.grid.detail")).setFlexGrow(3);
+        grid.addColumn(r -> r.result != null ? SystemBadges.millis(r.result.durationMs()) : "")
+                .setHeader(getTranslation("systemConnectionsView.grid.time")).setAutoWidth(true);
+        grid.addComponentColumn(r -> new Button(getTranslation("systemConnectionsView.check"), e -> check(r)))
+                .setHeader("").setAutoWidth(true);
         grid.setAllRowsVisible(true);
         grid.addThemeVariants(GridVariant.LUMO_COMPACT, GridVariant.LUMO_WRAP_CELL_CONTENT);
         add(grid);
@@ -127,6 +129,6 @@ public class SystemConnectionsView extends VerticalLayout implements HasDynamicT
 
     @Override
     public String getPageTitle() {
-        return "System Connections";
+        return getTranslation("systemConnectionsView.pageTitle");
     }
 }

@@ -412,6 +412,15 @@ public class SurveyDefinitionImportService {
                             counts.merge("metadata", 1, Integer::sum);
                             break;
                         }
+                        case "translations": {
+                            if (newSurveyId == null) {
+                                errors.add("Line " + lineNumber + ": Cannot insert translation before survey");
+                                continue;
+                            }
+                            insertTranslation(fields, newSurveyId);
+                            counts.merge("translations", 1, Integer::sum);
+                            break;
+                        }
                         default:
                             errors.add("Line " + lineNumber + ": Unknown table: " + tableName);
                     }
@@ -509,8 +518,9 @@ public class SurveyDefinitionImportService {
 
         Query query = em.createNativeQuery("""
                 INSERT INTO survey.surveys
-                    (id, survey_key, name, display_order, title, description, initial_display_key, post_survey_url)
-                VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8)
+                    (id, survey_key, name, display_order, title, description, initial_display_key, post_survey_url,
+                     base_language, content_languages)
+                VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10)
                 """);
         query.setParameter(1, newId);
         query.setParameter(2, surveyKey);
@@ -522,6 +532,12 @@ public class SurveyDefinitionImportService {
         // not the one allocated here. See SurveyDefinitionFileFields#rebaseDisplayKey.
         query.setParameter(7, SurveyDefinitionFileFields.rebaseDisplayKey(fields[6], newId));
         query.setParameter(8, nullIfEmpty(fields[7]));
+        // V019: the language the content is written in, and the set it is published in. A file
+        // written before these existed leaves the survey on the column default, 'en', publishing
+        // nothing -- which is what a survey with no translations means anyway.
+        String baseLanguage = fields.length > 10 ? nullIfEmpty(fields[10]) : null;
+        query.setParameter(9, baseLanguage != null ? baseLanguage : "en");
+        query.setParameter(10, fields.length > 11 ? nullIfEmpty(fields[11]) : null);
         query.executeUpdate();
         return new SurveyInsertResult(newId, surveyKey);
     }
@@ -1037,6 +1053,70 @@ public class SurveyDefinitionImportService {
         query.setParameter(6, newOntologyId);
         query.setParameter(7, nullIfEmpty(fields[6]));
         query.executeUpdate();
+    }
+
+    /**
+     * Inserts one content translation (Survey V019, UC-014 BR-110).
+     * <p>
+     * Both UUIDs are carried over verbatim and neither is generated: {@code translation_key} is how
+     * the next update matches this row, and {@code element_key} is the only link to what is being
+     * translated, so a row missing either names nothing and is a malformed record. The durable
+     * {@code translation_id} in the file belongs to the exporting instance and is discarded; the
+     * sequence allocates a local one. {@code source_hash} is stored exactly as the file gives it,
+     * so a translation that is out of date at the authoring instance is out of date here too.
+     * Fields: source_id|translation_key|element_type|element_key|field|language|value|source_hash|
+     * version|effective_from|effective_to|published_by|published_comment
+     */
+    private void insertTranslation(String[] fields, Long surveyId) {
+        if (fields.length < 13) {
+            throw new IllegalArgumentException("translations requires 13 fields, got " + fields.length);
+        }
+        UUID translationKey = requireKey(fields[1], "translation_key");
+        UUID targetKey = requireKey(fields[3], "element_key");
+        String elementType = nullIfEmpty(fields[2]);
+        String field = nullIfEmpty(fields[4]);
+        if (!SurveyDefinitionFileFields.isTranslatable(elementType, field)) {
+            throw new IllegalArgumentException("translations row targets a field that carries no "
+                    + "respondent-facing text: " + elementType + "." + field);
+        }
+        String value = nullIfEmpty(fields[6]);
+        if (value == null) {
+            throw new IllegalArgumentException("translations row for " + elementType + "." + field
+                    + " has an empty value; a removed translation is a closed effective_to, not a blank");
+        }
+
+        Query query = em.createNativeQuery("""
+                INSERT INTO survey.translations
+                    (id, survey_id, translation_key, element_type, element_key, field, language, value, source_hash)
+                VALUES (nextval('survey.translations_seq'), ?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8)
+                """);
+        query.setParameter(1, surveyId);
+        query.setParameter(2, translationKey);
+        query.setParameter(3, elementType);
+        query.setParameter(4, targetKey);
+        query.setParameter(5, field);
+        query.setParameter(6, nullIfEmpty(fields[5]));
+        query.setParameter(7, value);
+        query.setParameter(8, nullIfEmpty(fields[7]));
+        query.executeUpdate();
+    }
+
+    /**
+     * A UUID the file must carry. Unlike {@link #resolveElementKey(String)}, which mints one for a
+     * structural row written before keys existed, a translation's keys are never defaulted: a
+     * minted {@code element_key} would point at nothing and a minted {@code translation_key} would
+     * make the row unmatchable on the next update.
+     */
+    private UUID requireKey(String raw, String what) {
+        String value = nullIfEmpty(raw);
+        if (value == null) {
+            throw new IllegalArgumentException("translations row has no " + what);
+        }
+        try {
+            return UUID.fromString(value.trim());
+        } catch (IllegalArgumentException e) {
+            throw new IllegalArgumentException("Invalid " + what + " in file: " + value, e);
+        }
     }
 
     // -------------------------------------------------------------------------

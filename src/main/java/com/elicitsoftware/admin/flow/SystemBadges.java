@@ -11,11 +11,13 @@ package com.elicitsoftware.admin.flow;
  * ***LICENSE_END***
  */
 
+import com.elicitsoftware.admin.i18n.Translations;
 import com.elicitsoftware.diagnostics.CheckResult;
 import com.vaadin.flow.component.html.Span;
 
 /**
- * Shared rendering for the System screens: a status badge per {@link CheckResult}.
+ * Shared rendering for the System screens: a status badge per {@link CheckResult}. The labels are
+ * looked up through {@link Translations} because the helpers are static (UC-026).
  */
 final class SystemBadges {
 
@@ -25,23 +27,31 @@ final class SystemBadges {
 
     static Span status(CheckResult result) {
         return badge(switch (result.status()) {
-            case UP -> "OK";
-            case DOWN -> "Failed";
-            case UNKNOWN -> "Not checked";
+            case UP -> Translations.get("system.badge.ok");
+            case DOWN -> Translations.get("system.badge.failed");
+            case UNKNOWN -> Translations.get("system.badge.notChecked");
         }, switch (result.status()) {
-            case UP -> "badge success";
-            case DOWN -> "badge error";
-            case UNKNOWN -> "badge contrast";
+            case UP -> "success";
+            case DOWN -> "error";
+            case UNKNOWN -> "contrast";
         });
     }
 
     static Span presence(boolean present) {
-        return present ? badge("Present", "badge success") : badge("Absent", "badge error");
+        return present ? badge(Translations.get("system.badge.present"), "success")
+                : badge(Translations.get("system.badge.absent"), "error");
     }
 
-    static Span badge(String text, String theme) {
+    /** A Lumo badge in the given tone ({@code success}, {@code error} or {@code contrast}). */
+    static Span badge(String text, String tone) {
         Span span = new Span(text);
-        span.getElement().getThemeList().add(theme);
+        span.getElement().getThemeList().add("badge");
+        span.getElement().getThemeList().add(tone);
         return span;
+    }
+
+    /** {@code {0} ms} in the current language. */
+    static String millis(long durationMs) {
+        return Translations.get("system.milliseconds", Long.toString(durationMs));
     }
 }

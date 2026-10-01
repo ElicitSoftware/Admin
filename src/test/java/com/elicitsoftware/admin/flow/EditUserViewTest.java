@@ -31,7 +31,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  *
  * <p>Traceability: UC-009 (Manage Users). Code-review finding #6 converted this view to use a
  * {@link com.vaadin.flow.data.binder.Binder} with required/length validators and made the Save
- * button track validity. This test exercises that behaviour from the user's perspective:
+ * button track validity. This test exercises that behavior from the user's perspective:
  * required fields left blank keep Save disabled; filling them all in enables it; clearing one
  * disables it again.</p>
  *
@@ -54,32 +54,33 @@ class EditUserViewTest extends QuarkusBrowserlessTest {
         UI.getCurrent().add(view);
     }
 
-    private TextField field(String label) {
+    private TextField field(String labelKey) {
+        String label = UI.getCurrent().getTranslation(labelKey);
         return find(TextField.class, view).all().stream()
                 .filter(f -> label.equals(f.getLabel()))
                 .findFirst()
-                .orElseThrow(() -> new AssertionError("No TextField labelled '" + label + "'"));
+                .orElseThrow(() -> new AssertionError("No TextField labeled '" + label + "'"));
     }
 
     private Button saveButton() {
         return find(Button.class, view).all().stream()
-                .filter(b -> "Save".equals(b.getText()))
+                .filter(b -> UI.getCurrent().getTranslation("common.save").equals(b.getText()))
                 .findFirst()
                 .orElseThrow(() -> new AssertionError("No Save button"));
     }
 
     private void fillAllValid() {
-        field("Username").setValue("jane.doe@example.org");
-        field("First Name").setValue("Jane");
-        field("Last Name").setValue("Doe");
+        field("editUserView.username").setValue("jane.doe@example.org");
+        field("editUserView.firstName").setValue("Jane");
+        field("editUserView.lastName").setValue("Doe");
     }
 
     /** UC-009 (#6): with required fields blank, the Save button is disabled. */
     @Test
     void saveDisabledWhenRequiredFieldsBlank() {
         // Touch a required field and clear it to force a validation status update.
-        field("Username").setValue("temp");
-        field("Username").setValue("");
+        field("editUserView.username").setValue("temp");
+        field("editUserView.username").setValue("");
         assertFalse(saveButton().isEnabled(),
                 "Save must be disabled while a required field is blank");
     }
@@ -98,7 +99,7 @@ class EditUserViewTest extends QuarkusBrowserlessTest {
         fillAllValid();
         assertTrue(saveButton().isEnabled());
 
-        field("Last Name").setValue("");
+        field("editUserView.lastName").setValue("");
         assertFalse(saveButton().isEnabled(),
                 "Save must disable again when a required field is cleared");
     }
@@ -111,7 +112,7 @@ class EditUserViewTest extends QuarkusBrowserlessTest {
     @Test
     void roleDropdownHiddenInOidcMode() {
         boolean visible = find(ComboBox.class, view).all().stream()
-                .anyMatch(box -> "Role".equals(box.getLabel()) && box.isVisible());
+                .anyMatch(box -> UI.getCurrent().getTranslation("editUserView.role").equals(box.getLabel()) && box.isVisible());
         assertFalse(visible, "Role dropdown must not be visible when elicit.authorization.mode=OIDC");
     }
 }

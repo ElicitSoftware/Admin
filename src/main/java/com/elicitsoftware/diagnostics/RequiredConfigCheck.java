@@ -11,6 +11,7 @@ package com.elicitsoftware.diagnostics;
  * ***LICENSE_END***
  */
 
+import com.elicitsoftware.admin.i18n.Translations;
 import jakarta.enterprise.context.ApplicationScoped;
 import org.eclipse.microprofile.config.Config;
 import org.eclipse.microprofile.config.ConfigProvider;
@@ -46,18 +47,19 @@ public class RequiredConfigCheck {
     public record LegacySetting(String property, String replacement) {
     }
 
-    private record Required(String property, String envVar, String purpose) {
+    /** {@code purposeKey} names the translation of what the setting is for (UC-026). */
+    private record Required(String property, String envVar, String purposeKey) {
     }
 
     private static final List<Required> REQUIRED = List.of(
             new Required("quarkus.datasource.password", "ELICIT_DB_PASSWORD",
-                    "password of the application database user"),
+                    "systemOverviewView.setting.datasourcePassword"),
             new Required("quarkus.datasource.owner.password", "ELICIT_OWNER_DB_PASSWORD",
-                    "password of the owner database user that runs migrations"),
+                    "systemOverviewView.setting.ownerPassword"),
             new Required("quarkus.oidc.credentials.secret", "OIDC_CLIENT_SECRET",
-                    "client secret registered with the identity provider"),
+                    "systemOverviewView.setting.oidcSecret"),
             new Required("quarkus.mailer.from", "quarkus.mailer.from",
-                    "sender address of every invitation and reminder"));
+                    "systemOverviewView.setting.mailerFrom"));
 
     private static final List<LegacySetting> LEGACY = List.of(
             new LegacySetting("token.autoRegister", "accessCode.autoRegister"));
@@ -69,7 +71,8 @@ public class RequiredConfigCheck {
     public List<RequiredSetting> requiredSettings() {
         Config config = ConfigProvider.getConfig();
         return REQUIRED.stream()
-                .map(r -> new RequiredSetting(r.property(), r.envVar(), r.purpose(), isPresent(config, r.property())))
+                .map(r -> new RequiredSetting(r.property(), r.envVar(), Translations.get(r.purposeKey()),
+                        isPresent(config, r.property())))
                 .toList();
     }
 

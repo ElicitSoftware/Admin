@@ -105,7 +105,7 @@ class SurveyDefinitionExportViewTest extends QuarkusBrowserlessTest {
         SurveyDefinitionExportView view = attachView();
 
         assertTrue(find(H3.class, view).all().stream()
-                .anyMatch(h -> "Export Survey Definition".equals(h.getText())));
+                .anyMatch(h -> UI.getCurrent().getTranslation("surveyDefinitionExportView.title").equals(h.getText())));
         Grid<?> grid = grid(view);
         assertEquals(SurveyDefinitionExportView.GRID_ID, grid.getId().orElse(null));
 
@@ -174,7 +174,7 @@ class SurveyDefinitionExportViewTest extends QuarkusBrowserlessTest {
 
         SurveyDefinitionExportView view = attachView();
 
-        assertEquals("Not recorded", view.installedRevisionOf(unlogged));
+        assertEquals(UI.getCurrent().getTranslation("surveyDefinitionExportView.notRecorded"), view.installedRevisionOf(unlogged));
         assertEquals("2026-09-15 14:32 UTC", view.installedRevisionOf(logged));
     }
 

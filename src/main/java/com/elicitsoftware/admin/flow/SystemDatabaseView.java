@@ -59,54 +59,67 @@ public class SystemDatabaseView extends VerticalLayout implements HasDynamicTitl
 
     @PostConstruct
     void init() {
-        add(new H3("Database"));
-        add(new Paragraph("The application connection serves the console; the owner connection runs the "
-                + "migrations. Readiness probes only the first, so a wrong owner password shows up here "
-                + "and nowhere else."));
+        add(new H3(getTranslation("systemDatabaseView.title")));
+        add(new Paragraph(getTranslation("systemDatabaseView.intro")));
 
-        add(new H4("Connections"));
+        add(new H4(getTranslation("systemDatabaseView.connections")));
         Grid<DatabaseDiagnostics.ConnectionReport> connections = new Grid<>();
         connections.setId(CONNECTIONS_GRID_ID);
         connections.setItems(List.of(database.checkApplicationConnection(), database.checkOwnerConnection()));
-        connections.addColumn(DatabaseDiagnostics.ConnectionReport::label).setHeader("Connection").setAutoWidth(true);
-        connections.addColumn(DatabaseDiagnostics.ConnectionReport::configuredUser).setHeader("Configured user").setAutoWidth(true);
-        connections.addComponentColumn(r -> SystemBadges.status(r.result())).setHeader("State").setAutoWidth(true);
-        connections.addColumn(r -> r.connectedAs() != null ? r.connectedAs() : "").setHeader("Connected as").setAutoWidth(true);
-        connections.addColumn(r -> r.result().detail()).setHeader("Detail").setFlexGrow(1);
-        connections.addColumn(r -> r.result().durationMs() + " ms").setHeader("Round trip").setAutoWidth(true);
+        // The report labels the connection "application" or "owner"; the label is the key suffix.
+        connections.addColumn(r -> getTranslation("systemDatabaseView.connection." + r.label()))
+                .setHeader(getTranslation("systemDatabaseView.grid.connection")).setAutoWidth(true);
+        connections.addColumn(DatabaseDiagnostics.ConnectionReport::configuredUser)
+                .setHeader(getTranslation("systemDatabaseView.grid.configuredUser")).setAutoWidth(true);
+        connections.addComponentColumn(r -> SystemBadges.status(r.result()))
+                .setHeader(getTranslation("system.grid.state")).setAutoWidth(true);
+        connections.addColumn(r -> r.connectedAs() != null ? r.connectedAs() : "")
+                .setHeader(getTranslation("systemDatabaseView.grid.connectedAs")).setAutoWidth(true);
+        connections.addColumn(r -> r.result().detail())
+                .setHeader(getTranslation("system.grid.detail")).setFlexGrow(1);
+        connections.addColumn(r -> SystemBadges.millis(r.result().durationMs()))
+                .setHeader(getTranslation("systemDatabaseView.grid.roundTrip")).setAutoWidth(true);
         connections.setAllRowsVisible(true);
         connections.addThemeVariants(GridVariant.LUMO_COMPACT, GridVariant.LUMO_WRAP_CELL_CONTENT);
         add(connections);
 
-        add(new H4("Migrations"));
+        add(new H4(getTranslation("systemDatabaseView.migrations")));
         Grid<DatabaseDiagnostics.MigrationReport> migrations = new Grid<>();
         migrations.setId(MIGRATIONS_GRID_ID);
         migrations.setItems(database.migrationHistory());
-        migrations.addColumn(DatabaseDiagnostics.MigrationReport::module).setHeader("Module").setAutoWidth(true);
-        migrations.addColumn(DatabaseDiagnostics.MigrationReport::table).setHeader("History table").setAutoWidth(true);
-        migrations.addColumn(r -> !r.installed() ? "not installed" : r.version() != null ? r.version() : "none")
-                .setHeader("Latest version").setAutoWidth(true);
-        migrations.addColumn(r -> r.installedOn() != null ? r.installedOn() : "").setHeader("Applied").setFlexGrow(1);
-        migrations.addComponentColumn(r -> !r.installed() ? SystemBadges.badge("Not installed", "badge contrast")
-                : r.version() == null ? SystemBadges.badge("Empty", "badge contrast")
-                : r.success() ? SystemBadges.badge("OK", "badge success") : SystemBadges.badge("Failed", "badge error"))
-                .setHeader("State").setAutoWidth(true);
+        migrations.addColumn(DatabaseDiagnostics.MigrationReport::module)
+                .setHeader(getTranslation("systemDatabaseView.grid.module")).setAutoWidth(true);
+        migrations.addColumn(DatabaseDiagnostics.MigrationReport::table)
+                .setHeader(getTranslation("systemDatabaseView.grid.historyTable")).setAutoWidth(true);
+        migrations.addColumn(r -> !r.installed() ? getTranslation("systemDatabaseView.version.notInstalled")
+                        : r.version() != null ? r.version() : getTranslation("systemDatabaseView.version.none"))
+                .setHeader(getTranslation("systemDatabaseView.grid.latestVersion")).setAutoWidth(true);
+        migrations.addColumn(r -> r.installedOn() != null ? r.installedOn() : "")
+                .setHeader(getTranslation("systemDatabaseView.grid.applied")).setFlexGrow(1);
+        migrations.addComponentColumn(r -> !r.installed()
+                        ? SystemBadges.badge(getTranslation("systemDatabaseView.badge.notInstalled"), "contrast")
+                        : r.version() == null
+                        ? SystemBadges.badge(getTranslation("systemDatabaseView.badge.empty"), "contrast")
+                        : r.success() ? SystemBadges.badge(getTranslation("system.badge.ok"), "success")
+                        : SystemBadges.badge(getTranslation("system.badge.failed"), "error"))
+                .setHeader(getTranslation("system.grid.state")).setAutoWidth(true);
         migrations.setAllRowsVisible(true);
         migrations.addThemeVariants(GridVariant.LUMO_COMPACT, GridVariant.LUMO_WRAP_CELL_CONTENT);
         add(migrations);
 
-        add(new H4("Content"));
+        add(new H4(getTranslation("systemDatabaseView.content")));
         List<String> seeded = defaultAccounts.findDefaultAccounts();
         Grid<Row> content = new Grid<>();
         content.setId(CONTENT_GRID_ID);
         content.setItems(List.of(
-                new Row("Kimball durable-key sequences", database.checkDurableSequences().detail()),
-                new Row("Surveys installed", Long.toString(database.surveyCount())),
-                new Row("Console users", Long.toString(database.userCount())),
-                new Row("Seeded default accounts still present",
-                        seeded.isEmpty() ? "none" : String.join(", ", seeded) + " (rename them, see Users)")));
-        content.addColumn(Row::label).setHeader("Item").setAutoWidth(true);
-        content.addColumn(Row::value).setHeader("Value").setFlexGrow(1);
+                new Row(getTranslation("systemDatabaseView.row.durableSequences"), database.checkDurableSequences().detail()),
+                new Row(getTranslation("systemDatabaseView.row.surveysInstalled"), Long.toString(database.surveyCount())),
+                new Row(getTranslation("systemDatabaseView.row.consoleUsers"), Long.toString(database.userCount())),
+                new Row(getTranslation("systemDatabaseView.row.seededAccounts"),
+                        seeded.isEmpty() ? getTranslation("systemDatabaseView.seededAccounts.none")
+                                : getTranslation("systemDatabaseView.seededAccounts.present", String.join(", ", seeded)))));
+        content.addColumn(Row::label).setHeader(getTranslation("system.grid.item")).setAutoWidth(true);
+        content.addColumn(Row::value).setHeader(getTranslation("system.grid.value")).setFlexGrow(1);
         content.setAllRowsVisible(true);
         content.addThemeVariants(GridVariant.LUMO_COMPACT, GridVariant.LUMO_WRAP_CELL_CONTENT);
         add(content);
@@ -114,6 +127,6 @@ public class SystemDatabaseView extends VerticalLayout implements HasDynamicTitl
 
     @Override
     public String getPageTitle() {
-        return "System Database";
+        return getTranslation("systemDatabaseView.pageTitle");
     }
 }

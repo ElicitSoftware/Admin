@@ -156,7 +156,7 @@ class RegisterViewTest extends QuarkusBrowserlessTest {
         view.handleCsvUpload(csv.getBytes(StandardCharsets.UTF_8));
 
         Dialog dialog = find(Dialog.class).single();
-        assertEquals("CSV Import Success", dialog.getHeaderTitle());
+        assertEquals("CSV import succeeded", dialog.getHeaderTitle());
         assertEquals(List.of("Successfully imported 2 subjects:"), headingsIn(dialog));
 
         List<String> details = detailsIn(dialog);
@@ -213,7 +213,7 @@ class RegisterViewTest extends QuarkusBrowserlessTest {
         view.handleCsvUpload(csv.getBytes(StandardCharsets.UTF_8));
 
         Dialog dialog = find(Dialog.class).single();
-        assertEquals("CSV Import Error", dialog.getHeaderTitle());
+        assertEquals("CSV import error", dialog.getHeaderTitle());
         assertEquals(List.of("Import completed with errors:"), headingsIn(dialog));
 
         List<String> errors = errorsIn(dialog);

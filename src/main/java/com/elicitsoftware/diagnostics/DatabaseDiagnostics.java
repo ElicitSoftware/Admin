@@ -11,6 +11,7 @@ package com.elicitsoftware.diagnostics;
  * ***LICENSE_END***
  */
 
+import com.elicitsoftware.admin.i18n.Translations;
 import com.elicitsoftware.model.Survey;
 import com.elicitsoftware.model.User;
 import jakarta.enterprise.context.ApplicationScoped;
@@ -176,11 +177,11 @@ public class DatabaseDiagnostics {
             try (ResultSet rs = statement.executeQuery()) {
                 long ms = (System.nanoTime() - start) / 1_000_000;
                 if (rs.next()) {
-                    return CheckResult.up("Kimball durable-key sequences", "survey." + DURABLE_SEQUENCE + " exists", ms);
+                    return CheckResult.up("Kimball durable-key sequences",
+                            Translations.get("systemDatabaseView.durableSequences.exists", DURABLE_SEQUENCE), ms);
                 }
-                return CheckResult.down("Kimball durable-key sequences", "survey." + DURABLE_SEQUENCE
-                        + " is missing: the Survey module has not applied its V3 migrations, and the Admin and"
-                        + " Family History migrations depend on it", ms);
+                return CheckResult.down("Kimball durable-key sequences",
+                        Translations.get("systemDatabaseView.durableSequences.missing", DURABLE_SEQUENCE), ms);
             }
         } catch (SQLException | RuntimeException e) {
             return CheckResult.down("Kimball durable-key sequences", e.getMessage(), (System.nanoTime() - start) / 1_000_000);

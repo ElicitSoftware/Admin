@@ -40,6 +40,24 @@
     white-space: nowrap;
 }
 
+/* The manual link in the no-department dialog's footer (UC-029 A7). The footer right-aligns its
+   buttons; this pushes the link to the opposite end so the remedy button stays the primary,
+   rightmost action. */
+vaadin-dialog-overlay .dialog-manual-link {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--vaadin-gap-xs, 6px);
+    margin-inline-end: auto;
+    font-size: var(--brand-font-size-sm, 0.875rem);
+    color: var(--lumo-primary-text-color, hsl(214, 90%, 52%));
+    white-space: nowrap;
+}
+
+vaadin-dialog-overlay .dialog-manual-link vaadin-icon {
+    width: 1em;
+    height: 1em;
+}
+
 /* MissingSurveyNotice's empty state — the headline above the remedy link (UC-019). Asked for
    with LumoUtility.FontWeight.SEMIBOLD, which is inert here (#85). */
 .console-empty-state-headline {

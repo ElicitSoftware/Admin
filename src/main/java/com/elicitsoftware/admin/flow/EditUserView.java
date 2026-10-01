@@ -38,6 +38,7 @@ import com.vaadin.flow.router.BeforeEnterObserver;
 import com.vaadin.flow.router.Route;
 import jakarta.annotation.PostConstruct;
 import jakarta.annotation.security.RolesAllowed;
+import io.quarkus.security.identity.SecurityIdentity;
 import jakarta.inject.Inject;
 
 import java.util.ArrayList;
@@ -77,6 +78,14 @@ public class EditUserView extends VerticalLayout implements BeforeEnterObserver 
     @Inject
     UserService userService;
 
+    /** Re-read when an administrator edits their own account (UC-028 BR-114). */
+    @Inject
+    UiSessionLogin uiSessionLogin;
+
+    /** Tells whether the account being edited is the signed-in administrator's own. */
+    @Inject
+    SecurityIdentity identity;
+
     /** Service that owns the transactional persistence of database role grants. */
     @Inject
     UserRoleService userRoleService;
@@ -89,22 +98,22 @@ public class EditUserView extends VerticalLayout implements BeforeEnterObserver 
     private User user;
 
     /** Text field for the user's username. */
-    private TextField username = new TextField("Username");
+    private TextField username = new TextField();
 
     /** Text field for the user's first name. */
-    private TextField firstName = new TextField("First Name");
+    private TextField firstName = new TextField();
 
     /** Text field for the user's last name. */
-    private TextField lastName = new TextField("Last Name");
+    private TextField lastName = new TextField();
 
     /** Checkbox to control whether the user account is active. */
-    private Checkbox activeCheckbox = new Checkbox("Active");
+    private Checkbox activeCheckbox = new Checkbox();
 
     /** Multi-select combo box for assigning the user to departments. */
-    private MultiSelectComboBox<Department> departmentsBox = new MultiSelectComboBox<>("Departments");
+    private MultiSelectComboBox<Department> departmentsBox = new MultiSelectComboBox<>();
 
     /** Single-select dropdown for the user's database role grant. */
-    private final ComboBox<String> roleBox = new ComboBox<>("Role");
+    private final ComboBox<String> roleBox = new ComboBox<>();
 
     /** Wraps the role dropdown with a heading and explanatory text; shown only in DATABASE mode. */
     private final VerticalLayout roleSection = new VerticalLayout();
@@ -113,7 +122,7 @@ public class EditUserView extends VerticalLayout implements BeforeEnterObserver 
     private final Binder<User> binder = new Binder<>(User.class);
 
     /** Save button, enabled only when the form is valid. */
-    private final Button saveBtn = new Button("Save");
+    private final Button saveBtn = new Button();
 
     /**
      * Constructs a new EditUserView.
@@ -130,6 +139,14 @@ public class EditUserView extends VerticalLayout implements BeforeEnterObserver 
      * and is populated with all departments from the database.</p>
      */
     public EditUserView() {
+        username.setLabel(getTranslation("editUserView.username"));
+        firstName.setLabel(getTranslation("editUserView.firstName"));
+        lastName.setLabel(getTranslation("editUserView.lastName"));
+        activeCheckbox.setLabel(getTranslation("editUserView.active"));
+        departmentsBox.setLabel(getTranslation("editUserView.departments"));
+        roleBox.setLabel(getTranslation("editUserView.role"));
+        saveBtn.setText(getTranslation("common.save"));
+
         username.addThemeVariants(TextFieldVariant.LUMO_SMALL);
         username.setRequiredIndicatorVisible(true);
         firstName.addThemeVariants(TextFieldVariant.LUMO_SMALL);
@@ -145,13 +162,11 @@ public class EditUserView extends VerticalLayout implements BeforeEnterObserver 
         roleBox.setItems(new ArrayList<>(ElicitRoles.ALL));
         roleBox.setClearButtonVisible(true);
         roleBox.setWidthFull();
-        Paragraph roleSectionInfo = new Paragraph(
-                "Sets this user's database role fallback. Choose the user's highest role; "
-                        + "elicit_admin and elicit_user each imply the roles below them.");
+        Paragraph roleSectionInfo = new Paragraph(getTranslation("editUserView.role.info"));
         // The role section supplies its own spacing, so the paragraph's native margin has to go:
         // view-intro-flush in components/view-text.css.
         roleSectionInfo.addClassName("view-intro-flush");
-        roleSection.add(new H4("Database Role Assignment"), roleSectionInfo, roleBox);
+        roleSection.add(new H4(getTranslation("editUserView.role.heading")), roleSectionInfo, roleBox);
         roleSection.setPadding(false);
         roleSection.setSpacing(false);
         // Visibility is finalized in initRoleSectionVisibility() (@PostConstruct), not here:
@@ -163,7 +178,7 @@ public class EditUserView extends VerticalLayout implements BeforeEnterObserver 
         saveBtn.addClickListener(e -> saveUser());
         saveBtn.addThemeVariants(ButtonVariant.LUMO_PRIMARY);
 
-        Button cancelBtn = new Button("Cancel", e -> cancelEdit());
+        Button cancelBtn = new Button(getTranslation("common.cancel"), e -> cancelEdit());
         cancelBtn.addThemeVariants(ButtonVariant.LUMO_TERTIARY);
 
         add(new HorizontalLayout(saveBtn, cancelBtn));
@@ -200,21 +215,21 @@ public class EditUserView extends VerticalLayout implements BeforeEnterObserver 
      */
     private void setupValidation() {
         binder.forField(username)
-                .asRequired("Username is required")
+                .asRequired(getTranslation("editUserView.error.usernameRequired"))
                 .withValidator(new StringLengthValidator(
-                        "Username must be 1-255 characters", 1, 255))
+                        getTranslation("editUserView.error.usernameLength"), 1, 255))
                 .bind(User::getUsername, User::setUsername);
 
         binder.forField(firstName)
-                .asRequired("First name is required")
+                .asRequired(getTranslation("editUserView.error.firstNameRequired"))
                 .withValidator(new StringLengthValidator(
-                        "First name must be 1-255 characters", 1, 255))
+                        getTranslation("editUserView.error.firstNameLength"), 1, 255))
                 .bind(User::getFirstName, User::setFirstName);
 
         binder.forField(lastName)
-                .asRequired("Last name is required")
+                .asRequired(getTranslation("editUserView.error.lastNameRequired"))
                 .withValidator(new StringLengthValidator(
-                        "Last name must be 1-255 characters", 1, 255))
+                        getTranslation("editUserView.error.lastNameLength"), 1, 255))
                 .bind(User::getLastName, User::setLastName);
 
         binder.forField(activeCheckbox)
@@ -250,7 +265,7 @@ public class EditUserView extends VerticalLayout implements BeforeEnterObserver 
             long id = Long.parseLong(idStr);
             user = User.findById(id);
             if (user == null) {
-                Notification.show("User not found");
+                Notification.show(getTranslation("editUserView.error.notFound"));
                 event.forwardTo(UsersView.class);
                 return;
             }
@@ -289,7 +304,7 @@ public class EditUserView extends VerticalLayout implements BeforeEnterObserver 
             // Validate and write the bound fields (username, names, active) into the entity.
             binder.writeBean(user);
         } catch (ValidationException e) {
-            Notification.show("Please fix the validation errors before saving");
+            Notification.show(getTranslation("editUserView.error.fixValidation"));
             return;
         }
 
@@ -312,7 +327,13 @@ public class EditUserView extends VerticalLayout implements BeforeEnterObserver 
             }
         }
 
-        Notification.show("User saved");
+        // An administrator assigning a department to their own account should see the console
+        // notice it on the next screen, not at the next sign-in (UC-028 BR-114).
+        if (user.getUsername() != null && user.getUsername().equals(identity.getPrincipal().getName())) {
+            uiSessionLogin.refresh();
+        }
+
+        Notification.show(getTranslation("editUserView.saved"));
         getUI().ifPresent(ui -> ui.navigate(UsersView.class));
     }
 

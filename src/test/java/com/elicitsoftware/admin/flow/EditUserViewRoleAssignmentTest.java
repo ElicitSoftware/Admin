@@ -78,21 +78,22 @@ class EditUserViewRoleAssignmentTest extends QuarkusBrowserlessTest {
     @SuppressWarnings("unchecked")
     private ComboBox<String> roleBox() {
         return (ComboBox<String>) find(ComboBox.class, view).all().stream()
-                .filter(box -> "Role".equals(box.getLabel()))
+                .filter(box -> UI.getCurrent().getTranslation("editUserView.role").equals(box.getLabel()))
                 .findFirst()
                 .orElseThrow(() -> new AssertionError("No Role ComboBox"));
     }
 
-    private TextField field(String label) {
+    private TextField field(String labelKey) {
+        String label = UI.getCurrent().getTranslation(labelKey);
         return find(TextField.class, view).all().stream()
                 .filter(f -> label.equals(f.getLabel()))
                 .findFirst()
-                .orElseThrow(() -> new AssertionError("No TextField labelled '" + label + "'"));
+                .orElseThrow(() -> new AssertionError("No TextField labeled '" + label + "'"));
     }
 
     private Button saveButton() {
         return find(Button.class, view).all().stream()
-                .filter(b -> "Save".equals(b.getText()))
+                .filter(b -> UI.getCurrent().getTranslation("common.save").equals(b.getText()))
                 .findFirst()
                 .orElseThrow(() -> new AssertionError("No Save button"));
     }
@@ -108,9 +109,9 @@ class EditUserViewRoleAssignmentTest extends QuarkusBrowserlessTest {
     @Test
     @TestTransaction
     void savingPersistsSelectedRole() {
-        field("Username").setValue("uc016.grant@example.org");
-        field("First Name").setValue("Grant");
-        field("Last Name").setValue("Test");
+        field("editUserView.username").setValue("uc016.grant@example.org");
+        field("editUserView.firstName").setValue("Grant");
+        field("editUserView.lastName").setValue("Test");
         roleBox().setValue("elicit_admin");
 
         saveButton().click();
@@ -131,9 +132,9 @@ class EditUserViewRoleAssignmentTest extends QuarkusBrowserlessTest {
     @Test
     @TestTransaction
     void changingSelectionReplacesGrant() {
-        field("Username").setValue("uc016.replace@example.org");
-        field("First Name").setValue("Replace");
-        field("Last Name").setValue("Test");
+        field("editUserView.username").setValue("uc016.replace@example.org");
+        field("editUserView.firstName").setValue("Replace");
+        field("editUserView.lastName").setValue("Test");
         roleBox().setValue("elicit_admin");
         saveButton().click();
 
@@ -150,9 +151,9 @@ class EditUserViewRoleAssignmentTest extends QuarkusBrowserlessTest {
     @Test
     @TestTransaction
     void clearingSelectionRemovesGrant() {
-        field("Username").setValue("uc016.clear@example.org");
-        field("First Name").setValue("Clear");
-        field("Last Name").setValue("Test");
+        field("editUserView.username").setValue("uc016.clear@example.org");
+        field("editUserView.firstName").setValue("Clear");
+        field("editUserView.lastName").setValue("Test");
         roleBox().setValue("elicit_user");
         saveButton().click();
 

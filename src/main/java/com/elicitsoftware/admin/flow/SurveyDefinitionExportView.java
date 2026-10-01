@@ -69,7 +69,7 @@ public class SurveyDefinitionExportView extends VerticalLayout {
     static final String FILE_EXTENSION = ".elicit";
 
     private static final String CONTENT_TYPE = "application/octet-stream";
-    private static final String REVISION_HEADER = "# survey_revision: ";
+    private static final String REVISION_HEADER = "# survey_revision: "; // i18n:ignore (file format header)
     private static final DateTimeFormatter FILE_STAMP = DateTimeFormatter.ofPattern("yyyyMMdd-HHmm");
     private static final DateTimeFormatter DISPLAY_STAMP = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm 'UTC'");
 
@@ -103,18 +103,12 @@ public class SurveyDefinitionExportView extends VerticalLayout {
      * @param surveys the installed surveys, in display order
      */
     void render(List<Survey> surveys) {
-        add(new H3("Export Survey Definition"));
-        add(new Paragraph("Download a survey definition file (.elicit) for any survey installed "
-                + "here. The file carries the survey's structure only, never respondent data, "
-                + "and can be applied to another Elicit deployment through Apply Survey "
-                + "Definition or opened in the Author tool."));
-        add(new Paragraph("Every download is a fresh revision of the definition as it stands "
-                + "right now. To roll one revision out to several sites, download once and "
-                + "distribute that file rather than exporting again at each site."));
+        add(new H3(getTranslation("surveyDefinitionExportView.title")));
+        add(new Paragraph(getTranslation("surveyDefinitionExportView.intro")));
+        add(new Paragraph(getTranslation("surveyDefinitionExportView.revisionNote")));
 
         if (surveys.isEmpty()) {
-            Paragraph empty = new Paragraph("No survey is installed in this deployment, so there "
-                    + "is nothing to export.");
+            Paragraph empty = new Paragraph(getTranslation("surveyDefinitionExportView.empty"));
             empty.setId(EMPTY_NOTICE_ID);
             add(empty);
             return;
@@ -124,13 +118,13 @@ public class SurveyDefinitionExportView extends VerticalLayout {
         grid.setId(GRID_ID);
         grid.setItems(surveys);
         grid.setAllRowsVisible(true);
-        grid.addColumn(survey -> survey.name).setHeader("Name").setAutoWidth(true).setFlexGrow(1);
-        grid.addColumn(survey -> survey.title).setHeader("Title").setAutoWidth(true).setFlexGrow(2);
-        grid.addColumn(survey -> String.valueOf(survey.surveyKey)).setHeader("Survey Key")
+        grid.addColumn(survey -> survey.name).setHeader(getTranslation("surveyDefinitionExportView.grid.name")).setAutoWidth(true).setFlexGrow(1);
+        grid.addColumn(survey -> survey.title).setHeader(getTranslation("surveyDefinitionExportView.grid.title")).setAutoWidth(true).setFlexGrow(2);
+        grid.addColumn(survey -> String.valueOf(survey.surveyKey)).setHeader(getTranslation("surveyDefinitionExportView.grid.surveyKey"))
                 .setAutoWidth(true).setFlexGrow(0);
-        grid.addColumn(this::installedRevisionOf).setHeader("Installed Revision")
+        grid.addColumn(this::installedRevisionOf).setHeader(getTranslation("surveyDefinitionExportView.grid.installedRevision"))
                 .setAutoWidth(true).setFlexGrow(0);
-        grid.addComponentColumn(this::downloadAnchor).setHeader("Download")
+        grid.addComponentColumn(this::downloadAnchor).setHeader(getTranslation("surveyDefinitionExportView.grid.download"))
                 .setAutoWidth(true).setFlexGrow(0);
         add(grid);
     }
@@ -143,17 +137,17 @@ public class SurveyDefinitionExportView extends VerticalLayout {
      */
     String installedRevisionOf(Survey survey) {
         OffsetDateTime revision = surveyLogService.findLatestAppliedRevision(survey.surveyKey);
-        return revision == null ? "Not recorded"
+        return revision == null ? getTranslation("surveyDefinitionExportView.notRecorded")
                 : DISPLAY_STAMP.format(revision.withOffsetSameInstant(ZoneOffset.UTC));
     }
 
     private Anchor downloadAnchor(Survey survey) {
-        Button button = new Button("Download", VaadinIcon.DOWNLOAD.create());
+        Button button = new Button(getTranslation("surveyDefinitionExportView.btnDownload"), VaadinIcon.DOWNLOAD.create());
         button.addThemeVariants(ButtonVariant.LUMO_SMALL, ButtonVariant.LUMO_PRIMARY);
 
         Anchor anchor = new Anchor(downloadHandlerFor(survey), "");
         anchor.addClassName(DOWNLOAD_CLASS);
-        anchor.setAriaLabel("Download the definition of " + survey.name);
+        anchor.setAriaLabel(getTranslation("surveyDefinitionExportView.downloadAriaLabel", survey.name));
         anchor.add(button);
         return anchor;
     }

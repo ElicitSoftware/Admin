@@ -30,13 +30,14 @@ import java.util.List;
  * The summary is laid out as structure — one block element per line, detail lines in a real
  * {@code <ul>} — rather than as one newline-separated string. An earlier version handed the
  * whole summary to a single {@code Span} and relied on {@code LumoUtility.Whitespace.PRE_WRAP}
- * to render the newlines, but Admin's utility classes are inert: {@code styles.css} imports
- * {@code lumo/lumo-utility.css}, which is not there, and the Lumo utility classes need the Lumo
- * theme in any case, while this application renders with Aura. Every line therefore collapsed
- * into one run-on paragraph and the success/error coloring was lost with it. The layout here
- * survives a missing stylesheet because block elements and list indentation are native HTML
- * behaviour, and the few visual affordances are set on the components themselves through Lumo
- * custom properties that {@code styles.css} maps onto the brand's colors.
+ * to render the newlines. Admin's utility classes were inert: {@code styles.css} imported
+ * {@code lumo/lumo-utility.css}, which was never served, and the Lumo utility classes need the
+ * Lumo theme in any case, while this application renders with Aura. Every line therefore
+ * collapsed into one run-on paragraph and the success/error coloring was lost with it. Both
+ * imports are gone now (#85), and the layout here survives a missing stylesheet anyway, because
+ * block elements and list indentation are native HTML behavior. The few visual affordances are
+ * set on the components themselves, through the {@code --lumo-*-text-color} properties
+ * {@code styles.css} does define and maps onto the brand's colors, each with a literal fallback.
  */
 class ResultDialog extends Dialog {
 
@@ -114,7 +115,7 @@ class ResultDialog extends Dialog {
             summary.add(group);
         }
 
-        Button closeButton = new Button("Close", evt -> close());
+        Button closeButton = new Button(getTranslation("common.close"), evt -> close());
         closeButton.addThemeVariants(ButtonVariant.LUMO_PRIMARY);
 
         VerticalLayout dialogLayout = new VerticalLayout(summary, closeButton);

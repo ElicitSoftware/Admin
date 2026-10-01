@@ -55,13 +55,9 @@ public class SurveyDefinitionApplyView extends VerticalLayout {
     public SurveyDefinitionApplyView() {
         setSizeFull();
 
-        add(new H3("Apply Survey Definition"));
-        add(new Paragraph("Upload a survey definition file (.elicit) exported from the Author "
-                + "tool. You do not need to say whether this is a new survey or a revision of one "
-                + "already here — the file identifies itself, and this instance works out which "
-                + "it is."));
-        add(new Paragraph("A revision older than the one already installed is refused. Reverting "
-                + "to an earlier revision is a database restore, not an upload."));
+        add(new H3(getTranslation("surveyDefinitionApplyView.title")));
+        add(new Paragraph(getTranslation("surveyDefinitionApplyView.intro")));
+        add(new Paragraph(getTranslation("surveyDefinitionApplyView.revisionNote")));
 
         Upload upload = new Upload();
         upload.setId("survey-apply-upload");
@@ -69,7 +65,7 @@ public class SurveyDefinitionApplyView extends VerticalLayout {
         upload.setMaxFiles(1);
         upload.setMaxFileSize(SurveyDefinitionApplyService.MAX_FILE_BYTES);
 
-        Button uploadButton = new Button("Upload");
+        Button uploadButton = new Button(getTranslation("surveyDefinitionApplyView.upload"));
         uploadButton.addThemeVariants(ButtonVariant.LUMO_PRIMARY);
         upload.setUploadButton(uploadButton);
 
@@ -92,17 +88,17 @@ public class SurveyDefinitionApplyView extends VerticalLayout {
             new ResultDialog(titleFor(result), buildSummary(result), !result.success()).open();
         } catch (Exception e) {
             String message = e.getMessage() != null ? e.getMessage() : e.toString();
-            new ResultDialog("Apply Failed", message, true).open();
+            new ResultDialog(getTranslation("surveyDefinitionApplyView.applyFailed"), message, true).open();
         }
     }
 
     private String titleFor(SurveyDefinitionApplyService.ApplyResult result) {
         if (!result.success()) {
-            return "Apply Failed";
+            return getTranslation("surveyDefinitionApplyView.applyFailed");
         }
         return result.action() == SurveyDefinitionApplyService.ApplyResult.Action.IMPORT
-                ? "New Survey Installed"
-                : "Survey Updated";
+                ? getTranslation("surveyDefinitionApplyView.newSurveyInstalled")
+                : getTranslation("surveyDefinitionApplyView.surveyUpdated");
     }
 
     /**
@@ -119,14 +115,16 @@ public class SurveyDefinitionApplyView extends VerticalLayout {
         List<ResultDialog.Line> outcome = new ArrayList<>();
         outcome.add(ResultDialog.Line.message(result.message()));
         if (result.surveyKey() != null) {
-            outcome.add(ResultDialog.Line.message("Survey key: " + result.surveyKey()));
+            outcome.add(ResultDialog.Line.message(
+                    getTranslation("surveyDefinitionApplyView.surveyKey", result.surveyKey())));
         }
         sections.add(new ResultDialog.Section(outcome));
 
         switch (result.detail()) {
             case SurveyDefinitionImportService.ImportResult imported -> {
                 List<ResultDialog.Line> installed = new ArrayList<>();
-                installed.add(ResultDialog.Line.heading("Records installed: " + imported.getRecordsImported()));
+                installed.add(ResultDialog.Line.heading(getTranslation(
+                        "surveyDefinitionApplyView.recordsInstalled", imported.getRecordsImported())));
                 imported.getCounts().forEach((table, count) ->
                         installed.add(ResultDialog.Line.detail(table + ": " + count)));
                 sections.add(new ResultDialog.Section(installed));
@@ -136,7 +134,8 @@ public class SurveyDefinitionApplyView extends VerticalLayout {
                 Map<String, SurveyDefinitionUpdateService.TableUpdateCounts> counts = updated.getCounts();
                 if (counts != null) {
                     List<ResultDialog.Line> reconciled = new ArrayList<>();
-                    reconciled.add(ResultDialog.Line.heading("created / versioned / unchanged / retired:"));
+                    reconciled.add(ResultDialog.Line.heading(
+                            getTranslation("surveyDefinitionApplyView.countsHeader")));
                     counts.forEach((table, c) -> reconciled.add(ResultDialog.Line.detail(
                             table + ": " + c.created() + " / " + c.versioned()
                                     + " / " + c.unchanged() + " / " + c.retired())));
@@ -158,7 +157,7 @@ public class SurveyDefinitionApplyView extends VerticalLayout {
     private void addErrors(List<ResultDialog.Section> sections, List<String> errors) {
         if (errors != null && !errors.isEmpty()) {
             List<ResultDialog.Line> lines = new ArrayList<>();
-            lines.add(ResultDialog.Line.heading("Errors:"));
+            lines.add(ResultDialog.Line.heading(getTranslation("surveyDefinitionApplyView.errors")));
             errors.forEach(error -> lines.add(ResultDialog.Line.error(error)));
             sections.add(new ResultDialog.Section(lines));
         }

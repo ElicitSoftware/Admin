@@ -16,8 +16,8 @@
 
 1. The administrator opens Branding from the System section.
 2. The system shows the configured brand path, whether that directory exists, and which of the brand metadata files (`brand-config.json`, `brand-info.json`) are present there.
-3. The system shows the brand currently in use: key, display name, organisation and version as read from the metadata, and a preview of the logo.
-4. For each expected asset (colour stylesheet, typography stylesheet, theme stylesheet, horizontal logo, icon, favicon) the system reports where it resolved: the mounted directory, the local directory, the embedded default, or nowhere.
+3. The system shows the brand currently in use: key, display name, organization and version as read from the metadata, and a preview of the logo.
+4. For each expected asset (color stylesheet, typography stylesheet, theme stylesheet, horizontal logo, icon, favicon) the system reports where it resolved: the mounted directory, the local directory, the embedded default, or nowhere.
 5. The administrator compares the result with the directory they mounted.
 6. After correcting the mount, the administrator chooses Reload brand; the system discards the cached brand and shows the freshly resolved result.
 
@@ -53,7 +53,7 @@
 
 ### BR-091: Every asset reports its source
 
-Each asset is reported individually, because a partial mount (metadata and colours present, typography and theme absent) is the case that is otherwise invisible: the pages render, with the wrong fonts.
+Each asset is reported individually, because a partial mount (metadata and colors present, typography and theme absent) is the case that is otherwise invisible: the pages render, with the wrong fonts.
 
 ### BR-092: Reload is explicit
 

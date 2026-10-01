@@ -28,6 +28,9 @@ Authoring tool.
 - Track and display each subject's progress through their survey.
 - Send invitation and reminder emails to subjects.
 - Present results and reports to authorized staff.
+- Present the console itself in each staff member's language (browser or on-page
+  choice), including right-to-left layout, with translations a deployment can
+  mount without rebuilding.
 - Enforce role-based access via an OIDC provider (Keycloak in test; any
   OIDC-compliant server in production).
 - Operate as a Quarkus service deployable via Docker with health, metrics, and
@@ -54,8 +57,8 @@ Authoring tool.
 - **License:** PolyForm Noncommercial 1.0.0.
 - **Stack (do not deviate without explicit approval):**
   - Java 25
-  - Quarkus 3.37.x
-  - Vaadin 25.2.x (Flow / server-side UI)
+  - Quarkus 3.40.x (LTS)
+  - Vaadin 25.3.x (Flow / server-side UI)
   - Hibernate ORM with Panache (JPA) — *not* jOOQ
   - PostgreSQL (Flyway migrations)
   - Maven build, Docker deploy

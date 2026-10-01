@@ -25,7 +25,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
- * The seeded default accounts are recognised by username and the warning clears once they are
+ * The seeded default accounts are recognized by username and the warning clears once they are
  * renamed.
  *
  * <p>Traceability: UC-021 (Warn About Default Accounts), BR-085, BR-086, BR-088.</p>

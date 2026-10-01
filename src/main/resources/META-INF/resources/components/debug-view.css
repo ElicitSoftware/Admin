@@ -9,15 +9,20 @@
  * ***LICENSE_END***
  */
 
-/* DebugView — styling for the diagnostic <pre> panel.
-   Colors/spacing use Lumo tokens so a mounted brand can re-skin them;
-   font-family (monospace) and overflow-x are structural, not brand-driven,
-   and have no Lumo utility equivalent. */
+/* DebugView -- styling for the diagnostic <pre> panel on System > OIDC.
+
+   Surface, spacing, border and radius come from Aura's own --vaadin-* tokens, which is the theme
+   Admin renders with, each with a literal fallback. All four were written against --lumo-contrast-*pct,
+   --lumo-space-* and --lumo-border-radius-*, none of which resolve here (styles.css defines only the
+   color and font-family --lumo-* properties), so every one of them was dropped and the panel had no
+   background, no padding, no border and square corners -- inert for the same reason as the
+   LumoUtility classes #85 removed. font-family (monospace), white-space and overflow-x are literal
+   values and were always applied. */
 .debug-info {
-    background-color: var(--lumo-contrast-5pct);
-    padding: var(--lumo-space-m);
-    border: 1px solid var(--lumo-contrast-10pct);
-    border-radius: var(--lumo-border-radius-m);
+    background-color: var(--vaadin-background-container, #f5f5f5);
+    padding: var(--vaadin-padding-m, 12px);
+    border: 1px solid var(--vaadin-border-color, rgba(0, 0, 0, 0.16));
+    border-radius: var(--vaadin-radius-m, 6px);
     font-family: monospace;
     white-space: pre-wrap;
     overflow-x: auto;

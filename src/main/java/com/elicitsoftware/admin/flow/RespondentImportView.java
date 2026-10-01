@@ -45,9 +45,8 @@ public class RespondentImportView extends VerticalLayout {
     public RespondentImportView() {
         setSizeFull();
 
-        add(new H3("Import Respondent"));
-        add(new Paragraph("Upload a respondent export file (.elicit) produced by the \"Export\" "
-                + "action on the Search Subjects grid to import that respondent into this instance."));
+        add(new H3(getTranslation("respondentImportView.title")));
+        add(new Paragraph(getTranslation("respondentImportView.intro")));
 
         Upload upload = new Upload();
         upload.setId("respondent-import-upload");
@@ -55,7 +54,7 @@ public class RespondentImportView extends VerticalLayout {
         upload.setMaxFiles(1);
         upload.setMaxFileSize(5 * 1024 * 1024); // 5MB limit
 
-        Button uploadButton = new Button("Upload");
+        Button uploadButton = new Button(getTranslation("respondentImportView.upload"));
         uploadButton.addThemeVariants(ButtonVariant.LUMO_PRIMARY);
         upload.setUploadButton(uploadButton);
 
@@ -74,11 +73,13 @@ public class RespondentImportView extends VerticalLayout {
         try {
             InputStream inputStream = new ByteArrayInputStream(data);
             RespondentImportService.ImportResult result = respondentImportService.importFromFile(inputStream);
-            String title = result.isSuccess() ? "Import Successful" : "Import Failed";
+            String title = getTranslation(result.isSuccess()
+                    ? "respondentImportView.importSuccessful"
+                    : "respondentImportView.importFailed");
             new ResultDialog(title, buildSummary(result), !result.isSuccess()).open();
         } catch (Exception e) {
             String message = e.getMessage() != null ? e.getMessage() : e.toString();
-            new ResultDialog("Import Failed", message, true).open();
+            new ResultDialog(getTranslation("respondentImportView.importFailed"), message, true).open();
         }
     }
 
@@ -91,14 +92,15 @@ public class RespondentImportView extends VerticalLayout {
         List<ResultDialog.Section> sections = new ArrayList<>();
 
         List<ResultDialog.Line> imported = new ArrayList<>();
-        imported.add(ResultDialog.Line.heading("Records imported: " + result.getRecordsImported()));
+        imported.add(ResultDialog.Line.heading(getTranslation(
+                "respondentImportView.recordsImported", result.getRecordsImported())));
         result.getCounts().forEach((table, count) ->
                 imported.add(ResultDialog.Line.detail(table + ": " + count)));
         sections.add(new ResultDialog.Section(imported));
 
         if (!result.getErrors().isEmpty()) {
             List<ResultDialog.Line> errors = new ArrayList<>();
-            errors.add(ResultDialog.Line.heading("Errors:"));
+            errors.add(ResultDialog.Line.heading(getTranslation("respondentImportView.errors")));
             result.getErrors().forEach(error -> errors.add(ResultDialog.Line.error(error)));
             sections.add(new ResultDialog.Section(errors));
         }

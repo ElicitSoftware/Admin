@@ -11,6 +11,10 @@ package com.elicitsoftware.admin.flow;
  * ***LICENSE_END***
  */
 
+import com.elicitsoftware.admin.i18n.ElicitI18NProvider;
+import com.elicitsoftware.admin.i18n.LanguageSwitcher;
+import com.elicitsoftware.admin.i18n.LocaleSelection;
+import com.elicitsoftware.admin.manual.AdminManual;
 import com.elicitsoftware.admin.util.BrandUtil;
 import com.elicitsoftware.model.User;
 import com.elicitsoftware.security.ElicitRoles;
@@ -21,7 +25,9 @@ import com.vaadin.flow.component.Component;
 import com.vaadin.flow.component.HasElement;
 import com.vaadin.flow.component.applayout.AppLayout;
 import com.vaadin.flow.component.applayout.DrawerToggle;
+import com.vaadin.flow.component.dialog.Dialog;
 import com.vaadin.flow.component.html.Anchor;
+import com.vaadin.flow.component.html.AnchorTarget;
 import com.vaadin.flow.component.html.Div;
 import com.vaadin.flow.component.html.Image;
 import com.vaadin.flow.component.icon.VaadinIcon;
@@ -30,6 +36,7 @@ import com.vaadin.flow.component.orderedlayout.VerticalLayout;
 import com.vaadin.flow.component.sidenav.SideNavItem;
 import com.vaadin.flow.router.AfterNavigationEvent;
 import com.vaadin.flow.router.AfterNavigationListener;
+import com.vaadin.quarkus.annotation.VaadinServiceEnabled;
 import io.quarkus.security.identity.SecurityIdentity;
 import jakarta.annotation.PostConstruct;
 import jakarta.annotation.security.PermitAll;
@@ -88,6 +95,15 @@ public class MainLayout extends AppLayout implements AfterNavigationListener {
     @Inject
     BrandUtil brandUtil;
 
+    /** Remembers the language the administrator picks (UC-026). */
+    @Inject
+    LocaleSelection localeSelection;
+
+    /** Supplies the languages offered by the switcher. */
+    @Inject
+    @VaadinServiceEnabled
+    ElicitI18NProvider i18nProvider;
+
     /**
      * Reports whether this deployment has a survey installed (UC-019).
      */
@@ -101,9 +117,22 @@ public class MainLayout extends AppLayout implements AfterNavigationListener {
     DefaultAccountCheck defaultAccounts;
 
     /**
+     * The administrator's manual packaged in this image, offered in the header and the drawer
+     * when the build carries one (UC-029).
+     */
+    @Inject
+    AdminManual manual;
+
+    /**
      * The current authenticated user.
      */
     User user;
+
+    /** The open no-department dialog, if any, so navigations reuse one overlay (UC-028). */
+    private Dialog missingDepartmentDialog;
+
+    /** Where the packaged manual is served (UC-029); outside the Vaadin router, hence router-ignored. */
+    private static final String MANUAL_PATH = "/api/manual";
 
     /**
      * Default constructor for Vaadin layout component instantiation.
@@ -145,7 +174,7 @@ public class MainLayout extends AppLayout implements AfterNavigationListener {
             createNavBar();
         } else {
             SideNav nav = new SideNav();
-            SideNavItem logoutLink = new SideNavItem("Logout", LogoutView.class,
+            SideNavItem logoutLink = new SideNavItem(getTranslation("mainLayout.nav.logout"), LogoutView.class,
                     VaadinIcon.LOCK.create());
             nav.addItem(logoutLink);
             addToDrawer(nav);
@@ -192,7 +221,7 @@ public class MainLayout extends AppLayout implements AfterNavigationListener {
         try {
             Image logo = new Image();
             logo.setSrc(brandUtil.getIconResourcePath(brandInfo));
-            logo.setAlt(brandInfo.getDisplayName() + " Logo");
+            logo.setAlt(getTranslation("common.logoAlt", brandInfo.getDisplayName(getLocale())));
             logo.addClassName("logo");
 
             Div logoContainer = new Div(logo);
@@ -203,13 +232,66 @@ public class MainLayout extends AppLayout implements AfterNavigationListener {
         }
 
         // Create application title
-        String appTitle = brandUtil.getApplicationTitle(brandInfo, "Admin");
+        String appType = getTranslation("common.appType.admin");
+        String appTitle = brandInfo == null || brandInfo.isDefaultBrand()
+                ? getTranslation("common.appTitle.default", appType)
+                : getTranslation("common.appTitle", brandInfo.getDisplayName(getLocale()), appType);
         Anchor title = new Anchor("/", appTitle);
         title.addClassName("brand-title");
         headerContainer.add(title);
 
+        addManualLink(headerContainer);
+
+        // Language selector (UC-026): every screen offers the shipped and mounted languages.
+        headerContainer.add(new LanguageSwitcher(localeSelection, i18nProvider));
+
         // Add header to navbar
         addToNavbar(headerContainer);
+    }
+
+    /**
+     * The manual (UC-029): a link in the header opening the packaged PDF in a new tab. A build
+     * that carries no manual simply does not offer it (UC-029 A1). Unlike Author's, this link is
+     * offered to both console roles, because one manual serves them both and marks the
+     * administrator-only procedures where they appear (BR-006).
+     *
+     * @param headerContainer the branded header being assembled
+     */
+    private void addManualLink(Div headerContainer) {
+        if (!manualAvailable()) {
+            return;
+        }
+        Anchor manualLink = new Anchor(MANUAL_PATH, getTranslation("mainLayout.header.manual"));
+        // The Vaadin router intercepts relative hrefs; /api/manual is served outside the router.
+        manualLink.setRouterIgnore(true);
+        manualLink.setTarget(AnchorTarget.BLANK);
+        manualLink.setTitle(getTranslation("mainLayout.header.manualTitle"));
+        manualLink.addClassName("header-manual-link");
+        manualLink.getElement().insertChild(0, VaadinIcon.FILE_TEXT.create().getElement());
+        headerContainer.add(manualLink);
+    }
+
+    /**
+     * The manual's drawer entry (UC-029), placed with the items every signed-in reader sees
+     * rather than inside the administrator's sections: both roles may read it (BR-006).
+     *
+     * @param nav the drawer navigation being assembled
+     */
+    private void addManualNavItem(SideNav nav) {
+        if (!manualAvailable()) {
+            return;
+        }
+        SideNavItem manualItem = new SideNavItem(getTranslation("mainLayout.nav.manual"), MANUAL_PATH,
+                VaadinIcon.FILE_TEXT.create());
+        // As above: without this the router would swallow the /api path and show "page not found".
+        manualItem.setRouterIgnore(true);
+        manualItem.setOpenInNewBrowserTab(true);
+        nav.addItem(manualItem);
+    }
+
+    /** Whether this image carries a manual to link to (UC-029 A1). */
+    private boolean manualAvailable() {
+        return manual != null && manual.isAvailable();
     }
 
     /**
@@ -235,6 +317,8 @@ public class MainLayout extends AppLayout implements AfterNavigationListener {
      *
      * <h4>System Actions (all users):</h4>
      * <ul>
+     *   <li><strong>Manual:</strong> Open the packaged administrator's manual in a new tab,
+     *       when the image carries one (UC-029)</li>
      *   <li><strong>Logout:</strong> Terminate the current session</li>
      * </ul>
      *
@@ -248,31 +332,32 @@ public class MainLayout extends AppLayout implements AfterNavigationListener {
     private void createNavBar() {
         SideNav nav = new SideNav();
 
-        SideNavItem searchLink = new SideNavItem("Search Subjects",
+        SideNavItem searchLink = new SideNavItem(getTranslation("mainLayout.nav.searchSubjects"),
                 SearchView.class, VaadinIcon.SEARCH.create());
-        SideNavItem registerLink = new SideNavItem("Register Subjects", RegisterView.class,
+        SideNavItem registerLink = new SideNavItem(getTranslation("mainLayout.nav.registerSubjects"), RegisterView.class,
                 VaadinIcon.USERS.create());
         nav.addItem(searchLink, registerLink);
         // Message Templates Button (Admin only)
         if (identity.hasRole("elicit_admin")) {
-            SideNavItem adminSection = new SideNavItem("Admin");
+            SideNavItem adminSection = new SideNavItem(getTranslation("mainLayout.nav.admin"));
             adminSection.setPrefixComponent(VaadinIcon.COG.create());
-            adminSection.addItem(new SideNavItem("Departments", DepartmentsView.class,
-                    VaadinIcon.GRID_BEVEL.create()));
-            adminSection.addItem(new SideNavItem("Message Templates", MessageTemplatesView.class,
+            adminSection.addItem(new SideNavItem(getTranslation("mainLayout.nav.departments"), DepartmentsView.class,
+                    VaadinIcon.GRID.create()));
+            adminSection.addItem(new SideNavItem(getTranslation("mainLayout.nav.messageTemplates"), MessageTemplatesView.class,
                     VaadinIcon.ENVELOPE.create()));
-            adminSection.addItem(new SideNavItem("Users", UsersView.class,
+            adminSection.addItem(new SideNavItem(getTranslation("mainLayout.nav.users"), UsersView.class,
                     VaadinIcon.GROUP.create()));
-            adminSection.addItem(new SideNavItem("Import Respondent", RespondentImportView.class,
+            adminSection.addItem(new SideNavItem(getTranslation("mainLayout.nav.importRespondent"), RespondentImportView.class,
                     VaadinIcon.UPLOAD.create()));
-            adminSection.addItem(new SideNavItem("Apply Survey Definition", SurveyDefinitionApplyView.class,
+            adminSection.addItem(new SideNavItem(getTranslation("mainLayout.nav.applySurveyDefinition"), SurveyDefinitionApplyView.class,
                     VaadinIcon.FILE_PROCESS.create()));
-            adminSection.addItem(new SideNavItem("Export Survey Definition", SurveyDefinitionExportView.class,
+            adminSection.addItem(new SideNavItem(getTranslation("mainLayout.nav.exportSurveyDefinition"), SurveyDefinitionExportView.class,
                     VaadinIcon.DOWNLOAD.create()));
             nav.addItem(adminSection);
             nav.addItem(createSystemSection());
         }
-        SideNavItem logoutLink = new SideNavItem("Logout", LogoutView.class,
+        addManualNavItem(nav);
+        SideNavItem logoutLink = new SideNavItem(getTranslation("mainLayout.nav.logout"), LogoutView.class,
                 VaadinIcon.LOCK.create());
         nav.addItem(logoutLink);
         addToDrawer(nav);
@@ -293,19 +378,19 @@ public class MainLayout extends AppLayout implements AfterNavigationListener {
      * deployment (UC-020 to UC-025, and the OIDC entry for UC-009 / FR-026).
      */
     private SideNavItem createSystemSection() {
-        SideNavItem systemSection = new SideNavItem("System");
+        SideNavItem systemSection = new SideNavItem(getTranslation("mainLayout.nav.system"));
         systemSection.setPrefixComponent(VaadinIcon.TOOLS.create());
-        systemSection.addItem(new SideNavItem("Overview", SystemOverviewView.class,
+        systemSection.addItem(new SideNavItem(getTranslation("mainLayout.nav.systemOverview"), SystemOverviewView.class,
                 VaadinIcon.DASHBOARD.create()));
-        systemSection.addItem(new SideNavItem("Database", SystemDatabaseView.class,
+        systemSection.addItem(new SideNavItem(getTranslation("mainLayout.nav.systemDatabase"), SystemDatabaseView.class,
                 VaadinIcon.DATABASE.create()));
-        systemSection.addItem(new SideNavItem("Branding", SystemBrandingView.class,
+        systemSection.addItem(new SideNavItem(getTranslation("mainLayout.nav.systemBranding"), SystemBrandingView.class,
                 VaadinIcon.PAINTBRUSH.create()));
-        systemSection.addItem(new SideNavItem("Email", SystemEmailView.class,
+        systemSection.addItem(new SideNavItem(getTranslation("mainLayout.nav.systemEmail"), SystemEmailView.class,
                 VaadinIcon.PAPERPLANE.create()));
-        systemSection.addItem(new SideNavItem("Connections", SystemConnectionsView.class,
+        systemSection.addItem(new SideNavItem(getTranslation("mainLayout.nav.systemConnections"), SystemConnectionsView.class,
                 VaadinIcon.CONNECT.create()));
-        systemSection.addItem(new SideNavItem("OIDC", DebugView.class,
+        systemSection.addItem(new SideNavItem(getTranslation("mainLayout.nav.systemOidc"), DebugView.class,
                 VaadinIcon.SHIELD.create()));
         return systemSection;
     }
@@ -349,6 +434,7 @@ public class MainLayout extends AppLayout implements AfterNavigationListener {
      */
     @Override
     public void showRouterLayoutContent(HasElement content) {
+        gateOnDepartment(content);
         boolean surveyInstalled = surveyPresence.isSurveyInstalled();
         // Only an administrator can rename accounts, so only an administrator is warned (UC-021 A2).
         List<String> seededAccounts = identity.hasRole(ElicitRoles.ADMIN)
@@ -373,5 +459,65 @@ public class MainLayout extends AppLayout implements AfterNavigationListener {
         }
         wrapper.add((Component) content);
         setContent(wrapper);
+    }
+
+    /**
+     * Opens the blocking no-department dialog when the signed-in user has no department, and
+     * closes it once they have one (UC-028).
+     * <p>
+     * Evaluated on every navigation like the banners above, so an assignment made anywhere --
+     * by creating a department, by another administrator editing this account -- clears the
+     * dialog on the next screen with no restart and no re-login (BR-114). The check is free in
+     * the ordinary case: the session record already carries its departments, and the database
+     * is re-read only when that record shows none. An administrator on Departments or Edit
+     * Department is never blocked, because that is where the remedy lives (BR-111). A principal
+     * with no console record at all is left to UC-001's handling: the dialog would only mislead.
+     *
+     * @param content the routed view about to be shown
+     */
+    private void gateOnDepartment(HasElement content) {
+        boolean administrator = identity.hasRole(ElicitRoles.ADMIN);
+        // instanceof, not class equality: CDI hands the router intercepted subclasses of the views.
+        boolean onRemedyScreen = administrator && isDepartmentRemedyScreen(content);
+        if (onRemedyScreen || !lacksDepartment()) {
+            closeMissingDepartmentDialog();
+            return;
+        }
+        if (missingDepartmentDialog == null || !missingDepartmentDialog.isOpened()) {
+            missingDepartmentDialog = administrator
+                    ? MissingDepartmentDialog.forAdministrator(manualAvailable())
+                    : MissingDepartmentDialog.forUser(manualAvailable());
+            missingDepartmentDialog.open();
+        }
+    }
+
+    /**
+     * Whether the signed-in user has a console record but no department, re-reading the
+     * record when the session copy shows none (UC-028 BR-114).
+     */
+    private boolean lacksDepartment() {
+        User current = uiSessionLogin.getUser();
+        if (current == null || current.hasDepartments()) {
+            return false;
+        }
+        // The session copy may be stale: someone may have assigned a department since sign-in.
+        uiSessionLogin.refresh();
+        current = uiSessionLogin.getUser();
+        return current != null && !current.hasDepartments();
+    }
+
+    /**
+     * The screens an administrator must still reach while blocked for want of a department
+     * (UC-028 BR-111): the blocking notice must not block its own remedy.
+     */
+    private static boolean isDepartmentRemedyScreen(HasElement content) {
+        return content instanceof DepartmentsView || content instanceof EditDepartmentView;
+    }
+
+    private void closeMissingDepartmentDialog() {
+        if (missingDepartmentDialog != null) {
+            missingDepartmentDialog.close();
+            missingDepartmentDialog = null;
+        }
     }
 }

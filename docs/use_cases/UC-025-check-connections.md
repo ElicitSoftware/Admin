@@ -36,7 +36,7 @@
 **Trigger:** A report or post-survey target answers with HTTP 403 (step 4).
 **Flow:**
 
-1. The system marks the target reachable and adds that its licence validation may have failed, the same reading the report generator gives that status.
+1. The system marks the target reachable and adds that its license validation may have failed, the same reading the report generator gives that status.
 2. Use case continues at step 5.
 
 ### A3: The identity provider answers but not with a discovery document

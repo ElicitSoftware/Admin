@@ -63,7 +63,7 @@ and the test suite honest about what's actually verified. Existing tests and rec
 
 ### Backend Technologies
 - **Java**: 21 (LTS)
-- **Framework**: Quarkus 3.39.x
+- **Framework**: Quarkus 3.40.x (LTS)
 - **ORM**: Hibernate ORM with Panache — **active-record pattern only** (entities extend
   `PanacheEntity`/`PanacheEntityBase` directly; there are no `PanacheRepository` classes in
   this codebase and new code should not introduce one without discussion — active record is
@@ -76,7 +76,7 @@ and the test suite honest about what's actually verified. Existing tests and rec
   `com.elicitsoftware.security.ElicitRoles`.
 
 ### Frontend Technologies
-- **Framework**: Vaadin Flow 25.2.x
+- **Framework**: Vaadin Flow 25.3.x
 - **Language**: Java (server-side rendering, no client-side JS/TS views in this project)
 - **Theme**: Aura
 

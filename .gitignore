@@ -53,3 +53,12 @@ nb-configuration.xml
 
 # vite
 vite.generated.ts
+
+
+# Administrator's manual (UC-029): the sources and the captured figures are committed; what the
+# build produces from them is not.
+docs/manual/build/
+docs/manual/build-info.tex
+src/main/resources/manual/
+docs/manual/capture/node_modules/
+docs/manual/capture/package-lock.json

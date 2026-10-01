@@ -11,7 +11,8 @@ package com.elicitsoftware.admin.flow;
  * ***LICENSE_END***
  */
 
-import com.elicitsoftware.service.DefaultAccountCheck;
+import com.elicitsoftware.admin.i18n.Translations;
+import com.elicitsoftware.diagnostics.SetupWarnings;
 import com.vaadin.flow.component.Component;
 import com.vaadin.flow.component.html.Div;
 import com.vaadin.flow.component.html.Span;
@@ -41,9 +42,14 @@ final class DefaultAccountNotice {
         banner.getElement().setAttribute("role", "status");
 
         banner.add(VaadinIcon.WARNING.create());
-        banner.add(new Span(DefaultAccountCheck.instruction(accounts) + " "));
-        RouterLink remedy = new RouterLink("Open Users", UsersView.class);
+        banner.add(new Span(instruction(accounts) + " "));
+        RouterLink remedy = new RouterLink(Translations.get("defaultAccountNotice.openUsers"), UsersView.class);
         banner.add(remedy);
         return banner;
+    }
+
+    /** The seeded-account instruction in the current language. */
+    static String instruction(List<String> accounts) {
+        return accounts.isEmpty() ? "" : SetupWarnings.instruction(accounts);
     }
 }
