@@ -57,8 +57,8 @@ Authoring tool.
 - **License:** PolyForm Noncommercial 1.0.0.
 - **Stack (do not deviate without explicit approval):**
   - Java 25
-  - Quarkus 3.37.x
-  - Vaadin 25.2.x (Flow / server-side UI)
+  - Quarkus 3.40.x (LTS)
+  - Vaadin 25.3.x (Flow / server-side UI)
   - Hibernate ORM with Panache (JPA) — *not* jOOQ
   - PostgreSQL (Flyway migrations)
   - Maven build, Docker deploy

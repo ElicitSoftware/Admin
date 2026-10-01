@@ -267,7 +267,7 @@ public class MainLayout extends AppLayout implements AfterNavigationListener {
         manualLink.setTarget(AnchorTarget.BLANK);
         manualLink.setTitle(getTranslation("mainLayout.header.manualTitle"));
         manualLink.addClassName("header-manual-link");
-        manualLink.getElement().insertChild(0, VaadinIcon.FILE_TEXT_O.create().getElement());
+        manualLink.getElement().insertChild(0, VaadinIcon.FILE_TEXT.create().getElement());
         headerContainer.add(manualLink);
     }
 
@@ -282,7 +282,7 @@ public class MainLayout extends AppLayout implements AfterNavigationListener {
             return;
         }
         SideNavItem manualItem = new SideNavItem(getTranslation("mainLayout.nav.manual"), MANUAL_PATH,
-                VaadinIcon.FILE_TEXT_O.create());
+                VaadinIcon.FILE_TEXT.create());
         // As above: without this the router would swallow the /api path and show "page not found".
         manualItem.setRouterIgnore(true);
         manualItem.setOpenInNewBrowserTab(true);
@@ -342,7 +342,7 @@ public class MainLayout extends AppLayout implements AfterNavigationListener {
             SideNavItem adminSection = new SideNavItem(getTranslation("mainLayout.nav.admin"));
             adminSection.setPrefixComponent(VaadinIcon.COG.create());
             adminSection.addItem(new SideNavItem(getTranslation("mainLayout.nav.departments"), DepartmentsView.class,
-                    VaadinIcon.GRID_BEVEL.create()));
+                    VaadinIcon.GRID.create()));
             adminSection.addItem(new SideNavItem(getTranslation("mainLayout.nav.messageTemplates"), MessageTemplatesView.class,
                     VaadinIcon.ENVELOPE.create()));
             adminSection.addItem(new SideNavItem(getTranslation("mainLayout.nav.users"), UsersView.class,

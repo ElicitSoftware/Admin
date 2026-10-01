@@ -189,7 +189,7 @@ class MissingDepartmentDialogTest extends QuarkusBrowserlessTest {
         assertEquals(ModalityMode.STRICT, dialog.getModality(), "nothing behind the dialog may be reachable (BR-110)");
         assertFalse(dialog.isCloseOnEsc(), "Escape must not dismiss it (BR-110)");
         assertFalse(dialog.isCloseOnOutsideClick(), "clicking outside must not dismiss it (BR-110)");
-        assertEquals("alertdialog", dialog.getRole(), "announced as an alert dialog (NFR-016)");
+        assertEquals(Optional.of("alertdialog"), dialog.getAriaRole(), "announced as an alert dialog (NFR-016)");
         List<Button> buttons = buttons(dialog);
         assertTrue(hasButton(buttons, MissingDepartmentDialog.ADD_BUTTON_ID), "the administrator is offered Add a department");
         assertTrue(hasButton(buttons, MissingDepartmentDialog.LOGOUT_BUTTON_ID), "Logout is always offered (BR-112)");
