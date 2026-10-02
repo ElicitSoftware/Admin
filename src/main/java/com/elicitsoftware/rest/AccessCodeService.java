@@ -11,6 +11,7 @@ package com.elicitsoftware.rest;
  * ***LICENSE_END***
  */
 
+import com.elicitsoftware.admin.i18n.Translations;
 import com.elicitsoftware.admin.upload.MultipartBody;
 import com.elicitsoftware.exception.AccessCodeGenerationError;
 import com.elicitsoftware.model.*;
@@ -285,7 +286,7 @@ public class AccessCodeService {
             throw new AccessCodeGenerationError(e.getMessage());
         }
         //The tries worked but we couldn't find a unique access code. This should never happen.
-        throw new AccessCodeGenerationError("Unable to generate a unique access code");
+        throw new AccessCodeGenerationError(Translations.get("accessCode.noUniqueCode"));
     }
 
     /**

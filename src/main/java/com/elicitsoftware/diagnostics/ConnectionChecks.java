@@ -93,7 +93,8 @@ public class ConnectionChecks {
         boolean etlBuild = config.getOptionalValue("elicit.survey.etl-build.enabled", Boolean.class).orElse(true);
         if (etlBuild) {
             value(config, "elicit.survey.url").ifPresent(url ->
-                    targets.add(new Target("Survey application", "elicit.survey.url (reporting schema rebuild)", url, Kind.HTTP)));
+                    targets.add(new Target(Translations.get("systemConnectionsView.group.surveyApplication"),
+                            Translations.get("systemConnectionsView.source.surveyUrl"), url, Kind.HTTP)));
         }
 
         for (ReportDefinition report : ReportDefinition.<ReportDefinition>listAll()) {
@@ -194,7 +195,7 @@ public class ConnectionChecks {
 
     private static String reason(Exception e) {
         if (e instanceof java.net.SocketTimeoutException) {
-            return "timed out after " + TIMEOUT.toSeconds() + " s";
+            return Translations.get("systemConnectionsView.result.timedOut", String.valueOf(TIMEOUT.toSeconds()));
         }
         String message = e.getMessage();
         return message == null || message.isBlank() ? e.getClass().getSimpleName() : message;

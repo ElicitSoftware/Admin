@@ -11,6 +11,7 @@ package com.elicitsoftware.service;
  * ***LICENSE_END***
  */
 
+import com.elicitsoftware.admin.i18n.Translations;
 import com.elicitsoftware.model.Department;
 import com.elicitsoftware.diagnostics.CheckResult;
 import com.elicitsoftware.model.Message;
@@ -349,7 +350,7 @@ public class EmailService {
     public CheckResult sendTestEmail(String to, String requestedBy) {
         String name = "test email to " + LogMasking.maskEmail(to);
         if (fromEmail == null || fromEmail.isBlank()) {
-            return CheckResult.unknown(name, "no sender address is configured (quarkus.mailer.from)");
+            return CheckResult.unknown(name, Translations.get("systemEmailView.result.noSender"));
         }
         String body = "This is a test message from Elicit Admin, sent by " + requestedBy
                 + " to confirm that the mail relay at " + mailerHost + ":" + mailerPort + " accepts mail from "
@@ -360,13 +361,13 @@ public class EmailService {
                     LogMasking.maskEmail(to), mailerHost, mailerPort);
             mailer.send(Mail.withText(to, "Elicit Admin test email", body).setFrom(fromEmail))
                     .await().atMost(Duration.ofSeconds(mailSendTimeoutSeconds));
-            return CheckResult.up(name, "accepted by " + mailerHost + ":" + mailerPort,
+            return CheckResult.up(name, Translations.get("systemEmailView.result.accepted", mailerHost, String.valueOf(mailerPort)),
                     System.currentTimeMillis() - start);
         } catch (Exception ex) {
             Throwable cause = ex.getCause() != null ? ex.getCause() : ex;
             String reason;
             if (cause instanceof TimeoutException) {
-                reason = "no answer from " + mailerHost + ":" + mailerPort + " within " + mailSendTimeoutSeconds + " s";
+                reason = Translations.get("systemEmailView.result.noAnswer", mailerHost, String.valueOf(mailerPort), String.valueOf(mailSendTimeoutSeconds));
             } else {
                 reason = mailerHost + ":" + mailerPort + " " + (cause.getMessage() != null ? cause.getMessage()
                         : cause.getClass().getSimpleName());

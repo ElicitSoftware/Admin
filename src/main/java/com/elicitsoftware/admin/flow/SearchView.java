@@ -532,7 +532,7 @@ public class SearchView extends VerticalLayout implements HasDynamicTitle, Befor
         subjectGrid.addColumn(Status::getEmail).setHeader(getTranslation("searchView.grid.email")).setSortable(true).setSortProperty(Status.PROP_EMAIL);
         subjectGrid.addColumn(Status::getPhone).setHeader(getTranslation("searchView.grid.phone")).setSortable(true).setSortProperty(Status.PROP_PHONE);
         subjectGrid.addColumn(Status::getCreated).setHeader(getTranslation("searchView.grid.created")).setSortable(true).setSortProperty(Status.PROP_CREATED_DT);
-        subjectGrid.addColumn(Status::getStatus).setHeader(getTranslation("searchView.grid.status")).setSortable(true).setSortProperty(Status.PROP_STATUS);
+        subjectGrid.addColumn(status -> statusLabel(status.getStatus())).setHeader(getTranslation("searchView.grid.status")).setSortable(true).setSortProperty(Status.PROP_STATUS);
         subjectGrid.setMultiSort(true, Grid.MultiSortPriority.APPEND);
         subjectGrid.addThemeVariants(GridVariant.LUMO_ROW_STRIPES, GridVariant.LUMO_COMPACT);
         HeaderRow headerRow = subjectGrid.appendHeaderRow();
@@ -710,6 +710,23 @@ public class SearchView extends VerticalLayout implements HasDynamicTitle, Befor
      * @param component2 the second component (typically pagination controls)
      * @return a configured VerticalLayout containing both components
      */
+    /**
+     * The respondent status in the administrator's language. The {@code survey.status} view reports
+     * it in English, and the code compares against that value, so it is translated only where it is
+     * shown; an unknown value is shown as the view sent it.
+     */
+    private String statusLabel(String status) {
+        if (status == null) {
+            return "";
+        }
+        return switch (status) {
+            case "Not Started" -> getTranslation("searchView.status.notStarted"); // i18n:ignore
+            case "In Progress" -> getTranslation("searchView.status.inProgress"); // i18n:ignore
+            case "Finished" -> getTranslation("searchView.status.finished"); // i18n:ignore
+            default -> status;
+        };
+    }
+
     private VerticalLayout wrapWithVerticalLayout(Component component1, Component component2) {
         var gridWithPaginationLayout = new VerticalLayout(component1, component2);
         gridWithPaginationLayout.setPadding(false);

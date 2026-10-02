@@ -11,6 +11,7 @@ package com.elicitsoftware.service;
  * ***LICENSE_END***
  */
 
+import com.elicitsoftware.admin.i18n.Translations;
 import io.quarkus.logging.Log;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.json.Json;
@@ -85,8 +86,8 @@ public class ReportingSchemaRebuildClient {
          */
         public String summaryLine() {
             return switch (status) {
-                case REBUILT -> "Reporting schema rebuilt.";
-                case FAILED -> "Reporting schema not rebuilt: " + message;
+                case REBUILT -> Translations.get("reportingRebuild.rebuilt");
+                case FAILED -> Translations.get("reportingRebuild.notRebuilt", message);
                 case SKIPPED -> null;
             };
         }
@@ -144,15 +145,19 @@ public class ReportingSchemaRebuildClient {
             }
             Log.warnf("Reporting schema not rebuilt: %s answered HTTP %d: %s", endpoint,
                     response.statusCode(), message);
-            return new Outcome(Status.FAILED, message);
+            // Survey answers 409 for exactly one reason, a disabled ETL, and words it in English
+            // because a REST call has no reader's language; say it in the administrator's here.
+            return new Outcome(Status.FAILED, response.statusCode() == 409
+                    ? Translations.get("reportingRebuild.disabled") : message);
         } catch (HttpTimeoutException e) {
-            String reason = "no answer from " + endpoint + " within " + TIMEOUT.toSeconds() + " s";
-            Log.warn("Reporting schema not rebuilt: " + reason);
-            return new Outcome(Status.FAILED, reason);
+            // The log stays in English; the administrator reads the reason in their own language.
+            Log.warn("Reporting schema not rebuilt: no answer from " + endpoint + " within " + TIMEOUT.toSeconds() + " s");
+            return new Outcome(Status.FAILED, Translations.get("reportingRebuild.noAnswer",
+                    String.valueOf(endpoint), String.valueOf(TIMEOUT.toSeconds())));
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
             Log.warn("Reporting schema not rebuilt: interrupted while waiting for " + endpoint);
-            return new Outcome(Status.FAILED, "interrupted while waiting for " + endpoint);
+            return new Outcome(Status.FAILED, Translations.get("reportingRebuild.interrupted", String.valueOf(endpoint)));
         } catch (Exception e) {
             String reason = rootMessage(e) + " (" + endpoint + ")";
             Log.warn("Reporting schema not rebuilt: " + reason, e);

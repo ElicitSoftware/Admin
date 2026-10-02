@@ -11,6 +11,7 @@ package com.elicitsoftware.service;
  * ***LICENSE_END***
  */
 
+import com.elicitsoftware.admin.i18n.Translations;
 import com.elicitsoftware.model.Survey;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
@@ -118,11 +119,11 @@ public class SurveyDefinitionApplyService {
      */
     public ApplyResult apply(byte[] data, String fileName) {
         if (data == null || data.length == 0) {
-            return new ApplyResult(ApplyResult.Action.REJECTED, null, false, "File is empty", null);
+            return new ApplyResult(ApplyResult.Action.REJECTED, null, false, Translations.get("definition.fileEmpty"), null);
         }
         if (data.length > MAX_FILE_BYTES) {
             return new ApplyResult(ApplyResult.Action.REJECTED, null, false,
-                    "File exceeds the " + (MAX_FILE_BYTES / (1024 * 1024)) + "MB limit", null);
+                    Translations.get("definition.fileTooLarge", String.valueOf(MAX_FILE_BYTES / (1024 * 1024))), null);
         }
 
         UUID surveyKey;
@@ -130,7 +131,7 @@ public class SurveyDefinitionApplyService {
             surveyKey = readSurveyKey(data);
         } catch (IOException e) {
             return new ApplyResult(ApplyResult.Action.REJECTED, null, false,
-                    "Failed to read file: " + e.getMessage(), null);
+                    Translations.get("definition.readFailed", e.getMessage()), null);
         } catch (IllegalArgumentException e) {
             return new ApplyResult(ApplyResult.Action.REJECTED, null, false, e.getMessage(), null);
         }
@@ -139,9 +140,7 @@ public class SurveyDefinitionApplyService {
             // Pre-key files can still be installed, but only as a new survey, and only by an
             // operator who has confirmed that is what they want — routing cannot infer it.
             return new ApplyResult(ApplyResult.Action.REJECTED, null, false,
-                    "This file carries no survey_key, so it cannot be matched against the surveys "
-                            + "already installed here. Import it explicitly as a new survey if that "
-                            + "is what you intend.", null);
+                    Translations.get("definition.noSurveyKey"), null);
         }
 
         Survey existing = Survey.find("surveyKey", surveyKey).firstResult();
@@ -150,7 +149,7 @@ public class SurveyDefinitionApplyService {
                     importService.importFromFile(new ByteArrayInputStream(data), fileName);
             return new ApplyResult(ApplyResult.Action.IMPORT, surveyKey, result.isSuccess(),
                     result.isSuccess()
-                            ? "Installed as a new survey"
+                            ? Translations.get("definition.installed")
                             : String.join("; ", result.getErrors()),
                     result,
                     result.isSuccess() ? rebuildReportingSchema() : null);
@@ -160,7 +159,7 @@ public class SurveyDefinitionApplyService {
                 new ByteArrayInputStream(data), fileName, existing.id);
         return new ApplyResult(ApplyResult.Action.UPDATE, surveyKey, result.isSuccess(),
                 result.isSuccess()
-                        ? "Applied to existing survey " + existing.id
+                        ? Translations.get("definition.applied", String.valueOf(existing.id))
                         : String.join("; ", result.getErrors()),
                 result,
                 result.isSuccess() ? rebuildReportingSchema() : null);
@@ -205,8 +204,7 @@ public class SurveyDefinitionApplyService {
                 }
                 String[] fields = SurveyDefinitionFileFields.parseFields(line.substring(colonIndex + 1).trim());
                 if (fields.length < 2) {
-                    throw new IllegalArgumentException("The surveys record is malformed: expected at "
-                            + "least 2 fields, got " + fields.length);
+                    throw new IllegalArgumentException(Translations.get("definition.surveysMalformed", String.valueOf(fields.length)));
                 }
                 String rawKey = SurveyDefinitionFileFields.nullIfEmpty(fields[1]);
                 if (rawKey == null) {
@@ -215,11 +213,10 @@ public class SurveyDefinitionApplyService {
                 try {
                     return UUID.fromString(rawKey.trim());
                 } catch (IllegalArgumentException e) {
-                    throw new IllegalArgumentException("Invalid survey_key in file: " + rawKey, e);
+                    throw new IllegalArgumentException(Translations.get("definition.invalidValue", "survey_key", rawKey), e);
                 }
             }
         }
-        throw new IllegalArgumentException("This file contains no surveys record, so it is not a "
-                + "survey definition export.");
+        throw new IllegalArgumentException(Translations.get("definition.notExport"));
     }
 }

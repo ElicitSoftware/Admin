@@ -11,6 +11,7 @@ package com.elicitsoftware.service;
  * ***LICENSE_END***
  */
 
+import com.elicitsoftware.admin.i18n.Translations;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.Query;
 
@@ -60,13 +61,12 @@ final class SurveyDefinitionFileFields {
         }
         String value = line.substring(REVISION_HEADER.length()).trim();
         if (value.isEmpty()) {
-            throw new IllegalArgumentException("File carries an empty \"" + REVISION_HEADER + "\" header");
+            throw new IllegalArgumentException(Translations.get("definition.emptyHeader", REVISION_HEADER));
         }
         try {
             return OffsetDateTime.parse(value);
         } catch (DateTimeParseException e) {
-            throw new IllegalArgumentException(
-                    "Unparseable \"" + REVISION_HEADER + "\" header value: " + value, e);
+            throw new IllegalArgumentException(Translations.get("definition.unparseableHeader", REVISION_HEADER, value), e);
         }
     }
 
@@ -294,11 +294,11 @@ final class SurveyDefinitionFileFields {
      */
     static Long resolveRequired(Long oldId, Map<Long, Long> map, String entityDesc) {
         if (oldId == null) {
-            throw new IllegalStateException("Expected non-null source id for " + entityDesc);
+            throw new IllegalStateException(Translations.get("definition.noSourceId", entityDesc));
         }
         Long newId = map.get(oldId);
         if (newId == null) {
-            throw new IllegalStateException("No ID mapping found for " + entityDesc + " source_id=" + oldId);
+            throw new IllegalStateException(Translations.get("definition.noIdMapping", entityDesc, String.valueOf(oldId)));
         }
         return newId;
     }
@@ -313,7 +313,7 @@ final class SurveyDefinitionFileFields {
         }
         Long newId = map.get(oldId);
         if (newId == null) {
-            throw new IllegalStateException("No ID mapping found for " + entityDesc + " source_id=" + oldId);
+            throw new IllegalStateException(Translations.get("definition.noIdMapping", entityDesc, String.valueOf(oldId)));
         }
         return newId;
     }

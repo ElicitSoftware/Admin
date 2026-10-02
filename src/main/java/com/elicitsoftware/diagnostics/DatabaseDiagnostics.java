@@ -67,13 +67,18 @@ public class DatabaseDiagnostics {
                                   boolean success, boolean installed) {
     }
 
-    private record HistoryTable(String module, String table) {
+    private record HistoryTable(String moduleKey, String table) {
+
+        /** The module name in the reader's language; the record keeps the key because it is built once. */
+        String module() {
+            return Translations.get(moduleKey);
+        }
     }
 
     private static final List<HistoryTable> HISTORY_TABLES = List.of(
-            new HistoryTable("Survey", "flyway_history"),
-            new HistoryTable("Admin", "flyway_admin_history"),
-            new HistoryTable("Family History", "flyway_fhhs_history"));
+            new HistoryTable("systemDatabaseView.module.survey", "flyway_history"),
+            new HistoryTable("systemDatabaseView.module.admin", "flyway_admin_history"),
+            new HistoryTable("systemDatabaseView.module.fhhs", "flyway_fhhs_history"));
 
     @Inject
     DataSource dataSource;
