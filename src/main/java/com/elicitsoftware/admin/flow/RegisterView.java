@@ -1061,15 +1061,28 @@ public class RegisterView extends HorizontalLayout implements HasDynamicTitle, B
      * Describes one imported row: what became of it, and enough of the subject to recognize.
      *
      * <p>The outcome itself ({@code New Subject}, {@code Existing Subject}, ...) is the import
-     * service's own wording and travels in its REST payload, so it is not translated here. An
-     * excluded row carries an empty {@code Status}, so every field is optional and the line falls
-     * back to the outcome on its own.</p>
+     * service's own wording and travels in its REST payload, which stays as it is; it is put into
+     * the administrator's language here, where it is shown. An excluded row carries an empty
+     * {@code Status}, so every field is optional and the line falls back to the outcome on its own.</p>
      *
      * @param subject one row's outcome
      * @return a single line of text
      */
+    /** The import service's outcome word in the administrator's language; an unknown one is shown as sent. */
+    private String outcomeLabel(String importStatus) {
+        if (importStatus == null) {
+            return "";
+        }
+        return switch (importStatus) {
+            case "New Subject" -> getTranslation("registerView.csvImport.outcome.new"); // i18n:ignore
+            case "Existing Subject" -> getTranslation("registerView.csvImport.outcome.existing"); // i18n:ignore
+            case "Exluded Subject" -> getTranslation("registerView.csvImport.outcome.excluded"); // i18n:ignore
+            default -> importStatus;
+        };
+    }
+
     private String describe(AddResponseStatus subject) {
-        String outcome = subject.getImportStatus() != null ? subject.getImportStatus() : "";
+        String outcome = outcomeLabel(subject.getImportStatus());
         Status status = subject.getStatus();
         if (status == null) {
             return outcome;

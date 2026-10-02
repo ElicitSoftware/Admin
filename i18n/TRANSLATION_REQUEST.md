@@ -563,6 +563,86 @@ Every row is one key in `translations.properties`. Return a file `translations_<
 | `systemConnectionsView.result.reachable` | reachable, HTTP {0} | System connections · check detail | 40 | params: {0} = HTTP status code |
 | `systemConnectionsView.result.noHostPort` | address {0} has no host and port | System connections · check detail | 60 | params: {0} = address |
 | `systemConnectionsView.result.connected` | connected to {0}:{1} | System connections · check detail | 40 | params: {0} = host, {1} = port |
+| `definition.line` | Line {0}: {1} | Apply Survey Definition page · prefix naming the line of the file | 900 | params: {0} = line number, {1} = what is wrong on that line |
+| `definition.badHeader` | File does not start with valid format header (expected # {0}) | Apply Survey Definition page · why a line of the definition file was refused; continues definition.line | 200 | params: {0} = the format marker, kept as written |
+| `definition.noColon` | Invalid format, missing colon separator | Apply Survey Definition page · why a line of the definition file was refused; continues definition.line | 120 |  |
+| `definition.multipleSurveys` | Multiple survey records found; only one supported per file | Apply Survey Definition page · why a line of the definition file was refused; continues definition.line | 160 |  |
+| `definition.beforeSurvey` | Cannot insert {0} before survey | Apply Survey Definition page · why a line of the definition file was refused; continues definition.line | 140 | params: {0} = record name, kept as written |
+| `definition.unknownTable` | Unknown table: {0} | Apply Survey Definition page · why a line of the definition file was refused; continues definition.line | 120 | params: {0} = record name |
+| `definition.importFailedAtLine` | Import failed at line {0}: {1} | Apply Survey Definition page · the import stopped at one line | 900 | params: {0} = line number, {1} = what is wrong on that line |
+| `definition.updateFailedAtLine` | Update failed at line {0}: {1} | Apply Survey Definition page · the update stopped at one line | 900 | params: {0} = line number, {1} = what is wrong on that line |
+| `definition.noHeader` | File does not contain valid format header | Apply Survey Definition page · the file was refused | 120 |  |
+| `definition.noSurveysRecord` | File does not contain a surveys record | Apply Survey Definition page · the file was refused; surveys is a record name and stays | 120 |  |
+| `definition.readFailed` | Failed to read file: {0} | Apply Survey Definition page · the file could not be read | 400 | params: {0} = the system message, in English |
+| `definition.fieldCount` | {0} requires {1} fields, got {2} | Apply Survey Definition page · why a line of the definition file was refused; continues definition.line | 160 | params: {0} = record name, kept as written, {1} = fields required, {2} = fields found |
+| `definition.keyExists` | A survey with survey_key {0} already exists in this instance (id={1}); use Update instead of Import to apply changes to it. | Apply Survey Definition page · importing a survey that is already installed; survey_key stays | 320 | params: {0} = survey key, {1} = survey id |
+| `definition.invalidValue` | Invalid {0} in file: {1} | Apply Survey Definition page · why a line of the definition file was refused; continues definition.line | 300 | params: {0} = field name, kept as written, {1} = the value found |
+| `definition.translationNotTranslatable` | translations row targets a field that carries no respondent-facing text: {0} | Apply Survey Definition page · why a line of the definition file was refused; continues definition.line; translations is a record name and stays | 240 | params: {0} = table and field name, kept as written |
+| `definition.translationEmpty` | translations row for {0} has an empty value; a removed translation is a closed effective_to, not a blank | Apply Survey Definition page · why a line of the definition file was refused; continues definition.line; translations and effective_to stay | 300 | params: {0} = table and field name, kept as written |
+| `definition.translationMissing` | translations row has no {0} | Apply Survey Definition page · why a line of the definition file was refused; continues definition.line; translations is a record name and stays | 140 | params: {0} = field name, kept as written |
+| `definition.targetNotFound` | Target survey not found: {0} | Apply Survey Definition page · the survey to update no longer exists | 120 | params: {0} = survey id |
+| `definition.revisionRegression` | This file''s revision ({0}) predates the newest revision already applied to this survey here ({1}). Applying it would open new versions carrying older content rather than reverting anything. Apply the newer file instead; reverting this deployment to the earlier revision is an operational restore (prior database backup plus the prior image), not an update. | Apply Survey Definition page · an older file was applied over a newer one | 700 | params: {0} = the file revision, {1} = the newest revision already applied |
+| `definition.noSurveyKeyUpdate` | This file predates stable-key assignment and carries no survey_key to match against — import it as a new survey (UC-014), or re-export the target survey (UC-013) to see its current key before retrying. | Apply Survey Definition page · updating from a file that has no survey key; survey_key stays | 420 |  |
+| `definition.keyMismatch` | This file''s survey_key ({0}) does not match the selected survey''s key ({1}); it does not belong to survey {2}. | Apply Survey Definition page · the file belongs to another survey; survey_key stays | 320 | params: {0} = the key in the file, {1} = the selected survey key, {2} = the selected survey id |
+| `definition.noElementKey` | {0} row has no element_key to match against — this file predates stable-key assignment and cannot be applied via Update. | Apply Survey Definition page · why a line of the definition file was refused; continues definition.line; element_key stays | 320 | params: {0} = record name, kept as written |
+| `definition.invalidElementKey` | Invalid element_key in {0} row: {1} | Apply Survey Definition page · why a line of the definition file was refused; continues definition.line; element_key stays | 300 | params: {0} = record name, kept as written, {1} = the value found |
+| `definition.emptyHeader` | File carries an empty "{0}" header | Apply Survey Definition page · why a line of the definition file was refused; continues definition.line | 140 | params: {0} = header name, kept as written |
+| `definition.unparseableHeader` | Unparseable "{0}" header value: {1} | Apply Survey Definition page · why a line of the definition file was refused; continues definition.line | 240 | params: {0} = header name, kept as written, {1} = the value found |
+| `definition.noSourceId` | Expected non-null source id for {0} | Apply Survey Definition page · why a line of the definition file was refused; continues definition.line | 200 | params: {0} = record and reference name, kept as written |
+| `definition.noIdMapping` | No ID mapping found for {0} source_id={1} | Apply Survey Definition page · why a line of the definition file was refused; continues definition.line; source_id stays | 240 | params: {0} = record and reference name, kept as written, {1} = the id in the file |
+| `definition.fileEmpty` | File is empty | Apply Survey Definition page · the uploaded file was refused | 60 |  |
+| `definition.fileTooLarge` | File exceeds the {0}MB limit | Apply Survey Definition page · the uploaded file was refused | 100 | params: {0} = size limit in MB |
+| `definition.noSurveyKey` | This file carries no survey_key, so it cannot be matched against the surveys already installed here. Import it explicitly as a new survey if that is what you intend. | Apply Survey Definition page · the uploaded file was refused; survey_key stays | 360 |  |
+| `definition.installed` | Installed as a new survey | Apply Survey Definition page · result line after a first install | 80 |  |
+| `definition.applied` | Applied to existing survey {0} | Apply Survey Definition page · result line after an update | 100 | params: {0} = survey id |
+| `definition.surveysMalformed` | The surveys record is malformed: expected at least 2 fields, got {0} | Apply Survey Definition page · the uploaded file was refused; surveys is a record name and stays | 200 | params: {0} = fields found |
+| `definition.notExport` | This file contains no surveys record, so it is not a survey definition export. | Apply Survey Definition page · the uploaded file was refused; surveys is a record name and stays | 220 |  |
+| `reportingRebuild.rebuilt` | Reporting schema rebuilt. | Apply Survey Definition page · result line: the reporting schema was rebuilt | 80 |  |
+| `reportingRebuild.notRebuilt` | Reporting schema not rebuilt: {0} | Apply Survey Definition page · result line: the reporting schema was not rebuilt | 500 | params: {0} = the reason |
+| `reportingRebuild.noAnswer` | no answer from {0} within {1} s | Apply Survey Definition page · reason the reporting schema was not rebuilt; continues reportingRebuild.notRebuilt | 200 | params: {0} = the Survey application address, {1} = seconds waited |
+| `reportingRebuild.interrupted` | interrupted while waiting for {0} | Apply Survey Definition page · reason the reporting schema was not rebuilt; continues reportingRebuild.notRebuilt | 200 | params: {0} = the Survey application address |
+| `respondentImport.legacyFormat` | This file is in the {0} format, which carries identifiers specific to the instance that produced it and cannot be imported. Re-export the respondent from the source instance (which now produces {1}). | Respondent import page · why a line of the respondent file was refused; continues definition.line | 420 | params: {0} = the old format marker, {1} = the current format marker, both kept as written |
+| `respondentImport.unsupportedFormat` | Unsupported export format {0} (expected # {1}) | Respondent import page · why a line of the respondent file was refused; continues definition.line | 200 | params: {0} = the marker found, {1} = the marker expected |
+| `respondentImport.beforeRespondent` | Cannot insert {0} before respondent | Respondent import page · why a line of the respondent file was refused; continues definition.line | 140 | params: {0} = record name, kept as written |
+| `respondentImport.badSubjectIndex` | Invalid subject index for message: {0} | Respondent import page · why a line of the respondent file was refused; continues definition.line | 140 | params: {0} = the index found |
+| `respondentImport.noPsa` | No post_survey_action named ''{0}'' found for survey {1} (id {2}) in this instance | Respondent import page · why a line of the respondent file was refused; continues definition.line; post_survey_action stays | 300 | params: {0} = action name, {1} = survey name, {2} = survey id |
+| `respondentImport.invalidSurveyKey` | Invalid survey_key ''{0}''; expected a UUID | Respondent import page · why a line of the respondent file was refused; continues definition.line; survey_key and UUID stay | 200 | params: {0} = the value found |
+| `respondentImport.noSurvey` | No survey with survey_key {0} exists in this instance; apply the survey definition (UC-018) first | Respondent import page · why a line of the respondent file was refused; continues definition.line; survey_key stays | 300 | params: {0} = survey key |
+| `respondentImport.accessCodeExists` | Access code ''{0}'' already exists on survey {1} (id {2}) in this instance; the import was not performed | Respondent import page · why a line of the respondent file was refused; continues definition.line | 320 | params: {0} = access code, {1} = survey name, {2} = survey id |
+| `respondentImport.noDepartmentCode` | Subject has no department code; the export is incomplete | Respondent import page · why a line of the respondent file was refused; continues definition.line | 160 |  |
+| `respondentImport.noDepartment` | No department with code ''{0}'' exists in this instance; create the department before importing | Respondent import page · why a line of the respondent file was refused; continues definition.line | 260 | params: {0} = department code |
+| `respondentImport.invalidKey` | Invalid {0} key ''{1}''; expected a UUID | Respondent import page · why a line of the respondent file was refused; continues definition.line; UUID stays | 200 | params: {0} = element name, kept as written, {1} = the value found |
+| `respondentImport.noVersion` | No {0} with key {1} version {2} in this instance; update the survey definition (UC-017) so the source survey''s versions exist here | Respondent import page · why a line of the respondent file was refused; continues definition.line | 360 | params: {0} = element name, kept as written, {1} = its key, {2} = its version |
+| `respondentImport.multipleVersions` | Multiple {0} rows carry key {1} version {2} in this instance; the survey definition is inconsistent | Respondent import page · why a line of the respondent file was refused; continues definition.line | 300 | params: {0} = element name, kept as written, {1} = its key, {2} = its version |
+| `respondentImport.noDisplayKey` | Dependent has no {0} display_key; the export is incomplete | Respondent import page · why a line of the respondent file was refused; continues definition.line; display_key stays | 200 | params: {0} = upstream or downstream |
+| `respondentImport.noAnswer` | No answer with display_key ''{0}'' was imported for this respondent; the dependent''s {1} reference cannot be resolved | Respondent import page · why a line of the respondent file was refused; continues definition.line; display_key stays | 320 | params: {0} = the display key, {1} = upstream or downstream |
+| `respondentImport.notInteger` | Invalid {0} ''{1}''; expected an integer | Respondent import page · why a line of the respondent file was refused; continues definition.line | 200 | params: {0} = field name, kept as written, {1} = the value found |
+| `csvImport.unexpected` | failed to process this record due to an unexpected error | Register page, CSV import · why a line of the CSV file was refused; continues definition.line | 160 |  |
+| `csvImport.badFormat` | Invalid CSV format. Expected at least 6 fields: departmentId,firstName,lastName,middleName,dob,email,phone,xid | Register page, CSV import · why a line of the CSV file was refused; the field names stay | 260 |  |
+| `csvImport.badDate` | Invalid date format. Use yyyy-MM-dd or MM/dd/yyyy | Register page, CSV import · why a line of the CSV file was refused; the date patterns stay | 140 |  |
+| `csvImport.firstNameRequired` | First name is required | Register page, CSV import · why a line of the CSV file was refused | 60 |  |
+| `csvImport.lastNameRequired` | Last name is required | Register page, CSV import · why a line of the CSV file was refused | 60 |  |
+| `csvImport.emailRequired` | Email is required | Register page, CSV import · why a line of the CSV file was refused | 60 |  |
+| `csvImport.badDepartmentId` | Invalid department ID format | Register page, CSV import · why a line of the CSV file was refused | 80 |  |
+| `registerView.csvImport.outcome.new` | New Subject | Register page, CSV import · what became of one imported row | 40 |  |
+| `registerView.csvImport.outcome.existing` | Existing Subject | Register page, CSV import · what became of one imported row | 40 |  |
+| `registerView.csvImport.outcome.excluded` | Excluded Subject | Register page, CSV import · what became of one imported row | 40 |  |
+| `accessCode.noUniqueCode` | Unable to generate a unique access code | Register page, CSV import · error on one imported row | 100 |  |
+| `accessCode.invalidDepartment` | invalid departmentid | Register page, CSV import · error on one imported row: the department has no default message | 80 |  |
+| `accessCode.invalidTemplate` | Invalid message template ID: {0} | Register page, CSV import · error on one imported row | 120 | params: {0} = the template id found |
+| `systemEmailView.result.noSender` | no sender address is configured (quarkus.mailer.from) | System email page · why a test email was not sent; the setting name stays | 140 |  |
+| `systemEmailView.result.accepted` | accepted by {0}:{1} | System email page · the mail relay accepted a test email | 120 | params: {0} = relay host, {1} = relay port |
+| `systemEmailView.result.noAnswer` | no answer from {0}:{1} within {2} s | System email page · the mail relay did not answer a test email | 160 | params: {0} = relay host, {1} = relay port, {2} = seconds waited |
+| `systemConnectionsView.group.surveyApplication` | Survey application | System connections page · Dependency column | 40 |  |
+| `systemConnectionsView.source.surveyUrl` | elicit.survey.url (reporting schema rebuild) | System connections page · Source column; the setting name stays | 100 |  |
+| `systemDatabaseView.module.survey` | Survey | System database page · Module column; the name of the Survey application | 30 | identical |
+| `systemDatabaseView.module.admin` | Admin | System database page · Module column; the name of the Admin application | 30 | identical |
+| `systemDatabaseView.module.fhhs` | Family History | System database page · Module column; the Family History report module | 40 |  |
+| `system.build.unknown` | unknown | System overview · version or build time when the build did not record it | 30 |  |
+| `searchView.status.notStarted` | Not Started | Search page · Status column | 30 |  |
+| `searchView.status.inProgress` | In Progress | Search page · Status column | 30 |  |
+| `searchView.status.finished` | Finished | Search page · Status column | 30 |  |
+| `reportingRebuild.disabled` | Reporting ETL is disabled (elicit.etl.enabled=false) | Apply Survey Definition page · reason the reporting schema was not rebuilt; continues reportingRebuild.notRebuilt; the setting name stays | 160 |  |
 
 ## English source file
 
@@ -1059,4 +1139,84 @@ systemConnectionsView.result.reachableForbidden=reachable, HTTP 403: license val
 systemConnectionsView.result.reachable=reachable, HTTP {0}
 systemConnectionsView.result.noHostPort=address {0} has no host and port
 systemConnectionsView.result.connected=connected to {0}:{1}
+definition.line=Line {0}: {1}
+definition.badHeader=File does not start with valid format header (expected # {0})
+definition.noColon=Invalid format, missing colon separator
+definition.multipleSurveys=Multiple survey records found; only one supported per file
+definition.beforeSurvey=Cannot insert {0} before survey
+definition.unknownTable=Unknown table: {0}
+definition.importFailedAtLine=Import failed at line {0}: {1}
+definition.updateFailedAtLine=Update failed at line {0}: {1}
+definition.noHeader=File does not contain valid format header
+definition.noSurveysRecord=File does not contain a surveys record
+definition.readFailed=Failed to read file: {0}
+definition.fieldCount={0} requires {1} fields, got {2}
+definition.keyExists=A survey with survey_key {0} already exists in this instance (id={1}); use Update instead of Import to apply changes to it.
+definition.invalidValue=Invalid {0} in file: {1}
+definition.translationNotTranslatable=translations row targets a field that carries no respondent-facing text: {0}
+definition.translationEmpty=translations row for {0} has an empty value; a removed translation is a closed effective_to, not a blank
+definition.translationMissing=translations row has no {0}
+definition.targetNotFound=Target survey not found: {0}
+definition.revisionRegression=This file''s revision ({0}) predates the newest revision already applied to this survey here ({1}). Applying it would open new versions carrying older content rather than reverting anything. Apply the newer file instead; reverting this deployment to the earlier revision is an operational restore (prior database backup plus the prior image), not an update.
+definition.noSurveyKeyUpdate=This file predates stable-key assignment and carries no survey_key to match against — import it as a new survey (UC-014), or re-export the target survey (UC-013) to see its current key before retrying.
+definition.keyMismatch=This file''s survey_key ({0}) does not match the selected survey''s key ({1}); it does not belong to survey {2}.
+definition.noElementKey={0} row has no element_key to match against — this file predates stable-key assignment and cannot be applied via Update.
+definition.invalidElementKey=Invalid element_key in {0} row: {1}
+definition.emptyHeader=File carries an empty "{0}" header
+definition.unparseableHeader=Unparseable "{0}" header value: {1}
+definition.noSourceId=Expected non-null source id for {0}
+definition.noIdMapping=No ID mapping found for {0} source_id={1}
+definition.fileEmpty=File is empty
+definition.fileTooLarge=File exceeds the {0}MB limit
+definition.noSurveyKey=This file carries no survey_key, so it cannot be matched against the surveys already installed here. Import it explicitly as a new survey if that is what you intend.
+definition.installed=Installed as a new survey
+definition.applied=Applied to existing survey {0}
+definition.surveysMalformed=The surveys record is malformed: expected at least 2 fields, got {0}
+definition.notExport=This file contains no surveys record, so it is not a survey definition export.
+reportingRebuild.rebuilt=Reporting schema rebuilt.
+reportingRebuild.notRebuilt=Reporting schema not rebuilt: {0}
+reportingRebuild.noAnswer=no answer from {0} within {1} s
+reportingRebuild.interrupted=interrupted while waiting for {0}
+respondentImport.legacyFormat=This file is in the {0} format, which carries identifiers specific to the instance that produced it and cannot be imported. Re-export the respondent from the source instance (which now produces {1}).
+respondentImport.unsupportedFormat=Unsupported export format {0} (expected # {1})
+respondentImport.beforeRespondent=Cannot insert {0} before respondent
+respondentImport.badSubjectIndex=Invalid subject index for message: {0}
+respondentImport.noPsa=No post_survey_action named ''{0}'' found for survey {1} (id {2}) in this instance
+respondentImport.invalidSurveyKey=Invalid survey_key ''{0}''; expected a UUID
+respondentImport.noSurvey=No survey with survey_key {0} exists in this instance; apply the survey definition (UC-018) first
+respondentImport.accessCodeExists=Access code ''{0}'' already exists on survey {1} (id {2}) in this instance; the import was not performed
+respondentImport.noDepartmentCode=Subject has no department code; the export is incomplete
+respondentImport.noDepartment=No department with code ''{0}'' exists in this instance; create the department before importing
+respondentImport.invalidKey=Invalid {0} key ''{1}''; expected a UUID
+respondentImport.noVersion=No {0} with key {1} version {2} in this instance; update the survey definition (UC-017) so the source survey''s versions exist here
+respondentImport.multipleVersions=Multiple {0} rows carry key {1} version {2} in this instance; the survey definition is inconsistent
+respondentImport.noDisplayKey=Dependent has no {0} display_key; the export is incomplete
+respondentImport.noAnswer=No answer with display_key ''{0}'' was imported for this respondent; the dependent''s {1} reference cannot be resolved
+respondentImport.notInteger=Invalid {0} ''{1}''; expected an integer
+csvImport.unexpected=failed to process this record due to an unexpected error
+csvImport.badFormat=Invalid CSV format. Expected at least 6 fields: departmentId,firstName,lastName,middleName,dob,email,phone,xid
+csvImport.badDate=Invalid date format. Use yyyy-MM-dd or MM/dd/yyyy
+csvImport.firstNameRequired=First name is required
+csvImport.lastNameRequired=Last name is required
+csvImport.emailRequired=Email is required
+csvImport.badDepartmentId=Invalid department ID format
+registerView.csvImport.outcome.new=New Subject
+registerView.csvImport.outcome.existing=Existing Subject
+registerView.csvImport.outcome.excluded=Excluded Subject
+accessCode.noUniqueCode=Unable to generate a unique access code
+accessCode.invalidDepartment=invalid departmentid
+accessCode.invalidTemplate=Invalid message template ID: {0}
+systemEmailView.result.noSender=no sender address is configured (quarkus.mailer.from)
+systemEmailView.result.accepted=accepted by {0}:{1}
+systemEmailView.result.noAnswer=no answer from {0}:{1} within {2} s
+systemConnectionsView.group.surveyApplication=Survey application
+systemConnectionsView.source.surveyUrl=elicit.survey.url (reporting schema rebuild)
+systemDatabaseView.module.survey=Survey
+systemDatabaseView.module.admin=Admin
+systemDatabaseView.module.fhhs=Family History
+system.build.unknown=unknown
+searchView.status.notStarted=Not Started
+searchView.status.inProgress=In Progress
+searchView.status.finished=Finished
+reportingRebuild.disabled=Reporting ETL is disabled (elicit.etl.enabled=false)
 ```

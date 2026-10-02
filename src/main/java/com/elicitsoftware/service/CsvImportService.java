@@ -11,6 +11,7 @@ package com.elicitsoftware.service;
  * ***LICENSE_END***
  */
 
+import com.elicitsoftware.admin.i18n.Translations;
 import com.elicitsoftware.request.AddRequest;
 import com.elicitsoftware.response.AddResponse;
 import com.elicitsoftware.rest.AccessCodeService;
@@ -214,10 +215,10 @@ public class CsvImportService {
                         // infra/persistence failure - log it and keep the client-facing
                         // message generic rather than leaking driver/JPA error text.
                         Log.errorf(e, "CSV import: unexpected error processing line %d", lineNumber);
-                        errors.add("Line " + lineNumber + ": failed to process this record due to an unexpected error");
+                        errors.add(Translations.get("definition.line", String.valueOf(lineNumber), Translations.get("csvImport.unexpected")));
                     }
                 } catch (Exception e) {
-                    errors.add("Line " + lineNumber + ": " + e.getMessage());
+                    errors.add(Translations.get("definition.line", String.valueOf(lineNumber), e.getMessage()));
                 }
             }
         }
@@ -288,7 +289,7 @@ public class CsvImportService {
         String[] fields = splitCsvLine(csvLine);
 
         if (fields.length < 6) {
-            throw new Exception("Invalid CSV format. Expected at least 6 fields: departmentId,firstName,lastName,middleName,dob,email,phone,xid");
+            throw new Exception(Translations.get("csvImport.badFormat"));
         }
 
         AddRequest request = new AddRequest();
@@ -313,7 +314,7 @@ public class CsvImportService {
                     try {
                         request.dob = LocalDate.parse(fields[4].trim(), DateTimeFormatter.ofPattern("MM/dd/yyyy"));
                     } catch (DateTimeParseException e2) {
-                        throw new Exception("Invalid date format. Use yyyy-MM-dd or MM/dd/yyyy");
+                        throw new Exception(Translations.get("csvImport.badDate"));
                     }
                 }
             }
@@ -329,17 +330,17 @@ public class CsvImportService {
 
             // Validate required fields
             if (request.firstName.isEmpty()) {
-                throw new Exception("First name is required");
+                throw new Exception(Translations.get("csvImport.firstNameRequired"));
             }
             if (request.lastName.isEmpty()) {
-                throw new Exception("Last name is required");
+                throw new Exception(Translations.get("csvImport.lastNameRequired"));
             }
             if (request.email == null || request.email.isEmpty()) {
-                throw new Exception("Email is required");
+                throw new Exception(Translations.get("csvImport.emailRequired"));
             }
 
         } catch (NumberFormatException e) {
-            throw new Exception("Invalid department ID format");
+            throw new Exception(Translations.get("csvImport.badDepartmentId"));
         }
 
         return request;

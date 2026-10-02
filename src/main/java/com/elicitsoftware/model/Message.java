@@ -11,6 +11,7 @@ package com.elicitsoftware.model;
  * ***LICENSE_END***
  */
 
+import com.elicitsoftware.admin.i18n.Translations;
 import com.elicitsoftware.exception.AccessCodeGenerationError;
 import io.quarkus.hibernate.orm.panache.PanacheEntityBase;
 import io.quarkus.logging.Log;
@@ -269,7 +270,7 @@ public class Message extends PanacheEntityBase {
         if (department == null || department.defaultMessageId == null) {
             Log.warnf("createMessagesForSubject: invalid department for subjectId=%s, departmentId=%s",
                     subject.getId(), subject.getDepartmentId());
-            throw  new AccessCodeGenerationError("invalid departmentid");
+            throw  new AccessCodeGenerationError(Translations.get("accessCode.invalidDepartment"));
         }
 
         // Split comma-separated message template IDs
@@ -307,7 +308,7 @@ public class Message extends PanacheEntityBase {
                 // Log error parsing template ID
                 Log.errorf(e, "createMessagesForSubject: invalid message template id '%s' for subjectId=%s",
                         templateIdStr, subject.getId());
-                throw  new AccessCodeGenerationError("Invalid message template ID: " + templateIdStr);
+                throw  new AccessCodeGenerationError(Translations.get("accessCode.invalidTemplate", templateIdStr));
             }
         }
         Log.debugf("createMessagesForSubject: generated %d message(s) for subjectId=%s",

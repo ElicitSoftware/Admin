@@ -11,6 +11,7 @@ package com.elicitsoftware.service;
  * ***LICENSE_END***
  */
 
+import com.elicitsoftware.admin.i18n.Translations;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import jakarta.persistence.EntityManager;
@@ -238,7 +239,7 @@ public class SurveyDefinitionImportService {
                             fileRevision[0] = parsed;
                         }
                     } catch (IllegalArgumentException e) {
-                        errors.add("Line " + lineNumber + ": " + e.getMessage());
+                        errors.add(Translations.get("definition.line", String.valueOf(lineNumber), e.getMessage()));
                         logAttempt(surveyInsert[0], fileName, false, errors, counts, fileRevision[0]);
                         return new ImportResult(false, 0, errors, counts);
                     }
@@ -246,8 +247,7 @@ public class SurveyDefinitionImportService {
                 }
 
                 if (!versionValidated) {
-                    errors.add("Line " + lineNumber + ": File does not start with valid format header (expected # "
-                            + FORMAT_VERSION + ")");
+                    errors.add(Translations.get("definition.line", String.valueOf(lineNumber), Translations.get("definition.badHeader", FORMAT_VERSION)));
                     logAttempt(surveyInsert[0], fileName, false, errors, counts, fileRevision[0]);
                     return new ImportResult(false, 0, errors, counts);
                 }
@@ -255,7 +255,7 @@ public class SurveyDefinitionImportService {
                 // Data line: "tablename: field1|field2|..."
                 int colonIndex = line.indexOf(':');
                 if (colonIndex < 0) {
-                    errors.add("Line " + lineNumber + ": Invalid format, missing colon separator");
+                    errors.add(Translations.get("definition.line", String.valueOf(lineNumber), Translations.get("definition.noColon")));
                     continue;
                 }
 
@@ -274,7 +274,7 @@ public class SurveyDefinitionImportService {
                     switch (tableName) {
                         case "surveys": {
                             if (newSurveyId != null) {
-                                errors.add("Line " + lineNumber + ": Multiple survey records found; only one supported per file");
+                                errors.add(Translations.get("definition.line", String.valueOf(lineNumber), Translations.get("definition.multipleSurveys")));
                                 continue;
                             }
                             surveyInsert[0] = insertSurvey(fields);
@@ -284,7 +284,7 @@ public class SurveyDefinitionImportService {
                         }
                         case "select_groups": {
                             if (newSurveyId == null) {
-                                errors.add("Line " + lineNumber + ": Cannot insert select_group before survey");
+                                errors.add(Translations.get("definition.line", String.valueOf(lineNumber), Translations.get("definition.beforeSurvey", "select_group")));
                                 continue;
                             }
                             Long sourceId = parseLongOrNull(fields[0]);
@@ -295,7 +295,7 @@ public class SurveyDefinitionImportService {
                         }
                         case "select_items": {
                             if (newSurveyId == null) {
-                                errors.add("Line " + lineNumber + ": Cannot insert select_item before survey");
+                                errors.add(Translations.get("definition.line", String.valueOf(lineNumber), Translations.get("definition.beforeSurvey", "select_item")));
                                 continue;
                             }
                             insertSelectItem(fields, newSurveyId, selectGroupIdMap);
@@ -304,7 +304,7 @@ public class SurveyDefinitionImportService {
                         }
                         case "steps": {
                             if (newSurveyId == null) {
-                                errors.add("Line " + lineNumber + ": Cannot insert step before survey");
+                                errors.add(Translations.get("definition.line", String.valueOf(lineNumber), Translations.get("definition.beforeSurvey", "step")));
                                 continue;
                             }
                             Long sourceId = parseLongOrNull(fields[0]);
@@ -315,7 +315,7 @@ public class SurveyDefinitionImportService {
                         }
                         case "sections": {
                             if (newSurveyId == null) {
-                                errors.add("Line " + lineNumber + ": Cannot insert section before survey");
+                                errors.add(Translations.get("definition.line", String.valueOf(lineNumber), Translations.get("definition.beforeSurvey", "section")));
                                 continue;
                             }
                             Long sourceId = parseLongOrNull(fields[0]);
@@ -326,7 +326,7 @@ public class SurveyDefinitionImportService {
                         }
                         case "steps_sections": {
                             if (newSurveyId == null) {
-                                errors.add("Line " + lineNumber + ": Cannot insert steps_section before survey");
+                                errors.add(Translations.get("definition.line", String.valueOf(lineNumber), Translations.get("definition.beforeSurvey", "steps_section")));
                                 continue;
                             }
                             Long sourceId = parseLongOrNull(fields[0]);
@@ -337,7 +337,7 @@ public class SurveyDefinitionImportService {
                         }
                         case "questions": {
                             if (newSurveyId == null) {
-                                errors.add("Line " + lineNumber + ": Cannot insert question before survey");
+                                errors.add(Translations.get("definition.line", String.valueOf(lineNumber), Translations.get("definition.beforeSurvey", "question")));
                                 continue;
                             }
                             Long sourceId = parseLongOrNull(fields[0]);
@@ -348,7 +348,7 @@ public class SurveyDefinitionImportService {
                         }
                         case "sections_questions": {
                             if (newSurveyId == null) {
-                                errors.add("Line " + lineNumber + ": Cannot insert sections_question before survey");
+                                errors.add(Translations.get("definition.line", String.valueOf(lineNumber), Translations.get("definition.beforeSurvey", "sections_question")));
                                 continue;
                             }
                             Long sourceId = parseLongOrNull(fields[0]);
@@ -359,7 +359,7 @@ public class SurveyDefinitionImportService {
                         }
                         case "relationships": {
                             if (newSurveyId == null) {
-                                errors.add("Line " + lineNumber + ": Cannot insert relationship before survey");
+                                errors.add(Translations.get("definition.line", String.valueOf(lineNumber), Translations.get("definition.beforeSurvey", "relationship")));
                                 continue;
                             }
                             insertRelationship(fields, newSurveyId, stepIdMap, sectionsQuestionIdMap, stepsSectionIdMap);
@@ -368,7 +368,7 @@ public class SurveyDefinitionImportService {
                         }
                         case "reports": {
                             if (newSurveyId == null) {
-                                errors.add("Line " + lineNumber + ": Cannot insert report before survey");
+                                errors.add(Translations.get("definition.line", String.valueOf(lineNumber), Translations.get("definition.beforeSurvey", "report")));
                                 continue;
                             }
                             insertReport(fields, newSurveyId);
@@ -377,7 +377,7 @@ public class SurveyDefinitionImportService {
                         }
                         case "post_survey_actions": {
                             if (newSurveyId == null) {
-                                errors.add("Line " + lineNumber + ": Cannot insert post_survey_action before survey");
+                                errors.add(Translations.get("definition.line", String.valueOf(lineNumber), Translations.get("definition.beforeSurvey", "post_survey_action")));
                                 continue;
                             }
                             insertPostSurveyAction(fields, newSurveyId);
@@ -393,7 +393,7 @@ public class SurveyDefinitionImportService {
                         }
                         case "ontology": {
                             if (newSurveyId == null) {
-                                errors.add("Line " + lineNumber + ": Cannot insert ontology before survey");
+                                errors.add(Translations.get("definition.line", String.valueOf(lineNumber), Translations.get("definition.beforeSurvey", "ontology")));
                                 continue;
                             }
                             Long sourceId = parseLongOrNull(fields[0]);
@@ -404,7 +404,7 @@ public class SurveyDefinitionImportService {
                         }
                         case "metadata": {
                             if (newSurveyId == null) {
-                                errors.add("Line " + lineNumber + ": Cannot insert metadata before survey");
+                                errors.add(Translations.get("definition.line", String.valueOf(lineNumber), Translations.get("definition.beforeSurvey", "metadata")));
                                 continue;
                             }
                             insertMetadata(fields, newSurveyId, stepsSectionIdMap, questionIdMap,
@@ -414,7 +414,7 @@ public class SurveyDefinitionImportService {
                         }
                         case "translations": {
                             if (newSurveyId == null) {
-                                errors.add("Line " + lineNumber + ": Cannot insert translation before survey");
+                                errors.add(Translations.get("definition.line", String.valueOf(lineNumber), Translations.get("definition.beforeSurvey", "translation")));
                                 continue;
                             }
                             insertTranslation(fields, newSurveyId);
@@ -422,17 +422,17 @@ public class SurveyDefinitionImportService {
                             break;
                         }
                         default:
-                            errors.add("Line " + lineNumber + ": Unknown table: " + tableName);
+                            errors.add(Translations.get("definition.line", String.valueOf(lineNumber), Translations.get("definition.unknownTable", tableName)));
                     }
                 } catch (Exception e) {
-                    errors.add("Line " + lineNumber + ": " + e.getMessage());
+                    errors.add(Translations.get("definition.line", String.valueOf(lineNumber), e.getMessage()));
                     logAttempt(surveyInsert[0], fileName, false, errors, counts, fileRevision[0]);
-                    throw new RuntimeException("Import failed at line " + lineNumber + ": " + e.getMessage(), e);
+                    throw new RuntimeException(Translations.get("definition.importFailedAtLine", String.valueOf(lineNumber), e.getMessage()), e);
                 }
             }
 
             if (!versionValidated) {
-                errors.add("File does not contain valid format header");
+                errors.add(Translations.get("definition.noHeader"));
                 logAttempt(surveyInsert[0], fileName, false, errors, counts, fileRevision[0]);
                 return new ImportResult(false, 0, errors, counts);
             }
@@ -442,7 +442,7 @@ public class SurveyDefinitionImportService {
             return new ImportResult(errors.isEmpty(), total, errors, counts);
 
         } catch (IOException e) {
-            errors.add("Failed to read file: " + e.getMessage());
+            errors.add(Translations.get("definition.readFailed", e.getMessage()));
             logAttempt(surveyInsert[0], fileName, false, errors, counts, fileRevision[0]);
             return new ImportResult(false, 0, errors, counts);
         }
@@ -495,7 +495,7 @@ public class SurveyDefinitionImportService {
      */
     private SurveyInsertResult insertSurvey(String[] fields) {
         if (fields.length < 10) {
-            throw new IllegalArgumentException("surveys requires 10 fields, got " + fields.length);
+            throw new IllegalArgumentException(Translations.get("definition.fieldCount", "surveys", "10", String.valueOf(fields.length)));
         }
         UUID surveyKey = resolveSurveyKey(fields[1]);
 
@@ -503,9 +503,7 @@ public class SurveyDefinitionImportService {
         existQuery.setParameter(1, surveyKey);
         Long existingId = getLongResult(existQuery);
         if (existingId != null) {
-            throw new IllegalStateException("A survey with survey_key " + surveyKey
-                    + " already exists in this instance (id=" + existingId
-                    + "); use Update instead of Import to apply changes to it.");
+            throw new IllegalStateException(Translations.get("definition.keyExists", String.valueOf(surveyKey), String.valueOf(existingId)));
         }
 
         Query seqQuery = em.createNativeQuery("SELECT nextval('survey.surveys_seq')");
@@ -554,7 +552,7 @@ public class SurveyDefinitionImportService {
         try {
             return UUID.fromString(value.trim());
         } catch (IllegalArgumentException e) {
-            throw new IllegalArgumentException("Invalid survey_key in file: " + value, e);
+            throw new IllegalArgumentException(Translations.get("definition.invalidValue", "survey_key", value), e);
         }
     }
 
@@ -573,7 +571,7 @@ public class SurveyDefinitionImportService {
         try {
             return UUID.fromString(value.trim());
         } catch (IllegalArgumentException e) {
-            throw new IllegalArgumentException("Invalid element_key in file: " + value, e);
+            throw new IllegalArgumentException(Translations.get("definition.invalidValue", "element_key", value), e);
         }
     }
 
@@ -589,7 +587,7 @@ public class SurveyDefinitionImportService {
      */
     private Long insertSelectGroup(String[] fields, Long surveyId) {
         if (fields.length < 10) {
-            throw new IllegalArgumentException("select_groups requires 10 fields, got " + fields.length);
+            throw new IllegalArgumentException(Translations.get("definition.fieldCount", "select_groups", "10", String.valueOf(fields.length)));
         }
         UUID elementKey = resolveElementKey(fields[1]);
         Query seqQuery = em.createNativeQuery("SELECT nextval('survey.select_groups_seq')");
@@ -619,7 +617,7 @@ public class SurveyDefinitionImportService {
      */
     private void insertSelectItem(String[] fields, Long surveyId, Map<Long, Long> selectGroupIdMap) {
         if (fields.length < 11) {
-            throw new IllegalArgumentException("select_items requires 11 fields, got " + fields.length);
+            throw new IllegalArgumentException(Translations.get("definition.fieldCount", "select_items", "11", String.valueOf(fields.length)));
         }
         UUID elementKey = resolveElementKey(fields[1]);
         Long oldGroupId = parseLongOrNull(fields[2]);
@@ -650,7 +648,7 @@ public class SurveyDefinitionImportService {
      */
     private Long insertStep(String[] fields, Long surveyId) {
         if (fields.length < 11) {
-            throw new IllegalArgumentException("steps requires 11 fields, got " + fields.length);
+            throw new IllegalArgumentException(Translations.get("definition.fieldCount", "steps", "11", String.valueOf(fields.length)));
         }
         UUID elementKey = resolveElementKey(fields[1]);
         Query seqQuery = em.createNativeQuery("SELECT nextval('survey.steps_seq')");
@@ -690,7 +688,7 @@ public class SurveyDefinitionImportService {
      */
     private Long insertSection(String[] fields, Long surveyId) {
         if (fields.length < 11) {
-            throw new IllegalArgumentException("sections requires 11 fields, got " + fields.length);
+            throw new IllegalArgumentException(Translations.get("definition.fieldCount", "sections", "11", String.valueOf(fields.length)));
         }
         UUID elementKey = resolveElementKey(fields[1]);
         Query seqQuery = em.createNativeQuery("SELECT nextval('survey.sections_seq')");
@@ -730,7 +728,7 @@ public class SurveyDefinitionImportService {
     private Long insertStepsSection(String[] fields, Long surveyId,
             Map<Long, Long> stepIdMap, Map<Long, Long> sectionIdMap) {
         if (fields.length < 12) {
-            throw new IllegalArgumentException("steps_sections requires 12 fields, got " + fields.length);
+            throw new IllegalArgumentException(Translations.get("definition.fieldCount", "steps_sections", "12", String.valueOf(fields.length)));
         }
         UUID elementKey = resolveElementKey(fields[1]);
         Long newStepId = resolveRequired(parseLongOrNull(fields[2]), stepIdMap, "step (for steps_sections)");
@@ -769,7 +767,7 @@ public class SurveyDefinitionImportService {
      */
     private Long insertQuestion(String[] fields, Long surveyId, Map<Long, Long> selectGroupIdMap) {
         if (fields.length < 20) {
-            throw new IllegalArgumentException("questions requires 20 fields, got " + fields.length);
+            throw new IllegalArgumentException(Translations.get("definition.fieldCount", "questions", "20", String.valueOf(fields.length)));
         }
         UUID elementKey = resolveElementKey(fields[1]);
         Long oldSelectGroupId = parseLongOrNull(fields[10]);
@@ -819,7 +817,7 @@ public class SurveyDefinitionImportService {
     private Long insertSectionsQuestion(String[] fields, Long surveyId,
             Map<Long, Long> questionIdMap, Map<Long, Long> sectionIdMap) {
         if (fields.length < 10) {
-            throw new IllegalArgumentException("sections_questions requires 10 fields, got " + fields.length);
+            throw new IllegalArgumentException(Translations.get("definition.fieldCount", "sections_questions", "10", String.valueOf(fields.length)));
         }
         UUID elementKey = resolveElementKey(fields[1]);
         Long newQuestionId = resolveRequired(parseLongOrNull(fields[2]), questionIdMap, "question (for sections_questions)");
@@ -856,7 +854,7 @@ public class SurveyDefinitionImportService {
             Map<Long, Long> stepIdMap, Map<Long, Long> sectionsQuestionIdMap,
             Map<Long, Long> stepsSectionIdMap) {
         if (fields.length < 19) {
-            throw new IllegalArgumentException("relationships requires 19 fields, got " + fields.length);
+            throw new IllegalArgumentException(Translations.get("definition.fieldCount", "relationships", "19", String.valueOf(fields.length)));
         }
         UUID elementKey = resolveElementKey(fields[1]);
         Long newUpstreamStepId = resolveNullable(parseLongOrNull(fields[2]), stepIdMap, "step (upstream)");
@@ -896,7 +894,7 @@ public class SurveyDefinitionImportService {
      */
     private void insertReport(String[] fields, Long surveyId) {
         if (fields.length < 6) {
-            throw new IllegalArgumentException("reports requires 6 fields, got " + fields.length);
+            throw new IllegalArgumentException(Translations.get("definition.fieldCount", "reports", "6", String.valueOf(fields.length)));
         }
         UUID elementKey = resolveElementKey(fields[1]);
         Query query = em.createNativeQuery("""
@@ -919,7 +917,7 @@ public class SurveyDefinitionImportService {
      */
     private void insertPostSurveyAction(String[] fields, Long surveyId) {
         if (fields.length < 6) {
-            throw new IllegalArgumentException("post_survey_actions requires 6 fields, got " + fields.length);
+            throw new IllegalArgumentException(Translations.get("definition.fieldCount", "post_survey_actions", "6", String.valueOf(fields.length)));
         }
         UUID elementKey = resolveElementKey(fields[1]);
         Query query = em.createNativeQuery("""
@@ -946,7 +944,7 @@ public class SurveyDefinitionImportService {
      */
     private Long insertOrReuseDimension(String[] fields) {
         if (fields.length < 3) {
-            throw new IllegalArgumentException("dimensions requires 3 fields, got " + fields.length);
+            throw new IllegalArgumentException(Translations.get("definition.fieldCount", "dimensions", "3", String.valueOf(fields.length)));
         }
         String name = nullIfEmpty(fields[2]);
 
@@ -984,7 +982,7 @@ public class SurveyDefinitionImportService {
      */
     private Long insertOrReuseOntology(String[] fields, Long surveyId, Map<Long, Long> dimensionIdMap) {
         if (fields.length < 5) {
-            throw new IllegalArgumentException("ontology requires 5 fields, got " + fields.length);
+            throw new IllegalArgumentException(Translations.get("definition.fieldCount", "ontology", "5", String.valueOf(fields.length)));
         }
         String name = nullIfEmpty(fields[2]);
         String tag = nullIfEmpty(fields[3]);
@@ -1032,7 +1030,7 @@ public class SurveyDefinitionImportService {
             Map<Long, Long> stepsSectionIdMap, Map<Long, Long> questionIdMap,
             Map<Long, Long> sectionsQuestionIdMap, Map<Long, Long> ontologyIdMap) {
         if (fields.length < 7) {
-            throw new IllegalArgumentException("metadata requires 7 fields, got " + fields.length);
+            throw new IllegalArgumentException(Translations.get("definition.fieldCount", "metadata", "7", String.valueOf(fields.length)));
         }
         UUID elementKey = resolveElementKey(fields[1]);
         Long newStepsSectionsId = resolveNullable(parseLongOrNull(fields[2]), stepsSectionIdMap, "steps_section (metadata)");
@@ -1069,20 +1067,18 @@ public class SurveyDefinitionImportService {
      */
     private void insertTranslation(String[] fields, Long surveyId) {
         if (fields.length < 13) {
-            throw new IllegalArgumentException("translations requires 13 fields, got " + fields.length);
+            throw new IllegalArgumentException(Translations.get("definition.fieldCount", "translations", "13", String.valueOf(fields.length)));
         }
         UUID translationKey = requireKey(fields[1], "translation_key");
         UUID targetKey = requireKey(fields[3], "element_key");
         String elementType = nullIfEmpty(fields[2]);
         String field = nullIfEmpty(fields[4]);
         if (!SurveyDefinitionFileFields.isTranslatable(elementType, field)) {
-            throw new IllegalArgumentException("translations row targets a field that carries no "
-                    + "respondent-facing text: " + elementType + "." + field);
+            throw new IllegalArgumentException(Translations.get("definition.translationNotTranslatable", elementType + "." + field));
         }
         String value = nullIfEmpty(fields[6]);
         if (value == null) {
-            throw new IllegalArgumentException("translations row for " + elementType + "." + field
-                    + " has an empty value; a removed translation is a closed effective_to, not a blank");
+            throw new IllegalArgumentException(Translations.get("definition.translationEmpty", elementType + "." + field));
         }
 
         Query query = em.createNativeQuery("""
@@ -1110,12 +1106,12 @@ public class SurveyDefinitionImportService {
     private UUID requireKey(String raw, String what) {
         String value = nullIfEmpty(raw);
         if (value == null) {
-            throw new IllegalArgumentException("translations row has no " + what);
+            throw new IllegalArgumentException(Translations.get("definition.translationMissing", what));
         }
         try {
             return UUID.fromString(value.trim());
         } catch (IllegalArgumentException e) {
-            throw new IllegalArgumentException("Invalid " + what + " in file: " + value, e);
+            throw new IllegalArgumentException(Translations.get("definition.invalidValue", what, value), e);
         }
     }
 

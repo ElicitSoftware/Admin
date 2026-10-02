@@ -11,6 +11,7 @@ package com.elicitsoftware.service;
  * ***LICENSE_END***
  */
 
+import com.elicitsoftware.admin.i18n.Translations;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStream;
@@ -225,14 +226,10 @@ public class RespondentImportService {
                         if (FORMAT_VERSION.equals(token)) {
                             versionValidated = true;
                         } else if (LEGACY_FORMAT_VERSION.equals(token)) {
-                            errors.add("Line " + lineNumber + ": This file is in the " + LEGACY_FORMAT_VERSION
-                                    + " format, which carries identifiers specific to the instance that produced it"
-                                    + " and cannot be imported. Re-export the respondent from the source instance"
-                                    + " (which now produces " + FORMAT_VERSION + ").");
+                            errors.add(Translations.get("definition.line", String.valueOf(lineNumber), Translations.get("respondentImport.legacyFormat", LEGACY_FORMAT_VERSION, FORMAT_VERSION)));
                             return new ImportResult(false, 0, errors, counts);
                         } else {
-                            errors.add("Line " + lineNumber + ": Unsupported export format " + token
-                                    + " (expected # " + FORMAT_VERSION + ")");
+                            errors.add(Translations.get("definition.line", String.valueOf(lineNumber), Translations.get("respondentImport.unsupportedFormat", token, FORMAT_VERSION)));
                             return new ImportResult(false, 0, errors, counts);
                         }
                     }
@@ -241,14 +238,14 @@ public class RespondentImportService {
 
                 // Require version validation before processing data
                 if (!versionValidated) {
-                    errors.add("Line " + lineNumber + ": File does not start with valid format header (expected # " + FORMAT_VERSION + ")");
+                    errors.add(Translations.get("definition.line", String.valueOf(lineNumber), Translations.get("definition.badHeader", FORMAT_VERSION)));
                     return new ImportResult(false, 0, errors, counts);
                 }
 
                 // Parse data line: tablename: field1|field2|...
                 int colonIndex = line.indexOf(':');
                 if (colonIndex < 0) {
-                    errors.add("Line " + lineNumber + ": Invalid format, missing colon separator");
+                    errors.add(Translations.get("definition.line", String.valueOf(lineNumber), Translations.get("definition.noColon")));
                     continue;
                 }
 
@@ -264,7 +261,7 @@ public class RespondentImportService {
                             break;
                         case "answers":
                             if (newRespondentId == null) {
-                                errors.add("Line " + lineNumber + ": Cannot insert answer before respondent");
+                                errors.add(Translations.get("definition.line", String.valueOf(lineNumber), Translations.get("respondentImport.beforeRespondent", "answer")));
                                 continue;
                             }
                             insertAnswer(fields, newRespondentId, context);
@@ -272,7 +269,7 @@ public class RespondentImportService {
                             break;
                         case "dependents":
                             if (newRespondentId == null) {
-                                errors.add("Line " + lineNumber + ": Cannot insert dependent before respondent");
+                                errors.add(Translations.get("definition.line", String.valueOf(lineNumber), Translations.get("respondentImport.beforeRespondent", "dependent")));
                                 continue;
                             }
                             insertDependent(fields, newRespondentId, context);
@@ -280,7 +277,7 @@ public class RespondentImportService {
                             break;
                         case "subjects":
                             if (newRespondentId == null) {
-                                errors.add("Line " + lineNumber + ": Cannot insert subject before respondent");
+                                errors.add(Translations.get("definition.line", String.valueOf(lineNumber), Translations.get("respondentImport.beforeRespondent", "subject")));
                                 continue;
                             }
                             Long subjectId = insertSubject(fields, newRespondentId, context);
@@ -295,7 +292,7 @@ public class RespondentImportService {
                         case "messages":
                             int msgSubjectIndex = parseIntOrNull(fields[0]);
                             if (msgSubjectIndex < 0 || msgSubjectIndex >= subjectIds.size() || subjectIds.get(msgSubjectIndex) == null) {
-                                errors.add("Line " + lineNumber + ": Invalid subject index for message: " + msgSubjectIndex);
+                                errors.add(Translations.get("definition.line", String.valueOf(lineNumber), Translations.get("respondentImport.badSubjectIndex", String.valueOf(msgSubjectIndex))));
                                 continue;
                             }
                             insertMessage(fields, subjectIds.get(msgSubjectIndex));
@@ -303,28 +300,28 @@ public class RespondentImportService {
                             break;
                         case "respondent_psa":
                             if (newRespondentId == null) {
-                                errors.add("Line " + lineNumber + ": Cannot insert PSA before respondent");
+                                errors.add(Translations.get("definition.line", String.valueOf(lineNumber), Translations.get("respondentImport.beforeRespondent", "PSA")));
                                 continue;
                             }
                             insertRespondentPsa(fields, newRespondentId, context);
                             counts.put("respondent_psa", counts.get("respondent_psa") + 1);
                             break;
                         default:
-                            errors.add("Line " + lineNumber + ": Unknown table: " + tableName);
+                            errors.add(Translations.get("definition.line", String.valueOf(lineNumber), Translations.get("definition.unknownTable", tableName)));
                     }
                 } catch (ImportValidationException e) {
                     // Rethrown unwrapped so callers can show the administrator-facing message;
                     // the RuntimeException still rolls the whole import back (BR-042).
-                    errors.add("Line " + lineNumber + ": " + e.getMessage());
-                    throw new ImportValidationException("Line " + lineNumber + ": " + e.getMessage(), e);
+                    errors.add(Translations.get("definition.line", String.valueOf(lineNumber), e.getMessage()));
+                    throw new ImportValidationException(Translations.get("definition.line", String.valueOf(lineNumber), e.getMessage()), e);
                 } catch (Exception e) {
-                    errors.add("Line " + lineNumber + ": " + e.getMessage());
-                    throw new RuntimeException("Import failed at line " + lineNumber + ": " + e.getMessage(), e);
+                    errors.add(Translations.get("definition.line", String.valueOf(lineNumber), e.getMessage()));
+                    throw new RuntimeException(Translations.get("definition.importFailedAtLine", String.valueOf(lineNumber), e.getMessage()), e);
                 }
             }
 
             if (!versionValidated) {
-                errors.add("File does not contain valid format header");
+                errors.add(Translations.get("definition.noHeader"));
                 return new ImportResult(false, 0, errors, counts);
             }
 
@@ -332,7 +329,7 @@ public class RespondentImportService {
             return new ImportResult(errors.isEmpty(), total, errors, counts);
 
         } catch (IOException e) {
-            errors.add("Failed to read file: " + e.getMessage());
+            errors.add(Translations.get("definition.readFailed", e.getMessage()));
             return new ImportResult(false, 0, errors, counts);
         }
     }
@@ -377,7 +374,7 @@ public class RespondentImportService {
     private Long insertRespondent(String[] fields, ImportContext context) {
         // Fields: survey_key, access_code, active, logins, created_dt, first_access_dt, finalized_dt
         if (fields.length < 7) {
-            throw new IllegalArgumentException("Respondent requires 7 fields, got " + fields.length);
+            throw new IllegalArgumentException(Translations.get("definition.fieldCount", "Respondent", "7", String.valueOf(fields.length)));
         }
 
         resolveSurvey(fields[0], context);
@@ -413,7 +410,7 @@ public class RespondentImportService {
         //         question_key, question_version, display_key, display_text, text_value,
         //         deleted, created_dt, saved_dt
         if (fields.length < 16) {
-            throw new IllegalArgumentException("Answer requires 16 fields, got " + fields.length);
+            throw new IllegalArgumentException(Translations.get("definition.fieldCount", "Answer", "16", String.valueOf(fields.length)));
         }
 
         // Both references are nullable on answers; an empty key means the source row had none.
@@ -458,7 +455,7 @@ public class RespondentImportService {
         // Fields: upstream_display_key, downstream_display_key, relationship_key,
         //         relationship_version, deleted
         if (fields.length < 5) {
-            throw new IllegalArgumentException("Dependent requires 5 fields, got " + fields.length);
+            throw new IllegalArgumentException(Translations.get("definition.fieldCount", "Dependent", "5", String.valueOf(fields.length)));
         }
 
         Long upstreamId = resolveAnswerByDisplayKey(nullIfEmpty(fields[0]), "upstream", respondentId);
@@ -481,7 +478,7 @@ public class RespondentImportService {
         // Fields: subject_index, xid, firstname, lastname, middlename, dob, email, phone,
         //         department_code, created_dt
         if (fields.length < 10) {
-            throw new IllegalArgumentException("Subject requires 10 fields, got " + fields.length);
+            throw new IllegalArgumentException(Translations.get("definition.fieldCount", "Subject", "10", String.valueOf(fields.length)));
         }
 
         Long departmentId = resolveDepartment(fields[8], context);
@@ -513,7 +510,7 @@ public class RespondentImportService {
     private void insertMessage(String[] fields, Long subjectId) {
         // Fields: subject_index, message_type, mime_type, subjectline, body, created_dt, sent_dt
         if (fields.length < 7) {
-            throw new IllegalArgumentException("Message requires 7 fields, got " + fields.length);
+            throw new IllegalArgumentException(Translations.get("definition.fieldCount", "Message", "7", String.valueOf(fields.length)));
         }
 
         Query query = em.createNativeQuery("""
@@ -533,7 +530,7 @@ public class RespondentImportService {
     private void insertRespondentPsa(String[] fields, Long respondentId, ImportContext context) {
         // Fields: post_survey_action_name, tries, status, error_msg, created_dt, uploaded_dt
         if (fields.length < 6) {
-            throw new IllegalArgumentException("Respondent PSA requires 6 fields, got " + fields.length);
+            throw new IllegalArgumentException(Translations.get("definition.fieldCount", "Respondent PSA", "6", String.valueOf(fields.length)));
         }
 
         // The export carries the action's name rather than its source-database id - a
@@ -546,9 +543,7 @@ public class RespondentImportService {
         lookupQuery.setParameter(2, postSurveyActionName);
         Long postSurveyActionId = getLongResult(lookupQuery);
         if (postSurveyActionId == null) {
-            throw new ImportValidationException(
-                    "No post_survey_action named '" + postSurveyActionName + "' found for survey "
-                            + context.surveyName + " (id " + context.surveyId + ") in this instance");
+            throw new ImportValidationException(Translations.get("respondentImport.noPsa", postSurveyActionName, String.valueOf(context.surveyName), String.valueOf(context.surveyId)));
         }
 
         Query query = em.createNativeQuery("""
@@ -574,14 +569,13 @@ public class RespondentImportService {
         try {
             surveyKey = UUID.fromString(surveyKeyField == null ? "" : surveyKeyField.trim());
         } catch (IllegalArgumentException e) {
-            throw new ImportValidationException("Invalid survey_key '" + surveyKeyField + "'; expected a UUID", e);
+            throw new ImportValidationException(Translations.get("respondentImport.invalidSurveyKey", surveyKeyField), e);
         }
         Query query = em.createNativeQuery("SELECT id, name FROM survey.surveys WHERE survey_key = ?1");
         query.setParameter(1, surveyKey);
         List<?> rows = query.getResultList();
         if (rows.isEmpty()) {
-            throw new ImportValidationException("No survey with survey_key " + surveyKey
-                    + " exists in this instance; apply the survey definition (UC-018) first");
+            throw new ImportValidationException(Translations.get("respondentImport.noSurvey", String.valueOf(surveyKey)));
         }
         Object[] row = (Object[]) rows.get(0);
         context.surveyId = ((Number) row[0]).longValue();
@@ -596,8 +590,7 @@ public class RespondentImportService {
         query.setParameter(2, accessCode);
         long existing = ((Number) query.getSingleResult()).longValue();
         if (existing > 0) {
-            throw new ImportValidationException("Access code '" + accessCode + "' already exists on survey "
-                    + context.surveyName + " (id " + context.surveyId + ") in this instance; the import was not performed");
+            throw new ImportValidationException(Translations.get("respondentImport.accessCodeExists", accessCode, String.valueOf(context.surveyName), String.valueOf(context.surveyId)));
         }
     }
 
@@ -605,7 +598,7 @@ public class RespondentImportService {
     private Long resolveDepartment(String codeField, ImportContext context) {
         String code = nullIfEmpty(codeField);
         if (code == null) {
-            throw new ImportValidationException("Subject has no department code; the export is incomplete");
+            throw new ImportValidationException(Translations.get("respondentImport.noDepartmentCode"));
         }
         Long cached = context.departmentIds.get(code);
         if (cached != null) {
@@ -615,8 +608,7 @@ public class RespondentImportService {
         query.setParameter(1, code);
         Long id = getLongResult(query);
         if (id == null) {
-            throw new ImportValidationException("No department with code '" + code
-                    + "' exists in this instance; create the department before importing");
+            throw new ImportValidationException(Translations.get("respondentImport.noDepartment", code));
         }
         context.departmentIds.put(code, id);
         return id;
@@ -648,7 +640,7 @@ public class RespondentImportService {
         try {
             key = UUID.fromString(keyField == null ? "" : keyField.trim());
         } catch (IllegalArgumentException e) {
-            throw new ImportValidationException("Invalid " + elementName + " key '" + keyField + "'; expected a UUID", e);
+            throw new ImportValidationException(Translations.get("respondentImport.invalidKey", elementName, keyField), e);
         }
         int version = requireInt(versionField, elementName + " version");
         String cacheKey = key + "|" + version;
@@ -661,13 +653,11 @@ public class RespondentImportService {
         query.setParameter(2, version);
         List<?> rows = query.getResultList();
         if (rows.isEmpty()) {
-            throw new ImportValidationException("No " + elementName + " with key " + key + " version " + version
-                    + " in this instance; update the survey definition (UC-017) so the source survey's versions exist here");
+            throw new ImportValidationException(Translations.get("respondentImport.noVersion", elementName, String.valueOf(key), String.valueOf(version)));
         }
         if (rows.size() > 1) {
             // (key, version) is unique in the Survey schema; report rather than pick one silently.
-            throw new ImportValidationException("Multiple " + elementName + " rows carry key " + key + " version "
-                    + version + " in this instance; the survey definition is inconsistent");
+            throw new ImportValidationException(Translations.get("respondentImport.multipleVersions", elementName, String.valueOf(key), String.valueOf(version)));
         }
         Long id = ((Number) rows.get(0)).longValue();
         cache.put(cacheKey, id);
@@ -677,7 +667,7 @@ public class RespondentImportService {
     /** BR-043: dependents link answers of the just-imported respondent by display_key; a miss is an error, never a NULL. */
     private Long resolveAnswerByDisplayKey(String displayKey, String side, Long respondentId) {
         if (displayKey == null) {
-            throw new ImportValidationException("Dependent has no " + side + " display_key; the export is incomplete");
+            throw new ImportValidationException(Translations.get("respondentImport.noDisplayKey", side));
         }
         Query query = em.createNativeQuery(
                 "SELECT id FROM survey.answers WHERE respondent_id = ?1 AND display_key = ?2");
@@ -685,8 +675,7 @@ public class RespondentImportService {
         query.setParameter(2, displayKey);
         Long id = getLongResult(query);
         if (id == null) {
-            throw new ImportValidationException("No answer with display_key '" + displayKey
-                    + "' was imported for this respondent; the dependent's " + side + " reference cannot be resolved");
+            throw new ImportValidationException(Translations.get("respondentImport.noAnswer", displayKey, side));
         }
         return id;
     }
@@ -694,7 +683,7 @@ public class RespondentImportService {
     private int requireInt(String value, String fieldName) {
         Integer parsed = parseIntOrNull(value);
         if (parsed == null) {
-            throw new ImportValidationException("Invalid " + fieldName + " '" + value + "'; expected an integer");
+            throw new ImportValidationException(Translations.get("respondentImport.notInteger", fieldName, value));
         }
         return parsed;
     }

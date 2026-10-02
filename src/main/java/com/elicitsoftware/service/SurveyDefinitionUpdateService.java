@@ -11,6 +11,7 @@ package com.elicitsoftware.service;
  * ***LICENSE_END***
  */
 
+import com.elicitsoftware.admin.i18n.Translations;
 import com.elicitsoftware.model.Survey;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
@@ -205,7 +206,7 @@ public class SurveyDefinitionUpdateService {
 
         Survey target = Survey.findById(targetSurveyId);
         if (target == null) {
-            errors.add("Target survey not found: " + targetSurveyId);
+            errors.add(Translations.get("definition.targetNotFound", String.valueOf(targetSurveyId)));
             // No revision: the target could not be resolved, so the file was never opened.
             surveyLogService.logFailure(null, null, "UPDATE", fileName, String.join("; ", errors), null);
             return new UpdateResult(false, errors, null);
@@ -252,7 +253,7 @@ public class SurveyDefinitionUpdateService {
                             fileRevision = parsed;
                         }
                     } catch (IllegalArgumentException e) {
-                        errors.add("Line " + lineNumber + ": " + e.getMessage());
+                        errors.add(Translations.get("definition.line", String.valueOf(lineNumber), e.getMessage()));
                         logAttempt(target, fileName, false, errors, null, null);
                         return new UpdateResult(false, errors, null);
                     }
@@ -260,15 +261,14 @@ public class SurveyDefinitionUpdateService {
                 }
 
                 if (!versionValidated) {
-                    errors.add("Line " + lineNumber + ": File does not start with valid format header (expected # "
-                            + FORMAT_VERSION + ")");
+                    errors.add(Translations.get("definition.line", String.valueOf(lineNumber), Translations.get("definition.badHeader", FORMAT_VERSION)));
                     logAttempt(target, fileName, false, errors, null, fileRevision);
                     return new UpdateResult(false, errors, null);
                 }
 
                 int colonIndex = line.indexOf(':');
                 if (colonIndex < 0) {
-                    errors.add("Line " + lineNumber + ": Invalid format, missing colon separator");
+                    errors.add(Translations.get("definition.line", String.valueOf(lineNumber), Translations.get("definition.noColon")));
                     continue;
                 }
 
@@ -280,7 +280,7 @@ public class SurveyDefinitionUpdateService {
                     switch (tableName) {
                         case "surveys": {
                             if (surveyLineSeen) {
-                                errors.add("Line " + lineNumber + ": Multiple survey records found; only one supported per file");
+                                errors.add(Translations.get("definition.line", String.valueOf(lineNumber), Translations.get("definition.multipleSurveys")));
                                 continue;
                             }
                             surveyLineSeen = true;
@@ -290,7 +290,7 @@ public class SurveyDefinitionUpdateService {
                             // (malformed/dangling records) and always aborts via exception.
                             String keyError = matchSurveyKey(fields, target);
                             if (keyError != null) {
-                                errors.add("Line " + lineNumber + ": " + keyError);
+                                errors.add(Translations.get("definition.line", String.valueOf(lineNumber), keyError));
                                 logAttempt(target, fileName, false, errors, null, fileRevision);
                                 return new UpdateResult(false, errors, null);
                             }
@@ -404,22 +404,22 @@ public class SurveyDefinitionUpdateService {
                             break;
                         }
                         default:
-                            errors.add("Line " + lineNumber + ": Unknown table: " + tableName);
+                            errors.add(Translations.get("definition.line", String.valueOf(lineNumber), Translations.get("definition.unknownTable", tableName)));
                     }
                 } catch (Exception e) {
-                    errors.add("Line " + lineNumber + ": " + e.getMessage());
+                    errors.add(Translations.get("definition.line", String.valueOf(lineNumber), e.getMessage()));
                     logAttempt(target, fileName, false, errors, null, fileRevision);
-                    throw new RuntimeException("Update failed at line " + lineNumber + ": " + e.getMessage(), e);
+                    throw new RuntimeException(Translations.get("definition.updateFailedAtLine", String.valueOf(lineNumber), e.getMessage()), e);
                 }
             }
 
             if (!versionValidated) {
-                errors.add("File does not contain valid format header");
+                errors.add(Translations.get("definition.noHeader"));
                 logAttempt(target, fileName, false, errors, null, fileRevision);
                 return new UpdateResult(false, errors, null);
             }
             if (!surveyLineSeen) {
-                errors.add("File does not contain a surveys record");
+                errors.add(Translations.get("definition.noSurveysRecord"));
                 logAttempt(target, fileName, false, errors, null, fileRevision);
                 return new UpdateResult(false, errors, null);
             }
@@ -430,7 +430,7 @@ public class SurveyDefinitionUpdateService {
             return new UpdateResult(errors.isEmpty(), errors, immutableCounts);
 
         } catch (IOException e) {
-            errors.add("Failed to read file: " + e.getMessage());
+            errors.add(Translations.get("definition.readFailed", e.getMessage()));
             logAttempt(target, fileName, false, errors, null, fileRevision);
             return new UpdateResult(false, errors, null);
         }
@@ -475,11 +475,7 @@ public class SurveyDefinitionUpdateService {
         if (applied == null || !asStored(fileRevision).isBefore(asStored(applied))) {
             return null;
         }
-        return "This file's revision (" + fileRevision + ") predates the newest revision already "
-                + "applied to this survey here (" + applied + "). Applying it would open new "
-                + "versions carrying older content rather than reverting anything. Apply the "
-                + "newer file instead; reverting this deployment to the earlier revision is an "
-                + "operational restore (prior database backup plus the prior image), not an update.";
+        return Translations.get("definition.revisionRegression", String.valueOf(fileRevision), String.valueOf(applied));
     }
 
     /**
@@ -518,24 +514,20 @@ public class SurveyDefinitionUpdateService {
      */
     private String matchSurveyKey(String[] fields, Survey target) {
         if (fields.length < 10) {
-            throw new IllegalArgumentException("surveys requires 10 fields, got " + fields.length);
+            throw new IllegalArgumentException(Translations.get("definition.fieldCount", "surveys", "10", String.valueOf(fields.length)));
         }
         String rawKey = SurveyDefinitionFileFields.nullIfEmpty(fields[1]);
         if (rawKey == null) {
-            return "This file predates stable-key assignment and carries no survey_key to match against — "
-                    + "import it as a new survey (UC-014), or re-export the target survey (UC-013) to see its "
-                    + "current key before retrying.";
+            return Translations.get("definition.noSurveyKeyUpdate");
         }
         UUID fileKey;
         try {
             fileKey = UUID.fromString(rawKey.trim());
         } catch (IllegalArgumentException e) {
-            throw new IllegalArgumentException("Invalid survey_key in file: " + rawKey, e);
+            throw new IllegalArgumentException(Translations.get("definition.invalidValue", "survey_key", rawKey), e);
         }
         if (!fileKey.equals(target.surveyKey)) {
-            return "This file's survey_key (" + fileKey
-                    + ") does not match the selected survey's key (" + target.surveyKey
-                    + "); it does not belong to survey " + target.id + ".";
+            return Translations.get("definition.keyMismatch", String.valueOf(fileKey), String.valueOf(target.surveyKey), String.valueOf(target.id));
         }
         return null;
     }
@@ -615,7 +607,7 @@ public class SurveyDefinitionUpdateService {
      */
     private UpsertOutcome upsertSelectGroup(String[] fields, Integer surveyId) {
         if (fields.length < 10) {
-            throw new IllegalArgumentException("select_groups requires 10 fields, got " + fields.length);
+            throw new IllegalArgumentException(Translations.get("definition.fieldCount", "select_groups", "10", String.valueOf(fields.length)));
         }
         UUID elementKey = requireElementKey(fields[1], "select_groups");
         String name = SurveyDefinitionFileFields.nullIfEmpty(fields[2]);
@@ -668,7 +660,7 @@ public class SurveyDefinitionUpdateService {
      */
     private ChangeType upsertSelectItem(String[] fields, Integer surveyId, Map<Long, Long> selectGroupIdMap) {
         if (fields.length < 11) {
-            throw new IllegalArgumentException("select_items requires 11 fields, got " + fields.length);
+            throw new IllegalArgumentException(Translations.get("definition.fieldCount", "select_items", "11", String.valueOf(fields.length)));
         }
         UUID elementKey = requireElementKey(fields[1], "select_items");
         Long newGroupId = SurveyDefinitionFileFields.resolveRequired(
@@ -720,7 +712,7 @@ public class SurveyDefinitionUpdateService {
      */
     private UpsertOutcome upsertStep(String[] fields, Integer surveyId) {
         if (fields.length < 11) {
-            throw new IllegalArgumentException("steps requires 11 fields, got " + fields.length);
+            throw new IllegalArgumentException(Translations.get("definition.fieldCount", "steps", "11", String.valueOf(fields.length)));
         }
         UUID elementKey = requireElementKey(fields[1], "steps");
         BigDecimal displayOrder = SurveyDefinitionFileFields.parseDecimalOrNull(fields[2]);
@@ -777,7 +769,7 @@ public class SurveyDefinitionUpdateService {
      */
     private UpsertOutcome upsertSection(String[] fields, Integer surveyId) {
         if (fields.length < 11) {
-            throw new IllegalArgumentException("sections requires 11 fields, got " + fields.length);
+            throw new IllegalArgumentException(Translations.get("definition.fieldCount", "sections", "11", String.valueOf(fields.length)));
         }
         UUID elementKey = requireElementKey(fields[1], "sections");
         BigDecimal displayOrder = SurveyDefinitionFileFields.parseDecimalOrNull(fields[2]);
@@ -832,7 +824,7 @@ public class SurveyDefinitionUpdateService {
     private UpsertOutcome upsertStepsSection(String[] fields, Integer surveyId,
             Map<Long, Long> stepIdMap, Map<Long, Long> sectionIdMap) {
         if (fields.length < 12) {
-            throw new IllegalArgumentException("steps_sections requires 12 fields, got " + fields.length);
+            throw new IllegalArgumentException(Translations.get("definition.fieldCount", "steps_sections", "12", String.valueOf(fields.length)));
         }
         UUID elementKey = requireElementKey(fields[1], "steps_sections");
         Long newStepId = SurveyDefinitionFileFields.resolveRequired(
@@ -893,7 +885,7 @@ public class SurveyDefinitionUpdateService {
      */
     private UpsertOutcome upsertQuestion(String[] fields, Integer surveyId, Map<Long, Long> selectGroupIdMap) {
         if (fields.length < 20) {
-            throw new IllegalArgumentException("questions requires 20 fields, got " + fields.length);
+            throw new IllegalArgumentException(Translations.get("definition.fieldCount", "questions", "20", String.valueOf(fields.length)));
         }
         UUID elementKey = requireElementKey(fields[1], "questions");
         Integer typeId = SurveyDefinitionFileFields.parseIntOrNull(fields[2]);
@@ -985,21 +977,19 @@ public class SurveyDefinitionUpdateService {
      */
     private UpsertOutcome upsertTranslation(String[] fields, Integer surveyId) {
         if (fields.length < 13) {
-            throw new IllegalArgumentException("translations requires 13 fields, got " + fields.length);
+            throw new IllegalArgumentException(Translations.get("definition.fieldCount", "translations", "13", String.valueOf(fields.length)));
         }
         UUID translationKey = requireElementKey(fields[1], "translations");
         String elementType = SurveyDefinitionFileFields.nullIfEmpty(fields[2]);
         UUID targetKey = requireElementKey(fields[3], "translations (element_key)");
         String field = SurveyDefinitionFileFields.nullIfEmpty(fields[4]);
         if (!SurveyDefinitionFileFields.isTranslatable(elementType, field)) {
-            throw new IllegalArgumentException("translations row targets a field that carries no "
-                    + "respondent-facing text: " + elementType + "." + field);
+            throw new IllegalArgumentException(Translations.get("definition.translationNotTranslatable", elementType + "." + field));
         }
         String language = SurveyDefinitionFileFields.nullIfEmpty(fields[5]);
         String value = SurveyDefinitionFileFields.nullIfEmpty(fields[6]);
         if (value == null) {
-            throw new IllegalArgumentException("translations row for " + elementType + "." + field
-                    + " has an empty value; a removed translation is a closed effective_to, not a blank");
+            throw new IllegalArgumentException(Translations.get("definition.translationEmpty", elementType + "." + field));
         }
         String sourceHash = SurveyDefinitionFileFields.nullIfEmpty(fields[7]);
 
@@ -1055,7 +1045,7 @@ public class SurveyDefinitionUpdateService {
     private UpsertOutcome upsertSectionsQuestion(String[] fields, Integer surveyId,
             Map<Long, Long> questionIdMap, Map<Long, Long> sectionIdMap) {
         if (fields.length < 10) {
-            throw new IllegalArgumentException("sections_questions requires 10 fields, got " + fields.length);
+            throw new IllegalArgumentException(Translations.get("definition.fieldCount", "sections_questions", "10", String.valueOf(fields.length)));
         }
         UUID elementKey = requireElementKey(fields[1], "sections_questions");
         Long newQuestionId = SurveyDefinitionFileFields.resolveRequired(
@@ -1112,7 +1102,7 @@ public class SurveyDefinitionUpdateService {
     private ChangeType upsertRelationship(String[] fields, Integer surveyId,
             Map<Long, Long> stepIdMap, Map<Long, Long> sectionsQuestionIdMap, Map<Long, Long> stepsSectionIdMap) {
         if (fields.length < 19) {
-            throw new IllegalArgumentException("relationships requires 19 fields, got " + fields.length);
+            throw new IllegalArgumentException(Translations.get("definition.fieldCount", "relationships", "19", String.valueOf(fields.length)));
         }
         UUID elementKey = requireElementKey(fields[1], "relationships");
         Long newUpstreamStepId = SurveyDefinitionFileFields.resolveNullable(
@@ -1194,7 +1184,7 @@ public class SurveyDefinitionUpdateService {
      */
     private ChangeType upsertReport(String[] fields, Integer surveyId) {
         if (fields.length < 6) {
-            throw new IllegalArgumentException("reports requires 6 fields, got " + fields.length);
+            throw new IllegalArgumentException(Translations.get("definition.fieldCount", "reports", "6", String.valueOf(fields.length)));
         }
         UUID elementKey = requireElementKey(fields[1], "reports");
         String name = SurveyDefinitionFileFields.nullIfEmpty(fields[2]);
@@ -1233,7 +1223,7 @@ public class SurveyDefinitionUpdateService {
      */
     private ChangeType upsertPostSurveyAction(String[] fields, Integer surveyId) {
         if (fields.length < 6) {
-            throw new IllegalArgumentException("post_survey_actions requires 6 fields, got " + fields.length);
+            throw new IllegalArgumentException(Translations.get("definition.fieldCount", "post_survey_actions", "6", String.valueOf(fields.length)));
         }
         UUID elementKey = requireElementKey(fields[1], "post_survey_actions");
         String name = SurveyDefinitionFileFields.nullIfEmpty(fields[2]);
@@ -1276,7 +1266,7 @@ public class SurveyDefinitionUpdateService {
      */
     private UpsertOutcome upsertOrReuseDimension(String[] fields) {
         if (fields.length < 3) {
-            throw new IllegalArgumentException("dimensions requires 3 fields, got " + fields.length);
+            throw new IllegalArgumentException(Translations.get("definition.fieldCount", "dimensions", "3", String.valueOf(fields.length)));
         }
         UUID elementKey = requireElementKey(fields[1], "dimensions");
         String name = SurveyDefinitionFileFields.nullIfEmpty(fields[2]);
@@ -1300,7 +1290,7 @@ public class SurveyDefinitionUpdateService {
      */
     private UpsertOutcome upsertOrReuseOntology(String[] fields, Integer surveyId, Map<Long, Long> dimensionIdMap) {
         if (fields.length < 5) {
-            throw new IllegalArgumentException("ontology requires 5 fields, got " + fields.length);
+            throw new IllegalArgumentException(Translations.get("definition.fieldCount", "ontology", "5", String.valueOf(fields.length)));
         }
         UUID elementKey = requireElementKey(fields[1], "ontology");
         String name = SurveyDefinitionFileFields.nullIfEmpty(fields[2]);
@@ -1349,7 +1339,7 @@ public class SurveyDefinitionUpdateService {
             Map<Long, Long> stepsSectionIdMap, Map<Long, Long> questionIdMap,
             Map<Long, Long> sectionsQuestionIdMap, Map<Long, Long> ontologyIdMap) {
         if (fields.length < 7) {
-            throw new IllegalArgumentException("metadata requires 7 fields, got " + fields.length);
+            throw new IllegalArgumentException(Translations.get("definition.fieldCount", "metadata", "7", String.valueOf(fields.length)));
         }
         UUID elementKey = requireElementKey(fields[1], "metadata");
         Long newStepsSectionsId = SurveyDefinitionFileFields.resolveNullable(
@@ -1459,14 +1449,12 @@ public class SurveyDefinitionUpdateService {
     private UUID requireElementKey(String raw, String tableName) {
         String value = SurveyDefinitionFileFields.nullIfEmpty(raw);
         if (value == null) {
-            throw new IllegalStateException(
-                    tableName + " row has no element_key to match against — this file predates "
-                    + "stable-key assignment and cannot be applied via Update.");
+            throw new IllegalStateException(Translations.get("definition.noElementKey", tableName));
         }
         try {
             return UUID.fromString(value.trim());
         } catch (IllegalArgumentException e) {
-            throw new IllegalArgumentException("Invalid element_key in " + tableName + " row: " + value, e);
+            throw new IllegalArgumentException(Translations.get("definition.invalidElementKey", tableName, value), e);
         }
     }
 

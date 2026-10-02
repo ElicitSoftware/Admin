@@ -11,6 +11,7 @@ package com.elicitsoftware.diagnostics;
  * ***LICENSE_END***
  */
 
+import com.elicitsoftware.admin.i18n.Translations;
 import io.quarkus.runtime.Startup;
 import io.quarkus.runtime.configuration.ConfigUtils;
 import jakarta.annotation.PostConstruct;
@@ -33,7 +34,6 @@ import java.util.Optional;
 @ApplicationScoped
 public class BuildInfo {
 
-    static final String UNKNOWN = "unknown";
 
     @ConfigProperty(name = "quarkus.application.name", defaultValue = "elicit-admin")
     String applicationName;
@@ -61,12 +61,12 @@ public class BuildInfo {
 
     /** The Maven project version, or "unknown" when the build did not record it. */
     public String version() {
-        return version.filter(v -> !v.isBlank() && !v.startsWith("@")).orElse(UNKNOWN);
+        return version.filter(v -> !v.isBlank() && !v.startsWith("@")).orElse(Translations.get("system.build.unknown"));
     }
 
     /** The Maven build timestamp, or "unknown" when the build did not record it. */
     public String buildTimestamp() {
-        return buildTimestamp.filter(v -> !v.isBlank() && !v.startsWith("@")).orElse(UNKNOWN);
+        return buildTimestamp.filter(v -> !v.isBlank() && !v.startsWith("@")).orElse(Translations.get("system.build.unknown"));
     }
 
     public List<String> profiles() {
