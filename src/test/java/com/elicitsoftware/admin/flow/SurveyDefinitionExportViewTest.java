@@ -17,6 +17,7 @@ import com.elicitsoftware.test.PostgresTestResource;
 import com.vaadin.browserless.quarkus.QuarkusBrowserlessTest;
 import com.vaadin.flow.component.Component;
 import com.vaadin.flow.component.UI;
+import com.vaadin.flow.component.button.Button;
 import com.vaadin.flow.component.grid.Grid;
 import com.vaadin.flow.component.html.Anchor;
 import com.vaadin.flow.component.html.H3;
@@ -120,6 +121,31 @@ class SurveyDefinitionExportViewTest extends QuarkusBrowserlessTest {
         Anchor anchor = (Anchor) downloadCell;
         assertTrue(anchor.hasClassName(SurveyDefinitionExportView.DOWNLOAD_CLASS));
         assertNotNull(anchor.getHref(), "the anchor should point at a download handler");
+    }
+
+    /** UC-030 step 1 / A1: the schema column names a built survey's schema and offers Rename; an unbuilt one says so and offers nothing. */
+    @Test
+    @TestTransaction
+    @TestSecurity(user = "export.admin", roles = {"elicit_admin"})
+    void reportSchemaColumnShowsTheNameAndRenameOnlyWhenBuilt() {
+        Survey built = newSurveyWithStep("ExportViewBuilt");
+        Survey unbuilt = newSurveyWithStep("ExportViewUnbuilt");
+        QuarkusTransaction.requiringNew().run(() ->
+                em.createNativeQuery("UPDATE survey.surveys SET report_schema = 'report_exportviewbuilt' WHERE id = ?1")
+                        .setParameter(1, built.id).executeUpdate());
+
+        SurveyDefinitionExportView view = attachView();
+        Grid<?> grid = grid(view);
+
+        int builtRow = rowOf(grid, built);
+        assertEquals("report_exportviewbuilt", test(grid).getCellText(builtRow, 5));
+        Component rename = test(grid).getCellComponent(builtRow, 6);
+        assertTrue(rename instanceof Button && rename.isVisible(), "a built survey offers Rename");
+        assertTrue(((Button) rename).hasClassName(SurveyDefinitionExportView.RENAME_CLASS));
+
+        int unbuiltRow = rowOf(grid, unbuilt);
+        assertEquals(UI.getCurrent().getTranslation("surveyDefinitionExportView.notBuilt"), test(grid).getCellText(unbuiltRow, 5));
+        assertFalse(test(grid).getCellComponent(unbuiltRow, 6).isVisible(), "A1: nothing to rename until Survey's first build");
     }
 
     /** UC-013 step 4: the download is a self-contained definition file named after the survey. */

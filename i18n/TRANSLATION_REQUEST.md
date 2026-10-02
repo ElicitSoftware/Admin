@@ -268,6 +268,11 @@ Every row is one key in `translations.properties`. Return a file `translations_<
 | `surveyDefinitionExportView.notRecorded` | Not recorded | Export survey definition · grid cell when no revision is recorded | 20 |  |
 | `surveyDefinitionExportView.btnDownload` | Download | Export survey definition · button | 15 |  |
 | `surveyDefinitionExportView.downloadAriaLabel` | Download the definition of {0} | Export survey definition · download link accessible name | 60 | params: {0} = survey name |
+| `surveyDefinitionExportView.grid.reportSchema` | Reporting schema | Export survey definition · grid column header: the survey's reporting schema name | 25 |  |
+| `surveyDefinitionExportView.grid.rename` | Rename | Export survey definition · grid column header for the rename action | 20 |  |
+| `surveyDefinitionExportView.notBuilt` | Not built yet | Export survey definition · grid cell when Survey has not built the survey's reporting schema yet | 25 |  |
+| `surveyDefinitionExportView.btnRename` | Rename | Export survey definition · button opening the rename dialog | 20 |  |
+| `surveyDefinitionExportView.renameAriaLabel` | Rename the reporting schema of {0} | Export survey definition · rename button accessible name | 70 | params: {0} = survey name |
 | `editMessageTemplatesView.subject` | Subject | Edit message template · field label | 20 |  |
 | `editMessageTemplatesView.body` | Body | Edit message template · field label | 20 |  |
 | `editMessageTemplatesView.mimeType` | MIME type | Edit message template · dropdown label; MIME is a technical term | 20 |  |
@@ -601,6 +606,21 @@ Every row is one key in `translations.properties`. Return a file `translations_<
 | `reportingRebuild.notRebuilt` | Reporting schema not rebuilt: {0} | Apply Survey Definition page · result line: the reporting schema was not rebuilt | 500 | params: {0} = the reason |
 | `reportingRebuild.noAnswer` | no answer from {0} within {1} s | Apply Survey Definition page · reason the reporting schema was not rebuilt; continues reportingRebuild.notRebuilt | 200 | params: {0} = the Survey application address, {1} = seconds waited |
 | `reportingRebuild.interrupted` | interrupted while waiting for {0} | Apply Survey Definition page · reason the reporting schema was not rebuilt; continues reportingRebuild.notRebuilt | 200 | params: {0} = the Survey application address |
+| `reportingRename.title` | Rename the reporting schema of {0} | Rename reporting schema dialog · dialog title | 70 | params: {0} = survey name |
+| `reportingRename.current` | Current name: {0} | Rename reporting schema dialog · line naming the schema as it is now | 60 | params: {0} = the current schema name (a database identifier, untranslated) |
+| `reportingRename.warning` | Queries, saved reports and BI connections outside Elicit that name the current schema stop working after the rename. Nothing inside Elicit is affected: every module reads the name from the survey. | Rename reporting schema dialog · warning shown before the administrator confirms | 300 |  |
+| `reportingRename.nameLabel` | New schema name | Rename reporting schema dialog · text field label | 30 |  |
+| `reportingRename.btnCancel` | Cancel | Rename reporting schema dialog · footer button | 15 |  |
+| `reportingRename.btnRename` | Rename | Rename reporting schema dialog · footer button confirming the rename | 15 |  |
+| `reportingRename.nameRequired` | A schema name is required. | Rename reporting schema dialog · field error when the name is empty | 60 |  |
+| `reportingRename.namePattern` | Use 1 to 63 lower-case letters, digits and underscores, not starting with a digit. | Rename reporting schema dialog · field error when the name is not a lower-case identifier of at most 63 characters | 120 |  |
+| `reportingRename.nameReserved` | The name {0} is reserved. | Rename reporting schema dialog · field error when the name is one PostgreSQL or Elicit reserves | 60 | params: {0} = the typed name |
+| `reportingRename.renamed` | The reporting schema of {0} is now {1}. | Rename reporting schema dialog · success notification | 100 | params: {0} = survey name, {1} = the new schema name |
+| `reportingRename.refusedInvalid` | Survey refused the name: {0} | Rename reporting schema dialog · Survey refused the name (HTTP 400) | 200 | params: {0} = Survey's reason, in English |
+| `reportingRename.refusedTaken` | The name is already in use: {0} | Rename reporting schema dialog · Survey refused the name because another survey or schema has it (HTTP 409) | 200 | params: {0} = Survey's reason, in English |
+| `reportingRename.refusedUnbuilt` | The survey has no reporting schema yet; apply its definition first. | Rename reporting schema dialog · Survey has not built the survey's schema yet (HTTP 409) | 120 |  |
+| `reportingRename.refusedUnknown` | Survey does not know this survey; apply its definition first. | Rename reporting schema dialog · Survey has no survey with this key (HTTP 404) | 120 |  |
+| `reportingRename.failed` | The reporting schema was not renamed: {0} | Rename reporting schema dialog · Survey could not be reached or failed | 200 | params: {0} = the reason |
 | `respondentImport.legacyFormat` | This file is in the {0} format, which carries identifiers specific to the instance that produced it and cannot be imported. Re-export the respondent from the source instance (which now produces {1}). | Respondent import page · why a line of the respondent file was refused; continues definition.line | 420 | params: {0} = the old format marker, {1} = the current format marker, both kept as written |
 | `respondentImport.unsupportedFormat` | Unsupported export format {0} (expected # {1}) | Respondent import page · why a line of the respondent file was refused; continues definition.line | 200 | params: {0} = the marker found, {1} = the marker expected |
 | `respondentImport.beforeRespondent` | Cannot insert {0} before respondent | Respondent import page · why a line of the respondent file was refused; continues definition.line | 140 | params: {0} = record name, kept as written |
@@ -844,6 +864,11 @@ surveyDefinitionExportView.grid.download=Download
 surveyDefinitionExportView.notRecorded=Not recorded
 surveyDefinitionExportView.btnDownload=Download
 surveyDefinitionExportView.downloadAriaLabel=Download the definition of {0}
+surveyDefinitionExportView.grid.reportSchema=Reporting schema
+surveyDefinitionExportView.grid.rename=Rename
+surveyDefinitionExportView.notBuilt=Not built yet
+surveyDefinitionExportView.btnRename=Rename
+surveyDefinitionExportView.renameAriaLabel=Rename the reporting schema of {0}
 editMessageTemplatesView.subject=Subject
 editMessageTemplatesView.body=Body
 editMessageTemplatesView.mimeType=MIME type
@@ -1177,6 +1202,21 @@ reportingRebuild.rebuilt=Reporting schema rebuilt.
 reportingRebuild.notRebuilt=Reporting schema not rebuilt: {0}
 reportingRebuild.noAnswer=no answer from {0} within {1} s
 reportingRebuild.interrupted=interrupted while waiting for {0}
+reportingRename.title=Rename the reporting schema of {0}
+reportingRename.current=Current name: {0}
+reportingRename.warning=Queries, saved reports and BI connections outside Elicit that name the current schema stop working after the rename. Nothing inside Elicit is affected: every module reads the name from the survey.
+reportingRename.nameLabel=New schema name
+reportingRename.btnCancel=Cancel
+reportingRename.btnRename=Rename
+reportingRename.nameRequired=A schema name is required.
+reportingRename.namePattern=Use 1 to 63 lower-case letters, digits and underscores, not starting with a digit.
+reportingRename.nameReserved=The name {0} is reserved.
+reportingRename.renamed=The reporting schema of {0} is now {1}.
+reportingRename.refusedInvalid=Survey refused the name: {0}
+reportingRename.refusedTaken=The name is already in use: {0}
+reportingRename.refusedUnbuilt=The survey has no reporting schema yet; apply its definition first.
+reportingRename.refusedUnknown=Survey does not know this survey; apply its definition first.
+reportingRename.failed=The reporting schema was not renamed: {0}
 respondentImport.legacyFormat=This file is in the {0} format, which carries identifiers specific to the instance that produced it and cannot be imported. Re-export the respondent from the source instance (which now produces {1}).
 respondentImport.unsupportedFormat=Unsupported export format {0} (expected # {1})
 respondentImport.beforeRespondent=Cannot insert {0} before respondent

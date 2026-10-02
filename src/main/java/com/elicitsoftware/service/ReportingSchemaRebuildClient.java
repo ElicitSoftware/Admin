@@ -26,15 +26,18 @@ import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.net.http.HttpTimeoutException;
 import java.time.Duration;
+import java.util.UUID;
 
 /**
- * Asks the Survey application to rebuild its reporting star schema after a survey definition
- * has been installed or updated here (UC-014, UC-017, UC-018).
+ * Asks the Survey application to rebuild one survey's reporting star schema after that survey's
+ * definition has been installed or updated here (UC-014, UC-017, UC-018).
  * <p>
- * Survey builds {@code surveyreport} -- dimension rows and tables, fact columns, views -- from
- * the survey definitions present when it starts, and nothing else rebuilds it. Without this
- * call a survey applied through Admin has no dimensions until Survey is restarted. Survey's
- * {@code POST /api/etl/build} (its UC-008) runs that build again on request, idempotently.
+ * Every survey has a reporting schema of its own (Survey UC-008 BR-006), which Survey builds --
+ * schema, dimension rows and tables, fact columns, views -- from the definition present when it
+ * starts, and nothing else rebuilds it. Without this call a survey applied through Admin has no
+ * schema until Survey is restarted. Survey's {@code POST /api/etl/build?survey=<key>} (its
+ * UC-008) runs that build again on request, idempotently, for the one survey named; the request
+ * names the survey so no other survey's schema is touched.
  * <p>
  * The outcome never fails the apply: the definition is already committed by the time this
  * runs, and a reporting schema that is behind is recoverable (repeat the call, or restart
@@ -113,24 +116,40 @@ public class ReportingSchemaRebuildClient {
 
     /** The address the call goes to, for diagnostics. */
     public String endpoint() {
+        return baseUrl(surveyUrl) + PATH;
+    }
+
+    /** {@code elicit.survey.url} without a trailing slash, the base every Survey endpoint hangs off. */
+    static String baseUrl(String surveyUrl) {
         String base = surveyUrl == null ? "" : surveyUrl.trim();
         while (base.endsWith("/")) {
             base = base.substring(0, base.length() - 1);
         }
-        return base + PATH;
+        return base;
     }
 
     /**
-     * Calls Survey's rebuild endpoint and reports what happened. Never throws.
+     * The address a rebuild of one survey goes to: the endpoint with the survey named.
      *
+     * @param surveyKey the survey's portable key, or null to ask Survey to build every survey
+     */
+    public String endpoint(UUID surveyKey) {
+        return surveyKey == null ? endpoint() : endpoint() + "?survey=" + surveyKey;
+    }
+
+    /**
+     * Calls Survey's rebuild endpoint for one survey and reports what happened. Never throws.
+     *
+     * @param surveyKey the portable key of the survey just applied; null asks Survey to build
+     *                  every survey, which only an apply that could not learn the key does
      * @return the outcome; {@link Status#SKIPPED} when the call is disabled by configuration
      */
-    public Outcome rebuild() {
+    public Outcome rebuild(UUID surveyKey) {
         if (!enabled) {
             Log.debug("Reporting schema rebuild skipped: elicit.survey.etl-build.enabled=false");
             return new Outcome(Status.SKIPPED, "");
         }
-        String endpoint = endpoint();
+        String endpoint = endpoint(surveyKey);
         try {
             HttpRequest request = HttpRequest.newBuilder(URI.create(endpoint))
                     .POST(HttpRequest.BodyPublishers.noBody())
@@ -183,7 +202,7 @@ public class ReportingSchemaRebuildClient {
         }
     }
 
-    private static String rootMessage(Throwable e) {
+    static String rootMessage(Throwable e) {
         Throwable root = e;
         while (root.getCause() != null && root.getCause() != root) {
             root = root.getCause();

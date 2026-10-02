@@ -49,6 +49,9 @@ rectangle "Elicit Admin" {
     ' --- Documentation ---
     usecase "UC-029\nConsult the Administrator's Manual" as UC029
 
+    ' --- Reporting ---
+    usecase "UC-030\nRename a Survey's Reporting Schema" as UC030
+
     ' --- Shared subflow ---
     usecase "UC-015\nGenerate Survey Access Code" as UC015
 }
@@ -83,6 +86,7 @@ admin --> UC013
 admin --> UC014
 admin --> UC017
 admin --> UC018
+admin --> UC030
 admin --> UC019
 admin --> UC020
 admin --> UC021
@@ -102,9 +106,10 @@ importer --> UC010
 oidc --> UC001
 scheduler --> UC004
 reportsvc --> UC005
-UC014 --> surveyapp : rebuild reporting schema\n(POST /api/etl/build)
-UC017 --> surveyapp : rebuild reporting schema
-UC018 --> surveyapp : rebuild reporting schema
+UC014 --> surveyapp : rebuild the survey's reporting schema\n(POST /api/etl/build?survey=<key>)
+UC017 --> surveyapp : rebuild the survey's reporting schema
+UC018 --> surveyapp : rebuild the survey's reporting schema
+UC030 --> surveyapp : rename the survey's reporting schema\n(POST /api/etl/schema/<key>/rename)
 UC025 --> surveyapp : probes reachability
 
 ' Shared subflows

@@ -123,6 +123,7 @@ public class SurveyDefinitionUpdateService {
         private final boolean success;
         private final List<String> errors;
         private final Map<String, TableUpdateCounts> counts;
+        private final UUID surveyKey;
 
         /**
          * Creates a new UpdateResult.
@@ -132,6 +133,16 @@ public class SurveyDefinitionUpdateService {
          * @param counts breakdown of created/versioned/unchanged records by table
          */
         public UpdateResult(boolean success, List<String> errors, Map<String, TableUpdateCounts> counts) {
+            this(success, errors, counts, null);
+        }
+
+        /**
+         * Creates a new UpdateResult naming the survey it updated.
+         *
+         * @param surveyKey the updated survey's portable key
+         */
+        public UpdateResult(boolean success, List<String> errors, Map<String, TableUpdateCounts> counts, UUID surveyKey) {
+            this.surveyKey = surveyKey;
             this.success = success;
             this.errors = errors;
             this.counts = counts;
@@ -145,6 +156,13 @@ public class SurveyDefinitionUpdateService {
 
         /** @return breakdown of created/versioned/unchanged records by table */
         public Map<String, TableUpdateCounts> getCounts() { return counts; }
+
+        /**
+         * The portable key of the survey this update applied to, which the reporting schema
+         * rebuild names (UC-018 step 7), or null when the target was not found.
+         * @return the survey key or null
+         */
+        public UUID getSurveyKey() { return surveyKey; }
     }
 
     /** Accumulates created/versioned/unchanged counts for one table while the file is parsed. */
@@ -427,7 +445,7 @@ public class SurveyDefinitionUpdateService {
             Map<String, TableUpdateCounts> immutableCounts = new LinkedHashMap<>();
             counts.forEach((table, c) -> immutableCounts.put(table, c.toImmutable()));
             logAttempt(target, fileName, errors.isEmpty(), errors, immutableCounts, fileRevision);
-            return new UpdateResult(errors.isEmpty(), errors, immutableCounts);
+            return new UpdateResult(errors.isEmpty(), errors, immutableCounts, target.surveyKey);
 
         } catch (IOException e) {
             errors.add(Translations.get("definition.readFailed", e.getMessage()));

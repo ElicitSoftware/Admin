@@ -21,7 +21,7 @@
 4. If none exists, the system installs the file as a new survey (UC-014).
 5. If one exists, the system applies the file to it in place (UC-017), including that use case's revision-regression check, which routing neither relaxes nor overrides.
 6. The system reports which of the two it performed, along with that use case's own result.
-7. The system asks the Survey application to rebuild its reporting schema (Survey UC-008, `POST /api/etl/build`), so the survey just installed or updated has its dimensions, fact columns and views without a restart of Survey, and adds the outcome to its report: "Reporting schema rebuilt." or "Reporting schema not rebuilt: reason".
+7. The system asks the Survey application to rebuild the reporting schema of the survey just installed or updated, naming it by its key (Survey UC-008, `POST /api/etl/build?survey=<survey_key>`), so that survey has its own schema, dimensions, fact columns and views without a restart of Survey and no other survey's schema is touched, and adds the outcome to its report: "Reporting schema rebuilt." or "Reporting schema not rebuilt: reason".
 
 ## Alternative Flows
 
@@ -98,7 +98,7 @@ A file with no stable survey key cannot be matched against what is installed. Th
 
 ### BR-107: The reporting schema is rebuilt after every successful apply
 
-Survey builds its reporting star schema from the survey definitions present when it starts and nothing else rebuilds it, so a survey applied afterwards has no dimensions until Survey restarts. After a successful install or update -- through this use case, or through UC-014 or UC-017 directly -- the system asks Survey to rebuild, once, after the apply's transaction has committed so Survey sees the new rows. The call goes to `elicit.survey.url` (default `http://survey:8080`) and can be switched off with `elicit.survey.etl-build.enabled=false` for a deployment that restarts Survey after every apply or runs it without reporting.
+Survey builds each survey's reporting star schema from the survey definitions present when it starts and nothing else rebuilds it, so a survey applied afterwards has no schema until Survey restarts. After a successful install or update -- through this use case, or through UC-014 or UC-017 directly -- the system asks Survey to rebuild that one survey, by its key, once, after the apply's transaction has committed so Survey sees the new rows. Every survey has a reporting schema of its own (Survey UC-008 BR-006), so the request names the survey and leaves the others alone; the first build of a survey also assigns its schema name, which UC-030 shows and can change. The call goes to `elicit.survey.url` (default `http://survey:8080`) and can be switched off with `elicit.survey.etl-build.enabled=false` for a deployment that restarts Survey after every apply or runs it without reporting.
 
 ### BR-108: A failed rebuild does not undo the apply
 

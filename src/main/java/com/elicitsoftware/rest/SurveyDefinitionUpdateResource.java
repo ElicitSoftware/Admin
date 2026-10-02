@@ -99,7 +99,7 @@ public class SurveyDefinitionUpdateResource {
             if (result.isSuccess()) {
                 // The update has committed (updateFromFile is transactional and has returned),
                 // so Survey can see the new versions; the rebuild's outcome never fails the update.
-                response.setReporting(reportingSchemaRebuildClient.rebuild().summaryLine());
+                response.setReporting(reportingSchemaRebuildClient.rebuild(result.getSurveyKey()).summaryLine());
                 return Response.ok(response).build();
             } else {
                 boolean notFound = result.getErrors().stream().anyMatch(e -> e.contains("Target survey not found"));

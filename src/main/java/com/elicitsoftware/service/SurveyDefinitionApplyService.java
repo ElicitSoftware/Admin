@@ -152,7 +152,7 @@ public class SurveyDefinitionApplyService {
                             ? Translations.get("definition.installed")
                             : String.join("; ", result.getErrors()),
                     result,
-                    result.isSuccess() ? rebuildReportingSchema() : null);
+                    result.isSuccess() ? rebuildReportingSchema(result.getSurveyKey()) : null);
         }
 
         SurveyDefinitionUpdateService.UpdateResult result = updateService.updateFromFile(
@@ -162,17 +162,19 @@ public class SurveyDefinitionApplyService {
                         ? Translations.get("definition.applied", String.valueOf(existing.id))
                         : String.join("; ", result.getErrors()),
                 result,
-                result.isSuccess() ? rebuildReportingSchema() : null);
+                result.isSuccess() ? rebuildReportingSchema(result.getSurveyKey()) : null);
     }
 
     /**
-     * Asks Survey to rebuild its reporting schema now that the definition is committed. Runs
-     * outside the import/update transaction (this method is not transactional and the delegate
-     * has returned), so Survey sees the committed rows. The line comes back for the result and
-     * the apply stands whatever it says.
+     * Asks Survey to rebuild the applied survey's reporting schema now that the definition is
+     * committed. Runs outside the import/update transaction (this method is not transactional
+     * and the delegate has returned), so Survey sees the committed rows. The line comes back
+     * for the result and the apply stands whatever it says.
+     *
+     * @param surveyKey the survey the apply installed or updated
      */
-    private String rebuildReportingSchema() {
-        return reportingSchemaRebuildClient.rebuild().summaryLine();
+    private String rebuildReportingSchema(UUID surveyKey) {
+        return reportingSchemaRebuildClient.rebuild(surveyKey).summaryLine();
     }
 
     /**

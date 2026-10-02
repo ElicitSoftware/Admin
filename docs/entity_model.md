@@ -106,6 +106,7 @@ A person registered to take a survey, associated with a department and linked to
 | postSurveyURL     | URL to redirect to after completion            | String    |                  | Optional              |
 | publishedBy       | Who last published/updated the survey shell   | String    |                  | Optional              |
 | publishedComment  | Comment recorded with the last publish/update  | String    |                  | Optional              |
+| reportSchema      | Name of this survey's own reporting schema at this site (Survey UC-008 BR-006); assigned by Survey's first build, changed by UC-030, null until built. Read-only here: Survey's ETL is the only writer. Site-local, never carried in a definition file | String    | 63               | Optional, Unique |
 
 ### MESSAGE
 

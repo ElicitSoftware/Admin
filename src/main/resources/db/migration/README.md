@@ -24,5 +24,10 @@ on existing databases instead of failing validation:
   a fresh database could not create the view otherwise. Existing databases get the
   view's output column renamed by `V0.0.17` instead.
 
+- `V0.0.2` - its grant on `surveyreport.fact_respondents` is conditional on the table.
+  Survey's V021 stops creating that table (every survey's star now lives in a schema of
+  its own, with `fact_respondents` as a view), so a fresh database could not get past the
+  grant otherwise. `V0.0.20` revokes it where the table still exists.
+
 Prefer a new migration whenever one will do. Edit an applied migration only when a
 fresh database cannot get past it.

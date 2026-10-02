@@ -122,6 +122,7 @@ public class SurveyDefinitionImportService {
         private final int recordsImported;
         private final List<String> errors;
         private final Map<String, Integer> counts;
+        private final UUID surveyKey;
 
         /**
          * Creates a new ImportResult.
@@ -132,11 +133,28 @@ public class SurveyDefinitionImportService {
          * @param counts breakdown of records by table
          */
         public ImportResult(boolean success, int recordsImported, List<String> errors, Map<String, Integer> counts) {
+            this(success, recordsImported, errors, counts, null);
+        }
+
+        /**
+         * Creates a new ImportResult naming the survey it installed.
+         *
+         * @param surveyKey the installed survey's portable key, or null when the file never got far enough to have one
+         */
+        public ImportResult(boolean success, int recordsImported, List<String> errors, Map<String, Integer> counts, UUID surveyKey) {
             this.success = success;
             this.recordsImported = recordsImported;
             this.errors = errors;
             this.counts = counts;
+            this.surveyKey = surveyKey;
         }
+
+        /**
+         * The portable key of the survey this import installed, which the reporting schema
+         * rebuild names (UC-018 step 7), or null when the import did not get that far.
+         * @return the survey key or null
+         */
+        public UUID getSurveyKey() { return surveyKey; }
 
         /**
          * Indicates whether the import succeeded.
@@ -439,7 +457,8 @@ public class SurveyDefinitionImportService {
 
             int total = counts.values().stream().mapToInt(Integer::intValue).sum();
             logAttempt(surveyInsert[0], fileName, errors.isEmpty(), errors, counts, fileRevision[0]);
-            return new ImportResult(errors.isEmpty(), total, errors, counts);
+            return new ImportResult(errors.isEmpty(), total, errors, counts,
+                    surveyInsert[0] == null ? null : surveyInsert[0].surveyKey());
 
         } catch (IOException e) {
             errors.add(Translations.get("definition.readFailed", e.getMessage()));
