@@ -1,0 +1,21 @@
+/*-
+ * ***LICENSE_START***
+ * Elicit Survey
+ * %%
+ * Copyright (C) 2025 - 2026 The Regents of the University of Michigan - Rogel Cancer Center
+ * %%
+ * PolyForm Noncommercial License 1.0.0
+ * <https://polyformproject.org/licenses/noncommercial/1.0.0>
+ * ***LICENSE_END***
+ */
+
+/* Export Survey Definition (UC-013, UC-030): seven columns, one of them a 36-character survey
+   key. At the width of a laptop window (1440 px) the key on one line pushed the Download,
+   Reporting schema and Rename columns off the right edge behind a sideways scroll (UC-030
+   BR-119). The key column has a fixed width in the view and its cells wrap here; the grid grows
+   the row to fit. The part name is SurveyDefinitionExportView.KEY_CELL_PART. */
+#survey-export-grid::part(survey-key) {
+    white-space: normal;
+    word-break: break-all;
+    line-height: 1.3;
+}
