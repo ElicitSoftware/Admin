@@ -517,12 +517,46 @@ a database restore, not an upload.
 here. The file carries the survey's structure only — never respondent data — and can be applied
 to another deployment or opened in the Author tool.
 
-\screenshot{20-export-survey-definition.png}{Every installed survey, with its key and the
-revision this deployment is running. \ui{Download} takes the definition as it stands now.}
+\screenshot{20-export-survey-definition.png}{Every installed survey, with its key, the
+revision this deployment is running and the name of its reporting schema. \ui{Download} takes
+the definition as it stands now; \ui{Rename} is described below.}
 
 Each download is a fresh revision of the definition as it stands at that moment. To roll one
 revision out across several sites, download it once and distribute \emph{that} file, rather than
 exporting again at each site.
+
+\subsection{Renaming a survey's reporting schema}
+
+Every installed survey has a reporting schema of its own in the database, where its answers are
+laid out for analysts and reporting tools. The schema is named after the survey when the survey
+is first applied --- \texttt{report\_family\_history\_survey} for the Family History Survey ---
+and the \ui{Export Survey Definition} list shows the name beside each survey. A site that wants a
+shorter name, or one that follows its own convention, renames it here. Nothing in the schema is
+lost or rebuilt: the tables, views and every row keep going under the new name, and the console,
+Survey and the report services pick the new name up at once.
+
+\begin{enumerate}
+  \item Open \ui{Admin} $>$ \ui{Export Survey Definition}.
+  \item Choose \ui{Rename} on the survey's row.
+  \item Type the new name. It must be 1 to 63 lower-case letters, digits and underscores, not
+    starting with a digit, and the field says so while the name is not acceptable.
+  \item Choose \ui{Rename} in the dialog. The list shows the new name.
+\end{enumerate}
+
+\screenshot{30-rename-reporting-schema.png}{The rename dialog: the survey, its current schema
+name, the caution about what is outside the console, and the new name. \ui{Rename} stays
+until the name is acceptable.}
+
+\begin{elicitcaution}
+Queries, saved reports and BI connections \emph{outside} Elicit that name the current schema
+stop working after the rename; whoever maintains them needs the new name. Inside Elicit nothing
+is affected. A name another survey already uses is refused, and so is a name the database
+reserves.
+\end{elicitcaution}
+
+A survey whose row says \emph{Not built yet} has no reporting schema: its definition was
+installed but the reporting tables have not been built. Applying the definition again builds
+them and names the schema, after which \ui{Rename} is offered.
 
 \subsection{Before any survey is installed}
 

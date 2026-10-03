@@ -63,7 +63,7 @@ running console; the numbering is the capture order.
 | 8 | Finding subjects and watching progress | `13-search-filters`, `14-search-results` | UC-002 |
 | 9 | Reports | `15-report-download` | UC-005 |
 | 10 | Moving a respondent between deployments | `16-respondent-export`, `17-respondent-import` | UC-011, UC-012 |
-| 11 | Installing and updating a survey | `18-apply-survey-definition`, `19-apply-result`, `20-export-survey-definition`, `21-missing-survey-notice` | UC-018 (with UC-014/UC-017 inside it), the reporting rebuild (FR-027), UC-013, UC-019 |
+| 11 | Installing and updating a survey | `18-apply-survey-definition`, `19-apply-result`, `20-export-survey-definition`, `21-missing-survey-notice`, `30-rename-reporting-schema` | UC-018 (with UC-014/UC-017 inside it), the reporting rebuild (FR-027), UC-013, UC-019, UC-030 (renaming a survey's reporting schema; numbered last because it was added after the first 29) |
 | 12 | The System screens | `22-system-overview`, `23-system-database`, `24-system-branding`, `25-system-email`, `26-system-connections`, `27-system-oidc`, `28-default-account-warning` | UC-020 – UC-025, UC-021. Nothing here edits configuration (C-012) |
 | 13 | Reading the console in your language | `29-language-selector` | UC-026 — the selector only; making a language available is the installation manual's (BR-007) |
 | 14 | Where to look next | — | the installation manual, the author's manual, the System overview |
