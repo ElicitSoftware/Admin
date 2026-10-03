@@ -65,6 +65,15 @@ public class SurveyDefinitionExportView extends VerticalLayout {
     /** Element id of the notice shown instead of the grid when no survey is installed. */
     static final String EMPTY_NOTICE_ID = "survey-export-empty";
 
+    /**
+     * The survey key column's width: the 36-character UUID wraps to two lines of 18 in it
+     * (UC-030 BR-119). At 13em the row was still some 35 px wider than a 1440 px window.
+     */
+    static final String KEY_COLUMN_WIDTH = "10em";
+
+    /** The part name of the key column's cells, styled to wrap by {@code components/survey-export-view.css}. */
+    static final String KEY_CELL_PART = "survey-key";
+
     /** CSS class carried by every row's download anchor, for tests and page objects. */
     static final String DOWNLOAD_CLASS = "survey-export-download";
 
@@ -129,8 +138,11 @@ public class SurveyDefinitionExportView extends VerticalLayout {
         grid.setAllRowsVisible(true);
         grid.addColumn(survey -> survey.name).setHeader(getTranslation("surveyDefinitionExportView.grid.name")).setAutoWidth(true).setFlexGrow(1);
         grid.addColumn(survey -> survey.title).setHeader(getTranslation("surveyDefinitionExportView.grid.title")).setAutoWidth(true).setFlexGrow(2);
+        // UC-030 BR-119: the 36-character key wraps inside a fixed width (components/survey-export-view.css
+        // styles the part) so the Download, Reporting schema and Rename columns fit a 1440 px window
+        // without a sideways scroll.
         grid.addColumn(survey -> String.valueOf(survey.surveyKey)).setHeader(getTranslation("surveyDefinitionExportView.grid.surveyKey"))
-                .setAutoWidth(true).setFlexGrow(0);
+                .setWidth(KEY_COLUMN_WIDTH).setFlexGrow(0).setPartNameGenerator(survey -> KEY_CELL_PART);
         grid.addColumn(this::installedRevisionOf).setHeader(getTranslation("surveyDefinitionExportView.grid.installedRevision"))
                 .setAutoWidth(true).setFlexGrow(0);
         grid.addComponentColumn(this::downloadAnchor).setHeader(getTranslation("surveyDefinitionExportView.grid.download"))

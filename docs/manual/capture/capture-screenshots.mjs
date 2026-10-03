@@ -636,35 +636,27 @@ async function captureTransfers() {
   await goto('/respondent-import');
   await shot('17-respondent-import');
 
-  // The export grid carries seven columns (the survey key alone is 36 characters) and scrolls
-  // sideways at the walk's 1440 px; the two export figures are shot wider so the Reporting
-  // schema column and the Rename action the chapter describes are in the picture.
-  await page.setViewportSize({ width: 1800, height: 900 });
-  try {
-    await goto('/survey-export');
-    await shot('20-export-survey-definition');
+  await goto('/survey-export');
+  await shot('20-export-survey-definition');
 
-    // UC-030: the Rename dialog over the survey's row, with a shorter name typed in so the
-    // figure shows the field accepting one. Cancelled afterwards: the figure must not rename
-    // the schema the rest of the walk names.
-    const rename = page.locator('#survey-export-grid vaadin-button')
-      .filter({ hasText: 'Rename' }).first();
-    if (!(await rename.count())) {
-      skip('30-rename-reporting-schema', 'the survey has no reporting schema yet, so Rename is not offered');
-      return;
-    }
-    await rename.click();
-    const dialog = page.locator('vaadin-dialog[opened]');
-    await dialog.waitFor({ state: 'attached' });
-    await pause(900);
-    await page.locator('#rename-reporting-schema-name input').fill('report_household');
-    await page.keyboard.press('Tab');
-    await shot('30-rename-reporting-schema');
-    await page.locator('#rename-reporting-schema-cancel').click();
-    await pause(900);
-  } finally {
-    await page.setViewportSize({ width: 1440, height: 900 });
+  // UC-030: the Rename dialog over the survey's row, with a shorter name typed in so the
+  // figure shows the field accepting one. Cancelled afterwards: the figure must not rename
+  // the schema the rest of the walk names.
+  const rename = page.locator('#survey-export-grid vaadin-button')
+    .filter({ hasText: 'Rename' }).first();
+  if (!(await rename.count())) {
+    skip('30-rename-reporting-schema', 'the survey has no reporting schema yet, so Rename is not offered');
+    return;
   }
+  await rename.click();
+  const dialog = page.locator('vaadin-dialog[opened]');
+  await dialog.waitFor({ state: 'attached' });
+  await pause(900);
+  await page.locator('#rename-reporting-schema-name input').fill('report_household');
+  await page.keyboard.press('Tab');
+  await shot('30-rename-reporting-schema');
+  await page.locator('#rename-reporting-schema-cancel').click();
+  await pause(900);
 }
 
 /** UC-020 to UC-025: the System screens. Nothing here edits configuration (C-012). */

@@ -148,6 +148,24 @@ class SurveyDefinitionExportViewTest extends QuarkusBrowserlessTest {
         assertFalse(test(grid).getCellComponent(unbuiltRow, 6).isVisible(), "A1: nothing to rename until Survey's first build");
     }
 
+    /** UC-030 BR-119: the key column is fixed-width and its cells carry the part the stylesheet wraps. */
+    @Test
+    @TestTransaction
+    @TestSecurity(user = "export.admin", roles = {"elicit_admin"})
+    void surveyKeyColumnIsFixedWidthAndWraps() {
+        Survey survey = newSurveyWithStep("ExportViewKeyWidth");
+
+        SurveyDefinitionExportView view = attachView();
+        Grid<?> grid = grid(view);
+
+        @SuppressWarnings("unchecked")
+        Grid.Column<Survey> key = (Grid.Column<Survey>) grid.getColumns().get(2);
+        assertEquals(SurveyDefinitionExportView.KEY_COLUMN_WIDTH, key.getWidth());
+        assertFalse(key.isAutoWidth(), "an auto-width key column is as wide as the UUID and pushes Rename off a laptop window");
+        assertEquals(0, key.getFlexGrow());
+        assertEquals(SurveyDefinitionExportView.KEY_CELL_PART, key.getPartNameGenerator().apply(survey));
+    }
+
     /** UC-013 step 4: the download is a self-contained definition file named after the survey. */
     @Test
     @TestTransaction

@@ -88,6 +88,10 @@ The name must match `^[a-z_][a-z0-9_]{0,62}$` and may not be `survey`, `surveyre
 
 The console never touches a reporting schema itself: it connects as `surveyadmin_user`, which owns none of them, and the schema's name lives on the survey row that Survey's build maintains. The console shows the name and relays the request; Survey validates, renames and records in one transaction.
 
+### BR-119: The list fits a laptop window
+
+The Export Survey Definition list is seven columns wide, and the survey key alone is 36 characters. At a 1440 px window the Reporting schema column and the Rename action, the two this use case adds at the end of the row, must be in view without a sideways scroll: the key column has a fixed width and its value wraps, rather than the row growing past the window.
+
 ### BR-118: The warning is about the outside
 
 Inside Elicit a rename takes effect everywhere at once, because nothing hard-codes a survey schema's name. What breaks is a query, a saved report or a BI connection outside Elicit that names the old schema. The dialog says so before the administrator confirms, and the name is shown in the list afterwards so it can be passed on.
