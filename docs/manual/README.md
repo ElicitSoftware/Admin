@@ -84,7 +84,7 @@ silently undated.
 ## Regenerating the screenshots
 
 The figures are committed. Regenerate them only when the screens they show
-change. All 29 come from one run against a **greenfield** stack:
+change. All 30 come from one run against a **greenfield** stack:
 
 ```bash
 cd …/Elicit && ./resetDatabase.sh V3 && docker compose up -d
