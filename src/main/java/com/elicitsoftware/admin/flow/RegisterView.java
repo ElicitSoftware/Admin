@@ -397,7 +397,7 @@ public class RegisterView extends HorizontalLayout implements HasDynamicTitle, B
         // Create CSV upload button using modern UploadHandler API
         Upload csvUpload = new Upload();
         csvUpload.setId("register-csv-upload");
-        csvUpload.setAcceptedFileTypes(".csv");
+        csvUpload.setAcceptedFileExtensions(".csv");
         csvUpload.setMaxFiles(1);
         csvUpload.setMaxFileSize(5 * 1024 * 1024); // 5MB limit
         csvUpload.setI18n(uploadI18n());

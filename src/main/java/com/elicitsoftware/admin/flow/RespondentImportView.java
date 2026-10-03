@@ -50,7 +50,7 @@ public class RespondentImportView extends VerticalLayout {
 
         Upload upload = new Upload();
         upload.setId("respondent-import-upload");
-        upload.setAcceptedFileTypes(".elicit");
+        upload.setAcceptedFileExtensions(".elicit");
         upload.setMaxFiles(1);
         upload.setMaxFileSize(5 * 1024 * 1024); // 5MB limit
 

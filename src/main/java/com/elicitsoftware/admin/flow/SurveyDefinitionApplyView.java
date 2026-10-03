@@ -61,7 +61,7 @@ public class SurveyDefinitionApplyView extends VerticalLayout {
 
         Upload upload = new Upload();
         upload.setId("survey-apply-upload");
-        upload.setAcceptedFileTypes(".elicit");
+        upload.setAcceptedFileExtensions(".elicit");
         upload.setMaxFiles(1);
         upload.setMaxFileSize(SurveyDefinitionApplyService.MAX_FILE_BYTES);
 
