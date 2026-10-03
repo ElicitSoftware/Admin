@@ -27,6 +27,15 @@ GRANT DELETE, INSERT, SELECT, UPDATE ON survey.post_survey_actions TO ${surveyad
 GRANT DELETE, INSERT, SELECT, UPDATE ON survey.reports TO ${surveyadmin_user};
 GRANT ALL ON SEQUENCE survey.respondents_seq TO ${surveyadmin_user};
 GRANT DELETE, INSERT, SELECT, UPDATE ON survey.respondents TO ${surveyadmin_user};
-GRANT INSERT, SELECT, UPDATE ON surveyreport.fact_respondents TO ${surveyadmin_user};
+-- surveyreport.fact_respondents was the site-wide fact table Survey's V002 used to create. Since
+-- Survey V021 every survey's star lives in a schema of its own and fact_respondents is a view
+-- there, so a fresh database never has this table; the grant (never used by this console) is
+-- kept only for a database that still has it. Edited in place for that reason -- see README.md.
+DO $$
+BEGIN
+    IF to_regclass('surveyreport.fact_respondents') IS NOT NULL THEN
+        GRANT INSERT, SELECT, UPDATE ON surveyreport.fact_respondents TO ${surveyadmin_user};
+    END IF;
+END $$;
 GRANT SELECT ON survey.status TO ${surveyadmin_user};
 GRANT SELECT ON survey.status TO ${survey_user};

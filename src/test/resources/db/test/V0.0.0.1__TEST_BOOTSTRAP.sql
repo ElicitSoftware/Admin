@@ -68,6 +68,9 @@ CREATE TABLE IF NOT EXISTS survey.surveys
     description         character varying(2000),
     initial_display_key character varying(255),
     post_survey_url     character varying(2000),
+    -- Survey V021: the survey's own reporting schema at this site, assigned by Survey's first
+    -- build and shown/renamed by UC-030. Read-only for this console.
+    report_schema       character varying(63),
     -- Content language, Survey V019: the language the survey's content is written in, and
     -- the comma-separated set it is published in. Both are carried by the definition file
     -- and updated in place by the update service.
@@ -669,9 +672,11 @@ CREATE INDEX IF NOT EXISTS translations_key_current_idx
     WHERE effective_to = '9999-12-31 23:59:59+00';
 
 -- -----------------------------------------------------------------------------
--- 8. surveyreport.fact_respondents — GRANT target only (V0.0.6/V0.0.8).
+-- 8. surveyreport holds no fact table any more: every survey's star lives in a
+--    schema of its own (Survey V021, UC-008 BR-006), and V0.0.20's revoke of the
+--    old fact_respondents grant is conditional on the table, so nothing is needed
+--    here for it.
 -- -----------------------------------------------------------------------------
-CREATE TABLE IF NOT EXISTS surveyreport.fact_respondents (respondent_id bigint);
 
 -- -----------------------------------------------------------------------------
 -- 9. Let the application roles use the schemas (postgres owns every object here,

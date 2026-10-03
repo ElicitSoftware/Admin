@@ -12,6 +12,7 @@ package com.elicitsoftware.admin.flow;
  */
 
 import com.elicitsoftware.model.Survey;
+import com.elicitsoftware.service.ReportingSchemaRenameClient;
 import com.elicitsoftware.service.SurveyDefinitionExportService;
 import com.elicitsoftware.service.SurveyLogService;
 import com.vaadin.flow.component.button.Button;
@@ -45,7 +46,9 @@ import java.util.List;
  * <p>
  * The view lists every survey installed in this deployment with its stable key and the revision
  * last applied here, so an administrator can see which instrument they are about to export
- * before clicking Download. Each download is produced on demand by
+ * before clicking Download. It is also where each survey's reporting schema is named and can be
+ * renamed (UC-030): the schema column shows {@code survey.surveys.report_schema}, or that the
+ * survey is not built yet, and the Rename action opens {@link RenameReportingSchemaDialog}. Each download is produced on demand by
  * {@link SurveyDefinitionExportService}, so it is always the definition as it stands at the moment
  * of the click, stamped with a fresh revision (BR-072).
  * <p>
@@ -65,6 +68,9 @@ public class SurveyDefinitionExportView extends VerticalLayout {
     /** CSS class carried by every row's download anchor, for tests and page objects. */
     static final String DOWNLOAD_CLASS = "survey-export-download";
 
+    /** CSS class carried by every row's Rename button (UC-030), for tests and page objects. */
+    static final String RENAME_CLASS = "survey-export-rename";
+
     /** The extension of a portable survey definition file, shared with the Author tool. */
     static final String FILE_EXTENSION = ".elicit";
 
@@ -78,6 +84,9 @@ public class SurveyDefinitionExportView extends VerticalLayout {
 
     @Inject
     SurveyLogService surveyLogService;
+
+    @Inject
+    ReportingSchemaRenameClient renameClient;
 
     /**
      * Default constructor for Vaadin route instantiation; the content is built in
@@ -126,7 +135,38 @@ public class SurveyDefinitionExportView extends VerticalLayout {
                 .setAutoWidth(true).setFlexGrow(0);
         grid.addComponentColumn(this::downloadAnchor).setHeader(getTranslation("surveyDefinitionExportView.grid.download"))
                 .setAutoWidth(true).setFlexGrow(0);
+        grid.addColumn(this::reportSchemaOf).setHeader(getTranslation("surveyDefinitionExportView.grid.reportSchema"))
+                .setAutoWidth(true).setFlexGrow(0);
+        grid.addComponentColumn(survey -> renameButton(grid, survey)).setHeader(getTranslation("surveyDefinitionExportView.grid.rename"))
+                .setAutoWidth(true).setFlexGrow(0);
         add(grid);
+    }
+
+    /**
+     * UC-030 step 1 / A1: the survey's reporting schema name, or that it is not built yet. The
+     * name is assigned by Survey's first build of the survey (UC-018 BR-107), so a survey whose
+     * apply was just rejected by Survey, or whose rebuild is switched off, has none.
+     */
+    String reportSchemaOf(Survey survey) {
+        return survey.reportSchema == null ? getTranslation("surveyDefinitionExportView.notBuilt") : survey.reportSchema;
+    }
+
+    /**
+     * UC-030 step 2: the Rename action. Absent, not disabled, for a survey without a schema
+     * (A1): there is nothing to rename until Survey's first build names it.
+     */
+    private Button renameButton(Grid<Survey> grid, Survey survey) {
+        Button button = new Button(getTranslation("surveyDefinitionExportView.btnRename"), VaadinIcon.EDIT.create());
+        button.addThemeVariants(ButtonVariant.LUMO_SMALL);
+        button.addClassName(RENAME_CLASS);
+        button.setAriaLabel(getTranslation("surveyDefinitionExportView.renameAriaLabel", survey.name));
+        button.setVisible(survey.reportSchema != null);
+        button.addClickListener(event -> new RenameReportingSchemaDialog(survey, renameClient, renamed -> {
+            // Survey recorded the new name on the survey row; show it without re-reading the page.
+            survey.reportSchema = renamed;
+            grid.getDataProvider().refreshItem(survey);
+        }).open());
+        return button;
     }
 
     /**

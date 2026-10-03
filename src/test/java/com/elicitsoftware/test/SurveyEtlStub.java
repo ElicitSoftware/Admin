@@ -52,7 +52,11 @@ public final class SurveyEtlStub {
         SurveyEtlStub stub = new SurveyEtlStub(server);
         server.createContext("/", exchange -> {
             synchronized (stub.requests) {
-                stub.requests.add(exchange.getRequestMethod() + " " + exchange.getRequestURI().getPath());
+                // The query is part of what is asserted: a rebuild names its survey (UC-018 step 7)
+                // and a rename carries the new name (UC-030 step 7).
+                String query = exchange.getRequestURI().getRawQuery();
+                stub.requests.add(exchange.getRequestMethod() + " " + exchange.getRequestURI().getPath()
+                        + (query == null ? "" : "?" + query));
             }
             if (stub.delayMillis > 0) {
                 try {
@@ -86,7 +90,7 @@ public final class SurveyEtlStub {
         return this;
     }
 
-    /** Every request received so far, as "METHOD /path". */
+    /** Every request received so far, as "METHOD /path" with the query when there was one. */
     public List<String> requests() {
         synchronized (requests) {
             return List.copyOf(requests);

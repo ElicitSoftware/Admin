@@ -23,6 +23,7 @@ import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
 import java.util.List;
+import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
@@ -42,6 +43,9 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 class ReportingSchemaRebuildClientTest {
 
     private static SurveyEtlStub survey;
+
+    /** The survey the apply installed; the rebuild names it (UC-018 step 7). */
+    static final UUID KEY = UUID.fromString("5e91c606-59a1-450a-a8d7-2f1530ff472b");
 
     @Inject
     ReportingSchemaRebuildClient client;
@@ -66,13 +70,15 @@ class ReportingSchemaRebuildClientTest {
     void surveyAnswers200_rebuilt() {
         survey.respond(200, "{\"status\":\"ok\",\"message\":\"Step dimensions upserted: 3\"}");
 
-        ReportingSchemaRebuildClient.Outcome outcome = client.rebuild();
+        ReportingSchemaRebuildClient.Outcome outcome = client.rebuild(KEY);
 
         assertEquals(ReportingSchemaRebuildClient.Status.REBUILT, outcome.status());
         assertEquals("Step dimensions upserted: 3", outcome.message());
         assertEquals("Reporting schema rebuilt.", outcome.summaryLine());
-        assertEquals(List.of("POST /api/etl/build"), survey.requests());
+        assertEquals(List.of("POST /api/etl/build?survey=" + KEY), survey.requests());
         assertEquals("http://localhost:" + SurveyEtlStub.PORT + "/api/etl/build", client.endpoint());
+        assertEquals("http://localhost:" + SurveyEtlStub.PORT + "/api/etl/build?survey=" + KEY, client.endpoint(KEY));
+        assertEquals(client.endpoint(), client.endpoint(null), "without a key Survey is asked to build every survey");
     }
 
     /** UC-018 A5 / BR-108: Survey's 500 carries the cause (the dim_step_un case) into the line. */
@@ -80,7 +86,7 @@ class ReportingSchemaRebuildClientTest {
     void surveyAnswers500_failedWithSurveysMessage() {
         survey.respond(500, "{\"status\":\"failed\",\"message\":\"ERROR: duplicate key value violates unique constraint \\\"dim_step_un\\\"\"}");
 
-        ReportingSchemaRebuildClient.Outcome outcome = client.rebuild();
+        ReportingSchemaRebuildClient.Outcome outcome = client.rebuild(KEY);
 
         assertEquals(ReportingSchemaRebuildClient.Status.FAILED, outcome.status());
         assertEquals("Reporting schema not rebuilt: ERROR: duplicate key value violates unique constraint \"dim_step_un\"",
@@ -92,7 +98,7 @@ class ReportingSchemaRebuildClientTest {
     void surveyAnswers409_failedWithDisabledReason() {
         survey.respond(409, "{\"status\":\"disabled\",\"message\":\"Reporting ETL is disabled (elicit.etl.enabled=false)\"}");
 
-        ReportingSchemaRebuildClient.Outcome outcome = client.rebuild();
+        ReportingSchemaRebuildClient.Outcome outcome = client.rebuild(KEY);
 
         assertEquals(ReportingSchemaRebuildClient.Status.FAILED, outcome.status());
         assertEquals("Reporting schema not rebuilt: Reporting ETL is disabled (elicit.etl.enabled=false)",
@@ -104,7 +110,7 @@ class ReportingSchemaRebuildClientTest {
     void nonJsonAnswer_failedWithStatusAndBodyExcerpt() {
         survey.respond(502, "<html>Bad Gateway</html>");
 
-        ReportingSchemaRebuildClient.Outcome outcome = client.rebuild();
+        ReportingSchemaRebuildClient.Outcome outcome = client.rebuild(KEY);
 
         assertEquals(ReportingSchemaRebuildClient.Status.FAILED, outcome.status());
         assertTrue(outcome.message().startsWith("HTTP 502: <html>Bad Gateway</html>"), outcome.message());
@@ -115,7 +121,7 @@ class ReportingSchemaRebuildClientTest {
     void surveyUnreachable_failedWithoutThrowing() {
         survey.stop();
         try {
-            ReportingSchemaRebuildClient.Outcome outcome = client.rebuild();
+            ReportingSchemaRebuildClient.Outcome outcome = client.rebuild(KEY);
 
             assertEquals(ReportingSchemaRebuildClient.Status.FAILED, outcome.status());
             assertTrue(outcome.summaryLine().startsWith("Reporting schema not rebuilt: "), outcome.summaryLine());
@@ -137,7 +143,7 @@ class ReportingSchemaRebuildClientTest {
         off.enabled = false;
         off.surveyUrl = "http://localhost:" + SurveyEtlStub.PORT;
 
-        ReportingSchemaRebuildClient.Outcome outcome = off.rebuild();
+        ReportingSchemaRebuildClient.Outcome outcome = off.rebuild(KEY);
 
         assertEquals(ReportingSchemaRebuildClient.Status.SKIPPED, outcome.status());
         assertNull(outcome.summaryLine(), "a skipped rebuild adds nothing to the result");

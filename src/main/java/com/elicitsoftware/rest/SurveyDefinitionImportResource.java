@@ -86,7 +86,7 @@ public class SurveyDefinitionImportResource {
             if (result.isSuccess()) {
                 // The import has committed (importFromFile is transactional and has returned),
                 // so Survey can see the new survey; the rebuild's outcome never fails the import.
-                response.setReporting(reportingSchemaRebuildClient.rebuild().summaryLine());
+                response.setReporting(reportingSchemaRebuildClient.rebuild(result.getSurveyKey()).summaryLine());
                 return Response.ok(response).build();
             } else {
                 return Response.status(Response.Status.BAD_REQUEST)

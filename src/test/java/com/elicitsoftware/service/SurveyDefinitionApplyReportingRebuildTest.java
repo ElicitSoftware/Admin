@@ -93,25 +93,31 @@ class SurveyDefinitionApplyReportingRebuildTest {
         });
     }
 
-    private String fileForNewSurvey(String name) {
+    private String fileForNewSurvey(String name, UUID arrivingKey) {
         Survey source = newSurveyWithStep(name);
         return exportService.exportSurvey(source.id)
-                .replace(source.surveyKey.toString(), UUID.randomUUID().toString())
+                .replace(source.surveyKey.toString(), arrivingKey.toString())
                 .replace(name, name + "Arrived");
     }
 
-    /** UC-014 step 5 via UC-018: an install asks Survey once and reports "rebuilt". */
+    private String fileForNewSurvey(String name) {
+        return fileForNewSurvey(name, UUID.randomUUID());
+    }
+
+    /** UC-014 step 5 via UC-018: an install asks Survey once, for the installed survey, and reports "rebuilt". */
     @Test
     @TestTransaction
     void successfulInstallRebuildsAndReportsIt() {
+        UUID arrivingKey = UUID.randomUUID();
         SurveyDefinitionApplyService.ApplyResult result =
-                applyService.apply(bytes(fileForNewSurvey("RebuildNew")), "new.elicit");
+                applyService.apply(bytes(fileForNewSurvey("RebuildNew", arrivingKey)), "new.elicit");
 
         assertTrue(result.success(), result.message());
         assertEquals(SurveyDefinitionApplyService.ApplyResult.Action.IMPORT, result.action());
         assertEquals("Reporting schema rebuilt.", result.reporting());
         assertEquals("Installed as a new survey", result.message(), "the routing message is untouched");
-        assertEquals(List.of("POST /api/etl/build"), survey.requests());
+        assertEquals(List.of("POST /api/etl/build?survey=" + arrivingKey), survey.requests(),
+                "BR-107: the rebuild names the survey just installed, so no other survey's schema is touched");
     }
 
     /** UC-017 step 7 via UC-018: an update asks Survey once and reports "rebuilt". */
@@ -126,7 +132,8 @@ class SurveyDefinitionApplyReportingRebuildTest {
         assertTrue(result.success(), result.message());
         assertEquals(SurveyDefinitionApplyService.ApplyResult.Action.UPDATE, result.action());
         assertEquals("Reporting schema rebuilt.", result.reporting());
-        assertEquals(List.of("POST /api/etl/build"), survey.requests());
+        assertEquals(List.of("POST /api/etl/build?survey=" + existing.surveyKey), survey.requests(),
+                "BR-107: the rebuild names the survey just updated");
     }
 
     /** UC-018 A5 / BR-108: Survey's failure is reported on the result and the apply stands. */

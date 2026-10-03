@@ -169,6 +169,16 @@ public class Survey extends PanacheEntityBase {
     public String postSurveyURL;
 
     /**
+     * The name of this survey's own reporting schema at this site (Survey V021; Survey UC-008
+     * BR-006), assigned by Survey's ETL the first time the survey is built, changed only by a
+     * rename (UC-030) and null until then. Site-local: a survey definition file never carries
+     * it, and neither import nor update touches it. Read-only here because Survey's ETL is the
+     * only writer; the console shows it and asks Survey to change it (UC-030 BR-117).
+     */
+    @Column(name = "report_schema", length = 63, insertable = false, updatable = false)
+    public String reportSchema;
+
+    /**
      * Set of report definitions associated with this survey.
      *
      * <p>One-to-many relationship with {@link ReportDefinition} entities that
