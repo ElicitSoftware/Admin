@@ -50,6 +50,7 @@ import java.util.List;
  * dimensions: source_id|element_key|name
  * ontology: source_id|element_key|name|tag|dimension
  * metadata: source_id|element_key|steps_sections_id|question_id|sections_question_id|ontology_id|value
+ * report_items: source_id|element_key|report_type|steps_sections_id|question_id|sections_question_id|label|display_order
  * </pre>
  * <p>
  * The {@code source_id} (first field of every data line) is the original database ID from the
@@ -150,6 +151,7 @@ public class SurveyDefinitionExportService {
         List<Object[]> dimensions = getDimensions(surveyId);
         List<Object[]> ontology = getOntology(surveyId);
         List<Object[]> metadata = getMetadata(surveyId);
+        List<Object[]> reportItems = getReportItems(surveyId);
         List<Object[]> translations = getTranslations(surveyId);
 
         StringBuilder out = new StringBuilder();
@@ -173,6 +175,7 @@ public class SurveyDefinitionExportService {
         out.append("# dimensions: ").append(dimensions.size()).append("\n");
         out.append("# ontology: ").append(ontology.size()).append("\n");
         out.append("# metadata: ").append(metadata.size()).append("\n");
+        out.append("# report_items: ").append(reportItems.size()).append("\n");
         out.append("# translations: ").append(translations.size()).append("\n");
         OffsetDateTime exportedAt = OffsetDateTime.now();
         out.append("# generated: ").append(exportedAt).append("\n");
@@ -406,6 +409,23 @@ public class SurveyDefinitionExportService {
             out.append(FIELD_DELIMITER).append(escapeField(meta[4]));          // sections_question_id (durable, nullable)
             out.append(FIELD_DELIMITER).append(escapeField(meta[5]));          // ontology_id (old)
             out.append(FIELD_DELIMITER).append(escapeField(meta[6]));          // value
+            out.append("\n");
+        }
+
+        // report_items: source_id|element_key|report_type|steps_sections_id(durable)|question_id(durable)|
+        //               sections_question_id(durable)|label|display_order
+        // A report mark (Survey UC-013): what the survey's default reports show. Shaped like
+        // metadata, with the report type and the order in place of the tag and its value.
+        for (Object[] item : reportItems) {
+            out.append("report_items: ");
+            out.append(escapeField(item[0]));                                  // source_id (Type 1, not versioned)
+            out.append(FIELD_DELIMITER).append(escapeField(item[1]));          // element_key (report_item_key)
+            out.append(FIELD_DELIMITER).append(escapeField(item[2]));          // report_type
+            out.append(FIELD_DELIMITER).append(escapeField(item[3]));          // steps_sections_id (durable, nullable)
+            out.append(FIELD_DELIMITER).append(escapeField(item[4]));          // question_id (durable, nullable)
+            out.append(FIELD_DELIMITER).append(escapeField(item[5]));          // sections_question_id (durable, nullable)
+            out.append(FIELD_DELIMITER).append(escapeField(item[6]));          // label
+            out.append(FIELD_DELIMITER).append(escapeField(item[7]));          // display_order
             out.append("\n");
         }
 
@@ -704,6 +724,14 @@ public class SurveyDefinitionExportService {
                 "FROM survey.metadata WHERE survey_id = :surveyId ORDER BY id");
         query.setParameter("surveyId", surveyId);
         return toObjectArrayRows(query.getResultList(), "metadata");
+    }
+
+    private List<Object[]> getReportItems(Integer surveyId) {
+        Query query = em.createNativeQuery(
+                "SELECT id, report_item_key, report_type, steps_sections_id, question_id, sections_question_id, label, display_order " +
+                "FROM survey.report_items WHERE survey_id = :surveyId ORDER BY report_type, display_order, id");
+        query.setParameter("surveyId", surveyId);
+        return toObjectArrayRows(query.getResultList(), "report_items");
     }
 
     // -------------------------------------------------------------------------

@@ -66,9 +66,10 @@ class TranslatableFieldsParityTest {
 
     @Test
     void everyWhitelistedElementTypeIsOneTheSchemaAllows() {
-        // The same seven the translations_element_type_ck check constraint names (Survey V019).
+        // The same eight the translations_element_type_ck check constraint names (Survey V019,
+        // report_items added by V023).
         Set<String> allowed = Set.of("surveys", "steps", "sections", "questions", "select_items",
-                "relationships", "reports");
+                "relationships", "reports", "report_items");
         assertEquals(allowed, new TreeSet<>(SurveyDefinitionFileFields.TRANSLATABLE_FIELDS.keySet()));
     }
 

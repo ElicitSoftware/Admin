@@ -613,6 +613,26 @@ CREATE TABLE IF NOT EXISTS survey.metadata
     CONSTRAINT metadata_element_ck CHECK ((steps_sections_id + question_id + sections_question_id) > 0)
 );
 
+-- Survey V023: report marks (Survey UC-013).
+CREATE SEQUENCE IF NOT EXISTS survey.report_items_seq START WITH 1 INCREMENT BY 1;
+CREATE TABLE IF NOT EXISTS survey.report_items
+(
+    id                   integer               NOT NULL,
+    survey_id            integer               NOT NULL,
+    report_item_key      uuid                  NOT NULL DEFAULT (md5(random()::text || clock_timestamp()::text))::uuid,
+    report_type          character varying(13) NOT NULL,
+    steps_sections_id    integer,
+    question_id          integer,
+    sections_question_id integer,
+    label                character varying(255),
+    display_order        integer               NOT NULL DEFAULT 0,
+    CONSTRAINT report_items_pk PRIMARY KEY (id),
+    CONSTRAINT report_items_key_un UNIQUE (report_item_key),
+    CONSTRAINT report_items_survey_fk FOREIGN KEY (survey_id) REFERENCES survey.surveys (id),
+    CONSTRAINT report_items_type_ck CHECK (report_type IN ('RESPONDENT', 'ADMINISTRATOR')),
+    CONSTRAINT report_items_element_ck CHECK (num_nonnulls(steps_sections_id, question_id, sections_question_id) = 1)
+);
+
 CREATE SEQUENCE IF NOT EXISTS survey.respondent_psa_seq START WITH 1 INCREMENT BY 1;
 CREATE TABLE IF NOT EXISTS survey.respondent_psa
 (
@@ -661,7 +681,7 @@ CREATE TABLE IF NOT EXISTS survey.translations
     CONSTRAINT translations_id_version_un UNIQUE (translation_id, version),
     CONSTRAINT translations_key_version_un UNIQUE (translation_key, version),
     CONSTRAINT translations_element_type_ck
-        CHECK (element_type IN ('surveys','steps','sections','questions','select_items','relationships','reports'))
+        CHECK (element_type IN ('surveys','steps','sections','questions','select_items','relationships','reports','report_items'))
 );
 CREATE UNIQUE INDEX IF NOT EXISTS translations_one_current_un
     ON survey.translations (translation_id)

@@ -70,6 +70,26 @@ public class ReportRequest {
     }
 
     /**
+     * BCP-47 tag of the language the respondent answered in, or null when they answered in the
+     * survey's base language (UC-005 BR-022). Survey's own report request has carried this field
+     * since its V019; a service that renders in one language ignores it.
+     */
+    private String language;
+
+    public ReportRequest(int id, String language) {
+        this(id);
+        this.language = language;
+    }
+
+    public String getLanguage() {
+        return language;
+    }
+
+    public void setLanguage(String language) {
+        this.language = language;
+    }
+
+    /**
      * Returns the unique identifier for this report request.
      * <p>
      * The ID represents the primary key or identifier that the report service

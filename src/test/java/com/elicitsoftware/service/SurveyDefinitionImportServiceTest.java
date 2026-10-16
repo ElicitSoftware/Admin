@@ -232,6 +232,9 @@ class SurveyDefinitionImportServiceTest {
 
         String metadataValue = "Meta-" + token;
         insertMetadata(surveyId, stepsSectionId, ontologyId, metadataValue);
+        em.createNativeQuery("INSERT INTO survey.report_items (id, survey_id, report_type, steps_sections_id, label, display_order) "
+                        + "VALUES (nextval('survey.report_items_seq'), ?1, 'ADMINISTRATOR', ?2, ?3, 2)")
+                .setParameter(1, surveyId).setParameter(2, stepsSectionId).setParameter(3, "Mark-" + token).executeUpdate();
 
         return new SurveyDefinitionFixture(surveyId, survey.surveyKey, survey.name, stepName, sectionName, displayKey,
                 questionText, "Report " + token, "PSA " + token, ontologyName, ontologyTag, metadataValue);
@@ -257,7 +260,12 @@ class SurveyDefinitionImportServiceTest {
         // Blanking the key here simulates importing into a genuinely different instance that
         // has never seen this survey before (the file-predates-key-assignment path, BR-061);
         // the duplicate-key rejection itself is covered by importingDuplicateSurveyKeyIsRejected.
-        String simulatedFreshInstanceExport = exported.replace(fixture.surveyKey().toString(), "");
+        // The report mark's key is unique per instance (Survey V023), as the other element keys
+        // are in Survey's schema; blanking it here is the same simulation one level down (BR-061).
+        Object markKey = em.createNativeQuery("SELECT report_item_key FROM survey.report_items WHERE survey_id = ?1")
+                .setParameter(1, fixture.sourceSurveyId()).getSingleResult();
+        String simulatedFreshInstanceExport = exported.replace(fixture.surveyKey().toString(), "")
+                .replace(markKey.toString(), "");
 
         SurveyDefinitionImportService.ImportResult result =
                 surveyDefinitionImportService.importFromFile(toStream(simulatedFreshInstanceExport), "test.elicit");
@@ -277,6 +285,7 @@ class SurveyDefinitionImportServiceTest {
         assertEquals(1, result.getCounts().get("dimensions"));
         assertEquals(1, result.getCounts().get("ontology"));
         assertEquals(1, result.getCounts().get("metadata"));
+        assertEquals(1, result.getCounts().get("report_items"), "UC-014 BR-112: the report mark installs with the survey");
 
         long newSurveyId = queryLong(
                 "SELECT id FROM survey.surveys WHERE name = ?1 ORDER BY id DESC LIMIT 1", fixture.surveyName());
@@ -295,6 +304,11 @@ class SurveyDefinitionImportServiceTest {
                 "SELECT count(*) FROM survey.steps_sections WHERE survey_id = ?1 AND display_key = ?2",
                 newSurveyId, rebasedDisplayKey),
                 "steps_sections.display_key must be rebased onto the newly allocated survey id");
+        assertEquals(1L, queryLong(
+                "SELECT count(*) FROM survey.report_items ri JOIN survey.steps_sections ss ON ss.steps_sections_id = ri.steps_sections_id "
+                        + "WHERE ri.survey_id = ?1 AND ss.survey_id = ?1 AND ri.report_type = 'ADMINISTRATOR' AND ri.label = ?2",
+                newSurveyId, "Mark-SDT1"),
+                "the mark re-resolves its placement to the new survey's own row");
         assertEquals(0L, queryLong(
                 "SELECT count(*) FROM survey.steps_sections WHERE survey_id = ?1 AND display_key = ?2",
                 newSurveyId, fixture.displayKey()),

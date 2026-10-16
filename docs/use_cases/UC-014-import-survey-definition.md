@@ -109,3 +109,7 @@ A versioned record whose validity window is closed in the file describes an elem
 ### BR-110: Content translations install with the survey they belong to
 
 The file carries a `translations` record: one row per translated field of one element in one language, naming the element by its element key and the field by the name of the base column. They install like any other versioned record — under the new survey id, with the translation key preserved verbatim, retired rows skipped (BR-076) — and the survey's own record carries the base language and the published set of content languages with it. The console neither renders nor validates a translation; what a site's respondents are offered is decided at the site by what its chrome mount carries (Survey UC-009 BR-009).
+
+### BR-112: Report marks install with the survey they belong to
+
+The file carries a `report_items` record (Survey UC-013): one row per element the survey's respondent or administrator report shows, naming the element by durable id exactly as a `metadata` row does, with the report type, an optional label and the order. It installs under the new survey id with its `report_item_key` preserved verbatim (BR-061), its element references resolved through the same maps as metadata's, and the database holding each row to exactly one element and a known report type, so a malformed mark fails the import as a whole (BR-049). A file from before the table existed carries none and installs a survey with no marks.

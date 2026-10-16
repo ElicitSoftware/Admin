@@ -107,7 +107,8 @@ final class SurveyDefinitionFileFields {
             "questions", java.util.Set.of("text", "short_text", "tool_tip", "placeholder", "validation_text"),
             "select_items", java.util.Set.of("display_text"),
             "relationships", java.util.Set.of("default_upstream_value"),
-            "reports", java.util.Set.of("name", "description"));
+            "reports", java.util.Set.of("name", "description"),
+            "report_items", java.util.Set.of("label"));
 
     /**
      * Whether {@code field} of {@code elementType} may carry a translation.
