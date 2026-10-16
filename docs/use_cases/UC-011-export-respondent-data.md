@@ -82,7 +82,9 @@ A subject's department is exported by its department code, the only department i
 
 ### BR-101: Progress state exported faithfully
 
-The respondent's active flag, first access time, and finalization time are exported exactly as stored: a timestamp that is null in the source is exported empty, never replaced by the export time. The same holds for every other nullable timestamp (answer saved time, message sent time, post-survey-action upload time). Only a NOT NULL creation timestamp that is unexpectedly missing may be substituted.
+The respondent's active flag, first access time, finalization time and last activity time are exported exactly as stored: a timestamp that is null in the source is exported empty, never replaced by the export time. The same holds for every other nullable timestamp (answer saved time, answer presented time, message sent time, post-survey-action upload time). Only a NOT NULL creation timestamp that is unexpectedly missing may be substituted.
+
+The two progress stamps Survey records (Survey UC-012: `respondents.last_activity_dt` and `answers.presented_dt`) are the last field of their records, so a file written before they existed differs only by ending one field early, and the format version is unchanged.
 
 ---
 

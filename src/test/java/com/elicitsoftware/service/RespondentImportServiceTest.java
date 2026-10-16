@@ -37,6 +37,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -553,6 +554,64 @@ class RespondentImportServiceTest {
     }
 
     /** UC-012 A6 (BR-103): a question version this instance does not have aborts the import - no fallback to another version. */
+    /**
+     * UC-011 BR-101 / UC-012 BR-104: the progress stamps Survey records (Survey UC-012) ride at
+     * the end of the respondent and answer records and come back unchanged.
+     */
+    @Test
+    @TestTransaction
+    void progressStampsRoundTrip() {
+        RespondentFixture fixture = persistRespondentTree("PS1");
+        em.createNativeQuery("UPDATE survey.respondents SET last_activity_dt = '2026-03-04T05:06:07-05:00' WHERE id = ?1")
+                .setParameter(1, fixture.respondentId()).executeUpdate();
+        em.createNativeQuery("UPDATE survey.answers SET presented_dt = '2026-03-04T05:06:00-05:00' "
+                        + "WHERE respondent_id = ?1 AND display_key = ?2")
+                .setParameter(1, fixture.respondentId()).setParameter(2, fixture.answerKey1()).executeUpdate();
+
+        String exported = respondentExportService.exportRespondent(fixture.respondentId());
+        String respondentsLine = exported.lines().filter(l -> l.startsWith("respondents: ")).findFirst().orElseThrow();
+        assertEquals(8, respondentsLine.substring("respondents: ".length()).split("\\|", -1).length,
+                "last_activity_dt is the eighth respondent field: " + respondentsLine);
+        assertFalse(respondentsLine.endsWith("|"), "last_activity_dt exported: " + respondentsLine);
+        deleteSubjectAndMessages(fixture.respondentId());
+        renameSourceAccessCode(fixture.respondentId());
+
+        RespondentImportService.ImportResult result = respondentImportService.importFromFile(toStream(exported));
+
+        assertTrue(result.isSuccess(), () -> "import errors: " + result.getErrors());
+        long newRespondentId = newestRespondentId(fixture.accessCode());
+        assertNotNull(em.createNativeQuery("SELECT last_activity_dt FROM survey.respondents WHERE id = ?1")
+                .setParameter(1, newRespondentId).getSingleResult(), "last_activity_dt carried");
+        assertNotNull(em.createNativeQuery("SELECT presented_dt FROM survey.answers WHERE respondent_id = ?1 AND display_key = ?2")
+                .setParameter(1, newRespondentId).setParameter(2, fixture.answerKey1()).getSingleResult(),
+                "presented_dt carried on the stamped answer");
+        assertNull(em.createNativeQuery("SELECT presented_dt FROM survey.answers WHERE respondent_id = ?1 AND display_key = ?2")
+                .setParameter(1, newRespondentId).setParameter(2, fixture.answerKey2()).getSingleResult(),
+                "an unstamped answer stays unstamped");
+    }
+
+    /** UC-012 BR-104: a file written before the progress stamps existed ends one field early and still imports. */
+    @Test
+    @TestTransaction
+    void fileWithoutProgressStampsStillImports() {
+        RespondentFixture fixture = persistRespondentTree("PS2");
+        String exported = respondentExportService.exportRespondent(fixture.respondentId());
+        String trimmed = exported.lines()
+                .map(l -> (l.startsWith("respondents: ") || l.startsWith("answers: ")) ? l.substring(0, l.lastIndexOf('|')) : l)
+                .collect(java.util.stream.Collectors.joining("\n", "", "\n"));
+        assertNotEquals(exported, trimmed);
+        deleteSubjectAndMessages(fixture.respondentId());
+        renameSourceAccessCode(fixture.respondentId());
+
+        RespondentImportService.ImportResult result = respondentImportService.importFromFile(toStream(trimmed));
+
+        assertTrue(result.isSuccess(), () -> "import errors: " + result.getErrors());
+        assertEquals(2, result.getCounts().get("answers"));
+        long newRespondentId = newestRespondentId(fixture.accessCode());
+        assertNull(em.createNativeQuery("SELECT last_activity_dt FROM survey.respondents WHERE id = ?1")
+                .setParameter(1, newRespondentId).getSingleResult());
+    }
+
     @Test
     @TestTransaction
     void unknownQuestionVersionFails() {
