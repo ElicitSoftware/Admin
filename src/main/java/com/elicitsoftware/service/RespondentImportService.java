@@ -372,7 +372,8 @@ public class RespondentImportService {
     }
 
     private Long insertRespondent(String[] fields, ImportContext context) {
-        // Fields: survey_key, access_code, active, logins, created_dt, first_access_dt, finalized_dt
+        // Fields: survey_key, access_code, active, logins, created_dt, first_access_dt, finalized_dt,
+        //         last_activity_dt (optional: a file written before Survey V022 ends at finalized_dt)
         if (fields.length < 7) {
             throw new IllegalArgumentException(Translations.get("definition.fieldCount", "Respondent", "7", String.valueOf(fields.length)));
         }
@@ -388,8 +389,9 @@ public class RespondentImportService {
         // Finished, an inactive one stays inactive.
         Boolean active = parseBooleanOrNull(fields[2]);
         Query query = em.createNativeQuery("""
-            INSERT INTO survey.respondents (id, survey_id, access_code, active, logins, created_dt, first_access_dt, finalized_dt)
-            VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8)
+            INSERT INTO survey.respondents (id, survey_id, access_code, active, logins, created_dt, first_access_dt, finalized_dt,
+                last_activity_dt)
+            VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9)
             """);
         query.setParameter(1, newId);
         query.setParameter(2, context.surveyId);
@@ -399,6 +401,7 @@ public class RespondentImportService {
         query.setParameter(6, parseTimestamp(fields[4]));
         query.setParameter(7, parseTimestamp(fields[5]));
         query.setParameter(8, parseTimestamp(fields[6]));
+        query.setParameter(9, fields.length > 7 ? parseTimestamp(fields[7]) : null);
         query.executeUpdate();
 
         return newId;
@@ -408,7 +411,8 @@ public class RespondentImportService {
         // Fields: step, step_instance, section, section_instance, question_display_order,
         //         question_instance, sections_question_key, sections_question_version,
         //         question_key, question_version, display_key, display_text, text_value,
-        //         deleted, created_dt, saved_dt
+        //         deleted, created_dt, saved_dt,
+        //         presented_dt (optional: a file written before Survey V022 ends at saved_dt)
         if (fields.length < 16) {
             throw new IllegalArgumentException(Translations.get("definition.fieldCount", "Answer", "16", String.valueOf(fields.length)));
         }
@@ -428,8 +432,8 @@ public class RespondentImportService {
         Query query = em.createNativeQuery("""
             INSERT INTO survey.answers (id, survey_id, respondent_id, step, step_instance, section, section_instance,
                 question_display_order, question_instance, section_question_id, question_id,
-                display_key, display_text, text_value, deleted, created_dt, saved_dt, question_version)
-            VALUES (nextval('survey.answers_seq'), ?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15, ?16, ?17)
+                display_key, display_text, text_value, deleted, created_dt, saved_dt, question_version, presented_dt)
+            VALUES (nextval('survey.answers_seq'), ?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15, ?16, ?17, ?18)
             """);
         query.setParameter(1, context.surveyId);
         query.setParameter(2, respondentId);
@@ -448,6 +452,7 @@ public class RespondentImportService {
         query.setParameter(15, parseTimestamp(fields[14]));
         query.setParameter(16, parseTimestamp(fields[15]));
         query.setParameter(17, questionVersion == null ? 0 : questionVersion);
+        query.setParameter(18, fields.length > 16 ? parseTimestamp(fields[16]) : null);
         query.executeUpdate();
     }
 

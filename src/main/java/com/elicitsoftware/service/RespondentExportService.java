@@ -131,7 +131,8 @@ public class RespondentExportService {
         out.append("\n");
 
         // Respondent record
-        // Fields: survey_key, access_code, active, logins, created_dt, first_access_dt, finalized_dt
+        // Fields: survey_key, access_code, active, logins, created_dt, first_access_dt, finalized_dt,
+        //         last_activity_dt (Survey V022; appended last so an older file still imports, BR-101)
         out.append("respondents: ");
         out.append(escapeField(respondent[1]));  // survey_key
         out.append(FIELD_DELIMITER).append(escapeField(respondent[2]));  // access_code
@@ -140,13 +141,14 @@ public class RespondentExportService {
         out.append(FIELD_DELIMITER).append(formatTimestamp(respondent[5], zoneId));  // created_dt
         out.append(FIELD_DELIMITER).append(formatNullableTimestamp(respondent[6], zoneId));  // first_access_dt
         out.append(FIELD_DELIMITER).append(formatNullableTimestamp(respondent[7], zoneId));  // finalized_dt
+        out.append(FIELD_DELIMITER).append(formatNullableTimestamp(respondent[9], zoneId));  // last_activity_dt
         out.append("\n");
 
         // Answer records
         // Fields: step, step_instance, section, section_instance, question_display_order,
         //         question_instance, sections_question_key, sections_question_version,
         //         question_key, question_version, display_key, display_text, text_value,
-        //         deleted, created_dt, saved_dt
+        //         deleted, created_dt, saved_dt, presented_dt (Survey V022; appended last, BR-101)
         // The section-question and question are carried by element key + version (BR-099);
         // both are empty when the answer's nullable question_id / section_question_id is NULL.
         for (Object[] answer : answers) {
@@ -167,6 +169,7 @@ public class RespondentExportService {
             out.append(FIELD_DELIMITER).append(escapeField(answer[14]));  // deleted
             out.append(FIELD_DELIMITER).append(formatTimestamp(answer[15], zoneId));  // created_dt
             out.append(FIELD_DELIMITER).append(formatNullableTimestamp(answer[16], zoneId));  // saved_dt
+            out.append(FIELD_DELIMITER).append(formatNullableTimestamp(answer[17], zoneId));  // presented_dt
             out.append("\n");
         }
 
@@ -263,7 +266,7 @@ public class RespondentExportService {
         // The survey is identified by its stable cross-instance key, never its local id (BR-058).
         String querySql = """
                 SELECT r.id, s.survey_key, r.access_code, r.active, r.logins,
-                       r.created_dt, r.first_access_dt, r.finalized_dt, s.name
+                       r.created_dt, r.first_access_dt, r.finalized_dt, s.name, r.last_activity_dt
                 FROM survey.respondents r
                 JOIN survey.surveys s ON s.id = r.survey_id
                 WHERE r.id = :respondentId
@@ -282,7 +285,8 @@ public class RespondentExportService {
                 SELECT a.id, a.step, a.step_instance, a.section, a.section_instance,
                        a.question_display_order, a.question_instance,
                        sq.sections_question_key, sq.version, q.question_key, q.version,
-                       a.display_key, a.display_text, a.text_value, a.deleted, a.created_dt, a.saved_dt
+                       a.display_key, a.display_text, a.text_value, a.deleted, a.created_dt, a.saved_dt,
+                       a.presented_dt
                 FROM survey.answers a
                 LEFT JOIN survey.sections_questions sq ON sq.id = a.section_question_id
                 LEFT JOIN survey.questions q ON q.id = a.question_id

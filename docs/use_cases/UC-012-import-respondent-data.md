@@ -119,7 +119,7 @@ Every question, section-question, and relationship reference is resolved by the 
 
 ### BR-104: Respondent state preserved
 
-The imported respondent carries the source's active flag, first access time, and finalization time unchanged, so its status in this instance (Not Started, In Progress, Finished) is the same as it was at the source. Empty timestamps import as null.
+The imported respondent carries the source's active flag, first access time, finalization time and last activity time unchanged, so its status in this instance (Not Started, In Progress, Finished) is the same as it was at the source, and so is each answer's presented time. Empty timestamps import as null. A file written before Survey recorded the last activity and presented times (Survey UC-012) ends one field early on those records and imports with the two stamps null.
 
 ### BR-105: Access-code collisions rejected
 
