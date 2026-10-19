@@ -30,6 +30,8 @@ import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
+import java.util.Set;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -71,7 +73,11 @@ import java.util.UUID;
  * history — a content difference is a plain in-place {@code UPDATE}.
  * <p>
  * A target row whose {@code element_key} no longer appears anywhere in the file (i.e. the element
- * was removed from the authored copy) is left completely alone — this service never deletes.
+ * was removed from the authored copy) is left completely alone — this service never deletes —
+ * with one exception (UC-017 BR-113): the two Type 1 report tables, {@code reports} and
+ * {@code report_items}, are authored content with no history and nothing referencing them, and
+ * a report the author removed must stop running, so a row of either whose key the file no longer
+ * lists is deleted once the file has been applied, and counted as retired for that table.
  * A record the file marks as <em>retired</em> (closed {@code effective_to}, the authoring tool's
  * removal) has its current row closed here too; nothing is inserted (see {@code retireCurrentRow}).
  * <p>
@@ -181,6 +187,11 @@ public class SurveyDefinitionUpdateService {
             }
         }
 
+        /** Rows of a Type 1 report table deleted because the file no longer lists them (BR-113). */
+        void retired(int rows) {
+            retired += rows;
+        }
+
         TableUpdateCounts toImmutable() {
             return new TableUpdateCounts(created, versioned, unchanged, retired);
         }
@@ -218,9 +229,13 @@ public class SurveyDefinitionUpdateService {
         for (String table : List.of("surveys", "select_groups", "select_items", "steps", "sections",
                 "steps_sections", "questions", "sections_questions", "relationships",
                 "reports", "post_survey_actions", "dimensions", "ontology", "metadata",
-                "translations")) {
+                "report_items", "translations")) {
             counts.put(table, new MutableCounts());
         }
+        // The keys the file lists for the two Type 1 report tables; rows the target holds under
+        // any other key are deleted once the file is applied (BR-113).
+        Set<UUID> reportKeysInFile = new HashSet<>();
+        Set<UUID> reportItemKeysInFile = new HashSet<>();
 
         Survey target = Survey.findById(targetSurveyId);
         if (target == null) {
@@ -388,6 +403,7 @@ public class SurveyDefinitionUpdateService {
                         }
                         case "reports": {
                             ChangeType outcome = upsertReport(fields, target.id);
+                            reportKeysInFile.add(requireElementKey(fields[1], "reports"));
                             counts.get("reports").record(outcome);
                             break;
                         }
@@ -412,6 +428,13 @@ public class SurveyDefinitionUpdateService {
                             ChangeType outcome = upsertMetadata(fields, target.id, stepsSectionIdMap, questionIdMap,
                                     sectionsQuestionIdMap, ontologyIdMap);
                             counts.get("metadata").record(outcome);
+                            break;
+                        }
+                        case "report_items": {
+                            ChangeType outcome = upsertReportItem(fields, target.id, stepsSectionIdMap, questionIdMap,
+                                    sectionsQuestionIdMap);
+                            reportItemKeysInFile.add(requireElementKey(fields[1], "report_items"));
+                            counts.get("report_items").record(outcome);
                             break;
                         }
                         case "translations": {
@@ -441,6 +464,10 @@ public class SurveyDefinitionUpdateService {
                 logAttempt(target, fileName, false, errors, null, fileRevision);
                 return new UpdateResult(false, errors, null);
             }
+
+            // BR-113: the file is the whole list of the survey's reports and report marks.
+            counts.get("reports").retired(deleteUnlisted("survey.reports", "report_key", reportKeysInFile, target.id));
+            counts.get("report_items").retired(deleteUnlisted("survey.report_items", "report_item_key", reportItemKeysInFile, target.id));
 
             Map<String, TableUpdateCounts> immutableCounts = new LinkedHashMap<>();
             counts.forEach((table, c) -> immutableCounts.put(table, c.toImmutable()));
@@ -1237,6 +1264,81 @@ public class SurveyDefinitionUpdateService {
     }
 
     /**
+     * Fields: source_id|element_key|report_type|steps_sections_id|question_id|sections_question_id|label|display_order
+     * (Survey UC-013, BR-113). Type 1: matched by {@code report_item_key}, updated in place.
+     */
+    private ChangeType upsertReportItem(String[] fields, Integer surveyId, Map<Long, Long> stepsSectionIdMap,
+            Map<Long, Long> questionIdMap, Map<Long, Long> sectionsQuestionIdMap) {
+        if (fields.length < 8) {
+            throw new IllegalArgumentException(Translations.get("definition.fieldCount", "report_items", "8", String.valueOf(fields.length)));
+        }
+        UUID elementKey = requireElementKey(fields[1], "report_items");
+        String reportType = SurveyDefinitionFileFields.nullIfEmpty(fields[2]);
+        Long newStepsSectionsId = SurveyDefinitionFileFields.resolveNullable(
+                SurveyDefinitionFileFields.parseLongOrNull(fields[3]), stepsSectionIdMap, "steps_section (report_items)");
+        Long newQuestionId = SurveyDefinitionFileFields.resolveNullable(
+                SurveyDefinitionFileFields.parseLongOrNull(fields[4]), questionIdMap, "question (report_items)");
+        Long newSectionsQuestionId = SurveyDefinitionFileFields.resolveNullable(
+                SurveyDefinitionFileFields.parseLongOrNull(fields[5]), sectionsQuestionIdMap, "sections_question (report_items)");
+        String label = SurveyDefinitionFileFields.nullIfEmpty(fields[6]);
+        Integer displayOrder = SurveyDefinitionFileFields.parseIntOrNull(fields[7]);
+        int order = displayOrder == null ? 0 : displayOrder;
+
+        Object[] current = findCurrentRow("survey.report_items", "report_item_key", elementKey, surveyId,
+                "id, report_type, steps_sections_id, question_id, sections_question_id, label, display_order");
+        if (current == null) {
+            em.createNativeQuery("""
+                    INSERT INTO survey.report_items
+                        (id, survey_id, report_item_key, report_type, steps_sections_id, question_id, sections_question_id, label, display_order)
+                    VALUES (nextval('survey.report_items_seq'), ?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8)
+                    """)
+                    .setParameter(1, surveyId).setParameter(2, elementKey).setParameter(3, reportType)
+                    .setParameter(4, newStepsSectionsId).setParameter(5, newQuestionId).setParameter(6, newSectionsQuestionId)
+                    .setParameter(7, label).setParameter(8, order)
+                    .executeUpdate();
+            return ChangeType.CREATED;
+        }
+
+        Long id = ((Number) current[0]).longValue();
+        boolean unchanged = Objects.equals(reportType, current[1])
+                && Objects.equals(newStepsSectionsId, toLong(current[2])) && Objects.equals(newQuestionId, toLong(current[3]))
+                && Objects.equals(newSectionsQuestionId, toLong(current[4])) && Objects.equals(label, current[5])
+                && Objects.equals(order, ((Number) current[6]).intValue());
+        if (unchanged) {
+            return ChangeType.UNCHANGED;
+        }
+        em.createNativeQuery("""
+                UPDATE survey.report_items
+                SET report_type = ?1, steps_sections_id = ?2, question_id = ?3, sections_question_id = ?4, label = ?5, display_order = ?6
+                WHERE id = ?7
+                """)
+                .setParameter(1, reportType).setParameter(2, newStepsSectionsId).setParameter(3, newQuestionId)
+                .setParameter(4, newSectionsQuestionId).setParameter(5, label).setParameter(6, order).setParameter(7, id)
+                .executeUpdate();
+        return ChangeType.VERSIONED;
+    }
+
+    /**
+     * BR-113: deletes the target survey's rows of a Type 1 report table whose key the file did
+     * not list, and returns how many. A file with no record of the table at all lists nothing,
+     * so every row goes: a survey the author published with no reports has no report page
+     * (Survey UC-005).
+     */
+    @SuppressWarnings("unchecked")
+    private int deleteUnlisted(String table, String keyColumn, Set<UUID> keysInFile, Integer surveyId) {
+        List<UUID> current = em.createNativeQuery("SELECT " + keyColumn + " FROM " + table + " WHERE survey_id = ?1")
+                .setParameter(1, surveyId).getResultList();
+        int deleted = 0;
+        for (UUID key : current) {
+            if (!keysInFile.contains(key)) {
+                deleted += em.createNativeQuery("DELETE FROM " + table + " WHERE survey_id = ?1 AND " + keyColumn + " = ?2")
+                        .setParameter(1, surveyId).setParameter(2, key).executeUpdate();
+            }
+        }
+        return deleted;
+    }
+
+    /**
      * Fields: source_id|element_key|name|description|url|execution_order
      */
     private ChangeType upsertPostSurveyAction(String[] fields, Integer surveyId) {
@@ -1487,6 +1589,7 @@ public class SurveyDefinitionUpdateService {
                         + " WHERE survey_id = ?1 AND " + keyColumn + " = ?2"
                         + (table.equals("survey.reports") || table.equals("survey.post_survey_actions")
                                 || table.equals("survey.ontology") || table.equals("survey.metadata")
+                                || table.equals("survey.report_items")
                                 ? ""
                                 : " AND effective_to = '" + OPEN_ENDED + "'"));
         query.setParameter(1, surveyId);

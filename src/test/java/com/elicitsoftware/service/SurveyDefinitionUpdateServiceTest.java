@@ -452,6 +452,48 @@ class SurveyDefinitionUpdateServiceTest {
     }
 
     /**
+     * UC-017 BR-113 (Survey UC-013): a report mark is exported, applied unchanged by its key, and
+     * both a mark and a report whose key has left the file are deleted, counted as retired.
+     */
+    @Test
+    @TestTransaction
+    void reportMarksRoundTripAndUnlistedReportRowsAreDeleted() {
+        Survey survey = persistFullDefinitionTree("RI1");
+        long stepsSectionDurableId = queryLong("SELECT steps_sections_id FROM survey.steps_sections WHERE survey_id = ?1", survey.id);
+        long dropMeId = insertReport(survey, "Drop Me");
+        em.createNativeQuery("INSERT INTO survey.report_items (id, survey_id, report_type, steps_sections_id, label, display_order) "
+                        + "VALUES (nextval('survey.report_items_seq'), ?1, 'RESPONDENT', ?2, 'Your answers', 0)")
+                .setParameter(1, survey.id).setParameter(2, stepsSectionDurableId).executeUpdate();
+        long reportsBefore = queryLong("SELECT count(*) FROM survey.reports WHERE survey_id = ?1", survey.id);
+
+        String exported = surveyDefinitionExportService.exportSurvey(survey.id);
+        assertTrue(exported.contains("# report_items: 1"), exported);
+        assertTrue(exported.lines().anyMatch(l -> l.startsWith("report_items: ") && l.contains("|RESPONDENT|") && l.endsWith("|Your answers|0")),
+                "the mark is exported with its type, label and order");
+
+        SurveyDefinitionUpdateService.UpdateResult same =
+                surveyDefinitionUpdateService.updateFromFile(toStream(exported), "same.elicit", survey.id);
+        assertTrue(same.isSuccess(), () -> "update errors: " + same.getErrors());
+        assertEquals(new SurveyDefinitionUpdateService.TableUpdateCounts(0, 0, 1, 0), same.getCounts().get("report_items"));
+        assertEquals(0, same.getCounts().get("reports").retired(), "every report the target holds is in the file");
+
+        String dropped = exported.lines()
+                .filter(l -> !l.startsWith("report_items: "))
+                .filter(l -> !(l.startsWith("reports: ") && l.contains("|Drop Me|")))
+                .collect(java.util.stream.Collectors.joining("\n", "", "\n"));
+        SurveyDefinitionUpdateService.UpdateResult result =
+                surveyDefinitionUpdateService.updateFromFile(toStream(dropped), "dropped.elicit", survey.id);
+
+        assertTrue(result.isSuccess(), () -> "update errors: " + result.getErrors());
+        assertEquals(new SurveyDefinitionUpdateService.TableUpdateCounts(0, 0, 0, 1), result.getCounts().get("report_items"));
+        assertEquals(1, result.getCounts().get("reports").retired(), "the report the file no longer lists is deleted");
+        assertEquals(0L, queryLong("SELECT count(*) FROM survey.report_items WHERE survey_id = ?1", survey.id));
+        assertEquals(0L, queryLong("SELECT count(*) FROM survey.reports WHERE id = ?1", dropMeId));
+        assertEquals(reportsBefore - 1, queryLong("SELECT count(*) FROM survey.reports WHERE survey_id = ?1", survey.id),
+                "the reports the file still lists are kept");
+    }
+
+    /**
      * BR-063/A3: a file whose survey_key does not match the selected target survey's key aborts
      * the update entirely, with no changes applied.
      */

@@ -430,6 +430,15 @@ public class SurveyDefinitionImportService {
                             counts.merge("metadata", 1, Integer::sum);
                             break;
                         }
+                        case "report_items": {
+                            if (newSurveyId == null) {
+                                errors.add(Translations.get("definition.line", String.valueOf(lineNumber), Translations.get("definition.beforeSurvey", "report_items")));
+                                continue;
+                            }
+                            insertReportItem(fields, newSurveyId, stepsSectionIdMap, questionIdMap, sectionsQuestionIdMap);
+                            counts.merge("report_items", 1, Integer::sum);
+                            break;
+                        }
                         case "translations": {
                             if (newSurveyId == null) {
                                 errors.add(Translations.get("definition.line", String.valueOf(lineNumber), Translations.get("definition.beforeSurvey", "translation")));
@@ -1069,6 +1078,39 @@ public class SurveyDefinitionImportService {
         query.setParameter(5, newSectionsQuestionId);
         query.setParameter(6, newOntologyId);
         query.setParameter(7, nullIfEmpty(fields[6]));
+        query.executeUpdate();
+    }
+
+    /**
+     * Inserts one report mark (Survey V023, UC-014 BR-112): what one of the survey's default
+     * reports shows. Fields: source_id|element_key|report_type|steps_sections_id|question_id|
+     * sections_question_id|label|display_order. The three element ids are resolved through the
+     * same maps as a metadata row's; the database holds the row to exactly one of them and to a
+     * known report type, so a malformed mark fails the import as a whole.
+     */
+    private void insertReportItem(String[] fields, Long surveyId, Map<Long, Long> stepsSectionIdMap,
+            Map<Long, Long> questionIdMap, Map<Long, Long> sectionsQuestionIdMap) {
+        if (fields.length < 8) {
+            throw new IllegalArgumentException(Translations.get("definition.fieldCount", "report_items", "8", String.valueOf(fields.length)));
+        }
+        UUID elementKey = resolveElementKey(fields[1]);
+        Long newStepsSectionsId = resolveNullable(parseLongOrNull(fields[3]), stepsSectionIdMap, "steps_section (report_items)");
+        Long newQuestionId = resolveNullable(parseLongOrNull(fields[4]), questionIdMap, "question (report_items)");
+        Long newSectionsQuestionId = resolveNullable(parseLongOrNull(fields[5]), sectionsQuestionIdMap, "sections_question (report_items)");
+
+        Query query = em.createNativeQuery("""
+                INSERT INTO survey.report_items
+                    (id, survey_id, report_item_key, report_type, steps_sections_id, question_id, sections_question_id, label, display_order)
+                VALUES (nextval('survey.report_items_seq'), ?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8)
+                """);
+        query.setParameter(1, surveyId);
+        query.setParameter(2, elementKey);
+        query.setParameter(3, nullIfEmpty(fields[2]));
+        query.setParameter(4, newStepsSectionsId);
+        query.setParameter(5, newQuestionId);
+        query.setParameter(6, newSectionsQuestionId);
+        query.setParameter(7, nullIfEmpty(fields[6]));
+        query.setParameter(8, parseIntOrNull(fields[7]) == null ? 0 : parseIntOrNull(fields[7]));
         query.executeUpdate();
     }
 

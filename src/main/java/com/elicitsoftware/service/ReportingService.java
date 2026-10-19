@@ -14,7 +14,9 @@ package com.elicitsoftware.service;
 import io.quarkus.logging.Log;
 
 import java.net.URI;
+import java.net.URISyntaxException;
 import java.util.ArrayList;
+import java.util.List;
 
 import org.eclipse.microprofile.rest.client.RestClientBuilder;
 
@@ -34,6 +36,8 @@ import com.vaadin.flow.component.notification.Notification;
 
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
+import jakarta.persistence.EntityManager;
+import org.eclipse.microprofile.config.inject.ConfigProperty;
 import jakarta.servlet.http.HttpServletRequest;
 
 /**
@@ -108,6 +112,17 @@ public class ReportingService {
 
     @Inject
     HttpServletRequest httpRequest;
+
+    @Inject
+    EntityManager em;
+
+    /**
+     * Survey's base address at this site, which a report whose URL is a relative path is resolved
+     * against (UC-005 BR-023): a built-in report lives in Survey, and its row is authored without
+     * knowing the site.
+     */
+    @ConfigProperty(name = "elicit.survey.url")
+    String surveyUrl;
 
     /**
      * Collection of report responses aggregated from external report services.
@@ -262,11 +277,38 @@ public class ReportingService {
      * @see ReportResponse
      * @see RestClientBuilder
      */
+    /**
+     * The language the respondent answered in (UC-005 BR-022): the tag Survey stamped on their
+     * answer rows, or null when every row was rendered in the survey's base language.
+     */
+    String answeringLanguage(int respondentId) {
+        String sql = "SELECT display_language FROM survey.answers WHERE respondent_id = ?1 AND display_language IS NOT NULL " // i18n:ignore
+                + "ORDER BY saved_dt DESC NULLS LAST, id DESC LIMIT 1"; // i18n:ignore
+        List<?> rows = em.createNativeQuery(sql).setParameter(1, respondentId).getResultList();
+        return rows.isEmpty() ? null : (String) rows.get(0);
+    }
+
+    /**
+     * Resolves a report's address (UC-005 BR-023). An absolute URL is used as written. A relative
+     * path is resolved under Survey's base address, keeping any path prefix the site runs Survey
+     * under, so {@code /api/reports/respondent} on a Survey at {@code https://host/survey} becomes
+     * {@code https://host/survey/api/reports/respondent}.
+     */
+    static URI resolveReportUri(String surveyBaseUrl, String reportUrl) throws URISyntaxException {
+        URI url = new URI(reportUrl);
+        if (url.isAbsolute()) {
+            return url;
+        }
+        String base = surveyBaseUrl.endsWith("/") ? surveyBaseUrl : surveyBaseUrl + "/";
+        String path = reportUrl.startsWith("/") ? reportUrl.substring(1) : reportUrl;
+        return new URI(base).resolve(path);
+    }
+
     private ReportResponse callReport(ReportDefinition rpt, int respondent_id) {
         try {
-            ReportRequest request = new ReportRequest(respondent_id);
+            ReportRequest request = new ReportRequest(respondent_id, answeringLanguage(respondent_id));
             ReportService reportService = RestClientBuilder.newBuilder()
-                    .baseUri(new URI(rpt.url))
+                    .baseUri(resolveReportUri(surveyUrl, rpt.url))
                     .build(ReportService.class);
             ReportResponse reportResponse = reportService.callReport(request);
             return reportResponse;

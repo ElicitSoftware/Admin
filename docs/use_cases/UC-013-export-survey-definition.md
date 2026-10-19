@@ -89,7 +89,7 @@ Every export includes the survey's stable, cross-instance-portable key (assigned
 
 ## Reference
 
-Derived from `SurveyDefinitionExportResource` (integration endpoint), `SurveyDefinitionExportView` (console page, route `survey-export`) and `SurveyDefinitionExportService` (`ELICIT_SURVEY_EXPORT_V1` format). Reads the shared survey-definition tables (surveys, select groups/items, steps, sections, questions, relationships, reports, post-survey actions, dimensions, ontology, metadata). See UC-017 for the update flow this key enables.
+Derived from `SurveyDefinitionExportResource` (integration endpoint), `SurveyDefinitionExportView` (console page, route `survey-export`) and `SurveyDefinitionExportService` (`ELICIT_SURVEY_EXPORT_V1` format). Reads the shared survey-definition tables (surveys, select groups/items, steps, sections, questions, relationships, reports, post-survey actions, dimensions, ontology, metadata, report items). See UC-017 for the update flow this key enables.
 
 ### BR-073: Retired elements travel with the file
 

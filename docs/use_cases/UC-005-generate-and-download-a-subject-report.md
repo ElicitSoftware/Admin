@@ -19,7 +19,7 @@
 
 1. The user selects a finished subject and chooses to generate reports.
 2. The system loads the survey and its report definitions.
-3. For each report definition, the system requests the report content from the external report service for that respondent.
+3. For each report definition, the system requests the report content from the report service for that respondent, at the definition's address resolved per BR-023, telling the service which language the respondent answered in (BR-022).
 4. The system assembles the responses into a single multi-page PDF.
 5. The system caches the PDF and opens it in a new browser tab for viewing or download.
 
@@ -76,6 +76,14 @@ A single generated PDF combines the output of all of the survey's report definit
 ### BR-021: Download link expiry
 
 A generated report is retrievable through a temporary, unguessable link that expires after a limited time.
+
+### BR-022: The request names the respondent's language
+
+The report request carries, besides the respondent's id, the BCP-47 tag of the language the respondent answered in: the language Survey stamped on their answer rows, or none when they answered in the survey's base language. Survey's own report request has carried the same field since its content translations; a service that renders in one language ignores it, and Survey's built-in report renders in it.
+
+### BR-023: A relative report address is resolved under Survey
+
+A report definition's URL is used as written when it is absolute. When it is a path, it is resolved under this site's Survey address (`elicit.survey.url`), keeping any path prefix Survey runs under, because a report built into Survey is authored without knowing the site, while a site-specific service such as the Family History Survey's keeps its absolute URL.
 
 ---
 
