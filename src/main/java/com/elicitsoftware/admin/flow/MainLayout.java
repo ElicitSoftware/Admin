@@ -336,7 +336,9 @@ public class MainLayout extends AppLayout implements AfterNavigationListener {
                 SearchView.class, VaadinIcon.SEARCH.create());
         SideNavItem registerLink = new SideNavItem(getTranslation("mainLayout.nav.registerSubjects"), RegisterView.class,
                 VaadinIcon.USERS.create());
-        nav.addItem(searchLink, registerLink);
+        SideNavItem participationLink = new SideNavItem(getTranslation("mainLayout.nav.participation"), ParticipationView.class,
+                VaadinIcon.CHART.create());
+        nav.addItem(searchLink, registerLink, participationLink);
         // Message Templates Button (Admin only)
         if (identity.hasRole("elicit_admin")) {
             SideNavItem adminSection = new SideNavItem(getTranslation("mainLayout.nav.admin"));

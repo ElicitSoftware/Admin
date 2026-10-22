@@ -108,6 +108,10 @@ public class PDFService {
      */
     static final float FONT_SIZE = 10f;
     /**
+     * The page header of a subject report, which has always named the Family History Survey (Admin #5).
+     */
+    static final String DEFAULT_HEADER_TITLE = "Family Health History Survey";
+    /**
      * Line spacing (leading) between text lines, in points.
      */
     static final float LEADING = FONT_SIZE;
@@ -376,6 +380,19 @@ public class PDFService {
      * @return the generated PDF bytes
      */
     public byte[] generatePDF(ArrayList<ReportResponse> reportResponses, String baseUrl) {
+        return generatePDF(reportResponses, baseUrl, DEFAULT_HEADER_TITLE);
+    }
+
+    /**
+     * Generates a PDF document whose page header names {@code headerTitle} rather than the
+     * subject report's default; the Participation export (UC-031 BR-126) names its survey.
+     *
+     * @param reportResponses the list of report responses to include in the PDF
+     * @param baseUrl the application's base URL, printed in the footer of every page
+     * @param headerTitle the text the header shows before the page number
+     * @return the generated PDF bytes
+     */
+    public byte[] generatePDF(ArrayList<ReportResponse> reportResponses, String baseUrl, String headerTitle) {
         try {
             // Create a new document
             document = new PDDocument();
@@ -429,7 +446,7 @@ public class PDFService {
                 }
             }
 
-            addHeadersAndFooters(baseUrl);
+            addHeadersAndFooters(baseUrl, headerTitle);
 
             if (contentStream != null) {
                 contentStream.close();
@@ -682,6 +699,16 @@ public class PDFService {
      * @throws RuntimeException if an IOException occurs during content stream operations
      */
     void addHeadersAndFooters(String baseUrl) {
+        addHeadersAndFooters(baseUrl, DEFAULT_HEADER_TITLE);
+    }
+
+    /**
+     * Stamps the header and footer of every page, the header naming {@code headerTitle}.
+     *
+     * @param baseUrl the application's base URL to print in the footer of every page
+     * @param headerTitle the text the header shows before the page number
+     */
+    void addHeadersAndFooters(String baseUrl, String headerTitle) {
         // Step 2: Add header and footer to each page
         int totalPages = document.getNumberOfPages();
         for (int i = 0; i < totalPages; i++) {
@@ -695,7 +722,7 @@ public class PDFService {
                 boolean isLandscape = mediaBox.getWidth() > mediaBox.getHeight();
 
                 // Header text - adjust positioning based on orientation
-                String headerText = "Family Health History Survey - Page " + (i + 1) + " of " + totalPages;
+                String headerText = headerTitle + " - Page " + (i + 1) + " of " + totalPages;
                 float headerTextWidth = TEXT_FONT.getStringWidth(headerText) / 1000 * 10;
                 float headerTextX;
 

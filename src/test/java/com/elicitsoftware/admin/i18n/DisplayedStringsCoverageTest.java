@@ -45,7 +45,9 @@ class DisplayedStringsCoverageTest {
 
     /** Files outside a {@code flow} package that still render user-visible text. */
     private static final List<String> EXTRA_FILES = List.of(
-            "src/main/java/com/elicitsoftware/service/ReportingService.java");
+            "src/main/java/com/elicitsoftware/service/ReportingService.java",
+            "src/main/java/com/elicitsoftware/participation/ParticipationTables.java",
+            "src/main/java/com/elicitsoftware/participation/ParticipationExport.java");
 
     /** Infrastructure classes under {@code flow} whose literals are not user-visible. */
     private static final Set<String> EXCLUDED_FILES = Set.of(
