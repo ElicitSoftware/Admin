@@ -8,7 +8,7 @@ Elicit Admin is one module of a multi-module platform. Some entities are
 **owned** by the Admin module (created by its migrations: departments, subjects,
 messages, message types, message templates, users, user roles, and the
 user/department and user/survey associations). Others — **SURVEY**,
-**RESPONDENT**, **REPORT_DEFINITION**, **POST_SURVEY_ACTION**, and
+**RESPONDENT**, **REPORT_DEFINITION**, **REPORT_ITEM**, **POST_SURVEY_ACTION**, and
 **EXCLUDED_XID** — are owned by sibling modules (Authoring / Survey) but are
 mapped here as JPA entities because Admin reads and, in some flows, writes them.
 Owned-elsewhere entities are noted in their descriptions.
@@ -33,6 +33,7 @@ erDiagram
     MESSAGE_TYPE ||--o{ MESSAGE_TEMPLATE : classifies
 
     SURVEY ||--o{ REPORT_DEFINITION : defines
+    SURVEY ||--o{ REPORT_ITEM : marks
     SURVEY ||--o{ POST_SURVEY_ACTION : defines
 
     DEPARTMENT ||--o{ EXCLUDED_XID : excludes
@@ -89,6 +90,7 @@ A person registered to take a survey, associated with a department and linked to
 | createdDt     | Creation timestamp                         | DateTime  |                  | Optional                            |
 | firstAccessDt | When the survey was first accessed         | DateTime  |                  | Optional                            |
 | finalizedDt   | When the survey was finalized              | DateTime  |                  | Optional                            |
+| lastActivityDt | When the respondent last rendered a page or saved an answer (Survey UC-012 BR-004); carried by the respondent export and import (UC-011, UC-012) | DateTime | | Optional |
 
 ### SURVEY
 
@@ -193,6 +195,22 @@ A role granted to a user. Serves as the database fallback when the identity prov
 | description  | Report description             | String    |                  | Optional                           |
 | url          | Report service endpoint        | String    |                  | Optional                           |
 | displayOrder | Ordering position              | Integer   |                  | Optional                           |
+
+### REPORT_ITEM
+
+*Owned by the Survey module (Survey V023, UC-013); authored in Author.* A mark of what one of a survey's default reports shows: one durable element — a question, a question placement or a section placement — for the `RESPONDENT` report or the `ADMINISTRATOR` report. The console installs, updates and removes marks with the survey definition (UC-014 BR-112, UC-017 BR-113) and reads the `ADMINISTRATOR` ones on the Participation page (UC-031 BR-123). Not mapped as an entity: both paths use native SQL.
+
+| Attribute          | Description                                                  | Data Type | Length/Precision | Validation Rules                                   |
+|--------------------|--------------------------------------------------------------|-----------|------------------|----------------------------------------------------|
+| id                 | Unique identifier                                            | Integer   |                  | Primary Key, Sequence (`report_items_seq`)         |
+| surveyId           | Survey the mark belongs to                                   | Integer   |                  | Not Null, Foreign Key (surveys.id)                 |
+| reportItemKey      | Cross-instance identity, matched by the update path          | UUID      |                  | Not Null, Unique                                   |
+| reportType         | Which report the mark is for                                 | String    | 13               | Not Null; `RESPONDENT` or `ADMINISTRATOR`          |
+| stepsSectionsId    | Durable id of a section placement                            | Integer   |                  | Exactly one of the three element ids is set        |
+| questionId         | Durable id of a question                                     | Integer   |                  | Exactly one of the three element ids is set        |
+| sectionsQuestionId | Durable id of a question placement                           | Integer   |                  | Exactly one of the three element ids is set        |
+| label              | Text shown on the report instead of the element's own        | String    | 255              | Optional                                           |
+| displayOrder       | Order of the mark within its report                          | Integer   |                  | Not Null, default 0                                |
 
 ### POST_SURVEY_ACTION
 

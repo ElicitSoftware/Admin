@@ -117,8 +117,8 @@ The console names eight things, and this manual uses those names and no others.
 
 \subsection{Finding your way around}
 
-The navigation on the left is the whole console. \ui{Search Subjects} and \ui{Register
-Subjects} are the day's work and are open to both roles. \ui{Admin} and \ui{System} hold the
+The navigation on the left is the whole console. \ui{Search Subjects}, \ui{Register
+Subjects} and \ui{Participation} are the day's work and are open to both roles. \ui{Admin} and \ui{System} hold the
 administrator's screens and stay collapsed until opened.
 
 \screenshot{01-navigation.png}{The console with both navigation sections open. Search Subjects
@@ -128,7 +128,7 @@ administrator's.}
 \begin{elicitnote}[Where a procedure lives]
 \ui{Admin} holds \ui{Departments}, \ui{Message Templates}, \ui{Users}, \ui{Import Respondent},
 \ui{Apply Survey Definition} and \ui{Export Survey Definition}. \ui{System} holds the six
-read-only screens of chapter~12. \ui{Manual (PDF)} opens this document.
+read-only screens of chapter~13. \ui{Manual (PDF)} opens this document.
 \end{elicitnote}
 
 %% ------------------------------------------------------------------ 2
@@ -189,7 +189,7 @@ pencil in the \ui{Edit} column opens an existing one.}
   \item Fill in \ui{Department name} — what the department is called throughout the console.
   \item Fill in \ui{Department code} — a short abbreviation, such as \texttt{CARD} or
         \texttt{HR}. The code is what identifies this department to another Elicit deployment,
-        so chapter~10 depends on it.
+        so chapter~11 depends on it.
   \item Fill in \ui{Default message ID} — the ID of the message template to send to this
         department's subjects. Chapter~5 is where templates are written, and the ID is the
         first column of that screen.
@@ -251,7 +251,7 @@ the account sees; \ui{Role} decides what it may do with them.}
 
 \begin{itemize}
   \item \texttt{elicit\_admin} — the whole console: departments, users, message templates,
-        survey definitions, the System screens, and the export action of chapter~10.
+        survey definitions, the System screens, and the export action of chapter~11.
   \item \texttt{elicit\_user} — \ui{Search Subjects} and \ui{Register Subjects}, for the
         departments the account holds, and this manual.
   \item \texttt{elicit\_importer} — no console screens at all. It exists for the registration
@@ -272,7 +272,7 @@ the one that counts. The note above the grid tells you which case you are in.
 
 The database migrations create \texttt{admin} and \texttt{user} so that a new installation can be
 signed into at all. Until they are renamed the console carries a warning on every screen
-(chapter~12). Rename them here, and — under \texttt{DATABASE} authorization — rename the matching
+(chapter~13). Rename them here, and — under \texttt{DATABASE} authorization — rename the matching
 accounts in the identity provider to the same values.
 
 %% ------------------------------------------------------------------ 5
@@ -436,6 +436,56 @@ and checks that they answer.
 \end{elicitnote}
 
 %% ------------------------------------------------------------------ 10
+\section{Monitoring a survey's participation}
+
+\ui{Participation} shows how one survey is doing across your departments, as counts. It never
+shows a respondent: for one person, use \ui{Search Subjects}.
+
+\begin{enumerate}
+  \item Open \ui{Participation}.
+  \item Choose the \ui{Survey}. \ui{Departments} starts at \ui{All departments}, which is every
+        department your account reaches; choose one or more to narrow it.
+  \item Optionally set \ui{Registered from} and \ui{Registered to}. Both days are included.
+\end{enumerate}
+
+The page recomputes as soon as a filter changes. It has four parts:
+
+\begin{itemize}
+  \item \textbf{Participation} — how many subjects were registered, and how many have not started,
+        are in progress and have finished, the same three states \ui{Search Subjects} shows. The
+        \ui{Start rate} is started over registered, the \ui{Completion rate} finished over started,
+        and the \ui{Overall rate} finished over registered.
+  \item \textbf{By department} — the same, one row per department.
+  \item \textbf{By week} — per week, Monday to Sunday, how many were registered, started and
+        finished in it.
+  \item \textbf{Marked questions} — one card for each question or section the survey's author marked
+        for this report. Among finished respondents, \ui{Presented} counts each time a question was
+        shown (once per repeat), \ui{Answered} how many of those were answered, \ui{Response rate}
+        the share answered, and \ui{Reach} the share of finished respondents who were shown it at
+        all. A choice question lists its options with a count and share each, a number question
+        its minimum, quartiles and maximum, and a date question its range and a count per month.
+        Free-text answers are counted, never shown.
+\end{itemize}
+
+\begin{elicitnote}[Why some counts read “< 5”]
+A count from 1 to 4 is shown as \textbf{< 5}, and any rate built on it as \textbf{—}, so that a
+narrow filter cannot point at one person. A zero is shown, because it points at nobody. The
+threshold is a setting of the deployment; ask whoever runs it if your site uses another. The page
+does not hide a count that could be worked out from a total and its neighbours, so treat a
+small department or week with care when you pass the figures on.
+\end{elicitnote}
+
+\ui{Download CSV} and \ui{Download PDF} save the tables the page is showing, with the filter at the
+top and the same suppressed counts. They hold no respondent's record; that is what the export of
+chapter~11 is for.
+
+\begin{elicitnote}[Where the marks come from]
+The marked questions are part of the survey definition: the author marks them in the authoring
+tool and they arrive when the survey is applied (chapter~12). A survey with no marks shows the
+participation tables and says that nothing is marked.
+\end{elicitnote}
+
+%% ------------------------------------------------------------------ 11
 \section{Moving a respondent between deployments}\adminonly
 
 A respondent can be moved from one Elicit deployment to another — a site sending its finished
@@ -481,7 +531,7 @@ when they are not:
 An imported respondent arrives as they left: a finished respondent is still finished, and their
 answers read as they answered them.
 
-%% ------------------------------------------------------------------ 11
+%% ------------------------------------------------------------------ 12
 \section{Installing and updating a survey}\adminonly
 
 A survey is built in the Author tool and arrives here as a \texttt{.elicit} definition file. The
@@ -567,7 +617,7 @@ applied.
 definition is applied. An administrator is offered the remedy as a link; a user is told to ask
 for one.}
 
-%% ------------------------------------------------------------------ 12
+%% ------------------------------------------------------------------ 13
 \section{The System screens}\adminonly
 
 The six \ui{System} screens report what this deployment is running and test that the things it
@@ -638,7 +688,7 @@ The migrations create \texttt{admin} and \texttt{user} so that a new installatio
 into. The warning stays on every screen until they are renamed — see chapter~4 — and
 \ui{Open Users} takes you there.
 
-%% ------------------------------------------------------------------ 13
+%% ------------------------------------------------------------------ 14
 \section{Reading the console in your language}
 
 When a deployment has more than one language available, a selector appears at the right of the
@@ -665,7 +715,7 @@ the console cannot be added there either — that is a request to Elicit Softwar
 The survey's own questions are not translated by this selector. What a respondent reads is part
 of the survey definition and is the author's to write.
 
-%% ------------------------------------------------------------------ 14
+%% ------------------------------------------------------------------ 15
 \section{Where to look next}
 
 \begin{itemize}
@@ -674,7 +724,7 @@ of the survey definition and is the author's to write.
         provisioning a brand, and choosing which of the shipped languages this deployment
         offers.
   \item The \textbf{author's manual}, \emph{Building a Survey}, covers the Author tool — writing
-        questions, rules and reports, and exporting the definition that chapter~11 applies.
+        questions, rules and reports, and exporting the definition that chapter~12 applies.
   \item \ui{System} $>$ \ui{Overview} is the first place to look when something is wrong here.
         It names what is unhealthy and what setup is still outstanding, and links to the screen
         that fixes it.

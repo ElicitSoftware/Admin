@@ -51,6 +51,7 @@ rectangle "Elicit Admin" {
 
     ' --- Reporting ---
     usecase "UC-030\nRename a Survey's Reporting Schema" as UC030
+    usecase "UC-031\nMonitor a Survey's Participation" as UC031
 
     ' --- Shared subflow ---
     usecase "UC-015\nGenerate Survey Access Code" as UC015
@@ -67,6 +68,7 @@ user --> UC019
 user --> UC026
 user --> UC028
 user --> UC029
+user --> UC031
 
 ' Administrator (inherits user goals plus administration and data lifecycle)
 admin --> UC001
@@ -87,6 +89,7 @@ admin --> UC014
 admin --> UC017
 admin --> UC018
 admin --> UC030
+admin --> UC031
 admin --> UC019
 admin --> UC020
 admin --> UC021
@@ -131,5 +134,6 @@ UC026 ..> UC001 : <<extend>>\n(language applies to every screen)
 UC027 ..> UC026 : <<extend>>\n(adds a language to the selector)
 UC029 ..> UC001 : <<extend>>\n(printable form of the console's procedures)
 UC028 ..> UC029 : <<offers>>\n(the notice links the manual)
+UC031 ..> UC019 : <<include>>\n(no survey installed)
 
 @enduml
