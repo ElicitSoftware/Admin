@@ -97,6 +97,12 @@
           <td>❌</td>
         </tr>
         <tr>
+          <td>View a survey's participation and export it (CSV, PDF)</td>
+          <td>✅</td>
+          <td>✅</td>
+          <td>❌</td>
+        </tr>
+        <tr>
           <td>Add and edit departments</td>
           <td>❌</td>
           <td>✅</td>
@@ -232,6 +238,8 @@ Please visit <a href="https://quarkus.io/guides/security-oidc-configuration-prop
 For email configuration including examples for GMail, AWS SES, Mailjet & SendMail visit <a href="https://quarkus.io/guides/mailer-reference" target="_blank">Quarkus.io</a>
 
 After a survey definition is installed or updated (`/api/secured/survey/apply`, `/import`, `/update`, or the Apply Survey Definition page), Admin asks the Survey application to rebuild its reporting star schema by calling `POST {ELICIT_SURVEY_URL}/api/etl/build` (default `http://survey:8080`, the compose service name; `http://localhost:8080` in dev). The outcome is appended to the result ("Reporting schema rebuilt." / "Reporting schema not rebuilt: ...") and never fails the apply; set `ELICIT_SURVEY_ETL_BUILD_ENABLED=false` to skip the call. The Survey application also appears on System > Connections.
+
+The Participation page (`/participation`, UC-031) counts one survey's respondents in the user's departments and summarizes the questions the survey's author marked for the administrator report. Any count from 1 to one below `ELICIT_PARTICIPATION_SMALL_CELL` (`elicit.participation.small-cell`, default `5`) is shown as "< k" on the page and in its CSV and PDF; `1` turns suppression off.
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 
 <!-- ROADMAP

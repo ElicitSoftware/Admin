@@ -1,0 +1,39 @@
+/*-
+ * ***LICENSE_START***
+ * Elicit Survey
+ * %%
+ * Copyright (C) 2025 - 2026 The Regents of the University of Michigan - Rogel Cancer Center
+ * %%
+ * PolyForm Noncommercial License 1.0.0
+ * <https://polyformproject.org/licenses/noncommercial/1.0.0>
+ * ***LICENSE_END***
+ */
+
+/* The Participation page (UC-031). Aura's --vaadin-* tokens, as system-views.css explains; every
+   var() carries a literal fallback. Each card is a bordered block so a section mark's several
+   questions read as one card. */
+.participation-view {
+    padding-bottom: var(--vaadin-padding-xl, 24px);
+}
+
+.participation-section,
+.participation-card {
+    width: 100%;
+    margin-top: var(--vaadin-gap-m, 12px);
+}
+
+.participation-card {
+    border: 1px solid var(--vaadin-border-color-secondary, rgba(0, 0, 0, 0.12));
+    border-radius: var(--vaadin-radius-m, 8px);
+    padding: var(--vaadin-padding-m, 12px);
+    box-sizing: border-box;
+}
+
+.participation-caption {
+    font-weight: 600;
+    margin-bottom: var(--vaadin-gap-xs, 4px);
+}
+
+.participation-grid {
+    max-width: 60rem;
+}

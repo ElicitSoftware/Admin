@@ -663,6 +663,64 @@ Every row is one key in `translations.properties`. Return a file `translations_<
 | `searchView.status.inProgress` | In Progress | Search page · Status column | 30 |  |
 | `searchView.status.finished` | Finished | Search page · Status column | 30 |  |
 | `reportingRebuild.disabled` | Reporting ETL is disabled (elicit.etl.enabled=false) | Apply Survey Definition page · reason the reporting schema was not rebuilt; continues reportingRebuild.notRebuilt; the setting name stays | 160 |  |
+| `mainLayout.nav.participation` | Participation | Navigation drawer · menu item | 25 |  |
+| `participationView.title` | Participation | Participation page · page heading and browser tab title | 40 |  |
+| `participationView.intro` | How one survey is doing in your departments: who was registered, started and finished, and how finished respondents answered the questions the survey's author marked for this report. Every figure is a count; no respondent is shown. | Participation page · explanation under the heading | 300 |  |
+| `participationView.empty` | No survey is installed yet, so there is no participation to show. | Participation page · shown instead of the page when no survey is installed | 120 |  |
+| `participationView.filter.survey` | Survey | Participation page · filter label | 25 |  |
+| `participationView.filter.departments` | Departments | Participation page · filter label | 25 |  |
+| `participationView.filter.allDepartments` | All departments | Participation page · department filter entry that selects every department of the user | 30 |  |
+| `participationView.filter.from` | Registered from | Participation page · date filter label: first registration day | 25 |  |
+| `participationView.filter.to` | Registered to | Participation page · date filter label: last registration day, inclusive | 25 |  |
+| `participationView.filter.rangeInvalid` | The end date is before the start date. | Participation page · date filter error | 80 |  |
+| `participationView.download.csv` | Download CSV | Participation page · button | 25 |  |
+| `participationView.download.pdf` | Download PDF | Participation page · button | 25 |  |
+| `participationView.section.participation` | Participation | Participation page and exports · section heading | 40 |  |
+| `participationView.section.departments` | By department | Participation page and exports · section heading | 40 |  |
+| `participationView.section.weeks` | By week | Participation page and exports · section heading | 40 |  |
+| `participationView.section.questions` | Marked questions | Participation page and exports · section heading: the questions the survey author marked for this report | 40 |  |
+| `participationView.suppressionNote` | Counts from 1 to {0} are shown as "< {1}", and the rates built on them are withheld, so that a narrow filter cannot single out a respondent. | Participation page and exports · note under the first heading | 220 | params: {0} = largest suppressed count, {1} = the threshold |
+| `participationView.noWeeks` | Nobody in this filter has been registered yet. | Participation page and exports · shown instead of the weekly table | 120 |  |
+| `participationView.noMarks` | The author of this survey has marked no questions for this report. Marks are made on the Reports page of the authoring tool and arrive with the survey definition. | Participation page and exports · shown when the survey has no marked questions | 240 |  |
+| `participationView.questionsNote` | Among finished respondents. Presented counts each time a question was shown, once per repeat; Reach is the share of finished respondents who were shown it. Free-text answers are counted, never shown. | Participation page and exports · note under the marked questions heading | 260 |  |
+| `participationView.noQuestions` | This mark covers no question that holds an answer. | Participation page and exports · shown on a card with no question | 100 |  |
+| `participationView.metric.registered` | Registered | Participation page and exports · measure and column header | 20 |  |
+| `participationView.metric.notStarted` | Not started | Participation page and exports · measure and column header; same state as the Search page | 20 |  |
+| `participationView.metric.inProgress` | In progress | Participation page and exports · measure and column header; same state as the Search page | 20 |  |
+| `participationView.metric.finished` | Finished | Participation page and exports · measure and column header; same state as the Search page | 20 |  |
+| `participationView.metric.started` | Started | Participation page and exports · measure and column header: in progress plus finished | 20 |  |
+| `participationView.metric.startRate` | Start rate | Participation page and exports · measure and column header: started / registered | 20 |  |
+| `participationView.metric.completionRate` | Completion rate | Participation page and exports · measure and column header: finished / started | 20 |  |
+| `participationView.metric.overallRate` | Overall rate | Participation page and exports · measure and column header: finished / registered | 20 |  |
+| `participationView.col.measure` | Measure | Participation page and exports · column header | 20 |  |
+| `participationView.col.value` | Value | Participation page and exports · column header | 20 |  |
+| `participationView.col.department` | Department | Participation page and exports · column header | 20 |  |
+| `participationView.col.week` | Week of | Participation page and exports · column header: the Monday a week starts on | 20 |  |
+| `participationView.question.presented` | Presented | Participation page and exports · column header: times a question was shown | 20 |  |
+| `participationView.question.respondents` | Respondents | Participation page and exports · column header: respondents shown the question | 20 |  |
+| `participationView.question.answered` | Answered | Participation page and exports · column header | 20 |  |
+| `participationView.question.responseRate` | Response rate | Participation page and exports · column header: answered / presented | 20 |  |
+| `participationView.question.reach` | Reach | Participation page and exports · column header: respondents shown it / finished | 20 |  |
+| `participationView.dist.option` | Option | Participation page and exports · column header: an answer option | 20 |  |
+| `participationView.dist.count` | Count | Participation page and exports · column header | 20 |  |
+| `participationView.dist.share` | Share | Participation page and exports · column header: count / answered | 20 |  |
+| `participationView.dist.notListed` | {0} (not a current option) | Participation page and exports · a stored answer no current option carries | 80 | params: {0} = the stored value |
+| `participationView.dist.statistic` | Statistic | Participation page and exports · column header | 20 |  |
+| `participationView.dist.n` | Answers | Participation page and exports · statistic: how many answers | 20 |  |
+| `participationView.dist.min` | Minimum | Participation page and exports · statistic | 20 |  |
+| `participationView.dist.q1` | First quartile | Participation page and exports · statistic | 20 |  |
+| `participationView.dist.median` | Median | Participation page and exports · statistic | 20 |  |
+| `participationView.dist.q3` | Third quartile | Participation page and exports · statistic | 20 |  |
+| `participationView.dist.max` | Maximum | Participation page and exports · statistic | 20 |  |
+| `participationView.dist.earliest` | Earliest | Participation page and exports · statistic: earliest date answered | 20 |  |
+| `participationView.dist.latest` | Latest | Participation page and exports · statistic: latest date answered | 20 |  |
+| `participationView.checkbox.yes` | Yes | Participation page and exports · a checkbox answer | 10 |  |
+| `participationView.checkbox.no` | No | Participation page and exports · a checkbox answer | 10 | identical |
+| `participationView.export.registered` | Registered between | Participation exports · filter line label | 30 |  |
+| `participationView.export.range` | {0} and {1} | Participation exports · filter line value | 60 | params: {0} = first day or "any", {1} = last day or "any" |
+| `participationView.export.any` | any date | Participation exports · an open end of the date range | 20 |  |
+| `participationView.export.threshold` | Smallest count shown | Participation exports · filter line label: the suppression threshold | 30 |  |
+| `participationView.export.pdfTitle` | Participation: {0} | Participation PDF · document title | 80 | params: {0} = survey name |
 
 ## English source file
 
@@ -1259,4 +1317,62 @@ searchView.status.notStarted=Not Started
 searchView.status.inProgress=In Progress
 searchView.status.finished=Finished
 reportingRebuild.disabled=Reporting ETL is disabled (elicit.etl.enabled=false)
+mainLayout.nav.participation=Participation
+participationView.title=Participation
+participationView.intro=How one survey is doing in your departments: who was registered, started and finished, and how finished respondents answered the questions the survey's author marked for this report. Every figure is a count; no respondent is shown.
+participationView.empty=No survey is installed yet, so there is no participation to show.
+participationView.filter.survey=Survey
+participationView.filter.departments=Departments
+participationView.filter.allDepartments=All departments
+participationView.filter.from=Registered from
+participationView.filter.to=Registered to
+participationView.filter.rangeInvalid=The end date is before the start date.
+participationView.download.csv=Download CSV
+participationView.download.pdf=Download PDF
+participationView.section.participation=Participation
+participationView.section.departments=By department
+participationView.section.weeks=By week
+participationView.section.questions=Marked questions
+participationView.suppressionNote=Counts from 1 to {0} are shown as "< {1}", and the rates built on them are withheld, so that a narrow filter cannot single out a respondent.
+participationView.noWeeks=Nobody in this filter has been registered yet.
+participationView.noMarks=The author of this survey has marked no questions for this report. Marks are made on the Reports page of the authoring tool and arrive with the survey definition.
+participationView.questionsNote=Among finished respondents. Presented counts each time a question was shown, once per repeat; Reach is the share of finished respondents who were shown it. Free-text answers are counted, never shown.
+participationView.noQuestions=This mark covers no question that holds an answer.
+participationView.metric.registered=Registered
+participationView.metric.notStarted=Not started
+participationView.metric.inProgress=In progress
+participationView.metric.finished=Finished
+participationView.metric.started=Started
+participationView.metric.startRate=Start rate
+participationView.metric.completionRate=Completion rate
+participationView.metric.overallRate=Overall rate
+participationView.col.measure=Measure
+participationView.col.value=Value
+participationView.col.department=Department
+participationView.col.week=Week of
+participationView.question.presented=Presented
+participationView.question.respondents=Respondents
+participationView.question.answered=Answered
+participationView.question.responseRate=Response rate
+participationView.question.reach=Reach
+participationView.dist.option=Option
+participationView.dist.count=Count
+participationView.dist.share=Share
+participationView.dist.notListed={0} (not a current option)
+participationView.dist.statistic=Statistic
+participationView.dist.n=Answers
+participationView.dist.min=Minimum
+participationView.dist.q1=First quartile
+participationView.dist.median=Median
+participationView.dist.q3=Third quartile
+participationView.dist.max=Maximum
+participationView.dist.earliest=Earliest
+participationView.dist.latest=Latest
+participationView.checkbox.yes=Yes
+participationView.checkbox.no=No
+participationView.export.registered=Registered between
+participationView.export.range={0} and {1}
+participationView.export.any=any date
+participationView.export.threshold=Smallest count shown
+participationView.export.pdfTitle=Participation: {0}
 ```
