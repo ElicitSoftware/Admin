@@ -73,9 +73,25 @@
 }
 
 /* Navigation toggle button styling */
+/* Aura paints the toggle as a default button: a light surface and border with the icon in the
+   button text color, which on a dark brand header is a pale box with pale lines. Its colors come
+   from the --vaadin-button-* properties, not from `color`, so the toggle is made transparent with
+   its lines in the header text color, and tinted with that color on hover and press. */
 .branded-header vaadin-drawer-toggle {
     color: var(--brand-header-text);
     --vaadin-icon-size: 1.5rem;
+    --vaadin-button-background: transparent;
+    --vaadin-button-border-color: transparent;
+    --vaadin-button-text-color: var(--brand-header-text);
+    box-shadow: none;
+}
+
+.branded-header vaadin-drawer-toggle:hover {
+    --vaadin-button-background: color-mix(in srgb, var(--brand-header-text) 15%, transparent);
+}
+
+.branded-header vaadin-drawer-toggle[active] {
+    --vaadin-button-background: color-mix(in srgb, var(--brand-header-text) 25%, transparent);
 }
 
 /* Responsive behavior */
