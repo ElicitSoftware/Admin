@@ -6,7 +6,7 @@
 **Use Case Name:** Monitor a Survey's Participation
 **Primary Actor:** Survey User, Survey Administrator
 **Secondary Actor:** none
-**Goal:** See how one survey is doing across the departments one belongs to — how many respondents were registered, started and finished, by department and by week, and how finished respondents met and answered the questions the survey's author marked for the administrator report — and take the same tables away as a CSV file or a PDF.
+**Goal:** See how one survey is doing across the departments one belongs to — how many respondents were registered, started and finished, by department and by week, where those still in progress stopped and which of them have gone quiet, how long each step takes, and how finished respondents met and answered the questions the survey's author marked for the administrator report — as tables and charts, and take the same away as a CSV file or a PDF.
 **Status:** Implemented
 
 ## Preconditions
@@ -19,11 +19,12 @@
 1. The user opens Participation from the console's navigation.
 2. The system shows a survey picker (the first installed survey chosen), a department filter offering the user's own departments with "All departments" chosen, and an optional registration date range (BR-120).
 3. The system computes, live from the survey tables (BR-127), the **participation** of the respondents the filter selects: registered, not started, in progress and finished, with the start, completion and overall rates (BR-121).
-4. The system shows the same counts and rates **per department**, one row per department in the filter, and **per week**, one row for every week from the first registration to the last event in the population (BR-128).
-5. The system shows one **card per element marked `ADMINISTRATOR`** (Survey UC-013), in the author's order, each listing the questions the mark covers (BR-123). For each question: how many times it was presented to finished respondents and to how many of them, how many times it was answered, the response rate and the reach (BR-124), and a distribution suited to its type (BR-125).
+4. The system shows the same counts and rates **per department**, one row per department in the filter, and **per week**, one row for every week from the first registration to the last event in the population (BR-128). The participation is drawn as a funnel and the weeks as columns, each beside its table (BR-129). Respondents in progress with no recent activity are counted as **stalled**, overall and per department (BR-131).
+4a. The system shows the **progress** of the population: per step, how many respondents in progress stopped there and how many of those are stalled, drawn as bars (BR-130, BR-131); and per step, how long finished respondents spent on it, with the whole survey from first access to finish (BR-132, BR-133).
+5. The system shows one **card per element marked `ADMINISTRATOR`** (Survey UC-013), in the author's order, each listing the questions the mark covers (BR-123). For each question: how many times it was presented to finished respondents and to how many of them, how many times it was answered, the response rate and the reach (BR-124), and a distribution suited to its type (BR-125); a choice or checkbox distribution is also drawn as a bar per option (BR-129).
 6. Every count from 1 to one below the threshold is shown as "< k", and every rate, share or statistic built on such a count is withheld (BR-122).
 7. The user changes the survey, the departments or the dates; the system recomputes steps 3 to 6.
-8. The user chooses **Download CSV** or **Download PDF**; the system produces the tables the page is showing, with the filter written at the top and the same suppression, and the browser saves the file (BR-126).
+8. The user chooses **Download CSV** or **Download PDF**; the system produces the tables the page is showing, with the filter written at the top and the same suppression — the PDF with the page's charts too — and the browser saves the file (BR-126).
 
 ## Alternative Flows
 
@@ -91,7 +92,7 @@ The cards are the survey's `survey.report_items` rows of type `ADMINISTRATOR`, i
 - a **question placement** mark covers the question at that placement only, and its card has one row;
 - a **section placement** mark covers every question placed in that section at that step and section position, one row per question in the section's question order.
 
-Questions that hold no answer (`HTML`, `MODAL`) are left out. Texts are the survey's base-language text, as entered (C-014).
+Questions that hold no answer (`HTML`, `MODAL`) are left out. Texts — of steps, sections, questions, options and labels — are the survey's base-language text, as entered (C-014), except that a placeholder (`{<KEY>|default}`, Survey UC-002) is shown as its default text, since a count belongs to no one respondent; one without a default shows its phrase, and the counters `{Q#}` and `{S#}` are dropped.
 
 ### BR-124: Presented and answered are counted among finished respondents
 
@@ -111,14 +112,34 @@ The CSV file holds one block per table — the filter, the participation, the de
 
 ### BR-127: Live, aggregate and logged
 
-The figures are computed when the page is opened or the filter changes, from `survey.respondents`, `survey.subjects`, `survey.answers` and `survey.report_items`; nothing is precomputed. The page shows aggregates only and offers no way from a count to the respondents behind it (umbrella plan D-9). Opening the page and each export log the user, the survey's key and the filter at INFO.
+The figures are computed when the page is opened or the filter changes, from `survey.respondents`, `survey.subjects`, `survey.answers`, `survey.report_items` and, for step names, `survey.steps`; nothing is precomputed. The page shows aggregates only and offers no way from a count to the respondents behind it (umbrella plan D-9). Opening the page and each export log the user, the survey's key and the filter at INFO.
 
 ### BR-128: Weeks start on Monday
 
 A week is an ISO week, Monday to Sunday, in the server's time zone, labelled by its Monday. Per week the table counts the respondents of the population registered (`created_dt`), started (`first_access_dt`) and finished (`finalized_dt`) in that week, so a respondent registered in one week and finished in another appears in both. Every week from the first registration to the last event is listed, including weeks with nothing.
 
+### BR-129: Charts are drawn once, as SVG, beside their tables
+
+Four charts illustrate the tables: the **funnel** (registered, started, finished; one series), the **weeks** (registered, started and finished as three columns per week, with a legend), a **bar per option** on each choice and checkbox card (one series), and **drop-off by step** (one series). Each is drawn on the server as SVG and the same SVG is shown on the page and embedded in the PDF, so the two cannot differ. A chart never replaces its table: the table beside it is its text equivalent, and the chart carries an accessible name. A count suppressed by BR-122 draws no bar and is labeled "< k" at the baseline, so a chart never shows a value its table hides. Colors come in one fixed order (blue, orange, aqua), validated for color-vision deficiency on the page's white surface; aqua falls below 3:1 contrast and is relieved by the table beside it. Bar labels and axis text are in the text color, never in a series color.
+
+### BR-130: Where respondents in progress stopped
+
+A respondent **in progress** (BR-121) stopped at the step holding the answer row that was presented to them most recently (`answers.presented_dt`, Survey UC-012 BR-001). Every step of the survey is listed in survey order with how many stopped there, including zero, by its name in the survey's base language. A respondent in progress with no presented row — one who started before Survey recorded presentation (Survey V022), or whose first page was never drawn — is counted under **Not recorded**, after the steps.
+
+### BR-131: Stalled respondents
+
+A respondent in progress is **stalled** when their last activity — `respondents.last_activity_dt` (Survey UC-012 BR-004), else `first_access_dt` — is older than `elicit.participation.stalled-days` days (default 14) at the moment the page is computed. Stalled respondents are counted overall, per department and per drop-off step, and suppressed like every count (BR-122). They are counted, never named: reminding them is done from Search (UC-002, UC-004).
+
+### BR-132: Time per step and for the whole survey
+
+For a finished respondent, a step **starts** at the earliest `presented_dt` among its rows and **ends** where the next step presented to them starts, or at `finalized_dt` for the last one; time spent on a step they left and returned to is in the step they first entered. Per step, the page shows how many finished respondents it was measured for, and the median and the first and third quartiles. The **whole survey** row measures first access to finish (`finalized_dt − first_access_dt`, umbrella plan D-6, as Survey's reporting schema does). A figure measured on fewer than *k* respondents is withheld (BR-122). Durations are shown in minutes, hours and days.
+
+### BR-133: Progress needs the presentation stamp
+
+Drop-off and time per step read `answers.presented_dt`, which Survey has stamped only since V022. A finished respondent with no presented row is left out of the time per step (the whole-survey row still counts them), and the page says how many were left out, so that a survey upgraded from V2 is not read as having fast steps.
+
 ---
 
 ## Reference
 
-Traces to FR-042, FR-043, NFR-018 and NFR-019; phase 5 of the umbrella's default-reports plan (`Elicit/docs/research/default_reports.md`, sections 4.1, 4.2, 4.4 and 4.5). Implemented by `ParticipationView` (the page, its filter and its two downloads), `ParticipationService` (the queries, BR-120 to BR-125 and BR-128), `ParticipationTables` (the one rendering of the figures into tables that the page and both exports share), `ParticipationExport` (the CSV and the PDF, BR-126) and `SmallCell` (BR-122); `PDFService` gains an overload whose page header names the survey. Migration `V0.0.21` grants `survey.report_items` to the console's database user. Verified by `ParticipationServiceTest`, `SmallCellTest`, `ParticipationExportTest` and `ParticipationViewTest`. The administrator's manual (UC-029) describes the page in "Monitoring a survey's participation".
+Traces to FR-042, FR-043, NFR-018 and NFR-019, phase 5 of the umbrella's default-reports plan (`Elicit/docs/research/default_reports.md`, sections 4.1, 4.2, 4.4 and 4.5), and to FR-044 and FR-045, phase 6 (section 4.3). Implemented by `ParticipationView` (the page, its filter and its two downloads), `ParticipationService` (the queries, BR-120 to BR-125 and BR-128), `ParticipationTables` (the one rendering of the figures into tables that the page and both exports share), `ParticipationExport` (the CSV and the PDF, BR-126), `SmallCell` (BR-122) and `SvgCharts` (BR-129); `PDFService` gains an overload whose page header names the survey and draws a chart inline (`Content.inline`). Migration `V0.0.21` grants `survey.report_items` to the console's database user. Verified by `ParticipationServiceTest`, `SmallCellTest`, `SvgChartsTest`, `ParticipationExportTest` and `ParticipationViewTest`. The administrator's manual (UC-029) describes the page in "Monitoring a survey's participation".

@@ -72,7 +72,7 @@ class ParticipationViewTest extends QuarkusBrowserlessTest {
     void pageRendersTheSectionsForAConsoleUser() {
         assertNotNull(view.surveyPicker.getValue(), "the first installed survey is chosen");
         List<String> headings = find(H4.class, view.results).all().stream().map(H4::getText).toList();
-        assertEquals(List.of("Participation", "By department", "By week", "Marked questions"), headings);
+        assertEquals(List.of("Participation", "By department", "By week", "Progress", "Marked questions"), headings);
         assertNotNull(view.shown, "the figures on screen are kept for the downloads");
     }
 

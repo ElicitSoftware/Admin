@@ -25,6 +25,8 @@ import io.quarkus.test.common.QuarkusTestResource;
 import io.quarkus.test.junit.QuarkusTest;
 import jakarta.inject.Inject;
 import jakarta.persistence.EntityManager;
+import io.quarkus.arc.ClientProxy;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 
 import java.math.BigDecimal;
@@ -70,6 +72,9 @@ class ParticipationServiceTest {
     private static final OffsetDateTime WEEK_3 = WEEK_1.plusWeeks(2);
 
     Survey survey;
+    long inProgressWithAnswers;
+    long inProgressLate;
+    long finishedB;
     Department deptA;
     Department deptB;
     int answerId = BASE;
@@ -78,7 +83,12 @@ class ParticipationServiceTest {
     // ---- fixture --------------------------------------------------------------------------------
 
     private void seed() {
-        service.zone = ZoneOffset.UTC;
+        // The injected service is a client proxy: fields set on it would never reach the bean.
+        ParticipationService bean = ClientProxy.unwrap(service);
+        bean.zone = ZoneOffset.UTC;
+        // BR-131: "now" is three weeks after WEEK_3, so a 14-day threshold falls a week after it.
+        bean.clock = java.time.Clock.fixed(WEEK_3.plusDays(20).toInstant(), ZoneOffset.UTC);
+        bean.stalledDays = 14;
         survey = new Survey();
         survey.name = "UC-031 survey";
         survey.title = "UC-031";
@@ -124,14 +134,25 @@ class ParticipationServiceTest {
             long r = respondent(deptA, WEEK_1, WEEK_1, WEEK_3);
             answers(r, radio[i], number[i], text[i], checkbox[i], date[i]);
         }
-        answers(respondent(deptA, WEEK_1, WEEK_1, null), "1", "99", "q", "true", "2026-01-01");   // in progress: not counted
-        respondent(deptA, WEEK_3, WEEK_3, null);
+        inProgressWithAnswers = respondent(deptA, WEEK_1, WEEK_1, null);
+        answers(inProgressWithAnswers, "1", "99", "q", "true", "2026-01-01");   // in progress: not counted
+        inProgressLate = respondent(deptA, WEEK_3, WEEK_3, null);
         respondent(deptA, WEEK_3, null, null);
         long b = respondent(deptB, WEEK_3, WEEK_3, WEEK_3);
+        finishedB = b;
         answers(b, "7", "60", "u", "true", "2026-03-01");                      // "7" is no current option
         // A deleted row of a finished respondent is not presented.
         answer(b, Q_RADIO, "1", true, 1);
         em.flush();
+    }
+
+    /** The bean is application-scoped and shared with every other test: put back what seed() changed. */
+    @AfterEach
+    void restoreTheBean() {
+        ParticipationService bean = ClientProxy.unwrap(service);
+        bean.zone = java.time.ZoneId.systemDefault();
+        bean.clock = java.time.Clock.systemUTC();
+        bean.stalledDays = 14;
     }
 
     private Department department(String code) {
@@ -217,11 +238,12 @@ class ParticipationServiceTest {
     void participationCountsReconcile() {
         seed();
         Participation p = compute(List.of(deptA.id, deptB.id), null, null);
-        assertEquals(new Participation.Counts(10, 1, 2, 7), p.overall());
+        // Both respondents in progress were last active by WEEK_3, before the stalled cutoff (BR-131).
+        assertEquals(new Participation.Counts(10, 1, 2, 7, 2), p.overall());
         assertEquals(9, p.overall().started());
         assertEquals(2, p.departments().size());
-        assertEquals(new Participation.Counts(9, 1, 2, 6), p.departments().get(0).counts());
-        assertEquals(new Participation.Counts(1, 0, 0, 1), p.departments().get(1).counts());
+        assertEquals(new Participation.Counts(9, 1, 2, 6, 2), p.departments().get(0).counts());
+        assertEquals(new Participation.Counts(1, 0, 0, 1, 0), p.departments().get(1).counts());
     }
 
     /** UC-031 BR-120: a department outside the filter is not counted, nor listed. */
@@ -230,7 +252,7 @@ class ParticipationServiceTest {
     void departmentFilterScopesEveryFigure() {
         seed();
         Participation p = compute(List.of(deptB.id), null, null);
-        assertEquals(new Participation.Counts(1, 0, 0, 1), p.overall());
+        assertEquals(new Participation.Counts(1, 0, 0, 1, 0), p.overall());
         assertEquals(1, p.departments().size());
         QuestionStats radio = only(p.cards().get(0));
         assertEquals(1, radio.presented());
@@ -342,6 +364,88 @@ class ParticipationServiceTest {
         assertEquals(10, p.overall().registered());
         assertEquals(3, p.cards().size());
         assertEquals(7, p.cards().get(2).questions().get(0).presented());
+    }
+
+    /**
+     * Adds a second step ("Lifestyle") and stamps presentation (BR-130, BR-132): the six finished
+     * respondents of department A were shown step 1 thirty minutes before finishing and step 2 ten
+     * minutes before; department B's finished respondent has no stamp; the respondent in progress
+     * with answers last saw step 2; the late one has no presented row and was active ten days after
+     * WEEK_3, inside the threshold.
+     */
+    private void seedProgress() {
+        int s = survey.id;
+        int qStep2 = BASE + 7;
+        sql("INSERT INTO survey.steps (id, survey_id, display_order, name, dimension_name, step_id) VALUES (?1, ?2, 2, 'Lifestyle', 'D', ?1)", BASE + 1, s);
+        sql("INSERT INTO survey.sections (id, survey_id, display_order, name, dimension_name, section_id) VALUES (?1, ?2, 2, 'Daily', 'D', ?1)", BASE + 1, s);
+        sql("INSERT INTO survey.questions (id, survey_id, type_id, text, question_id) "
+                + "VALUES (?1, ?2, (SELECT id FROM survey.question_types WHERE name = 'TEXT'), 'Exercise?', ?1)", qStep2, s);
+        sql("INSERT INTO survey.sections_questions (id, survey_id, question_id, section_id, display_order, sections_question_id) "
+                + "VALUES (?1, ?2, ?1, ?3, 1, ?1)", qStep2, s, BASE + 1);
+        List<Long> finishedA = em.createNativeQuery("""
+                        SELECT r.id FROM survey.respondents r JOIN survey.subjects sub ON sub.respondent_id = r.id
+                        WHERE r.survey_id = ?1 AND sub.department_id = ?2 AND r.finalized_dt IS NOT NULL ORDER BY r.id""")
+                .setParameter(1, s).setParameter(2, deptA.id).getResultList().stream().map(o -> ((Number) o).longValue()).toList();
+        for (long r : finishedA) {
+            sql("UPDATE survey.answers SET presented_dt = ?1 WHERE respondent_id = ?2", WEEK_3.minusMinutes(30), r);
+            stepTwoAnswer(r, qStep2, WEEK_3.minusMinutes(10));
+        }
+        sql("UPDATE survey.answers SET presented_dt = ?1 WHERE respondent_id = ?2", WEEK_1.plusHours(1), inProgressWithAnswers);
+        stepTwoAnswer(inProgressWithAnswers, qStep2, WEEK_1.plusHours(2));
+        sql("UPDATE survey.respondents SET last_activity_dt = ?1 WHERE id = ?2", WEEK_3.plusDays(10), inProgressLate);
+        em.flush();
+    }
+
+    private void stepTwoAnswer(long respondent, int question, OffsetDateTime presented) {
+        int id = ++answerId;
+        sql("INSERT INTO survey.answers (id, survey_id, respondent_id, step, section, section_question_id, question_id, "
+                        + "display_key, display_text, text_value, deleted, presented_dt) "
+                        + "VALUES (?1, ?2, ?3, 2, 1, ?4, ?4, ?5, 'q', 'yes', false, ?6)",
+                id, survey.id, respondent, question, "UC031-" + id, presented);
+    }
+
+    /** UC-031 BR-130 and BR-131: where respondents in progress stopped, and which are stalled. */
+    @Test
+    @TestTransaction
+    void dropOffAndStalledFollowTheLastPresentedRow() {
+        seed();
+        seedProgress();
+        Participation p = compute(List.of(deptA.id, deptB.id), null, null);
+        assertEquals(1, p.overall().stalled(), "the late respondent was active inside the threshold");
+        Participation.Progress progress = p.progress();
+        assertEquals(List.of("Health", "Lifestyle"), progress.steps().stream().map(Participation.StepProgress::name).toList());
+        assertEquals(0, progress.steps().get(0).stopped());
+        assertEquals(1, progress.steps().get(1).stopped());
+        assertEquals(1, progress.steps().get(1).stalled());
+        assertEquals(1, progress.notRecorded(), "the late respondent has no presented row");
+        assertEquals(0, progress.notRecordedStalled());
+        assertEquals(14, p.stalledDays());
+    }
+
+    /** UC-031 BR-132 and BR-133: time per step among finished respondents with stamps. */
+    @Test
+    @TestTransaction
+    void timePerStepRunsFromStepToStep() {
+        seed();
+        seedProgress();
+        Participation.Progress progress = compute(List.of(deptA.id, deptB.id), null, null).progress();
+        assertEquals(new Participation.Durations(6, 1200L, 1200L, 1200L), progress.steps().get(0).time());
+        assertEquals(new Participation.Durations(6, 600L, 600L, 600L), progress.steps().get(1).time());
+        assertEquals(1, progress.finishedUnmeasured(), "department B's finished respondent has no stamp");
+        // The whole survey counts every finished respondent: six took 14 days, one took none.
+        long fourteenDays = 14L * 24 * 3600;
+        assertEquals(new Participation.Durations(7, fourteenDays, fourteenDays, fourteenDays), progress.wholeSurvey());
+    }
+
+    /** UC-031 BR-123: a placeholder shows its default, a counter is dropped, a bare token loses its marks. */
+    @Test
+    void placeholdersShowTheirDefault() {
+        assertEquals("this person", ParticipationService.plain("{<NAME>|this person}"));
+        assertEquals("About this person", ParticipationService.plain("About {<NAME>|this person}"));
+        assertEquals("Person", ParticipationService.plain("Person {Q#}"));
+        assertEquals("NAME", ParticipationService.plain("{<NAME>}"));
+        assertEquals("No placeholder", ParticipationService.plain("No placeholder"));
+        assertNull(ParticipationService.plain(null));
     }
 
     /** UC-031 BR-125: quartiles interpolate between order statistics. */

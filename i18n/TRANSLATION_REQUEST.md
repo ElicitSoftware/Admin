@@ -721,6 +721,26 @@ Every row is one key in `translations.properties`. Return a file `translations_<
 | `participationView.export.any` | any date | Participation exports · an open end of the date range | 20 |  |
 | `participationView.export.threshold` | Smallest count shown | Participation exports · filter line label: the suppression threshold | 30 |  |
 | `participationView.export.pdfTitle` | Participation: {0} | Participation PDF · document title | 80 | params: {0} = survey name |
+| `participationView.metric.stalled` | Stalled (no activity in {0} days) | Participation page and exports · measure and column header: respondents in progress who have gone quiet | 40 | params: {0} = number of days |
+| `participationView.chart.funnel` | Registered, started and finished | Participation page and PDF · accessible name of the funnel chart | 80 |  |
+| `participationView.chart.weeks` | Registered, started and finished per week | Participation page and PDF · accessible name of the weekly chart | 80 |  |
+| `participationView.chart.options` | Answers per option: {0} | Participation page and PDF · accessible name of a question's option chart | 120 | params: {0} = the question text |
+| `participationView.chart.dropOff` | Respondents in progress by the step where they stopped | Participation page and PDF · accessible name of the drop-off chart | 100 |  |
+| `participationView.section.progress` | Progress | Participation page and exports · section heading: where respondents stop and how long steps take | 40 |  |
+| `participationView.progress.step` | Step {0} | Participation page and exports · a step that has no name | 20 | params: {0} = the step number |
+| `participationView.progress.notRecorded` | Not recorded | Participation page and exports · drop-off row: respondents whose pages were not recorded | 30 |  |
+| `participationView.progress.wholeSurvey` | Whole survey (first access to finish) | Participation page and exports · time row for the whole survey | 50 |  |
+| `participationView.progress.stoppedTitle` | Where respondents in progress stopped | Participation page and exports · table caption | 60 |  |
+| `participationView.progress.timeTitle` | Time spent by finished respondents | Participation page and exports · table caption | 60 |  |
+| `participationView.progress.colStep` | Step | Participation page and exports · column header | 20 |  |
+| `participationView.progress.colStopped` | Stopped here | Participation page and exports · column header | 20 |  |
+| `participationView.progress.colMeasured` | Respondents | Participation page and exports · column header: how many respondents a time was measured on | 20 |  |
+| `participationView.progress.note` | A respondent in progress stopped at the step of the last page they were shown. A step takes the time from its first page to the first page of the next step; the whole survey runs from first access to finish. | Participation page and exports · note under the progress heading | 260 |  |
+| `participationView.progress.noteUnmeasured` | A respondent in progress stopped at the step of the last page they were shown. A step takes the time from its first page to the first page of the next step; the whole survey runs from first access to finish. {0} finished respondents took the survey before pages were recorded and are left out of the time per step, though not of the whole survey. | Participation page and exports · note under the progress heading when some respondents predate page recording | 340 | params: {0} = a count, possibly "< 5" |
+| `participationView.duration.underMinute` | < 1 min | Participation page and exports · a duration under a minute | 12 | identical in es-419 |
+| `participationView.duration.minutes` | {0} min | Participation page and exports · a duration | 12 | params: {0} = minutes identical in es-419 |
+| `participationView.duration.hoursMinutes` | {0} h {1} min | Participation page and exports · a duration | 16 | params: {0} = hours, {1} = minutes identical in es-419 |
+| `participationView.duration.daysHours` | {0} d {1} h | Participation page and exports · a duration | 16 | params: {0} = days, {1} = hours identical in es-419 |
 
 ## English source file
 
@@ -1375,4 +1395,24 @@ participationView.export.range={0} and {1}
 participationView.export.any=any date
 participationView.export.threshold=Smallest count shown
 participationView.export.pdfTitle=Participation: {0}
+participationView.metric.stalled=Stalled (no activity in {0} days)
+participationView.chart.funnel=Registered, started and finished
+participationView.chart.weeks=Registered, started and finished per week
+participationView.chart.options=Answers per option: {0}
+participationView.chart.dropOff=Respondents in progress by the step where they stopped
+participationView.section.progress=Progress
+participationView.progress.step=Step {0}
+participationView.progress.notRecorded=Not recorded
+participationView.progress.wholeSurvey=Whole survey (first access to finish)
+participationView.progress.stoppedTitle=Where respondents in progress stopped
+participationView.progress.timeTitle=Time spent by finished respondents
+participationView.progress.colStep=Step
+participationView.progress.colStopped=Stopped here
+participationView.progress.colMeasured=Respondents
+participationView.progress.note=A respondent in progress stopped at the step of the last page they were shown. A step takes the time from its first page to the first page of the next step; the whole survey runs from first access to finish.
+participationView.progress.noteUnmeasured=A respondent in progress stopped at the step of the last page they were shown. A step takes the time from its first page to the first page of the next step; the whole survey runs from first access to finish. {0} finished respondents took the survey before pages were recorded and are left out of the time per step, though not of the whole survey.
+participationView.duration.underMinute=< 1 min
+participationView.duration.minutes={0} min
+participationView.duration.hoursMinutes={0} h {1} min
+participationView.duration.daysHours={0} d {1} h
 ```

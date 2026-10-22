@@ -119,6 +119,14 @@ public class Content {
     public String svg;
 
     /**
+     * Whether {@link #svg} is drawn inline, at the current position and at most the text width,
+     * like a paragraph, rather than on a landscape page of its own. A report service's diagram
+     * (FHHS's pedigree) leaves it {@code false}; the Participation export's charts (UC-031 BR-129)
+     * set it.
+     */
+    public boolean inline;
+
+    /**
      * Table content for structured data presentation.
      *
      * <p>Contains a {@link Table} object that defines tabular data to be rendered

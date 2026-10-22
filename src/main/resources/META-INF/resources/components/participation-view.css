@@ -37,3 +37,16 @@
 .participation-grid {
     max-width: 60rem;
 }
+
+/* BR-129: the charts are fixed-size SVG drawn on the server; on a narrow window they scale down
+   rather than scroll sideways, and keep their aspect ratio. */
+.participation-chart-box {
+    display: block;
+    max-width: 100%;
+    margin: var(--vaadin-gap-s, 8px) 0;
+}
+
+.participation-chart-box svg {
+    max-width: 100%;
+    height: auto;
+}

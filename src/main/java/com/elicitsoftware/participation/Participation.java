@@ -25,8 +25,11 @@ import java.util.SortedMap;
  * @param departments the same counts per department in the filter, by department name
  * @param weeks       the counts per week, every week from the first registration to the last event (BR-128)
  * @param cards       one card per {@code ADMINISTRATOR} mark, in the author's order (BR-123)
+ * @param progress    where respondents in progress stopped and how long steps take (BR-130 to BR-133)
+ * @param stalledDays the inactivity, in days, after which a respondent in progress is stalled (BR-131)
  */
-public record Participation(Counts overall, List<DepartmentCounts> departments, List<Week> weeks, List<Card> cards) {
+public record Participation(Counts overall, List<DepartmentCounts> departments, List<Week> weeks, List<Card> cards,
+                            Progress progress, int stalledDays) {
 
     /**
      * Respondents by state (BR-121).
@@ -35,8 +38,9 @@ public record Participation(Counts overall, List<DepartmentCounts> departments, 
      * @param notStarted no first access and not finalized
      * @param inProgress first access and not finalized
      * @param finished   finalized
+     * @param stalled    in progress with no activity for the stalled threshold (BR-131)
      */
-    public record Counts(long registered, long notStarted, long inProgress, long finished) {
+    public record Counts(long registered, long notStarted, long inProgress, long finished, long stalled) {
 
         /** Started is in progress plus finished. */
         public long started() {
@@ -97,5 +101,40 @@ public record Participation(Counts overall, List<DepartmentCounts> departments, 
 
     /** The earliest and latest answer of a date question and the count per month. */
     public record DateSummary(long n, LocalDate earliest, LocalDate latest, SortedMap<YearMonth, Long> perMonth) {
+    }
+
+    /**
+     * The progress of the population (BR-130 to BR-133).
+     *
+     * @param steps               every step in survey order, with drop-off and time spent
+     * @param notRecorded         respondents in progress with no presented row (BR-130)
+     * @param notRecordedStalled  of those, how many are stalled
+     * @param wholeSurvey         first access to finish, among finished respondents (BR-132)
+     * @param finishedUnmeasured  finished respondents left out of the time per step for want of a stamp (BR-133)
+     */
+    public record Progress(List<StepProgress> steps, long notRecorded, long notRecordedStalled,
+                           Durations wholeSurvey, long finishedUnmeasured) {
+    }
+
+    /**
+     * One step.
+     *
+     * @param order     the step's display order, as {@code answers.step} holds it
+     * @param name      the step's name in the survey's base language
+     * @param stopped   respondents in progress who stopped here (BR-130)
+     * @param stalled   of those, how many are stalled (BR-131)
+     * @param time      how long finished respondents spent here (BR-132)
+     */
+    public record StepProgress(int order, String name, long stopped, long stalled, Durations time) {
+    }
+
+    /**
+     * Durations measured on {@code n} respondents, in seconds; the statistics are {@code null}
+     * when {@code n} is zero.
+     */
+    public record Durations(long n, Long q1, Long median, Long q3) {
+
+        /** No measurement. */
+        public static final Durations NONE = new Durations(0, null, null, null);
     }
 }

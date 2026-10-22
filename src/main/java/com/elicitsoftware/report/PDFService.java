@@ -435,7 +435,9 @@ public class PDFService {
                         }
 
                         // Add the content
-                        if (content.svg != null) {
+                        if (content.svg != null && content.inline) {
+                            addInlineSVG(content);
+                        } else if (content.svg != null) {
                             addSVG(content);
                         } else if (content.table != null) {
                             drawTable(createContent(content));
@@ -591,6 +593,58 @@ public class PDFService {
      * @param svg the raw SVG markup to check
      * @throws IOException if the content contains a DOCTYPE or ENTITY declaration
      */
+    /**
+     * Draws an SVG inline, at the current position, scaled down to the text width when it is wider
+     * and never scaled up, starting a new page when it does not fit below the content already
+     * drawn. The Participation export's charts use it (UC-031 BR-129); a report service's diagram
+     * keeps {@link #addSVG(Content)}'s landscape page.
+     *
+     * @param content the content whose {@code svg} is drawn
+     * @throws IOException if the SVG cannot be parsed or drawn
+     */
+    void addInlineSVG(Content content) throws IOException {
+        rejectXxePayload(content.svg);
+        String parser = XMLResourceDescriptor.getXMLParserClassName();
+        SAXSVGDocumentFactory factory = new SAXSVGDocumentFactory(parser);
+        SVGDocument svgDocument = factory.createSVGDocument(null, new StringReader(content.svg));
+        BridgeContext ctx = new BridgeContext(new UserAgentAdapter());
+        GraphicsNode graphicsNode = new GVTBuilder().build(ctx, svgDocument);
+
+        // The chart's own size, from its root element; Batik's bounds would drop the margins.
+        float svgWidth = svgDocument.getRootElement().getWidth().getBaseVal().getValue();
+        float svgHeight = svgDocument.getRootElement().getHeight().getBaseVal().getValue();
+        if (svgWidth <= 0 || svgHeight <= 0) {
+            return;
+        }
+        float available = page.getMediaBox().getWidth() - 2 * TEXT_MARGIN;
+        float scale = Math.min(1f, available / svgWidth);
+        float width = svgWidth * scale;
+        float height = svgHeight * scale;
+
+        yPosition -= FONT_SIZE / 2;
+        if (yPosition - height < TEXT_MARGIN + FONT_SIZE) {
+            contentStream.close();
+            page = new PDPage(PDRectangle.LETTER);
+            document.addPage(page);
+            contentStream = new PDPageContentStream(document, page);
+            contentStream.setFont(TEXT_FONT, FONT_SIZE);
+            yPosition = pageHeight - TEXT_MARGIN;
+        }
+
+        PdfBoxGraphics2D graphics2D = new PdfBoxGraphics2D(document, width, height);
+        graphics2D.setFontTextDrawer(new PdfBoxGraphics2DFontTextDrawer());
+        graphics2D.scale(scale, scale);
+        graphicsNode.paint(graphics2D);
+        graphics2D.dispose();
+
+        contentStream.saveGraphicsState();
+        contentStream.transform(Matrix.getTranslateInstance(TEXT_MARGIN, yPosition - height));
+        contentStream.drawForm(graphics2D.getXFormObject());
+        contentStream.restoreGraphicsState();
+        contentStream.setNonStrokingColor(0f, 0f, 0f);
+        yPosition -= height + FONT_SIZE / 2;
+    }
+
     static void rejectXxePayload(String svg) throws IOException {
         if (svg != null
                 && (svg.toUpperCase().contains("<!DOCTYPE") || svg.toUpperCase().contains("<!ENTITY"))) {
