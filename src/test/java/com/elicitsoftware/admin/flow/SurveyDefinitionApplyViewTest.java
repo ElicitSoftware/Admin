@@ -108,7 +108,7 @@ class SurveyDefinitionApplyViewTest extends QuarkusBrowserlessTest {
 
         Upload upload = find(Upload.class, view).single();
         assertEquals("survey-apply-upload", upload.getId().orElse(null));
-        assertEquals(List.of(".elicit"), upload.getAcceptedFileTypes());
+        assertEquals(List.of(".elicit"), upload.getAcceptedFileExtensions());
         assertEquals(1, upload.getMaxFiles());
     }
 
