@@ -454,10 +454,16 @@ The page recomputes as soon as a filter changes. It has four parts:
   \item \textbf{Participation} — how many subjects were registered, and how many have not started,
         are in progress and have finished, the same three states \ui{Search Subjects} shows. The
         \ui{Start rate} is started over registered, the \ui{Completion rate} finished over started,
-        and the \ui{Overall rate} finished over registered.
+        and the \ui{Overall rate} finished over registered. \ui{Stalled} counts the subjects in progress who have not
+        opened a page or saved an answer for some days (14 unless your site changed it); they are
+        the ones to remind, from \ui{Search Subjects}.
   \item \textbf{By department} — the same, one row per department.
   \item \textbf{By week} — per week, Monday to Sunday, how many were registered, started and
         finished in it.
+  \item \textbf{Progress} — for subjects still in progress, the step of the last page they were
+        shown, so you can see where people stop; and for those who finished, how long each step
+        took them (median and quartiles) and how long the whole survey took. A subject who
+        started before the deployment recorded pages is counted as \ui{Not recorded}.
   \item \textbf{Marked questions} — one card for each question or section the survey's author marked
         for this report. Among finished respondents, \ui{Presented} counts each time a question was
         shown (once per repeat), \ui{Answered} how many of those were answered, \ui{Response rate}
@@ -475,7 +481,11 @@ does not hide a count that could be worked out from a total and its neighbours, 
 small department or week with care when you pass the figures on.
 \end{elicitnote}
 
-\ui{Download CSV} and \ui{Download PDF} save the tables the page is showing, with the filter at the
+The participation, the weeks, each choice question and the progress by step are also drawn as
+charts beside their tables. A count shown as \textbf{< 5} draws no bar.
+
+\ui{Download CSV} and \ui{Download PDF} save the tables the page is showing (the PDF with the
+charts too), with the filter at the
 top and the same suppressed counts. They hold no respondent's record; that is what the export of
 chapter~11 is for.
 
