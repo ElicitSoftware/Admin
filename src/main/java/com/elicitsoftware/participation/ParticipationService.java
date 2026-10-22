@@ -78,6 +78,18 @@ public class ParticipationService {
     static final Set<String> DATE_TYPES = Set.of("DATE_PICKER");
     static final String CHECKBOX = "CHECKBOX";
 
+    /**
+     * A placeholder as Survey writes it (Survey {@code QuestionManager.PLACEHOLDER}): group 1 is the
+     * phrase, group 2 the default text, absent when the placeholder has none.
+     */
+    static final java.util.regex.Pattern PLACEHOLDER = java.util.regex.Pattern.compile("\\{([^{}|]+)(?:\\|([^{}]*))?}");
+
+    /** A token inside a phrase, {@code <NAME>}. */
+    static final java.util.regex.Pattern TOKEN_REF = java.util.regex.Pattern.compile("<([A-Za-z0-9_]+)>");
+
+    /** Survey's per-instance counters, which mean nothing across respondents. */
+    static final Set<String> COUNTERS = Set.of("Q#", "S#");
+
     /** The types whose stored value a distribution reads (BR-125); every other value is only counted. */
     static final Set<String> VALUE_TYPES;
 
@@ -336,7 +348,7 @@ public class ParticipationService {
                 .getResultList();
         Map<Integer, String> names = new LinkedHashMap<>();
         for (Object[] row : rows) {
-            names.putIfAbsent(((Number) row[0]).intValue(), row[1] == null ? null : String.valueOf(row[1]));
+            names.putIfAbsent(((Number) row[0]).intValue(), row[1] == null ? null : plain(String.valueOf(row[1])));
         }
         return names;
     }
@@ -411,7 +423,7 @@ public class ParticipationService {
             Integer questionId = integer(mark[1]);
             Integer sectionsQuestionId = integer(mark[2]);
             Integer stepsSectionsId = integer(mark[3]);
-            String label = mark[4] == null || String.valueOf(mark[4]).isBlank() ? null : String.valueOf(mark[4]);
+            String label = mark[4] == null || String.valueOf(mark[4]).isBlank() ? null : plain(String.valueOf(mark[4]));
 
             List<Item> items;
             String title;
@@ -563,7 +575,7 @@ public class ParticipationService {
                     .getResultList();
             for (Object[] option : current) {
                 String code = option[0] == null ? "" : String.valueOf(option[0]);
-                String text = option[1] == null ? code : String.valueOf(option[1]);
+                String text = option[1] == null ? code : plain(String.valueOf(option[1]));
                 Long count = perCode.remove(code);
                 options.add(new OptionCount(text, count == null ? 0 : count, true));
             }
@@ -645,7 +657,7 @@ public class ParticipationService {
                     .setParameter("id", questionId)
                     .getResultList();
             for (Object[] row : rows) {
-                items.add(new Item(((Number) row[0]).intValue(), String.valueOf(row[1]), String.valueOf(row[2]), integer(row[3])));
+                items.add(new Item(((Number) row[0]).intValue(), plain(String.valueOf(row[1])), String.valueOf(row[2]), integer(row[3])));
             }
         }
         return items;
@@ -690,12 +702,39 @@ public class ParticipationService {
         if (rows.isEmpty()) {
             return null;
         }
-        String step = rows.get(0)[0] == null ? "" : String.valueOf(rows.get(0)[0]);
-        String section = rows.get(0)[1] == null ? "" : String.valueOf(rows.get(0)[1]);
+        String step = rows.get(0)[0] == null ? "" : plain(String.valueOf(rows.get(0)[0]));
+        String section = rows.get(0)[1] == null ? "" : plain(String.valueOf(rows.get(0)[1]));
         if (step.isBlank()) {
             return section;
         }
         return section.isBlank() ? step : step + " › " + section;
+    }
+
+    /**
+     * BR-123: authored text as an aggregate shows it. Every placeholder is shown as its default
+     * text, since no one respondent's values apply; one without a default shows its phrase with
+     * the token marks removed, and Survey's counters ({Q#}, {S#}) are dropped.
+     */
+    static String plain(String text) {
+        if (text == null || text.indexOf('{') < 0) {
+            return text;
+        }
+        java.util.regex.Matcher m = PLACEHOLDER.matcher(text);
+        StringBuilder out = new StringBuilder();
+        while (m.find()) {
+            String phrase = m.group(1);
+            String replacement;
+            if (COUNTERS.contains(phrase.trim())) {
+                replacement = "";
+            } else if (m.group(2) != null) {
+                replacement = m.group(2);
+            } else {
+                replacement = TOKEN_REF.matcher(phrase).replaceAll("$1");
+            }
+            m.appendReplacement(out, java.util.regex.Matcher.quoteReplacement(replacement));
+        }
+        m.appendTail(out);
+        return out.toString().replaceAll("\\s{2,}", " ").trim();
     }
 
     /** {@code 'A', 'B'} for a set of constant type names. */

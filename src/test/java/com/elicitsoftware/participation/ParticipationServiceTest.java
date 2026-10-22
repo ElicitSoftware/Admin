@@ -437,6 +437,17 @@ class ParticipationServiceTest {
         assertEquals(new Participation.Durations(7, fourteenDays, fourteenDays, fourteenDays), progress.wholeSurvey());
     }
 
+    /** UC-031 BR-123: a placeholder shows its default, a counter is dropped, a bare token loses its marks. */
+    @Test
+    void placeholdersShowTheirDefault() {
+        assertEquals("this person", ParticipationService.plain("{<NAME>|this person}"));
+        assertEquals("About this person", ParticipationService.plain("About {<NAME>|this person}"));
+        assertEquals("Person", ParticipationService.plain("Person {Q#}"));
+        assertEquals("NAME", ParticipationService.plain("{<NAME>}"));
+        assertEquals("No placeholder", ParticipationService.plain("No placeholder"));
+        assertNull(ParticipationService.plain(null));
+    }
+
     /** UC-031 BR-125: quartiles interpolate between order statistics. */
     @Test
     void quantilesInterpolateLinearly() {

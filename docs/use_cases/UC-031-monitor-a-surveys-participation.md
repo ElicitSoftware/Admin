@@ -92,7 +92,7 @@ The cards are the survey's `survey.report_items` rows of type `ADMINISTRATOR`, i
 - a **question placement** mark covers the question at that placement only, and its card has one row;
 - a **section placement** mark covers every question placed in that section at that step and section position, one row per question in the section's question order.
 
-Questions that hold no answer (`HTML`, `MODAL`) are left out. Texts are the survey's base-language text, as entered (C-014).
+Questions that hold no answer (`HTML`, `MODAL`) are left out. Texts — of steps, sections, questions, options and labels — are the survey's base-language text, as entered (C-014), except that a placeholder (`{<KEY>|default}`, Survey UC-002) is shown as its default text, since a count belongs to no one respondent; one without a default shows its phrase, and the counters `{Q#}` and `{S#}` are dropped.
 
 ### BR-124: Presented and answered are counted among finished respondents
 
