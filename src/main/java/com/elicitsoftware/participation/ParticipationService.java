@@ -14,6 +14,9 @@ import com.elicitsoftware.participation.Participation.Card;
 import com.elicitsoftware.participation.Participation.Counts;
 import com.elicitsoftware.participation.Participation.DateSummary;
 import com.elicitsoftware.participation.Participation.DepartmentCounts;
+import com.elicitsoftware.participation.Participation.Durations;
+import com.elicitsoftware.participation.Participation.Progress;
+import com.elicitsoftware.participation.Participation.StepProgress;
 import com.elicitsoftware.participation.Participation.Kind;
 import com.elicitsoftware.participation.Participation.NumberSummary;
 import com.elicitsoftware.participation.Participation.OptionCount;
@@ -24,11 +27,14 @@ import jakarta.inject.Inject;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.Query;
 import jakarta.transaction.Transactional;
+import org.eclipse.microprofile.config.inject.ConfigProperty;
 
 import java.math.BigDecimal;
 import java.math.MathContext;
 import java.math.RoundingMode;
+import java.time.Clock;
 import java.time.DayOfWeek;
+import java.time.Duration;
 import java.time.LocalDate;
 import java.time.OffsetDateTime;
 import java.time.YearMonth;
@@ -49,7 +55,9 @@ import java.util.TreeMap;
  * Computes the Participation page of one survey (UC-031) live from the survey tables (BR-127):
  * the participation of the filtered respondents (BR-120, BR-121), per department and per week
  * (BR-128), and one card per {@code ADMINISTRATOR} mark with the presented, answered and
- * distribution figures of every question it covers (BR-123 to BR-125).
+ * distribution figures of every question it covers (BR-123 to BR-125); and the progress of the
+ * population: where respondents in progress stopped, which of them are stalled, and how long
+ * finished respondents spent on each step (BR-130 to BR-133).
  * <p>
  * Counts are returned raw; suppression is {@link SmallCell}'s, applied when the result is
  * rendered. Data access is native SQL because the survey tables it reads ({@code answers},
@@ -93,7 +101,18 @@ public class ParticipationService {
     }
 
     /** One respondent as the participation counts read it. */
-    record Respondent(long departmentId, OffsetDateTime created, OffsetDateTime firstAccess, OffsetDateTime finalized) {
+    record Respondent(long id, long departmentId, OffsetDateTime created, OffsetDateTime firstAccess,
+                      OffsetDateTime finalized, OffsetDateTime lastActivity) {
+
+        boolean inProgress() {
+            return finalized == null && firstAccess != null;
+        }
+
+        /** BR-131: in progress, and nothing since {@code cutoff}. */
+        boolean stalled(OffsetDateTime cutoff) {
+            OffsetDateTime last = lastActivity != null ? lastActivity : firstAccess;
+            return inProgress() && last != null && last.isBefore(cutoff);
+        }
     }
 
     /** A question a mark covers, as its latest version describes it. */
@@ -110,6 +129,13 @@ public class ParticipationService {
     /** The zone weeks and registration days are reckoned in (BR-120, BR-128). */
     ZoneId zone = ZoneId.systemDefault();
 
+    /** The clock stalled respondents are measured against (BR-131); replaced in tests. */
+    Clock clock = Clock.systemUTC();
+
+    /** BR-131: days without activity after which a respondent in progress is stalled. */
+    @ConfigProperty(name = "elicit.participation.stalled-days", defaultValue = "14")
+    int stalledDays;
+
     /**
      * Computes the page.
      *
@@ -120,11 +146,13 @@ public class ParticipationService {
      */
     @Transactional
     public Participation compute(Filter filter, Map<Long, String> departmentNames) {
+        OffsetDateTime cutoff = OffsetDateTime.now(clock).minusDays(stalledDays);
         if (filter.departmentIds().isEmpty()) {
-            return new Participation(new Counts(0, 0, 0, 0), List.of(), List.of(), cards(filter));
+            return new Participation(new Counts(0, 0, 0, 0, 0), List.of(), List.of(), cards(filter),
+                    progress(filter, List.of(), cutoff), stalledDays);
         }
         List<Respondent> respondents = respondents(filter);
-        Counts overall = counts(respondents);
+        Counts overall = counts(respondents, cutoff);
         List<DepartmentCounts> departments = new ArrayList<>();
         for (Map.Entry<Long, String> department : departmentNames.entrySet()) {
             if (!filter.departmentIds().contains(department.getKey())) {
@@ -132,9 +160,10 @@ public class ParticipationService {
             }
             long id = department.getKey();
             departments.add(new DepartmentCounts(department.getValue(),
-                    counts(respondents.stream().filter(r -> r.departmentId() == id).toList())));
+                    counts(respondents.stream().filter(r -> r.departmentId() == id).toList(), cutoff)));
         }
-        return new Participation(overall, departments, weeks(respondents), cards(filter));
+        return new Participation(overall, departments, weeks(respondents), cards(filter),
+                progress(filter, respondents, cutoff), stalledDays);
     }
 
     // ---- participation (BR-120, BR-121, BR-128) -------------------------------------------------
@@ -166,7 +195,7 @@ public class ParticipationService {
     @SuppressWarnings("unchecked")
     List<Respondent> respondents(Filter filter) {
         String sql = """
-                SELECT s.department_id, r.created_dt, r.first_access_dt, r.finalized_dt
+                SELECT r.id, s.department_id, r.created_dt, r.first_access_dt, r.finalized_dt, r.last_activity_dt
                 FROM survey.respondents r
                 JOIN survey.subjects s ON s.respondent_id = r.id
                 WHERE %s
@@ -174,25 +203,30 @@ public class ParticipationService {
         List<Object[]> rows = bind(em.createNativeQuery(sql), filter).getResultList();
         List<Respondent> respondents = new ArrayList<>(rows.size());
         for (Object[] row : rows) {
-            respondents.add(new Respondent(((Number) row[0]).longValue(), timestamp(row[1]), timestamp(row[2]), timestamp(row[3])));
+            respondents.add(new Respondent(((Number) row[0]).longValue(), ((Number) row[1]).longValue(),
+                    timestamp(row[2]), timestamp(row[3]), timestamp(row[4]), timestamp(row[5])));
         }
         return respondents;
     }
 
-    static Counts counts(List<Respondent> respondents) {
+    static Counts counts(List<Respondent> respondents, OffsetDateTime stalledCutoff) {
         long notStarted = 0;
         long inProgress = 0;
         long finished = 0;
+        long stalled = 0;
         for (Respondent r : respondents) {
             if (r.finalized() != null) {
                 finished++;
             } else if (r.firstAccess() != null) {
                 inProgress++;
+                if (r.stalled(stalledCutoff)) {
+                    stalled++;
+                }
             } else {
                 notStarted++;
             }
         }
-        return new Counts(respondents.size(), notStarted, inProgress, finished);
+        return new Counts(respondents.size(), notStarted, inProgress, finished, stalled);
     }
 
     List<Week> weeks(List<Respondent> respondents) {
@@ -219,6 +253,145 @@ public class ParticipationService {
         }
         LocalDate monday = at.atZoneSameInstant(zone).toLocalDate().with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY));
         byWeek.computeIfAbsent(monday, k -> new long[3])[column]++;
+    }
+
+    // ---- progress (BR-130 to BR-133) ------------------------------------------------------------
+
+    Progress progress(Filter filter, List<Respondent> respondents, OffsetDateTime cutoff) {
+        Map<Integer, String> stepNames = stepNames(filter.surveyId());
+        Map<Long, Respondent> byId = new HashMap<>();
+        for (Respondent r : respondents) {
+            byId.put(r.id(), r);
+        }
+
+        // BR-130: the step of each respondent in progress's most recently presented row.
+        Map<Integer, long[]> stopped = new TreeMap<>();
+        long notRecorded = 0;
+        long notRecordedStalled = 0;
+        Map<Long, Integer> lastStep = respondents.isEmpty() ? Map.of() : lastPresentedSteps(filter);
+        for (Respondent r : respondents) {
+            if (!r.inProgress()) {
+                continue;
+            }
+            Integer step = lastStep.get(r.id());
+            boolean stalled = r.stalled(cutoff);
+            if (step == null) {
+                notRecorded++;
+                notRecordedStalled += stalled ? 1 : 0;
+            } else {
+                long[] n = stopped.computeIfAbsent(step, k -> new long[2]);
+                n[0]++;
+                n[1] += stalled ? 1 : 0;
+            }
+        }
+
+        // BR-132: per finished respondent, each step from its first presented row to the next step's.
+        Map<Integer, List<Long>> spent = new TreeMap<>();
+        long measured = 0;
+        long finished = 0;
+        List<Long> whole = new ArrayList<>();
+        Map<Long, TreeMap<Integer, OffsetDateTime>> starts = respondents.isEmpty() ? Map.of() : stepStarts(filter);
+        for (Respondent r : respondents) {
+            if (r.finalized() == null) {
+                continue;
+            }
+            finished++;
+            if (r.firstAccess() != null) {
+                whole.add(Math.max(0, Duration.between(r.firstAccess(), r.finalized()).toSeconds()));
+            }
+            TreeMap<Integer, OffsetDateTime> mine = starts.get(r.id());
+            if (mine == null || mine.isEmpty()) {
+                continue;
+            }
+            measured++;
+            List<Map.Entry<Integer, OffsetDateTime>> inOrder = new ArrayList<>(mine.entrySet());
+            inOrder.sort(Map.Entry.comparingByValue());
+            for (int i = 0; i < inOrder.size(); i++) {
+                OffsetDateTime end = i + 1 < inOrder.size() ? inOrder.get(i + 1).getValue() : r.finalized();
+                long seconds = Math.max(0, Duration.between(inOrder.get(i).getValue(), end).toSeconds());
+                spent.computeIfAbsent(inOrder.get(i).getKey(), k -> new ArrayList<>()).add(seconds);
+            }
+        }
+
+        java.util.SortedSet<Integer> orders = new java.util.TreeSet<>(stepNames.keySet());
+        orders.addAll(stopped.keySet());
+        orders.addAll(spent.keySet());
+        List<StepProgress> steps = new ArrayList<>();
+        for (Integer order : orders) {
+            long[] n = stopped.getOrDefault(order, new long[2]);
+            steps.add(new StepProgress(order, stepNames.get(order), n[0], n[1], durations(spent.get(order))));
+        }
+        return new Progress(steps, notRecorded, notRecordedStalled, durations(whole), finished - measured);
+    }
+
+    /** The current steps of the survey by display order, which is what {@code answers.step} holds. */
+    @SuppressWarnings("unchecked")
+    Map<Integer, String> stepNames(int surveyId) {
+        List<Object[]> rows = em.createNativeQuery("""
+                        SELECT display_order, name FROM survey.steps
+                        WHERE survey_id = :surveyId AND effective_to = %s
+                        ORDER BY display_order, id
+                        """.formatted(CURRENT))
+                .setParameter("surveyId", surveyId)
+                .getResultList();
+        Map<Integer, String> names = new LinkedHashMap<>();
+        for (Object[] row : rows) {
+            names.putIfAbsent(((Number) row[0]).intValue(), row[1] == null ? null : String.valueOf(row[1]));
+        }
+        return names;
+    }
+
+    /** BR-130: each respondent in progress with a presented row, and the step of the latest one. */
+    @SuppressWarnings("unchecked")
+    Map<Long, Integer> lastPresentedSteps(Filter filter) {
+        String sql = """
+                SELECT DISTINCT ON (a.respondent_id) a.respondent_id, a.step
+                FROM survey.answers a
+                JOIN survey.respondents r ON r.id = a.respondent_id
+                JOIN survey.subjects s ON s.respondent_id = r.id
+                WHERE %s AND r.first_access_dt IS NOT NULL AND r.finalized_dt IS NULL
+                  AND a.presented_dt IS NOT NULL AND a.deleted = false
+                ORDER BY a.respondent_id, a.presented_dt DESC, a.display_key DESC
+                """.formatted(population(filter));
+        Map<Long, Integer> steps = new HashMap<>();
+        for (Object[] row : (List<Object[]>) bind(em.createNativeQuery(sql), filter).getResultList()) {
+            steps.put(((Number) row[0]).longValue(), ((Number) row[1]).intValue());
+        }
+        return steps;
+    }
+
+    /** BR-132: for each finished respondent, when each step they were shown was first presented. */
+    @SuppressWarnings("unchecked")
+    Map<Long, TreeMap<Integer, OffsetDateTime>> stepStarts(Filter filter) {
+        String sql = """
+                SELECT a.respondent_id, a.step, min(a.presented_dt)
+                FROM survey.answers a
+                JOIN survey.respondents r ON r.id = a.respondent_id
+                JOIN survey.subjects s ON s.respondent_id = r.id
+                WHERE %s AND r.finalized_dt IS NOT NULL AND a.presented_dt IS NOT NULL AND a.deleted = false
+                GROUP BY a.respondent_id, a.step
+                """.formatted(population(filter));
+        Map<Long, TreeMap<Integer, OffsetDateTime>> starts = new HashMap<>();
+        for (Object[] row : (List<Object[]>) bind(em.createNativeQuery(sql), filter).getResultList()) {
+            starts.computeIfAbsent(((Number) row[0]).longValue(), k -> new TreeMap<>())
+                    .put(((Number) row[1]).intValue(), timestamp(row[2]));
+        }
+        return starts;
+    }
+
+    /** The quartiles of a list of durations in seconds, rounded to the second. */
+    static Durations durations(List<Long> seconds) {
+        if (seconds == null || seconds.isEmpty()) {
+            return Durations.NONE;
+        }
+        TreeMap<BigDecimal, Long> sorted = new TreeMap<>();
+        for (Long s : seconds) {
+            sorted.merge(BigDecimal.valueOf(s), 1L, Long::sum);
+        }
+        long n = seconds.size();
+        return new Durations(n, quantile(sorted, n, 1, 4).setScale(0, RoundingMode.HALF_UP).longValue(),
+                quantile(sorted, n, 1, 2).setScale(0, RoundingMode.HALF_UP).longValue(),
+                quantile(sorted, n, 3, 4).setScale(0, RoundingMode.HALF_UP).longValue());
     }
 
     // ---- marked questions (BR-123 to BR-125) ----------------------------------------------------

@@ -24,6 +24,7 @@ import com.elicitsoftware.participation.SmallCell;
 import com.elicitsoftware.report.PDFService;
 import com.elicitsoftware.report.ReportResponse;
 import com.vaadin.flow.component.Component;
+import com.vaadin.flow.component.Svg;
 import com.vaadin.flow.component.button.Button;
 import com.vaadin.flow.component.button.ButtonVariant;
 import com.vaadin.flow.component.combobox.ComboBox;
@@ -310,6 +311,12 @@ public class ParticipationView extends VerticalLayout implements HasDynamicTitle
                     Paragraph caption = new Paragraph(table.title());
                     caption.addClassName("participation-caption");
                     block.add(caption);
+                }
+                if (table.chart() != null) {
+                    // BR-129: the chart the PDF embeds, drawn from the same figures as the table below it.
+                    Svg chart = new Svg(table.chart());
+                    chart.addClassName("participation-chart-box");
+                    block.add(chart);
                 }
                 block.add(grid(table));
             }

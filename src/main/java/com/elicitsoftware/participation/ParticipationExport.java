@@ -119,6 +119,13 @@ public final class ParticipationExport {
                 if (table.title() != null) {
                     contents.add(text(table.title()));
                 }
+                if (table.chart() != null) {
+                    // BR-129: the page's own SVG, drawn inline above its table.
+                    Content chart = new Content();
+                    chart.svg = table.chart();
+                    chart.inline = true;
+                    contents.add(chart);
+                }
                 com.elicitsoftware.report.pdf.Table pdfTable = new com.elicitsoftware.report.pdf.Table();
                 pdfTable.headers = table.headers().stream().map(ParticipationExport::drawableText).toArray(String[]::new);
                 pdfTable.widths = new float[table.headers().size()];
