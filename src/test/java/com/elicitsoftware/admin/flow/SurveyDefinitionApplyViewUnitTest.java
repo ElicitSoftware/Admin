@@ -48,9 +48,8 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * titled by what the routing chose (BR-073), the per-table summary of an import or an update,
  * and the reporting-schema line reported last (BR-107, BR-108).
  *
- * <p>A refused file (BR-075) is not covered: its result carries no detail, and the view's pattern
- * {@code switch} over a null detail throws, so the dialog shows the exception instead of the
- * refusal. That is reported as a defect rather than asserted here.</p>
+ * <p>A refused file (BR-075) carries no detail; the failure dialog shows the refusal reason
+ * (#131: the view's pattern {@code switch} used to throw on the null detail).</p>
  */
 class SurveyDefinitionApplyViewUnitTest extends PlainSmallViewTestSupport {
 
@@ -195,6 +194,32 @@ class SurveyDefinitionApplyViewUnitTest extends PlainSmallViewTestSupport {
         ResultDialog dialog = openDialog();
         assertEquals(List.of(), headingsIn(dialog));
         assertEquals(List.of("Updated"), messagesIn(dialog), "no survey key line without a key");
+    }
+
+    @Test
+    void given_aRefusedFile_when_applied_then_theFailureDialogShowsTheReason() {
+        // UC-018 BR-075 (#131): a refusal carries no per-table detail (a null detail), and the
+        // summary used to throw on it, so the dialog showed a NullPointerException instead.
+        answer = new ApplyResult(Action.REJECTED, null, false, "The file has no survey key.", null);
+
+        view.handleUpload(new byte[0], "f.elicit");
+
+        ResultDialog dialog = openDialog();
+        assertEquals(t("surveyDefinitionApplyView.applyFailed"), dialog.getHeaderTitle());
+        assertEquals(List.of("The file has no survey key."), messagesIn(dialog));
+        assertEquals(List.of(), headingsIn(dialog));
+    }
+
+    @Test
+    void given_aRefusedFileWithAKey_when_applied_then_theReasonAndTheKeyAreShown() {
+        // UC-018 BR-075 (#131): a refusal that read the survey key names it under the reason.
+        answer = new ApplyResult(Action.REJECTED, KEY, false, "The file is empty.", null);
+
+        view.handleUpload(new byte[0], "f.elicit");
+
+        ResultDialog dialog = openDialog();
+        assertEquals(t("surveyDefinitionApplyView.applyFailed"), dialog.getHeaderTitle());
+        assertEquals(List.of("The file is empty.", t("surveyDefinitionApplyView.surveyKey", KEY)), messagesIn(dialog));
     }
 
     @Test

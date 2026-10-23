@@ -143,8 +143,9 @@ public class SurveyDefinitionApplyView extends VerticalLayout {
                 }
                 addErrors(sections, updated.getErrors());
             }
-            default -> {
-                // A rejection carries no per-table detail; the message above is the whole story.
+            case null, default -> {
+                // A rejection carries no per-table detail (a null detail, which a pattern switch
+                // without "case null" would throw on); the message above is the whole story.
             }
         }
         if (result.reporting() != null) {
