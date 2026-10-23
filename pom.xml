@@ -535,6 +535,7 @@
                         <param>com.elicitsoftware.participation.ParticipationExportTest</param>
                         <param>com.elicitsoftware.participation.SmallCellTest</param>
                         <param>com.elicitsoftware.participation.SvgChartsTest</param>
+                        <param>com.elicitsoftware.report.PDFServiceWrapTextTest</param>
                         <param>com.elicitsoftware.report.PDFServiceXxeTest</param>
                         <param>com.elicitsoftware.report.pdfbox.PDFTableGeneratorTest</param>
                         <param>com.elicitsoftware.response.AddResponseTest</param>
