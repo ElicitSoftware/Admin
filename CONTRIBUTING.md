@@ -92,6 +92,12 @@ and the test suite honest about what's actually verified. Existing tests and rec
 - **Coverage**: JaCoCo (`jacoco-maven-plugin`, bound to `verify`)
 - **Mutation testing**: Pitest (`pitest-maven`, on demand only, plain unit tests only; a new
   plain unit test is added to its `targetTests` in `pom.xml` by hand)
+  - Plain tests share `src/test` with the booted ones, and a booted test's build indexes every
+    test class. So a test-only `UI` subclass needs a no-argument constructor (the Vaadin extension
+    makes each `UI` subclass a CDI bean), and a placeholder view must not carry `@Route`: register
+    it by path with `RouteConfiguration` instead, or it claims the real view's route.
+    `admin/flow/PlainAdminViewTestSupport` and `PlainSmallViewTestSupport` (plain `BrowserlessTest`
+    bases with stub services) and `admin/i18n/PlainVaadin` show both.
 
 ### Build & Tools
 - **Build**: Maven (`./mvnw`)
