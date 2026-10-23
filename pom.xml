@@ -511,17 +511,55 @@
                         <param>com.elicitsoftware.*</param>
                     </targetClasses>
                     <targetTests>
+                        <param>com.elicitsoftware.admin.flow.AppConfigShellTest</param>
+                        <param>com.elicitsoftware.admin.flow.BrandResourceHandlerUnitTest</param>
+                        <param>com.elicitsoftware.admin.flow.ConsoleNoticesUnitTest</param>
+                        <param>com.elicitsoftware.admin.flow.DebugViewInitUnitTest</param>
                         <param>com.elicitsoftware.admin.flow.DebugViewTest</param>
+                        <param>com.elicitsoftware.admin.flow.EditDepartmentViewUnitTest</param>
+                        <param>com.elicitsoftware.admin.flow.EditMessageTemplatesViewUnitTest</param>
+                        <param>com.elicitsoftware.admin.flow.MainLayoutUnitTest</param>
+                        <param>com.elicitsoftware.admin.flow.MissingDepartmentDialogUnitTest</param>
+                        <param>com.elicitsoftware.admin.flow.PaginationControlsNavigationUnitTest</param>
                         <param>com.elicitsoftware.admin.flow.PaginationControlsTest</param>
+                        <param>com.elicitsoftware.admin.flow.ParticipationViewUnitTest</param>
+                        <param>com.elicitsoftware.admin.flow.RegisterViewUnitTest</param>
+                        <param>com.elicitsoftware.admin.flow.RenameReportingSchemaDialogUnitTest</param>
+                        <param>com.elicitsoftware.admin.flow.RespondentImportViewUnitTest</param>
+                        <param>com.elicitsoftware.admin.flow.ResultDialogUnitTest</param>
+                        <param>com.elicitsoftware.admin.flow.SearchViewUnitTest</param>
+                        <param>com.elicitsoftware.admin.flow.SignInPagesUnitTest</param>
                         <param>com.elicitsoftware.admin.flow.StylesheetTokenConsistencyTest</param>
+                        <param>com.elicitsoftware.admin.flow.SurveyDefinitionApplyViewUnitTest</param>
+                        <param>com.elicitsoftware.admin.flow.SurveyDefinitionExportViewUnitTest</param>
+                        <param>com.elicitsoftware.admin.flow.SystemBrandingViewUnitTest</param>
+                        <param>com.elicitsoftware.admin.flow.SystemConnectionsViewUnitTest</param>
+                        <param>com.elicitsoftware.admin.flow.SystemDatabaseViewUnitTest</param>
+                        <param>com.elicitsoftware.admin.flow.SystemEmailViewUnitTest</param>
+                        <param>com.elicitsoftware.admin.flow.SystemOverviewViewUnitTest</param>
                         <param>com.elicitsoftware.admin.i18n.DisplayedStringsCoverageTest</param>
+                        <param>com.elicitsoftware.admin.i18n.ElicitI18NProviderLocalesTest</param>
                         <param>com.elicitsoftware.admin.i18n.ElicitI18NProviderTest</param>
+                        <param>com.elicitsoftware.admin.i18n.LanguageSwitcherTest</param>
                         <param>com.elicitsoftware.admin.i18n.LocaleConfigTest</param>
+                        <param>com.elicitsoftware.admin.i18n.LocaleInitializerTest</param>
+                        <param>com.elicitsoftware.admin.i18n.LocaleLayoutUnitTest</param>
+                        <param>com.elicitsoftware.admin.i18n.LocaleSelectionTest</param>
                         <param>com.elicitsoftware.admin.i18n.TranslationBundleConsistencyTest</param>
                         <param>com.elicitsoftware.admin.i18n.TranslationRequestGeneratorTest</param>
+                        <param>com.elicitsoftware.admin.i18n.TranslationsTest</param>
+                        <param>com.elicitsoftware.admin.util.BrandUtilDetectionTest</param>
                         <param>com.elicitsoftware.admin.util.BrandUtilTest</param>
                         <param>com.elicitsoftware.admin.validator.RespondentValidatorTest</param>
                         <param>com.elicitsoftware.admin.validator.ResultTest</param>
+                        <param>com.elicitsoftware.common.health.DatabaseHealthCheckUnitTest</param>
+                        <param>com.elicitsoftware.diagnostics.BrandDiagnosticsReportTest</param>
+                        <param>com.elicitsoftware.diagnostics.BuildInfoValuesTest</param>
+                        <param>com.elicitsoftware.diagnostics.ConnectionChecksProbeTest</param>
+                        <param>com.elicitsoftware.diagnostics.DatabaseDiagnosticsProbeTest</param>
+                        <param>com.elicitsoftware.diagnostics.MailerDiagnosticsReportTest</param>
+                        <param>com.elicitsoftware.diagnostics.RequiredConfigCheckPresenceTest</param>
+                        <param>com.elicitsoftware.diagnostics.SetupWarningsInstructionTest</param>
                         <param>com.elicitsoftware.exception.AccessCodeGenerationErrorTest</param>
                         <param>com.elicitsoftware.model.EntityIdentityTest</param>
                         <param>com.elicitsoftware.model.ExcludedXidTest</param>
@@ -533,18 +571,44 @@
                         <param>com.elicitsoftware.model.UserRoleTest</param>
                         <param>com.elicitsoftware.model.UserTest</param>
                         <param>com.elicitsoftware.participation.ParticipationExportTest</param>
+                        <param>com.elicitsoftware.participation.ParticipationServiceUnitTest</param>
+                        <param>com.elicitsoftware.participation.ParticipationTablesTest</param>
                         <param>com.elicitsoftware.participation.SmallCellTest</param>
                         <param>com.elicitsoftware.participation.SvgChartsTest</param>
+                        <param>com.elicitsoftware.report.PDFDownloadCacheTest</param>
+                        <param>com.elicitsoftware.report.PDFServiceLayoutTest</param>
                         <param>com.elicitsoftware.report.PDFServiceWrapTextTest</param>
                         <param>com.elicitsoftware.report.PDFServiceXxeTest</param>
                         <param>com.elicitsoftware.report.pdfbox.PDFTableGeneratorTest</param>
                         <param>com.elicitsoftware.response.AddResponseTest</param>
                         <param>com.elicitsoftware.response.ListResponseTest</param>
                         <param>com.elicitsoftware.response.RefreshTest</param>
+                        <param>com.elicitsoftware.rest.AccessCodeServiceUnitTest</param>
+                        <param>com.elicitsoftware.rest.RespondentTransferResourceUnitTest</param>
+                        <param>com.elicitsoftware.rest.SurveyDefinitionApplyResourceUnitTest</param>
+                        <param>com.elicitsoftware.rest.SurveyDefinitionExportResourceUnitTest</param>
+                        <param>com.elicitsoftware.rest.SurveyDefinitionImportResourceUnitTest</param>
+                        <param>com.elicitsoftware.rest.SurveyDefinitionUpdateResourceUnitTest</param>
                         <param>com.elicitsoftware.security.ElicitRolesTest</param>
+                        <param>com.elicitsoftware.security.RoleSecurityIdentityAugmentorUnitTest</param>
+                        <param>com.elicitsoftware.service.CsvImportServiceUnitTest</param>
+                        <param>com.elicitsoftware.service.DefaultAccountInstructionTest</param>
+                        <param>com.elicitsoftware.service.EmailServiceUnitTest</param>
                         <param>com.elicitsoftware.service.ReportUriResolutionTest</param>
+                        <param>com.elicitsoftware.service.ReportingSchemaClientsUnitTest</param>
+                        <param>com.elicitsoftware.service.ReportingServiceUnitTest</param>
+                        <param>com.elicitsoftware.service.RespondentExportServiceUnitTest</param>
+                        <param>com.elicitsoftware.service.RespondentImportServiceUnitTest</param>
+                        <param>com.elicitsoftware.service.StatusQueryTest</param>
+                        <param>com.elicitsoftware.service.SurveyDefinitionApplyServiceUnitTest</param>
                         <param>com.elicitsoftware.service.SurveyDefinitionDisplayKeyRebaseTest</param>
+                        <param>com.elicitsoftware.service.SurveyDefinitionExportServiceUnitTest</param>
+                        <param>com.elicitsoftware.service.SurveyDefinitionFileFieldsUnitTest</param>
+                        <param>com.elicitsoftware.service.SurveyDefinitionImportServiceUnitTest</param>
+                        <param>com.elicitsoftware.service.SurveyDefinitionUpdateServiceUnitTest</param>
+                        <param>com.elicitsoftware.service.SurveyLogServiceUnitTest</param>
                         <param>com.elicitsoftware.service.TranslatableFieldsParityTest</param>
+                        <param>com.elicitsoftware.util.LogMaskingTest</param>
                         <param>com.elicitsoftware.util.RandomStringTest</param>
                     </targetTests>
                     <jvmArgs>
