@@ -90,6 +90,8 @@ and the test suite honest about what's actually verified. Existing tests and rec
 - **UI Testing**: Vaadin Browserless Testing (`browserless-test-quarkus`) — not TestBench
 - **API Testing**: REST Assured
 - **Coverage**: JaCoCo (`jacoco-maven-plugin`, bound to `verify`)
+- **Mutation testing**: Pitest (`pitest-maven`, on demand only, plain unit tests only; a new
+  plain unit test is added to its `targetTests` in `pom.xml` by hand)
 
 ### Build & Tools
 - **Build**: Maven (`./mvnw`)
@@ -338,6 +340,9 @@ Descriptive method names that state the scenario and expectation, e.g.:
 
 # Run the opt-in integration smoke test
 ./mvnw test -Dit.integration=true -Dquarkus.container-image.build=false
+
+# Run Pitest mutation testing over the plain unit tests (target/pit-reports/index.html)
+./mvnw test-compile pitest:mutationCoverage -Dquarkus.container-image.build=false
 ```
 
 > `-Dquarkus.container-image.build=false -Dquarkus.container-image.push=false` bypasses this

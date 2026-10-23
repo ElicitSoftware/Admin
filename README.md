@@ -219,6 +219,16 @@ Run tests and generate a JaCoCo coverage report
 ./mvnw test jacoco:report -Dquarkus.container-image.build=false
 ```
 
+Run Pitest mutation testing over the plain unit tests
+(`target/pit-reports/index.html`; about a minute, no Docker):
+
+```shell
+./mvnw test-compile pitest:mutationCoverage -Dquarkus.container-image.build=false
+```
+
+Booted `@QuarkusTest` classes are left out because they cannot see Pitest's mutants. The
+plugin's `targetTests` in `pom.xml` lists the plain tests by name, so add a new one there.
+
 Also run the opt-in `AccessCodeServiceEndpointIT` smoke test:
 
 ```shell
