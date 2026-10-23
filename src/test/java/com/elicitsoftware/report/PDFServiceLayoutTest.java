@@ -256,6 +256,92 @@ class PDFServiceLayoutTest {
     }
 
     @Test
+    void given_aPartWhoseOnlyContentIsADiagram_when_built_then_itsTitleIsKeptAboveTheDrawing() throws IOException {
+        // UC-005 (#132): the drawing used to reopen the page without appending, erasing the title.
+        try (PDDocument doc = Loader.loadPDF(generate(part("DIAGRAMTITLE", false, svg(300, false))))) {
+            assertEquals(1, doc.getNumberOfPages());
+            assertTrue(pageTexts(doc).get(0).contains("DIAGRAMTITLE"), pageTexts(doc).get(0));
+            assertTrue(hasForm(doc.getPage(0)));
+        }
+    }
+
+    @Test
+    void given_textAfterADiagram_when_built_then_itIsDrawnBelowItOnTheSameLandscapePage() throws IOException {
+        // UC-005 (#132): the legend that follows the pedigree used to go to a closed stream.
+        try (PDDocument doc = Loader.loadPDF(generate(part("Pedigree", false, svg(300, false),
+                text("red fill = family member with cancer"),
+                text("* Indicates multiple diagnoses of the same cancer type."))))) {
+            assertEquals(1, doc.getNumberOfPages(), "the legend fits under the drawing");
+            PDRectangle box = doc.getPage(0).getMediaBox();
+            assertTrue(box.getWidth() > box.getHeight(), "the drawing's page is landscape");
+            Map<String, Placed> drawn = placed(doc, 1);
+            Placed title = drawn.get("Pedigree");
+            Placed legend = drawn.get("red fill = family member with cancer");
+            assertNotNull(title, drawn.keySet().toString());
+            assertNotNull(legend, drawn.keySet().toString());
+            assertNotNull(drawn.get("* Indicates multiple diagnoses of the same cancer type."), drawn.keySet().toString());
+            assertTrue(legend.yFromTop() - title.yFromTop() > 100, "the drawing sits between the title and the legend");
+        }
+    }
+
+    @Test
+    void given_aPartAfterADiagram_when_built_then_itIsDrawnOnAPortraitPage() throws IOException {
+        // UC-005 (#132): a later part without a page break used to be dropped as well.
+        try (PDDocument doc = Loader.loadPDF(generate(part("Pedigree", false, svg(300, false)),
+                part("Summary", false, text("After the drawing"))))) {
+            assertEquals(2, doc.getNumberOfPages());
+            PDRectangle second = doc.getPage(1).getMediaBox();
+            assertTrue(second.getHeight() > second.getWidth(), "a part without a drawing returns to portrait");
+            assertTrue(pageTexts(doc).get(1).contains("Summary"), pageTexts(doc).get(1));
+            assertTrue(pageTexts(doc).get(1).contains("After the drawing"), pageTexts(doc).get(1));
+        }
+    }
+
+    @Test
+    void given_thePedigreeAfterAPortraitPart_when_built_then_itHasALandscapePageOfItsOwn() throws IOException {
+        // UC-005 (#132): the pedigree as FHHS sends it: page break, landscape, drawing, legend.
+        ReportResponse pedigree = part("Pedigree", true, svg(300, false), text("red fill = family member with cancer"));
+        pedigree.pdf.landscape = true;
+        try (PDDocument doc = Loader.loadPDF(generate(part("Summary", false, text("Before the drawing")), pedigree))) {
+            assertEquals(2, doc.getNumberOfPages());
+            PDRectangle first = doc.getPage(0).getMediaBox();
+            PDRectangle second = doc.getPage(1).getMediaBox();
+            assertTrue(first.getHeight() > first.getWidth(), "the summary stays portrait");
+            assertTrue(second.getWidth() > second.getHeight(), "the pedigree page is landscape");
+            assertTrue(pageTexts(doc).get(0).contains("Before the drawing"));
+            assertTrue(pageTexts(doc).get(1).contains("Pedigree"), pageTexts(doc).get(1));
+            assertTrue(pageTexts(doc).get(1).contains("red fill = family member with cancer"), pageTexts(doc).get(1));
+        }
+    }
+
+    @Test
+    void given_oneTextBlockLongerThanAPage_when_built_then_itContinuesOnNewPagesAndNothingRunsOffThePage() throws IOException {
+        // UC-005 (#133): the page check ran once per block, so a long block was drawn below the
+        // bottom margin and off the page; each continuation page starts at its top.
+        StringBuilder words = new StringBuilder();
+        for (int i = 1; i <= 2500; i++) {
+            words.append(String.format("w%04d ", i));
+        }
+        try (PDDocument doc = Loader.loadPDF(generate(part("Long", false, text(words.toString().trim()))))) {
+            assertTrue(doc.getNumberOfPages() >= 2, "pages: " + doc.getNumberOfPages());
+            String all = String.join(" ", pageTexts(doc));
+            for (int i = 1; i <= 2500; i++) {
+                String word = String.format("w%04d", i);
+                assertEquals(1, all.split("\\b" + word + "\\b", -1).length - 1, word + " appears exactly once");
+            }
+            for (int p = 1; p <= doc.getNumberOfPages(); p++) {
+                float lowestAllowed = doc.getPage(p - 1).getMediaBox().getHeight() - (PDFService.PADDING + PDFService.FONT_SIZE);
+                for (Placed line : placed(doc, p).values()) {
+                    if (line.text().startsWith("w")) {
+                        assertTrue(line.yFromTop() <= lowestAllowed + 0.5f,
+                                "page " + p + ": line at " + line.yFromTop() + " is below the text area: " + line.text());
+                    }
+                }
+            }
+        }
+    }
+
+    @Test
     void given_aDiagramWithADoctype_when_built_then_theReportFails() {
         Content malicious = new Content();
         malicious.svg = "<!DOCTYPE svg [<!ENTITY x SYSTEM \"file:///etc/passwd\">]><svg>&x;</svg>";
