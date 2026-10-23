@@ -160,6 +160,11 @@ public class PDFService {
     float pageWidth;
 
     /**
+     * Orientation of the current page; a page started to continue a report keeps it.
+     */
+    boolean landscape;
+
+    /**
      * Generates a PDF document from a list of report responses and returns it as a StreamResource.
      * <p>
      * This method processes each report response sequentially, handling page breaks, titles,
@@ -396,49 +401,44 @@ public class PDFService {
         try {
             // Create a new document
             document = new PDDocument();
-            page = new PDPage(PDRectangle.LETTER);
-            document.addPage(page);
-            contentStream = new PDPageContentStream(document, page);
-            contentStream.setFont(TEXT_FONT, FONT_SIZE);
-
-            pageHeight = PDRectangle.LETTER.getHeight();
-            pageWidth = PDRectangle.LETTER.getWidth();
-            yPosition = pageHeight - TEXT_MARGIN;
+            contentStream = null;
+            newPage(false);
 
             for (ReportResponse response : reportResponses) {
                 if (response.pdf != null) {
-                    // Close the current content stream if a new page is needed
+                    // A report asks for landscape, and one carrying a full-page drawing (the
+                    // pedigree) gets it whether or not it asks. An orientation is a property of a
+                    // page, so a change of orientation starts a page unless nothing has been drawn
+                    // on this one yet.
+                    boolean wantsLandscape = response.pdf.landscape || hasFullPageSvg(response.pdf.content);
                     if (response.pdf.pageBreak) {
-                        contentStream.close();
-                        page = new PDPage(PDRectangle.LETTER);
-                        document.addPage(page);
-                        contentStream = new PDPageContentStream(document, page);
-                        contentStream.setFont(TEXT_FONT, FONT_SIZE);
-                        yPosition = pageHeight - TEXT_MARGIN;
+                        newPage(wantsLandscape);
+                    } else if (wantsLandscape != landscape) {
+                        if (pageIsEmpty()) {
+                            orient(wantsLandscape);
+                        } else {
+                            newPage(wantsLandscape);
+                        }
                     }
 
                     addTitleBlock(response.pdf.title);
 
-                    for (Content content : response.pdf.content) {
+                    Content[] contents = response.pdf.content;
+                    for (int c = 0; c < contents.length; c++) {
+                        Content content = contents[c];
                         if (content == null) {
                             Log.warn("Content is null");
                             continue;
                         }
-                        // Close the current content stream if a new page is needed
                         if (yPosition < TEXT_MARGIN + FONT_SIZE) {
-                            contentStream.close();
-                            page = new PDPage(PDRectangle.LETTER);
-                            document.addPage(page);
-                            contentStream = new PDPageContentStream(document, page);
-                            contentStream.setFont(TEXT_FONT, FONT_SIZE);
-                            yPosition = pageHeight - TEXT_MARGIN;
+                            newPage(landscape);
                         }
 
                         // Add the content
                         if (content.svg != null && content.inline) {
                             addInlineSVG(content);
                         } else if (content.svg != null) {
-                            addSVG(content);
+                            addSVG(content, textHeightAfter(contents, c));
                         } else if (content.table != null) {
                             drawTable(createContent(content));
                         } else {
@@ -486,12 +486,7 @@ public class PDFService {
             yPosition -= HEADER_MARGIN;
             // Check if we need a new page
             if (yPosition < FONT_SIZE + PADDING) {
-                page = new PDPage(PDRectangle.LETTER);
-                document.addPage(page);
-                contentStream.close();
-                contentStream = new PDPageContentStream(document, page);
-                contentStream.setFont(TEXT_FONT, FONT_SIZE); // Ensure font is set
-                yPosition = pageHeight - TEXT_MARGIN; // Reset yPosition for new page
+                newPage(landscape);
             }
 
             // Begin text
@@ -529,21 +524,17 @@ public class PDFService {
      * @see #wrapText(String, PDFont, float, float)
      */
     public void addTextBlock(String text) throws IOException {
-        // Check if we need a new page
-        if (yPosition < PADDING + FONT_SIZE) {
-            page = new PDPage(PDRectangle.LETTER);
-            document.addPage(page);
-            contentStream.close();
-            contentStream = new PDPageContentStream(document, page);
-            contentStream.setFont(TEXT_FONT, FONT_SIZE); // Ensure font is set
-        }
         PDRectangle mediaBox = page.getMediaBox();
         float width = mediaBox.getWidth() - 2 * PADDING;
 
         List<String> lines = wrapText(text, TEXT_FONT, FONT_SIZE, width);
 
-        // Begin text
         for (String line : lines) {
+            // Before every line, not once per block: a block longer than the rest of the page
+            // continues at the top of a new one instead of running off the bottom (#133).
+            if (yPosition < PADDING + FONT_SIZE) {
+                newPage(landscape);
+            }
             contentStream.beginText();
             contentStream.setFont(TEXT_FONT, FONT_SIZE); // Ensure font is set before writing text
             contentStream.newLineAtOffset(PADDING, yPosition);
@@ -556,48 +547,10 @@ public class PDFService {
     }
 
     /**
-     * Adds an SVG graphic to the PDF document in landscape orientation.
-     * <p>
-     * This method handles SVG content by:
-     * - Creating a new landscape-oriented page
-     * - Parsing the SVG content using Apache Batik
-     * - Rendering the SVG using PdfBoxGraphics2D
-     * - Applying proper scaling and positioning
-     * - Closing the content stream after rendering
-     * <p>
-     * The SVG is rendered on a dedicated landscape page to accommodate
-     * wider graphics that might not fit in portrait orientation. The method
-     * uses Apache Batik for SVG parsing and PdfBoxGraphics2D for rendering
-     * the vector graphics directly into the PDF.
-     * <p>
-     * Process flow:
-     * 1. Close current content stream
-     * 2. Switch current page to landscape orientation
-     * 3. Create new content stream for the landscape page
-     * 4. Parse SVG content using Batik SAXSVGDocumentFactory
-     * 5. Build graphics tree and render to PDF
-     * 6. Apply coordinate transformation for proper positioning
-     * 7. Close content stream
-     * <p>
-     * Note: This method assumes the content object contains valid SVG data
-     * in its svg field.
-     *
-     * @param content The content object containing SVG data to be rendered
-     * @throws IOException if an error occurs during SVG processing or PDF writing
-     * @see Content
-     */
-    /**
-     * Rejects SVG/XML content containing a DOCTYPE or ENTITY declaration, guarding against
-     * XXE (local file disclosure) or SSRF via external entity resolution.
-     *
-     * @param svg the raw SVG markup to check
-     * @throws IOException if the content contains a DOCTYPE or ENTITY declaration
-     */
-    /**
      * Draws an SVG inline, at the current position, scaled down to the text width when it is wider
      * and never scaled up, starting a new page when it does not fit below the content already
      * drawn. The Participation export's charts use it (UC-031 BR-129); a report service's diagram
-     * keeps {@link #addSVG(Content)}'s landscape page.
+     * keeps {@link #addSVG(Content, float)}'s landscape page.
      *
      * @param content the content whose {@code svg} is drawn
      * @throws IOException if the SVG cannot be parsed or drawn
@@ -623,12 +576,7 @@ public class PDFService {
 
         yPosition -= FONT_SIZE / 2;
         if (yPosition - height < TEXT_MARGIN + FONT_SIZE) {
-            contentStream.close();
-            page = new PDPage(PDRectangle.LETTER);
-            document.addPage(page);
-            contentStream = new PDPageContentStream(document, page);
-            contentStream.setFont(TEXT_FONT, FONT_SIZE);
-            yPosition = pageHeight - TEXT_MARGIN;
+            newPage(landscape);
         }
 
         PdfBoxGraphics2D graphics2D = new PdfBoxGraphics2D(document, width, height);
@@ -645,6 +593,13 @@ public class PDFService {
         yPosition -= height + FONT_SIZE / 2;
     }
 
+    /**
+     * Rejects SVG/XML content containing a DOCTYPE or ENTITY declaration, guarding against
+     * XXE (local file disclosure) or SSRF via external entity resolution.
+     *
+     * @param svg the raw SVG markup to check
+     * @throws IOException if the content contains a DOCTYPE or ENTITY declaration
+     */
     static void rejectXxePayload(String svg) throws IOException {
         if (svg != null
                 && (svg.toUpperCase().contains("<!DOCTYPE") || svg.toUpperCase().contains("<!ENTITY"))) {
@@ -652,84 +607,152 @@ public class PDFService {
         }
     }
 
-    void addSVG(Content content) throws IOException {
-        PDRectangle landscape = new PDRectangle(PDRectangle.LETTER.getHeight(), PDRectangle.LETTER.getWidth());
+    /**
+     * Draws a full-page SVG (the pedigree) on the current page, below what is already there:
+     * scaled to fit between the cursor and the room kept for the report's text that follows it,
+     * centred across the page and aligned to the top, and the cursor is moved to just below it.
+     * When too little of the page is left for a legible drawing it starts a page of the same
+     * orientation first. The drawing is added to the open content stream, so the report's title
+     * above it and its legend below it stay on the page (UC-005, #132).
+     *
+     * @param content      the content whose {@code svg} is drawn
+     * @param reserveBelow height of the text that follows the drawing in the same report
+     * @throws IOException if the SVG is refused or cannot be written to the page
+     */
+    void addSVG(Content content, float reserveBelow) throws IOException {
+        // Reject any DOCTYPE/ENTITY declaration before parsing. content.svg comes from
+        // an admin-configured, DB-stored, arbitrary report-service URL (ReportDefinition.url);
+        // Batik's SAXSVGDocumentFactory does not disable external-entity/DOCTYPE resolution
+        // by default, so a malicious or compromised report service could otherwise use it
+        // for XXE (local file disclosure) or SSRF.
+        rejectXxePayload(content.svg);
 
-        //Create a new page and open a new content stream.
-        contentStream.close();
-        page = document.getPage(document.getNumberOfPages() - 1);
-        page.setMediaBox(landscape);
-        contentStream = new PDPageContentStream(document, page);
-
-        float pageWidth = landscape.getWidth();
-        float pageHeight = landscape.getHeight();
-
-        try {
-            PdfBoxGraphics2D graphics2D = new PdfBoxGraphics2D(document, (int) pageWidth, (int) pageHeight);
-            graphics2D.setFontTextDrawer(new PdfBoxGraphics2DFontTextDrawer());
-
-            // Reject any DOCTYPE/ENTITY declaration before parsing. content.svg comes from
-            // an admin-configured, DB-stored, arbitrary report-service URL (ReportDefinition.url);
-            // Batik's SAXSVGDocumentFactory does not disable external-entity/DOCTYPE resolution
-            // by default, so a malicious or compromised report service could otherwise use it
-            // for XXE (local file disclosure) or SSRF.
-            rejectXxePayload(content.svg);
-
-            // Parse the SVG
-            String parser = XMLResourceDescriptor.getXMLParserClassName();
-            SAXSVGDocumentFactory factory = new SAXSVGDocumentFactory(parser);
-            SVGDocument svgDocument = factory.createSVGDocument(null, new StringReader(content.svg));
-
-            // Build GVT
-            GVTBuilder builder = new GVTBuilder();
-            BridgeContext ctx = new BridgeContext(new UserAgentAdapter());
-            GraphicsNode graphicsNode = builder.build(ctx, svgDocument);
-
-            // Use actual computed bounds that include all rendered content
-            Rectangle bounds = graphicsNode.getBounds().getBounds();
-            Rectangle primitiveBounds = graphicsNode.getPrimitiveBounds().getBounds();
-            Rectangle actualBounds = bounds.union(primitiveBounds);
-
-            // Add explicit padding to ensure content that extends beyond computed bounds is captured
-            int padding = 5; // Add 5 pixels padding on all sides
-            Rectangle expandedBounds = new Rectangle(
-                    actualBounds.x - padding,
-                    actualBounds.y - padding,
-                    actualBounds.width + (2 * padding),
-                    actualBounds.height + (2 * padding)
-            );
-
-            // Calculate scale to fit using expanded bounds with margins
-            double availableWidth = pageWidth - (2 * TEXT_MARGIN);
-            double availableHeight = pageHeight - (2 * TEXT_MARGIN);
-
-            double scaleX = availableWidth / expandedBounds.getWidth();
-            double scaleY = availableHeight / expandedBounds.getHeight();
-            double scale = Math.min(scaleX, scaleY); // Preserve aspect ratio
-
-            graphics2D.scale(scale, scale);
-
-            // Center the image using expanded bounds within available space
-            double translateX = (availableWidth / scale - expandedBounds.getWidth()) / 2.0 + TEXT_MARGIN / scale;
-            double translateY = (availableHeight / scale - expandedBounds.getHeight()) / 2.0 + TEXT_MARGIN / scale;
-            graphics2D.translate(translateX - expandedBounds.getX(), translateY - expandedBounds.getY());
-
-            graphicsNode.paint(graphics2D);
-            graphics2D.dispose();
-
-            contentStream.drawForm(graphics2D.getXFormObject());
-
-            // Reset color to black for subsequent content
-            contentStream.setNonStrokingColor(0f, 0f, 0f);
-
-        } catch (IOException e) {
-            throw new RuntimeException(e);
-        } finally {
-            // Ensure the content stream is closed after drawing
-            if (contentStream != null) {
-                contentStream.close();
-            }
+        float bottomLimit = PADDING + FONT_SIZE;
+        // The legend is a few short lines; never let it squeeze the drawing below half the page.
+        float reserve = Math.min(reserveBelow, (pageHeight - TEXT_MARGIN - bottomLimit) / 2);
+        if (yPosition - bottomLimit - reserve < pageHeight / 3) {
+            newPage(landscape);
         }
+        float top = yPosition;
+        float boxWidth = pageWidth - 2 * TEXT_MARGIN;
+        float boxHeight = top - bottomLimit - reserve;
+
+        PdfBoxGraphics2D graphics2D = new PdfBoxGraphics2D(document, (int) boxWidth, (int) boxHeight);
+        graphics2D.setFontTextDrawer(new PdfBoxGraphics2DFontTextDrawer());
+
+        // Parse the SVG
+        String parser = XMLResourceDescriptor.getXMLParserClassName();
+        SAXSVGDocumentFactory factory = new SAXSVGDocumentFactory(parser);
+        SVGDocument svgDocument = factory.createSVGDocument(null, new StringReader(content.svg));
+
+        // Build GVT
+        GVTBuilder builder = new GVTBuilder();
+        BridgeContext ctx = new BridgeContext(new UserAgentAdapter());
+        GraphicsNode graphicsNode = builder.build(ctx, svgDocument);
+
+        // Use actual computed bounds that include all rendered content
+        Rectangle bounds = graphicsNode.getBounds().getBounds();
+        Rectangle primitiveBounds = graphicsNode.getPrimitiveBounds().getBounds();
+        Rectangle actualBounds = bounds.union(primitiveBounds);
+
+        // Add explicit padding to ensure content that extends beyond computed bounds is captured
+        int padding = 5; // Add 5 pixels padding on all sides
+        Rectangle expandedBounds = new Rectangle(
+                actualBounds.x - padding,
+                actualBounds.y - padding,
+                actualBounds.width + (2 * padding),
+                actualBounds.height + (2 * padding)
+        );
+
+        // Scale to fit the box, preserving the aspect ratio
+        double scale = Math.min(boxWidth / expandedBounds.getWidth(), boxHeight / expandedBounds.getHeight());
+        graphics2D.scale(scale, scale);
+
+        // Centre across the box and align to its top (Graphics2D's y runs down from the top)
+        double translateX = (boxWidth / scale - expandedBounds.getWidth()) / 2.0;
+        graphics2D.translate(translateX - expandedBounds.getX(), -expandedBounds.getY());
+
+        graphicsNode.paint(graphics2D);
+        graphics2D.dispose();
+
+        contentStream.saveGraphicsState();
+        contentStream.transform(Matrix.getTranslateInstance(TEXT_MARGIN, top - boxHeight));
+        contentStream.drawForm(graphics2D.getXFormObject());
+        contentStream.restoreGraphicsState();
+
+        // Reset color to black for subsequent content
+        contentStream.setNonStrokingColor(0f, 0f, 0f);
+
+        yPosition = top - (float) (expandedBounds.getHeight() * scale) - LEADING;
+    }
+
+    /**
+     * Closes the current page's content stream, if any, and starts a Letter page in the given
+     * orientation with the cursor at its top.
+     *
+     * @param landscape whether the new page is landscape
+     * @throws IOException if the content stream cannot be closed or opened
+     */
+    void newPage(boolean landscape) throws IOException {
+        if (contentStream != null) {
+            contentStream.close();
+        }
+        page = new PDPage(PDRectangle.LETTER);
+        document.addPage(page);
+        contentStream = new PDPageContentStream(document, page);
+        contentStream.setFont(TEXT_FONT, FONT_SIZE);
+        orient(landscape);
+    }
+
+    /**
+     * Turns the current page, on which nothing has been drawn yet, and puts the cursor at its top.
+     *
+     * @param landscape whether the page is landscape
+     */
+    void orient(boolean landscape) {
+        this.landscape = landscape;
+        PDRectangle size = landscape
+                ? new PDRectangle(PDRectangle.LETTER.getHeight(), PDRectangle.LETTER.getWidth())
+                : PDRectangle.LETTER;
+        page.setMediaBox(size);
+        pageWidth = size.getWidth();
+        pageHeight = size.getHeight();
+        yPosition = pageHeight - TEXT_MARGIN;
+    }
+
+    /** Whether nothing has been drawn on the current page yet: the cursor is still at its top. */
+    boolean pageIsEmpty() {
+        return yPosition == pageHeight - TEXT_MARGIN;
+    }
+
+    /** Whether a report carries a drawing that takes a page of its own (not an inline chart). */
+    private static boolean hasFullPageSvg(Content[] contents) {
+        return contents != null && Arrays.stream(contents).anyMatch(c -> c != null && c.svg != null && !c.inline);
+    }
+
+    /**
+     * The height the text blocks after {@code index} take on a page this wide, up to the next
+     * drawing or table: the room a drawing leaves so its legend fits below it.
+     *
+     * @param contents the report's content
+     * @param index    the position of the drawing
+     * @return the height of the text that follows, in points
+     * @throws IOException if the text cannot be measured
+     */
+    float textHeightAfter(Content[] contents, int index) throws IOException {
+        float height = 0;
+        for (int i = index + 1; i < contents.length; i++) {
+            Content next = contents[i];
+            if (next == null) {
+                continue;
+            }
+            if (next.svg != null || next.table != null) {
+                break;
+            }
+            int lines = wrapText(next.text, TEXT_FONT, FONT_SIZE, pageWidth - 2 * PADDING).size();
+            height += lines * (FONT_SIZE + 2) + LEADING;
+        }
+        return height;
     }
 
     /**
