@@ -90,8 +90,8 @@ the margin, so that a user knows what to ask for rather than looking for a scree
 there.
 
 It describes the console of an installed system. Installing Elicit — the database, the identity
-provider, and the Survey and Admin services — and provisioning it with a brand, or choosing which
-of the shipped languages it offers, is the subject of the \emph{installation manual}. Building a
+provider, and the Survey and Admin services — and provisioning it with a brand, or with the
+translations of the languages it offers, is the subject of the \emph{installation manual}. Building a
 survey is the subject of the \emph{author's manual}. This manual points at both rather than
 repeating them.
 
@@ -718,8 +718,9 @@ shown in English rather than left blank, so a partly translated console is still
 \begin{elicitnote}[Only English?]
 The selector is hidden when English is the only language available, because there would be
 nothing to choose. Which languages a deployment offers is set when it is installed, not from the
-console: it is one setting in the installation manual. A language the release did not build into
-the console cannot be added there either — that is a request to Elicit Software.
+console: the console's image carries English, and every other language is a translation file the
+installer mounts beside it, as the installation manual describes. Ask whoever runs your
+deployment.
 \end{elicitnote}
 
 The survey's own questions are not translated by this selector. What a respondent reads is part
@@ -731,7 +732,7 @@ of the survey definition and is the author's to write.
 \begin{itemize}
   \item The \textbf{installation manual} covers everything this one does not: bringing up the
         database, the identity provider and the two services, the configuration reference,
-        provisioning a brand, and choosing which of the shipped languages this deployment
+        provisioning a brand, and mounting the translations of the languages this deployment
         offers.
   \item The \textbf{author's manual}, \emph{Building a Survey}, covers the Author tool — writing
         questions, rules and reports, and exporting the definition that chapter~12 applies.

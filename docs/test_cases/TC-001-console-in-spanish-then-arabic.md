@@ -15,7 +15,7 @@
 
 - An administrator account exists with the `elicit_user` role (Keycloak realm import `keycloak/elicit-realm.json`; test seed `V0.0.3__POPULATE_DEV_DATA.sql`).
 - A survey is installed (test seed) so subject search and registration screens have content.
-- Spanish (`es-419`) and Arabic (`ar`) ship with the console: the bundles live in `i18n/` and are packaged onto the classpath by the build, and `i18n.bundled.locales=en,ar,es-419` offers all three. Nothing is mounted, and no umbrella checkout is needed.
+- Spanish (`es-419`) and Arabic (`ar`) are mounted: the umbrella's curated `elicit-i18n/` is the translations directory (`i18n.file.system.path`; the test profile reads `../elicit-i18n`, so this module must sit in an umbrella checkout, which CI provides), and `i18n.offered.locales` is unset, so all three are offered.
 - The browser's preferred language is set to Spanish (Latin America).
 
 ## Flow

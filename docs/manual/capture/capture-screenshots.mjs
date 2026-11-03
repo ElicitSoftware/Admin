@@ -694,9 +694,8 @@ async function captureLanguageSelector() {
   const selector = byId('language-switcher');
   if (!(await selector.first().isVisible().catch(() => false))) {
     skip('29-language-selector',
-      'only English is available, so the selector stays out of the header. The console ships '
-      + 'Spanish and Arabic, so this means the site narrowed i18n.bundled.locales to en; widen '
-      + 'it and re-run');
+      'only English is available, so the selector stays out of the header. Mount the umbrella\'s '
+      + 'elicit-i18n/ at i18n.file.system.path (and leave i18n.offered.locales unset) and re-run');
     return;
   }
   await selector.click();
