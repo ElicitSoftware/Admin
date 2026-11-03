@@ -26,7 +26,7 @@ Closes #
 ## Checks
 
 - [ ] Flyway migration added under `db/migration` (Admin's tables only; the `survey` schema is Survey's)
-- [ ] New user-facing text has its key in `translations.properties`, `i18n/translations_es_419.properties` and `i18n/translations_ar.properties`, a context note, and `i18n/TRANSLATION_REQUEST.md` regenerated
+- [ ] New user-facing text has its key in `translations.properties` and in the umbrella's `elicit-i18n/<app>/translations_es_419.properties` and `translations_ar.properties` (a branch of the same name there), a context note, and `i18n/TRANSLATION_REQUEST.md` regenerated
 - [ ] Respondent credential is called the **access code**, never a token
 - [ ] Cross-module change: the tracking issue in `ElicitSoftware/Elicit` and the sibling PRs are linked above
 - [ ] No AI co-author trailer in any commit message
