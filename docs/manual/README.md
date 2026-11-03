@@ -58,9 +58,14 @@ docs/manual/build-manual.sh                       # version from pom.xml, date i
 docs/manual/build-manual.sh 3.0.0 "2026-09-24"    # explicit stamp
 ```
 
-`buildDockerImage.sh` (and `buildNativeDockerImage.sh`) calls it with the project
-version and the build date before `mvn package`, so the PDF is on the classpath
-when Quarkus builds the image. The PDF lands at
+`buildDockerImage.sh` (and `buildNativeDockerImage.sh`) runs it with the project
+version and the build date before `mvn package` when no PDF is there yet, and
+otherwise reuses the one a previous run left, so that a development build does
+not wait on TeX Live every time; `BUILD_MANUAL=1` typesets a fresh one. A reused
+manual carries the stamp of the build that typeset it. The release workflow
+(`.github/workflows/maven.yml`) typesets it for every tagged build, pre-release
+or final, so a published image always carries a manual stamped with its own
+version (UC-029 BR-004). The PDF lands at
 `src/main/resources/manual/elicit-admin-manual.pdf` — deliberately **not** under
 `META-INF/resources`, which Quarkus would serve with no role check. It reaches
 the browser only through `ManualResource` (`/api/manual`), which requires

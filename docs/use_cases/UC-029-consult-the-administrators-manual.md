@@ -113,7 +113,7 @@ The version and the date recorded by the application build appear on the title p
 
 ### BR-004: The manual ships with the application
 
-The manual is produced by the same build that produces the application image and travels inside it. The application never fetches the manual from an external location, and a manual that is absent is simply not offered (A1).
+The manual is produced by the same build that produces the application image and travels inside it. The application never fetches the manual from an external location, and a manual that is absent is simply not offered (A1). A development build that is not published may reuse a manual an earlier build typeset, and then carries that build's stamp; a published image, pre-release or final, is always built with a manual typeset for it, and a release whose manual cannot be typeset does not ship.
 
 ### BR-005: The manual is the default brand
 
