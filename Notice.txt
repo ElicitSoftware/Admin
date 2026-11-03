@@ -27,5 +27,5 @@ Lists of 29 third-party dependencies.
      (The Apache Software License, Version 2.0) Quarkus - Scheduler - Runtime (io.quarkus:quarkus-scheduler:3.40.1.1 - https://github.com/quarkusio/quarkus)
      (The Apache Software License, Version 2.0) Quarkus - SmallRye Health - Runtime (io.quarkus:quarkus-smallrye-health:3.40.1.1 - https://github.com/quarkusio/quarkus)
      (The Apache Software License, Version 2.0) Quarkus - SmallRye JWT - Runtime (io.quarkus:quarkus-smallrye-jwt:3.40.1.1 - https://github.com/quarkusio/quarkus)
-     (The Apache Software License, Version 2.0) org.apache.xmlgraphics:batik-all (org.apache.xmlgraphics:batik-all:1.16 - http://xmlgraphics.apache.org/batik/batik-all/)
+     (The Apache Software License, Version 2.0) org.apache.xmlgraphics:batik-all (org.apache.xmlgraphics:batik-all:1.20 - http://xmlgraphics.apache.org/batik/batik-all/)
      (The Apache Software License, Version 2.0) Xerces2-j (xerces:xercesImpl:2.12.2 - https://xerces.apache.org/xerces2-j/)

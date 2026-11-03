@@ -8,13 +8,12 @@ and navigation/security classes, and build/config (`pom.xml`, `application.prope
 Everything else from that audit — 25 findings, plus a Quarkus 3.39.2 regression found and
 fixed along the way — has been verified fixed in the source and is no longer tracked here.
 
-## Critical — accepted risk, not scheduled for a fix
+## Critical — resolved
 
-- [ ] **`quarkus.tls.trust-all=true`** (global outbound TLS certificate verification disabled,
-  affecting the mailer, OIDC, and the dynamic report-service REST client). Kept deliberately
-  per explicit sign-off during the 2026-09-03 audit; documented with a comment in
-  `application.properties`. Revisit only if the team's risk posture changes — don't "fix" this
-  without re-confirming first.
+- [x] **`quarkus.tls.trust-all=true`** (global outbound TLS certificate verification disabled,
+  affecting the mailer, OIDC, and the dynamic report-service REST client). Accepted as a risk
+  during the 2026-09-03 audit; the acceptance was withdrawn and the setting removed for 3.0.0,
+  in Survey as well. A site with a private CA configures `quarkus.tls.trust-store.*` instead.
 
 ## Significant
 
