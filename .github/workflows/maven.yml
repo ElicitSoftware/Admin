@@ -68,6 +68,16 @@ jobs:
             exit 1
           fi
 
+      # The manual ships inside the image (UC-029 BR-004), stamped with this version and the
+      # build date (BR-003, NFR-017). src/main/resources/manual/ is not tracked, so this checkout
+      # has no PDF until it is typeset here, which happens for every tagged build, pre-release
+      # or final; a failed typeset fails the release rather than publishing an image whose
+      # Manual entry is missing (UC-029 A1).
+      - name: Typeset the manual
+        run: |
+          docs/manual/build-manual.sh "${{ steps.version.outputs.version }}" "$(date -u '+%Y-%m-%d %H:%M:%S UTC')"
+          test -s src/main/resources/manual/elicit-admin-manual.pdf
+
         # Add support for more platforms with QEMU (optional)
         # https://github.com/docker/setup-qemu-action
       - name: Set up QEMU
