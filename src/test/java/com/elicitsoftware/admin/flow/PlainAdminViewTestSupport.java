@@ -11,6 +11,7 @@ package com.elicitsoftware.admin.flow;
  * ***LICENSE_END***
  */
 
+import com.elicitsoftware.admin.i18n.ConfiguredI18NProvider;
 import com.elicitsoftware.model.Department;
 import com.elicitsoftware.model.User;
 import com.elicitsoftware.service.SurveyDefinitionPresenceCheck;
@@ -34,6 +35,8 @@ import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.lang.reflect.Proxy;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.security.Principal;
 import java.text.MessageFormat;
 import java.util.LinkedHashSet;
@@ -59,15 +62,35 @@ abstract class PlainAdminViewTestSupport extends BrowserlessTest {
         // Copilot, a development tool, scans the whole classpath each time a mock VaadinService
         // starts -- about a second per test, which is what Pitest would pay per mutant.
         System.setProperty("vaadin.copilot.enable", "false");
+        // Vaadin's own provider reads the classpath only, where the image carries English alone;
+        // the console's provider also reads the translations mount (UC-026). The pom sets this for
+        // the whole surefire and Pitest run, because Vaadin reads it once, at the first mock
+        // service; this covers a test class run on its own from an IDE.
+        System.setProperty("vaadin.i18n.provider", ConfiguredI18NProvider.class.getName());
     }
 
     private static final Properties ENGLISH = bundle("/vaadin-i18n/translations.properties");
-    private static final Properties SPANISH = bundle("/vaadin-i18n/translations_es_419.properties");
+    /**
+     * Spanish is not in the image: it is read from the curated translations mount (UC-026), the
+     * umbrella's elicit-i18n/ one level up from this module, as the test profile reads it.
+     */
+    private static final Properties SPANISH =
+            mounted(Path.of("../elicit-i18n/admin/translations_es_419.properties"));
 
     private static Properties bundle(String resource) {
         Properties properties = new Properties();
         try (InputStream in = PlainAdminViewTestSupport.class.getResourceAsStream(resource);
              Reader reader = new InputStreamReader(in, StandardCharsets.UTF_8)) {
+            properties.load(reader);
+        } catch (IOException e) {
+            throw new UncheckedIOException(e);
+        }
+        return properties;
+    }
+
+    private static Properties mounted(Path file) {
+        Properties properties = new Properties();
+        try (Reader reader = Files.newBufferedReader(file, StandardCharsets.UTF_8)) {
             properties.load(reader);
         } catch (IOException e) {
             throw new UncheckedIOException(e);

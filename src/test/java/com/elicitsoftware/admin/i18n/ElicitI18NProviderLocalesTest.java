@@ -12,9 +12,12 @@ package com.elicitsoftware.admin.i18n;
  */
 
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
 
+import java.nio.file.Path;
 import java.util.List;
 import java.util.Locale;
+import java.util.Optional;
 import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -23,24 +26,27 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * UC-026: Use the Console in My Language (BR-082, BR-083) — the languages a site offers are
- * English first and then the declared tags in a stable order, a malformed tag offers nothing, a
- * narrowed list takes effect once the cache is cleared, and a regional locale's whole bundle
- * falls back through its language to English. Complements {@code ElicitI18NProviderTest}.
+ * English first and then the mounted languages the offered list keeps, in a stable order; a
+ * malformed tag offers nothing, a narrowed list takes effect once the cache is cleared, and a
+ * regional locale's whole bundle falls back through its language to English. Complements
+ * {@code ElicitI18NProviderTest}.
  */
 class ElicitI18NProviderLocalesTest {
 
     private static final Locale SPANISH = Locale.forLanguageTag("es-419");
     private static final Locale ARABIC = Locale.forLanguageTag("ar");
 
-    private static ElicitI18NProvider provider(String bundledLocales, boolean pseudo) {
+    /** The curated mount, narrowed by {@code offered} ({@code null} offers every mounted language). */
+    private static ElicitI18NProvider provider(String offered, boolean pseudo) {
         ElicitI18NProvider p = new ElicitI18NProvider();
-        p.bundledLocales = bundledLocales;
+        p.fileSystemPath = ElicitI18NProviderTest.CURATED;
+        p.offeredLocales = Optional.ofNullable(offered);
         p.pseudoLocaleEnabled = pseudo;
         return p;
     }
 
     @Test
-    void given_declaredTagsInAnyOrder_when_providedLocales_then_englishFirstThenByTag() {
+    void given_offeredTagsInAnyOrder_when_providedLocales_then_englishFirstThenByTag() {
         ElicitI18NProvider p = provider("es-419, ar,  ,x-private,en", true);
 
         assertEquals(List.of(Locale.ENGLISH, ARABIC, SPANISH, ElicitI18NProvider.PSEUDO_LOCALE), p.getProvidedLocales());
@@ -48,9 +54,17 @@ class ElicitI18NProviderLocalesTest {
     }
 
     @Test
-    void given_noDeclaredTags_when_providedLocales_then_englishAlone() {
-        assertEquals(List.of(Locale.ENGLISH), provider(null, false).getProvidedLocales());
-        assertEquals(List.of(Locale.ENGLISH), provider("", false).getProvidedLocales());
+    void given_nothingMounted_when_providedLocales_then_englishAlone(@TempDir Path empty) {
+        ElicitI18NProvider p = provider(null, false);
+        p.fileSystemPath = empty.toString();
+
+        assertEquals(List.of(Locale.ENGLISH), p.getProvidedLocales());
+    }
+
+    @Test
+    void given_noOfferedList_when_providedLocales_then_everyMountedLanguage() {
+        assertEquals(List.of(Locale.ENGLISH, ARABIC, SPANISH), provider(null, false).getProvidedLocales());
+        assertEquals(List.of(Locale.ENGLISH, ARABIC, SPANISH), provider("", false).getProvidedLocales());
     }
 
     @Test
@@ -66,7 +80,7 @@ class ElicitI18NProviderLocalesTest {
     void given_aChangedDeclaration_when_cacheCleared_then_theNewListIsOffered() {
         ElicitI18NProvider p = provider("en", false);
         assertEquals(List.of(Locale.ENGLISH), p.getProvidedLocales());
-        p.bundledLocales = "en,ar";
+        p.offeredLocales = Optional.of("en,ar");
 
         assertEquals(List.of(Locale.ENGLISH), p.getProvidedLocales(), "the list is cached");
         p.clearCache();
