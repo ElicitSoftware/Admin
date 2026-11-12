@@ -73,6 +73,17 @@ jobs:
       # has no PDF until it is typeset here, which happens for every tagged build, pre-release
       # or final; a failed typeset fails the release rather than publishing an image whose
       # Manual entry is missing (UC-029 A1).
+      # The manual is typeset with the umbrella's brand package, which build-manual.sh reads from
+      # ../docs/manual, where it sits in a local umbrella checkout (Elicit/Admin). Fetch just that
+      # directory from the umbrella's default branch, the line this release is built against.
+      - name: Fetch the brand package from the umbrella repository
+        run: |
+          git clone --depth 1 --filter=blob:none --sparse https://github.com/ElicitSoftware/Elicit.git "$RUNNER_TEMP/elicit"
+          git -C "$RUNNER_TEMP/elicit" sparse-checkout set docs/manual
+          mkdir -p ../docs
+          ln -s "$RUNNER_TEMP/elicit/docs/manual" ../docs/manual
+          test -f ../docs/manual/elicit-brand.sty
+
       - name: Typeset the manual
         run: |
           docs/manual/build-manual.sh "${{ steps.version.outputs.version }}" "$(date -u '+%Y-%m-%d %H:%M:%S UTC')"

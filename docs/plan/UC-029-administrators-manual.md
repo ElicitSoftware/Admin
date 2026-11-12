@@ -46,6 +46,9 @@ is a reader's action, so it stays — one short chapter, no upload, no directory
 with no common build, and a copied style file is cheaper than a shared artifact. It is the one
 file to re-copy when the brand changes.
 
+*Superseded by Elicit#90: the manual now reads the umbrella's `docs/manual/elicit-brand.sty` in
+place, as Author's manuals do, and Admin keeps no copy.*
+
 ## Chapters and figures
 
 BR-002 requires a captioned screenshot per procedure. Every figure below is one screen of the
