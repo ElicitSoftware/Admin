@@ -96,6 +96,10 @@ A create-import is rejected if a survey with the file's stable key already exist
 
 After the import has committed, the Survey application is asked once to rebuild its reporting schema; the outcome is reported and never fails the import. The rules are stated in UC-018, which shares this step, and the call is switched off with `elicit.survey.etl-build.enabled=false`.
 
+### Post-survey action fields (Elicit#95)
+
+A post-survey action is installed with its method and whether it sends the External ID, and a definition with an External-ID action at a non-`https` address is refused (UC-018 BR-134, BR-135).
+
 ---
 
 ## Reference

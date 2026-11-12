@@ -85,6 +85,10 @@ Static lookup references (such as question type, operator, and action) are expor
 
 Every export includes the survey's stable, cross-instance-portable key (assigned once and never reassigned) alongside preserved source identifiers, so the same authored survey can be recognized across separate deployments (e.g., different institutions) and matched for an update (UC-017) or for respondent data consolidation.
 
+### Post-survey action fields (Elicit#95)
+
+A post-survey action is exported with its method and whether it sends the External ID, as the record's last two fields (UC-018 BR-134).
+
 ---
 
 ## Reference
