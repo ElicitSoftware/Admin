@@ -164,6 +164,10 @@ The file is the whole list of the survey's report services, report marks and pos
 
 After the update has committed, the Survey application is asked once to rebuild its reporting schema; the outcome is reported and never fails the update. The rules are stated in UC-018, which shares this step, and the call is switched off with `elicit.survey.etl-build.enabled=false`.
 
+### Post-survey action fields (Elicit#95)
+
+A post-survey action's method and External-ID flag are compared and updated like its other fields, and a definition with an External-ID action at a non-`https` address is refused before anything is written (UC-018 BR-134, BR-135).
+
 ---
 
 ## Reference

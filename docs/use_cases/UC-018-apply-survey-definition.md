@@ -104,8 +104,16 @@ Survey builds each survey's reporting star schema from the survey definitions pr
 
 The definition is committed before Survey is asked, and a reporting schema that is behind is recoverable (repeat the apply, or restart Survey) where a rolled-back apply is not. So the rebuild's outcome is reported -- on the result and in the log -- and never fails the apply, changes its title, or is written into the apply's audit record, which was committed with the apply itself.
 
+### BR-134: A post-survey action carries its method and whether it sends the External ID
+
+A `post_survey_actions` record may carry two fields after its `execution_order`: the action's `method` (`POST`, `GET` or `PUT`) and `sends_external_id` (`true` or `false`), which Survey uses to call it (Survey UC-015 BR-001). A record without them, written before Elicit#95, reads as `POST` and `false`; a method other than the three is refused like any malformed record. The install (UC-014), the update (UC-017) and the export (UC-013) carry both, and an update compares and writes them like the action's other fields.
+
+### BR-135: An action that sends the External ID must use https
+
+The subject's External ID usually identifies a person in another system, so an action that sends it must be called at an `https` address (Survey UC-015 BR-002). A definition carrying such an action at any other address is refused as a whole, before anything is written, naming the action; the authoring tool refuses it too (Author UC-052), so only a hand-edited file meets this rule.
+
 ---
 
 ## Reference
 
-Implemented by `SurveyDefinitionApplyResource` / `SurveyDefinitionApplyService`, which delegate to `SurveyDefinitionImportService` (UC-014) and `SurveyDefinitionUpdateService` (UC-017), and by `ReportingSchemaRebuildClient` for step 7 (Survey's `ETLBuildResource`, its UC-008). The Connections screen (UC-025) lists the Survey application so its address can be checked before an apply. Verified by `SurveyDefinitionApplyServiceTest`, `SurveyDefinitionApplyViewTest`, `ReportingSchemaRebuildClientTest` and `SurveyDefinitionApplyReportingRebuildTest`. The explicit UC-013/UC-014/UC-017 endpoints remain available for an administrator who wants to assert which operation should occur and have the request fail if that assertion is wrong.
+Implemented by `SurveyDefinitionApplyResource` / `SurveyDefinitionApplyService`, which delegate to `SurveyDefinitionImportService` (UC-014) and `SurveyDefinitionUpdateService` (UC-017), and by `ReportingSchemaRebuildClient` for step 7 (Survey's `ETLBuildResource`, its UC-008). The Connections screen (UC-025) lists the Survey application so its address can be checked before an apply. For Survey UC-015 BR-001, migration V0.0.24 appends `department_code` to the `survey.status` view, beside the External ID it already carries, so that Survey can send both for an action that sends the External ID. Verified by `SurveyDefinitionApplyServiceTest`, `SurveyDefinitionApplyViewTest`, `ReportingSchemaRebuildClientTest` and `SurveyDefinitionApplyReportingRebuildTest`. The explicit UC-013/UC-014/UC-017 endpoints remain available for an administrator who wants to assert which operation should occur and have the request fail if that assertion is wrong.

@@ -290,6 +290,53 @@ final class SurveyDefinitionFileFields {
         return Boolean.parseBoolean(value) || "t".equalsIgnoreCase(value);
     }
 
+    /** The methods a post-survey action may be called with (UC-018 BR-134, Survey UC-015 BR-001). */
+    static final java.util.Set<String> POST_SURVEY_ACTION_METHODS = java.util.Set.of("POST", "GET", "PUT");
+
+    /**
+     * UC-018 BR-134: a post_survey_actions record's method, its 7th field; {@code POST} when the
+     * record has none (a file written before Elicit#95). Any other value is refused.
+     */
+    static String postSurveyActionMethod(String[] fields) {
+        if (fields.length < 7 || fields[6] == null || fields[6].isBlank()) {
+            return "POST";
+        }
+        String method = fields[6].trim().toUpperCase();
+        if (!POST_SURVEY_ACTION_METHODS.contains(method)) {
+            throw new IllegalArgumentException(Translations.get("definition.badPostSurveyActionMethod", fields[6].trim()));
+        }
+        return method;
+    }
+
+    /** UC-018 BR-134: whether the action sends the External ID, its 8th field; {@code false} when absent. */
+    static boolean postSurveyActionSendsExternalId(String[] fields) {
+        return fields.length >= 8 && parseBooleanOrFalse(fields[7] == null ? null : fields[7].trim());
+    }
+
+    /**
+     * UC-018 BR-135: the names of the post-survey actions in a definition file that send the
+     * External ID to an address that is not https. A file that has any is refused as a whole,
+     * before anything is written, so this reads the whole file first.
+     */
+    static java.util.List<String> externalIdActionsWithoutHttps(String content) {
+        java.util.List<String> refused = new java.util.ArrayList<>();
+        for (String raw : content.split("\\R")) {
+            String line = raw.trim();
+            if (!line.toLowerCase().startsWith("post_survey_actions:")) {
+                continue;
+            }
+            String[] fields = parseFields(line.substring(line.indexOf(':') + 1).trim());
+            if (isRetired("post_survey_actions", fields) || !postSurveyActionSendsExternalId(fields)) {
+                continue;
+            }
+            String url = fields.length > 4 && fields[4] != null ? fields[4].trim() : "";
+            if (!url.regionMatches(true, 0, "https://", 0, 8)) {
+                refused.add(fields.length > 2 ? fields[2] : "?");
+            }
+        }
+        return refused;
+    }
+
     /**
      * Resolves a required (NOT NULL) FK reference. Throws if not found in map.
      */

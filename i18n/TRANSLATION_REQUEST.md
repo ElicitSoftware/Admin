@@ -580,6 +580,8 @@ Every row is one key in `translations.properties`. Return a file `translations_<
 | `definition.noSurveysRecord` | File does not contain a surveys record | Apply Survey Definition page · the file was refused; surveys is a record name and stays | 120 |  |
 | `definition.readFailed` | Failed to read file: {0} | Apply Survey Definition page · the file could not be read | 400 | params: {0} = the system message, in English |
 | `definition.fieldCount` | {0} requires {1} fields, got {2} | Apply Survey Definition page · why a line of the definition file was refused; continues definition.line | 160 | params: {0} = record name, kept as written, {1} = fields required, {2} = fields found |
+| `definition.badPostSurveyActionMethod` | post_survey_actions: unsupported method {0}; use POST, GET or PUT | Apply Survey Definition page · why a post-survey action line was refused; continues definition.line; POST, GET, PUT and post_survey_actions stay | 120 | params: {0} = the method in the file |
+| `definition.externalIdNeedsHttps` | Refused: these post-survey actions send the External ID to an address that is not https: {0}. Change their addresses to https in the authoring tool and export again. | Apply Survey Definition page · why a whole definition file was refused; https stays | 220 | params: {0} = comma-separated action names |
 | `definition.keyExists` | A survey with survey_key {0} already exists in this instance (id={1}); use Update instead of Import to apply changes to it. | Apply Survey Definition page · importing a survey that is already installed; survey_key stays | 320 | params: {0} = survey key, {1} = survey id |
 | `definition.invalidValue` | Invalid {0} in file: {1} | Apply Survey Definition page · why a line of the definition file was refused; continues definition.line | 300 | params: {0} = field name, kept as written, {1} = the value found |
 | `definition.translationNotTranslatable` | translations row targets a field that carries no respondent-facing text: {0} | Apply Survey Definition page · why a line of the definition file was refused; continues definition.line; translations is a record name and stays | 240 | params: {0} = table and field name, kept as written |
@@ -1254,6 +1256,8 @@ definition.noHeader=File does not contain valid format header
 definition.noSurveysRecord=File does not contain a surveys record
 definition.readFailed=Failed to read file: {0}
 definition.fieldCount={0} requires {1} fields, got {2}
+definition.badPostSurveyActionMethod=post_survey_actions: unsupported method {0}; use POST, GET or PUT
+definition.externalIdNeedsHttps=Refused: these post-survey actions send the External ID to an address that is not https: {0}. Change their addresses to https in the authoring tool and export again.
 definition.keyExists=A survey with survey_key {0} already exists in this instance (id={1}); use Update instead of Import to apply changes to it.
 definition.invalidValue=Invalid {0} in file: {1}
 definition.translationNotTranslatable=translations row targets a field that carries no respondent-facing text: {0}

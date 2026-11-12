@@ -269,7 +269,7 @@ class SurveyDefinitionUpdateServiceUnitTest {
                         questionIds, sectionsQuestionIds),
                         new Object[]{510L, "RESPONDENT", 2061L, 2071L, 2081L, "label", 3}, 1, false),
                 new Spec("post_survey_actions", () -> call("upsertPostSurveyAction", fields("post_survey_actions"), SURVEY_ID),
-                        new Object[]{511L, "Action", "act desc", "http://action", 2}, 1, false),
+                        new Object[]{511L, "Action", "act desc", "http://action", 2, "POST", false}, 1, false),
                 new Spec("ontology", () -> call("upsertOrReuseOntology", fields("ontology"), SURVEY_ID, dimensionIds),
                         new Object[]{512L, "Female", "F", 2111L}, 1, false),
                 new Spec("metadata", () -> call("upsertMetadata", fields("metadata"), SURVEY_ID, stepsSectionIds, questionIds,
@@ -590,10 +590,10 @@ class SurveyDefinitionUpdateServiceUnitTest {
         assertTrue(!db.calls.get(0).sql().contains("effective_to"), "Type 1 tables have no current-row filter");
 
         setUp();
-        currentRows.put("survey.post_survey_actions", List.of((Object) new Object[]{511L, "Old", "act desc", "http://action", 2}));
+        currentRows.put("survey.post_survey_actions", List.of((Object) new Object[]{511L, "Old", "act desc", "http://action", 2, "POST", false}));
         assertEquals(ChangeType.VERSIONED, call("upsertPostSurveyAction", fields("post_survey_actions"), SURVEY_ID));
         ScriptedEntityManager.Call action = db.only("UPDATE survey.post_survey_actions");
-        assertEquals(List.of("Action", "act desc", "http://action", 2, 511L), List.copyOf(action.params().values()));
+        assertEquals(List.of("Action", "act desc", "http://action", 2, "POST", false, 511L), List.copyOf(action.params().values()));
 
         setUp();
         currentRows.put("survey.report_items", List.of((Object) new Object[]{510L, "ADMIN", 2061L, 2071L, 2081L, "label", 3}));
@@ -624,7 +624,7 @@ class SurveyDefinitionUpdateServiceUnitTest {
         assertEquals(List.of(SURVEY_ID, UUID.fromString(key(101)), "Report", "rep desc", "http://report", 4),
                 List.copyOf(insertInto("reports").params().values()));
         call("upsertPostSurveyAction", fields("post_survey_actions"), SURVEY_ID);
-        assertEquals(List.of(SURVEY_ID, UUID.fromString(key(102)), "Action", "act desc", "http://action", 2),
+        assertEquals(List.of(SURVEY_ID, UUID.fromString(key(102)), "Action", "act desc", "http://action", 2, "POST", false),
                 List.copyOf(insertInto("post_survey_actions").params().values()));
         call("upsertReportItem", with(fields("report_items"), 7, ""), SURVEY_ID, stepsSectionIds, questionIds, sectionsQuestionIds);
         assertEquals(List.of(SURVEY_ID, UUID.fromString(key(141)), "RESPONDENT", 2061L, 2071L, 2081L, "label", 0),

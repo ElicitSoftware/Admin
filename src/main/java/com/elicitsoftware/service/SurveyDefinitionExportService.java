@@ -46,7 +46,7 @@ import java.util.List;
  * sections_questions: source_id|element_key|question_id|section_id|display_order|version|effective_from|effective_to|published_by|published_comment
  * relationships: source_id|element_key|upstream_step_id|upstream_sq_id|downstream_step_id|downstream_ss_id|downstream_sq_id|operator_id|action_id|description|token|reference_value|default_upstream_value|override_upstream_value|version|effective_from|effective_to|published_by|published_comment
  * reports: source_id|element_key|name|description|url|display_order
- * post_survey_actions: source_id|element_key|name|description|url|execution_order
+ * post_survey_actions: source_id|element_key|name|description|url|execution_order|method|sends_external_id
  * dimensions: source_id|element_key|name
  * ontology: source_id|element_key|name|tag|dimension
  * metadata: source_id|element_key|steps_sections_id|question_id|sections_question_id|ontology_id|value
@@ -367,7 +367,7 @@ public class SurveyDefinitionExportService {
             out.append("\n");
         }
 
-        // post_survey_actions: source_id|element_key|name|description|url|execution_order
+        // post_survey_actions: source_id|element_key|name|description|url|execution_order|method|sends_external_id
         for (Object[] psa : postSurveyActions) {
             out.append("post_survey_actions: ");
             out.append(escapeField(psa[0]));                                   // source_id
@@ -376,6 +376,8 @@ public class SurveyDefinitionExportService {
             out.append(FIELD_DELIMITER).append(escapeField(psa[3]));           // description
             out.append(FIELD_DELIMITER).append(escapeField(psa[4]));           // url
             out.append(FIELD_DELIMITER).append(escapeField(psa[5]));           // execution_order
+            out.append(FIELD_DELIMITER).append(escapeField(psa[6]));           // method (UC-018 BR-134)
+            out.append(FIELD_DELIMITER).append(escapeField(psa[7]));           // sends_external_id
             out.append("\n");
         }
 
@@ -675,7 +677,7 @@ public class SurveyDefinitionExportService {
      */
     private List<Object[]> getPostSurveyActions(Integer surveyId) {
         Query query = em.createNativeQuery(
-                "SELECT id, post_survey_action_key, name, description, url, execution_order " +
+                "SELECT id, post_survey_action_key, name, description, url, execution_order, method, sends_external_id " +
                 "FROM survey.post_survey_actions WHERE survey_id = :surveyId ORDER BY execution_order");
         query.setParameter("surveyId", surveyId);
         return toObjectArrayRows(query.getResultList(), "post_survey_actions");

@@ -228,6 +228,24 @@ public class SurveyDefinitionImportService {
         Map<Long, Long> dimensionIdMap = new HashMap<>();
         Map<Long, Long> ontologyIdMap = new HashMap<>();
 
+        // UC-018 BR-135: an External-ID action at a non-https address refuses the file before
+        // anything is written, so the whole file is read and checked first.
+        byte[] content;
+        try {
+            content = inputStream.readAllBytes();
+        } catch (java.io.IOException e) {
+            errors.add(Translations.get("definition.readFailed", e.getMessage()));
+            logAttempt(null, fileName, false, errors, counts, null);
+            return new ImportResult(false, 0, errors, counts);
+        }
+        List<String> insecure = SurveyDefinitionFileFields.externalIdActionsWithoutHttps(new String(content, StandardCharsets.UTF_8));
+        if (!insecure.isEmpty()) {
+            errors.add(Translations.get("definition.externalIdNeedsHttps", String.join(", ", insecure)));
+            logAttempt(null, fileName, false, errors, counts, null);
+            return new ImportResult(false, 0, errors, counts);
+        }
+        inputStream = new java.io.ByteArrayInputStream(content);
+
         int lineNumber = 0;
         // Parsed from the "# survey_revision:" header, before any data line. Held in a
         // single-element array so logAttempt() can read whatever was parsed at the point a
@@ -941,17 +959,21 @@ public class SurveyDefinitionImportService {
     /**
      * Inserts a new post_survey_action row. {@code element_key} carried over verbatim (or
      * freshly generated) — see {@link #resolveElementKey(String)}.
-     * Fields: source_id|element_key|name|description|url|execution_order
+     * Fields: source_id|element_key|name|description|url|execution_order[|method|sends_external_id]
      */
     private void insertPostSurveyAction(String[] fields, Long surveyId) {
         if (fields.length < 6) {
             throw new IllegalArgumentException(Translations.get("definition.fieldCount", "post_survey_actions", "6", String.valueOf(fields.length)));
         }
         UUID elementKey = resolveElementKey(fields[1]);
+        // UC-018 BR-134: method and sends_external_id, absent from a file written before Elicit#95.
+        String method = SurveyDefinitionFileFields.postSurveyActionMethod(fields);
+        boolean sendsExternalId = SurveyDefinitionFileFields.postSurveyActionSendsExternalId(fields);
         Query query = em.createNativeQuery("""
                 INSERT INTO survey.post_survey_actions
-                    (id, survey_id, post_survey_action_key, name, description, url, execution_order)
-                VALUES (nextval('survey.post_survey_actions_seq'), ?1, ?2, ?3, ?4, ?5, ?6)
+                    (id, survey_id, post_survey_action_key, name, description, url, execution_order,
+                     method, sends_external_id)
+                VALUES (nextval('survey.post_survey_actions_seq'), ?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8)
                 """);
         query.setParameter(1, surveyId);
         query.setParameter(2, elementKey);
@@ -959,6 +981,8 @@ public class SurveyDefinitionImportService {
         query.setParameter(4, nullIfEmpty(fields[3]));
         query.setParameter(5, nullIfEmpty(fields[4]));
         query.setParameter(6, parseIntOrNull(fields[5]));
+        query.setParameter(7, method);
+        query.setParameter(8, sendsExternalId);
         query.executeUpdate();
     }
 

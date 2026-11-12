@@ -257,6 +257,24 @@ public class SurveyDefinitionUpdateService {
         Map<Long, Long> dimensionIdMap = new HashMap<>();
         Map<Long, Long> ontologyIdMap = new HashMap<>();
 
+        // UC-018 BR-135: an External-ID action at a non-https address refuses the file before
+        // anything is written, so the whole file is read and checked first.
+        byte[] content;
+        try {
+            content = inputStream.readAllBytes();
+        } catch (java.io.IOException e) {
+            errors.add(Translations.get("definition.readFailed", e.getMessage()));
+            logAttempt(target, fileName, false, errors, null, null);
+            return new UpdateResult(false, errors, null);
+        }
+        List<String> insecure = SurveyDefinitionFileFields.externalIdActionsWithoutHttps(new String(content, StandardCharsets.UTF_8));
+        if (!insecure.isEmpty()) {
+            errors.add(Translations.get("definition.externalIdNeedsHttps", String.join(", ", insecure)));
+            logAttempt(target, fileName, false, errors, null, null);
+            return new UpdateResult(false, errors, null);
+        }
+        inputStream = new java.io.ByteArrayInputStream(content);
+
         int lineNumber = 0;
         boolean surveyLineSeen = false;
         // Parsed from the "# survey_revision:" header, which always precedes the data lines.
@@ -1378,30 +1396,37 @@ public class SurveyDefinitionUpdateService {
         String description = SurveyDefinitionFileFields.nullIfEmpty(fields[3]);
         String url = SurveyDefinitionFileFields.nullIfEmpty(fields[4]);
         Integer executionOrder = SurveyDefinitionFileFields.parseIntOrNull(fields[5]);
+        // UC-018 BR-134: method and sends_external_id, absent from a file written before Elicit#95.
+        String method = SurveyDefinitionFileFields.postSurveyActionMethod(fields);
+        boolean sendsExternalId = SurveyDefinitionFileFields.postSurveyActionSendsExternalId(fields);
 
         Object[] current = findCurrentRow("survey.post_survey_actions", "post_survey_action_key", elementKey, surveyId,
-                "id, name, description, url, execution_order");
+                "id, name, description, url, execution_order, method, sends_external_id");
         if (current == null) {
             em.createNativeQuery("""
                     INSERT INTO survey.post_survey_actions
-                        (id, survey_id, post_survey_action_key, name, description, url, execution_order)
-                    VALUES (nextval('survey.post_survey_actions_seq'), ?1, ?2, ?3, ?4, ?5, ?6)
+                        (id, survey_id, post_survey_action_key, name, description, url, execution_order,
+                         method, sends_external_id)
+                    VALUES (nextval('survey.post_survey_actions_seq'), ?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8)
                     """)
                     .setParameter(1, surveyId).setParameter(2, elementKey).setParameter(3, name)
                     .setParameter(4, description).setParameter(5, url).setParameter(6, executionOrder)
+                    .setParameter(7, method).setParameter(8, sendsExternalId)
                     .executeUpdate();
             return ChangeType.CREATED;
         }
 
         Long id = ((Number) current[0]).longValue();
         boolean unchanged = Objects.equals(name, current[1]) && Objects.equals(description, current[2])
-                && Objects.equals(url, current[3]) && Objects.equals(executionOrder, current[4]);
+                && Objects.equals(url, current[3]) && Objects.equals(executionOrder, current[4])
+                && Objects.equals(method, current[5]) && Objects.equals(sendsExternalId, current[6]);
         if (unchanged) {
             return ChangeType.UNCHANGED;
         }
-        em.createNativeQuery("UPDATE survey.post_survey_actions SET name = ?1, description = ?2, url = ?3, execution_order = ?4 WHERE id = ?5")
+        em.createNativeQuery("UPDATE survey.post_survey_actions SET name = ?1, description = ?2, url = ?3, execution_order = ?4, "
+                        + "method = ?5, sends_external_id = ?6 WHERE id = ?7")
                 .setParameter(1, name).setParameter(2, description).setParameter(3, url)
-                .setParameter(4, executionOrder).setParameter(5, id)
+                .setParameter(4, executionOrder).setParameter(5, method).setParameter(6, sendsExternalId).setParameter(7, id)
                 .executeUpdate();
         return ChangeType.VERSIONED;
     }

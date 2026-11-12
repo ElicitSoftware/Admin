@@ -134,6 +134,9 @@ CREATE TABLE IF NOT EXISTS survey.post_survey_actions
     description            character varying(2000),
     url                    character varying(2000),
     execution_order        integer,
+    -- Survey V026 (Survey UC-015 BR-001): the call's method and whether it sends the External ID.
+    method                 character varying(10) NOT NULL DEFAULT 'POST',
+    sends_external_id      boolean NOT NULL DEFAULT false,
     CONSTRAINT post_survey_actions_pk PRIMARY KEY (id),
     CONSTRAINT psa_surveys_fk FOREIGN KEY (survey_id) REFERENCES survey.surveys (id)
 );
