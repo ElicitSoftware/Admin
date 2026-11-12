@@ -124,7 +124,7 @@ Every table in the survey definition carries a stable element key (the survey's 
 
 ### BR-068: Update never deletes
 
-No structural row is ever physically removed by an update. An element the file marks as retired has its current version closed (the same close that versioning performs, without the re-insert), so recorded answers and the as-of view of respondents already in progress are untouched. An element simply absent from the file is left as it is. The one exception is the two Type 1 report tables, `reports` and `report_items`, which BR-113 deletes: they are authored content with no history, nothing references them, and a report the author removed must stop being offered.
+No structural row is ever physically removed by an update. An element the file marks as retired has its current version closed (the same close that versioning performs, without the re-insert), so recorded answers and the as-of view of respondents already in progress are untouched. An element simply absent from the file is left as it is. The one exception is the three Type 1 tables `reports`, `report_items` and `post_survey_actions`, which BR-113 deletes: they are authored content with no history, and a report or action the author removed must stop running. Only an action is referenced, by its delivery records, which go with it.
 
 ### BR-069: An older revision is always refused
 
@@ -156,9 +156,9 @@ A `translations` record is matched to its target by `translation_key` (BR-067) a
 
 A `report_items` record (Survey UC-013) is matched by `report_item_key` (BR-067) and treated as the other Type 1 tables are (BR-064): absent at the target it is inserted, identical it is left alone, otherwise updated in place. Its element references resolve through the same maps as a `metadata` row's.
 
-### BR-113: Reports and report marks the file no longer lists are deleted
+### BR-113: Reports, report marks and post-survey actions the file no longer lists are deleted
 
-The file is the whole list of the survey's report services and report marks. Once the file has been applied, every `reports` row and every `report_items` row of the target survey whose key the file did not list is deleted, and the deletions are counted as retired for that table in the summary. A file that lists no reports at all therefore leaves the survey with none, and Survey then sends a finishing respondent straight to the post-survey URL (Survey UC-005). This is the author's removal reaching the site, not a site-side edit: the rows are authored content and the console has no page for them.
+The file is the whole list of the survey's report services, report marks and post-survey actions. Once the file has been applied, every `reports`, `report_items` and `post_survey_actions` row of the target survey whose key the file did not list is deleted, and the deletions are counted as retired for that table in the summary. A file that lists no reports at all therefore leaves the survey with none, and Survey then sends a finishing respondent straight to the post-survey URL (Survey UC-005); a file that lists no actions leaves Survey nothing to call when a respondent finishes (Survey UC-004). A deleted action takes its delivery records with it: the `respondent_psa` rows that record, per respondent, whether the action was called and how it went reference the action and are deleted first. This is the author's removal reaching the site (Author UC-052), not a site-side edit: the rows are authored content and the console has no page for them.
 
 ### BR-107 / BR-108 (UC-018): The reporting schema is rebuilt after a successful update; a failed rebuild does not undo it
 
