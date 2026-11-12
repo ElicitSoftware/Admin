@@ -74,10 +74,11 @@ import java.util.UUID;
  * <p>
  * A target row whose {@code element_key} no longer appears anywhere in the file (i.e. the element
  * was removed from the authored copy) is left completely alone — this service never deletes —
- * with one exception (UC-017 BR-113): the two Type 1 report tables, {@code reports} and
- * {@code report_items}, are authored content with no history and nothing referencing them, and
- * a report the author removed must stop running, so a row of either whose key the file no longer
- * lists is deleted once the file has been applied, and counted as retired for that table.
+ * with one exception (UC-017 BR-113): the three Type 1 tables {@code reports},
+ * {@code report_items} and {@code post_survey_actions} are authored content with no history, and
+ * a report or action the author removed must stop running, so a row of any of them whose key the
+ * file no longer lists is deleted once the file has been applied, and counted as retired for that
+ * table. An action's delivery records ({@code respondent_psa}) reference it and are deleted first.
  * A record the file marks as <em>retired</em> (closed {@code effective_to}, the authoring tool's
  * removal) has its current row closed here too; nothing is inserted (see {@code retireCurrentRow}).
  * <p>
@@ -187,7 +188,7 @@ public class SurveyDefinitionUpdateService {
             }
         }
 
-        /** Rows of a Type 1 report table deleted because the file no longer lists them (BR-113). */
+        /** Rows of a Type 1 table deleted because the file no longer lists them (BR-113). */
         void retired(int rows) {
             retired += rows;
         }
@@ -232,10 +233,11 @@ public class SurveyDefinitionUpdateService {
                 "report_items", "translations")) {
             counts.put(table, new MutableCounts());
         }
-        // The keys the file lists for the two Type 1 report tables; rows the target holds under
-        // any other key are deleted once the file is applied (BR-113).
+        // The keys the file lists for the three Type 1 tables; rows the target holds under any
+        // other key are deleted once the file is applied (BR-113).
         Set<UUID> reportKeysInFile = new HashSet<>();
         Set<UUID> reportItemKeysInFile = new HashSet<>();
+        Set<UUID> postSurveyActionKeysInFile = new HashSet<>();
 
         Survey target = Survey.findById(targetSurveyId);
         if (target == null) {
@@ -409,6 +411,7 @@ public class SurveyDefinitionUpdateService {
                         }
                         case "post_survey_actions": {
                             ChangeType outcome = upsertPostSurveyAction(fields, target.id);
+                            postSurveyActionKeysInFile.add(requireElementKey(fields[1], "post_survey_actions"));
                             counts.get("post_survey_actions").record(outcome);
                             break;
                         }
@@ -465,9 +468,11 @@ public class SurveyDefinitionUpdateService {
                 return new UpdateResult(false, errors, null);
             }
 
-            // BR-113: the file is the whole list of the survey's reports and report marks.
+            // BR-113: the file is the whole list of the survey's reports, report marks and
+            // post-survey actions.
             counts.get("reports").retired(deleteUnlisted("survey.reports", "report_key", reportKeysInFile, target.id));
             counts.get("report_items").retired(deleteUnlisted("survey.report_items", "report_item_key", reportItemKeysInFile, target.id));
+            counts.get("post_survey_actions").retired(deleteUnlistedPostSurveyActions(postSurveyActionKeysInFile, target.id));
 
             Map<String, TableUpdateCounts> immutableCounts = new LinkedHashMap<>();
             counts.forEach((table, c) -> immutableCounts.put(table, c.toImmutable()));
@@ -1333,6 +1338,29 @@ public class SurveyDefinitionUpdateService {
             if (!keysInFile.contains(key)) {
                 deleted += em.createNativeQuery("DELETE FROM " + table + " WHERE survey_id = ?1 AND " + keyColumn + " = ?2")
                         .setParameter(1, surveyId).setParameter(2, key).executeUpdate();
+            }
+        }
+        return deleted;
+    }
+
+    /**
+     * BR-113: deletes the target survey's post-survey actions whose key the file did not list, and
+     * returns how many. Each action's delivery records ({@code respondent_psa}, one per respondent
+     * it was called for) reference it by foreign key, so they are deleted with it.
+     */
+    @SuppressWarnings("unchecked")
+    private int deleteUnlistedPostSurveyActions(Set<UUID> keysInFile, Integer surveyId) {
+        List<Object[]> current = em.createNativeQuery(
+                        "SELECT id, post_survey_action_key FROM survey.post_survey_actions WHERE survey_id = ?1")
+                .setParameter(1, surveyId).getResultList();
+        int deleted = 0;
+        for (Object[] row : current) {
+            if (!keysInFile.contains((UUID) row[1])) {
+                Integer id = ((Number) row[0]).intValue();
+                em.createNativeQuery("DELETE FROM survey.respondent_psa WHERE post_survey_action_id = ?1")
+                        .setParameter(1, id).executeUpdate();
+                deleted += em.createNativeQuery("DELETE FROM survey.post_survey_actions WHERE id = ?1")
+                        .setParameter(1, id).executeUpdate();
             }
         }
         return deleted;

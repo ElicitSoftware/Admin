@@ -494,6 +494,52 @@ class SurveyDefinitionUpdateServiceTest {
     }
 
     /**
+     * UC-017 BR-113 (Author UC-052, issue #157): a post-survey action whose key has left the file
+     * is deleted, with the delivery records that reference it, and counted as retired; an action
+     * the file still lists is kept. The runtime role may delete those records (V0.0.23), which
+     * the superuser this suite connects as would not otherwise reveal.
+     */
+    @Test
+    @TestTransaction
+    void unlistedPostSurveyActionIsDeletedWithItsDeliveryRecords() {
+        Survey survey = persistFullDefinitionTree("PSA1");
+        long dropMeId = QuarkusTransaction.requiringNew().call(() -> {
+            PostSurveyAction psa = new PostSurveyAction();
+            psa.survey = Survey.findById(survey.id);
+            psa.name = "Drop Me";
+            psa.persistAndFlush();
+            return psa.id.longValue();
+        });
+        em.createNativeQuery("INSERT INTO survey.respondents (id, survey_id, access_code) "
+                        + "VALUES (nextval('survey.respondents_seq'), ?1, 'psa-delivery-1')")
+                .setParameter(1, survey.id).executeUpdate();
+        em.createNativeQuery("INSERT INTO survey.respondent_psa (id, respondent_id, post_survey_action_id, status) "
+                        + "SELECT nextval('survey.respondent_psa_seq'), r.id, ?2, 'COMPLETED' "
+                        + "FROM survey.respondents r WHERE r.survey_id = ?1 AND r.access_code = 'psa-delivery-1'")
+                .setParameter(1, survey.id).setParameter(2, dropMeId).executeUpdate();
+
+        String exported = surveyDefinitionExportService.exportSurvey(survey.id);
+        assertTrue(exported.lines().anyMatch(l -> l.startsWith("post_survey_actions: ") && l.contains("|Drop Me|")), exported);
+        String dropped = exported.lines()
+                .filter(l -> !(l.startsWith("post_survey_actions: ") && l.contains("|Drop Me|")))
+                .collect(java.util.stream.Collectors.joining("\n", "", "\n"));
+
+        SurveyDefinitionUpdateService.UpdateResult result =
+                surveyDefinitionUpdateService.updateFromFile(toStream(dropped), "dropped.elicit", survey.id);
+
+        assertTrue(result.isSuccess(), () -> "update errors: " + result.getErrors());
+        assertEquals(1, result.getCounts().get("post_survey_actions").retired(),
+                "the action the file no longer lists is deleted");
+        assertEquals(0L, queryLong("SELECT count(*) FROM survey.post_survey_actions WHERE id = ?1", dropMeId));
+        assertEquals(0L, queryLong("SELECT count(*) FROM survey.respondent_psa WHERE post_survey_action_id = ?1", dropMeId),
+                "its delivery records go with it");
+        assertEquals(1L, queryLong("SELECT count(*) FROM survey.post_survey_actions WHERE survey_id = ?1", survey.id),
+                "the action the file still lists is kept");
+        assertTrue((Boolean) queryOne("SELECT has_table_privilege('surveyadmin_user', 'survey.respondent_psa', 'DELETE')"),
+                "the runtime role must be able to delete delivery records (V0.0.23)");
+    }
+
+    /**
      * BR-063/A3: a file whose survey_key does not match the selected target survey's key aborts
      * the update entirely, with no changes applied.
      */
