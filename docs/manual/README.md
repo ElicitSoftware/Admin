@@ -29,7 +29,6 @@ than shipping a placeholder.
 | Path | Committed? | What it is |
 | --- | --- | --- |
 | `elicit-admin-manual.tex` | yes | the manual |
-| `elicit-brand.sty` | yes | the Elicit default brand as LaTeX — colors, IBM Plex, the page furniture, `\screenshot`, `\ui`, `\term` (UC-029 BR-005) |
 | `images/` | yes | the captured screens, plus `elicit-logo.png` for the title page |
 | `capture/` | yes | `capture-screenshots.mjs`, its own `package.json`, and `fixtures/` — the survey definition and the three finished respondents the walk installs; regenerates `images/` from a running Admin |
 | `build-manual.sh` | yes | typesets the PDF and puts it where the application packages it |
@@ -39,17 +38,19 @@ than shipping a placeholder.
 | `../../src/main/resources/manual/` | **no** | generated: where the image picks the PDF up |
 | `../../src/test/resources/manual/elicit-admin-manual.pdf` | yes | a small fixture, so the tests need neither Docker nor LaTeX |
 
-### `elicit-brand.sty` is Author's file, adjusted — not a verbatim copy
+### The brand package is the umbrella's
 
-The style file came from `Author/docs/manual/elicit-brand.sty` with **two**
-changes, and it must keep them:
+The manual is typeset with `docs/manual/elicit-brand.sty` from the Elicit
+umbrella, read in place from the checkout Admin sits in (`Elicit/Admin`), as
+Author's manuals are: every Elicit manual shares that one design (umbrella
+C-003), and there is no copy here to keep in step. The footer's product name
+comes from `\elicitProduct`, which `elicit-admin-manual.tex` sets to
+`Elicit Admin` before loading the package.
 
-1. the product name in the page footer — `Elicit Author` → `Elicit Admin`;
-2. the use-case references in its comments — `UC-039` → `UC-029`.
-
-It is duplicated rather than shared because Admin and Author are independent
-repositories with no common build. It is the one file to **re-copy from Author
-and re-apply those two changes to** when the brand changes.
+`build-manual.sh` stops with a message naming the file when it is missing;
+`UMBRELLA_MANUAL_DIR` points it somewhere else. The release workflow
+(`.github/workflows/maven.yml`) fetches the umbrella's `docs/manual/` beside
+its checkout before typesetting, so a tagged build is laid out the same way.
 
 ## Building it
 
