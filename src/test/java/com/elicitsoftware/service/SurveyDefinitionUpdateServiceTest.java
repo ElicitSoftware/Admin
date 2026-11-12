@@ -539,6 +539,81 @@ class SurveyDefinitionUpdateServiceTest {
                 "the runtime role must be able to delete delivery records (V0.0.23)");
     }
 
+    private String psaLine(String exported) {
+        return exported.lines().filter(l -> l.startsWith("post_survey_actions: ")).findFirst().orElseThrow();
+    }
+
+    /** The action record with its url, method and External-ID flag replaced (null drops the last two). */
+    private static String psaWith(String line, String url, String method, String sendsExternalId) {
+        String[] f = line.substring("post_survey_actions: ".length()).split("\\|", -1);
+        String head = "post_survey_actions: " + f[0] + "|" + f[1] + "|" + f[2] + "|" + f[3] + "|" + (url == null ? f[4] : url) + "|" + f[5];
+        return method == null ? head : head + "|" + method + "|" + sendsExternalId;
+    }
+
+    /**
+     * UC-018 BR-134 (Survey UC-015 BR-001): an action's method and External-ID flag are exported
+     * as the record's last two fields, updated in place, and read as POST and false from a record
+     * written before Elicit#95.
+     */
+    @Test
+    @TestTransaction
+    void postSurveyActionMethodAndExternalIdFlagTravelAndUpdate() {
+        Survey survey = persistFullDefinitionTree("PM1");
+        String exported = surveyDefinitionExportService.exportSurvey(survey.id);
+        String line = psaLine(exported);
+        assertTrue(line.endsWith("|POST|false"), "BR-134: method and flag are the last two fields: " + line);
+
+        SurveyDefinitionUpdateService.UpdateResult result = surveyDefinitionUpdateService.updateFromFile(
+                toStream(exported.replace(line, psaWith(line, null, "GET", "false"))), "get.elicit", survey.id);
+        assertTrue(result.isSuccess(), () -> "update errors: " + result.getErrors());
+        assertEquals("GET", queryOne("SELECT method FROM survey.post_survey_actions WHERE survey_id = ?1", survey.id));
+
+        SurveyDefinitionUpdateService.UpdateResult back = surveyDefinitionUpdateService.updateFromFile(
+                toStream(exported.replace(line, psaWith(line, null, null, null))), "six-fields.elicit", survey.id);
+        assertTrue(back.isSuccess(), () -> "update errors: " + back.getErrors());
+        assertEquals("POST", queryOne("SELECT method FROM survey.post_survey_actions WHERE survey_id = ?1", survey.id),
+                "BR-134: a 6-field record reads as POST");
+
+        RuntimeException bad = assertThrows(RuntimeException.class, () -> surveyDefinitionUpdateService.updateFromFile(
+                toStream(exported.replace(line, psaWith(line, null, "DELETE", "false"))), "delete.elicit", survey.id),
+                "BR-134: only POST, GET and PUT; a malformed record aborts the update");
+        assertTrue(bad.getMessage().contains("DELETE"), bad.getMessage());
+    }
+
+    /**
+     * UC-018 BR-135 (Survey UC-015 BR-002): a definition with an action that sends the External ID
+     * to an address that is not https is refused as a whole, before anything is written.
+     */
+    @Test
+    @TestTransaction
+    void externalIdActionOverHttpRefusesTheWholeFile() {
+        Survey survey = persistFullDefinitionTree("PM2");
+        String exported = surveyDefinitionExportService.exportSurvey(survey.id);
+        String line = psaLine(exported);
+        String insecure = exported.replace(line, psaWith(line, "http://svc.example/notify", "POST", "true"))
+                .replace("Full Title PM2", "Full Title PM2 renamed");
+
+        SurveyDefinitionUpdateService.UpdateResult result =
+                surveyDefinitionUpdateService.updateFromFile(toStream(insecure), "insecure.elicit", survey.id);
+        assertFalse(result.isSuccess());
+        assertTrue(result.getErrors().get(0).contains("https"), result.getErrors().toString());
+        assertEquals("Full Title PM2", queryOne("SELECT title FROM survey.surveys WHERE id = ?1", survey.id), "nothing was written");
+        assertEquals(Boolean.FALSE, queryOne("SELECT sends_external_id FROM survey.post_survey_actions WHERE survey_id = ?1", survey.id));
+
+        SurveyDefinitionUpdateService.UpdateResult ok = surveyDefinitionUpdateService.updateFromFile(
+                toStream(exported.replace(line, psaWith(line, "https://svc.example/notify/{externalId}", "POST", "true"))),
+                "secure.elicit", survey.id);
+        assertTrue(ok.isSuccess(), () -> "update errors: " + ok.getErrors());
+        assertEquals(Boolean.TRUE, queryOne("SELECT sends_external_id FROM survey.post_survey_actions WHERE survey_id = ?1", survey.id));
+    }
+
+    /** Survey UC-015 BR-001: survey.status carries the department's code beside the External ID (V0.0.24). */
+    @Test
+    void statusViewCarriesTheDepartmentCode() {
+        assertEquals(1L, queryLong("SELECT count(*) FROM information_schema.columns "
+                + "WHERE table_schema = 'survey' AND table_name = 'status' AND column_name = 'department_code'"));
+    }
+
     /**
      * BR-063/A3: a file whose survey_key does not match the selected target survey's key aborts
      * the update entirely, with no changes applied.

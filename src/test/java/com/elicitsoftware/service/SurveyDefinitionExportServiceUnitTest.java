@@ -54,7 +54,7 @@ class SurveyDefinitionExportServiceUnitTest {
         COLUMNS.put("sections_questions", 10);
         COLUMNS.put("relationships", 19);
         COLUMNS.put("reports", 6);
-        COLUMNS.put("post_survey_actions", 6);
+        COLUMNS.put("post_survey_actions", 8); // UC-018 BR-134: method, sends_external_id
         COLUMNS.put("dimensions", 3);
         COLUMNS.put("ontology", 5);
         COLUMNS.put("metadata", 7);
