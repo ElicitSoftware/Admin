@@ -9,12 +9,12 @@
 
 \documentclass[11pt, a4paper]{article}
 
-\usepackage[T1]{fontenc}
 \usepackage[a4paper, margin = 25mm, bottom = 28mm]{geometry}
 %% The footer's product name; the brand package is the umbrella's, shared by every Elicit manual.
 \newcommand{\elicitProduct}{Elicit Admin}
 \usepackage{elicit-brand}
-\usepackage[hidelinks]{hyperref}
+\usepackage{hyperref}
+\elicitAccent{elicitVerdigrisLight}
 
 \hypersetup{
   pdftitle = {Elicit Admin — Running the Console},
@@ -38,45 +38,14 @@
 \begin{document}
 
 %% ------------------------------------------------------------------ title page
-\begin{titlepage}
-\thispagestyle{empty}
-\centering
-\vspace*{3.5cm}
-
-\includegraphics[width = 70mm]{images/elicit-logo.png}
-
-\vspace{1.4cm}
-
-{\color{elicitInk}\Huge\bfseries Running the Console\par}
-
-\vspace{0.5cm}
-
-{\color{elicitSlate}\Large The Elicit Admin manual\par}
-
-\vspace{2.6cm}
-
-{\color{elicitSlate}\large
-Version \textbf{\elicitVersion}\\[0.35em]
-Built \textbf{\elicitBuildDate}\par}
-
-\vfill
-
-{\color{elicitSlate}\small
-This manual was produced by the same build as the application it ships inside,\\
-and describes that version. Elicit Software.\par}
-
-\vspace{1cm}
-\end{titlepage}
+\elicitTitlePage{Running the Console}{The Elicit Admin manual}%
+  {Departments \textperiodcentered\ users \textperiodcentered\ subjects and access codes \textperiodcentered\ message templates \textperiodcentered\ survey definitions \textperiodcentered\ participation \textperiodcentered\ the System pages}%
+  {This manual was produced by the same build as the application it ships inside, and describes that version.\\[0.5em] Elicit Software \textperiodcentered\ PolyForm Noncommercial License 1.0.0}
 
 %% ------------------------------------------------------------------ contents
 \pagenumbering{roman}
 \setcounter{page}{1}
-{\color{elicitInk}\section*{Contents}}
-\vspace{-0.6em}
-\begingroup
-\hypersetup{linkcolor = elicitCharcoal}
-\makeatletter\@starttoc{toc}\makeatother
-\endgroup
+\elicitContents
 
 \clearpage
 \pagenumbering{arabic}
