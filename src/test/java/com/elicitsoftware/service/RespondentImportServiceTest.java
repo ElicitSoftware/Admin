@@ -167,13 +167,28 @@ class RespondentImportServiceTest {
     /** Inserts an answer that references its question and section-question by surrogate id, as the Survey app does. */
     private long insertAnswer(int surveyId, int respondentId, long stepId, String displayKey, String displayText,
                               long questionId, long sectionQuestionId) {
+        return insertAnswer(surveyId, respondentId, stepId, displayKey, displayText, questionId, sectionQuestionId, null);
+    }
+
+    /**
+     * Same, stamped as presented at {@code presentedDt} when that is not null. The stamp goes in
+     * with the row, as the import writes it: the console's role may insert an answer but not
+     * update one.
+     */
+    private long insertAnswer(int surveyId, int respondentId, long stepId, String displayKey, String displayText,
+                              long questionId, long sectionQuestionId, String presentedDt) {
         long id = nextVal("survey.answers_seq");
-        em.createNativeQuery("INSERT INTO survey.answers (id, survey_id, respondent_id, step, display_key, display_text, "
-                        + "question_id, section_question_id) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8)")
+        String stampColumn = presentedDt == null ? "" : ", presented_dt";
+        String stampValue = presentedDt == null ? "" : ", CAST(?9 AS timestamptz)";
+        var query = em.createNativeQuery("INSERT INTO survey.answers (id, survey_id, respondent_id, step, display_key, display_text, "
+                        + "question_id, section_question_id" + stampColumn + ") VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8" + stampValue + ")")
                 .setParameter(1, id).setParameter(2, surveyId).setParameter(3, respondentId)
                 .setParameter(4, stepId).setParameter(5, displayKey).setParameter(6, displayText)
-                .setParameter(7, questionId).setParameter(8, sectionQuestionId)
-                .executeUpdate();
+                .setParameter(7, questionId).setParameter(8, sectionQuestionId);
+        if (presentedDt != null) {
+            query.setParameter(9, presentedDt);
+        }
+        query.executeUpdate();
         return id;
     }
 
@@ -288,6 +303,11 @@ class RespondentImportServiceTest {
      * ({@code null} models a department that was never given one, which UC-011 refuses to export).
      */
     private RespondentFixture persistRespondentTree(String accessCode, String departmentCode) {
+        return persistRespondentTree(accessCode, departmentCode, null);
+    }
+
+    /** Same, with the first answer stamped as presented at {@code firstAnswerPresentedDt} when that is not null. */
+    private RespondentFixture persistRespondentTree(String accessCode, String departmentCode, String firstAnswerPresentedDt) {
         Survey survey = Survey.findById(1L);
         assertNotNull(survey, "test bootstrap should have seeded survey id=1");
         int surveyId = survey.id;
@@ -335,7 +355,8 @@ class RespondentImportServiceTest {
 
         String key1 = "A1-" + accessCode;
         String key2 = "A2-" + accessCode;
-        long answer1Id = insertAnswer(surveyId, respondentId, stepId, key1, "Answer text 1 " + accessCode, questionId, sqId);
+        long answer1Id = insertAnswer(surveyId, respondentId, stepId, key1, "Answer text 1 " + accessCode, questionId, sqId,
+                firstAnswerPresentedDt);
         long answer2Id = insertAnswer(surveyId, respondentId, stepId, key2, "Answer text 2 " + accessCode, questionId, sqId);
         insertDependent(respondentId, answer1Id, answer2Id, relationshipId);
 
@@ -561,12 +582,9 @@ class RespondentImportServiceTest {
     @Test
     @TestTransaction
     void progressStampsRoundTrip() {
-        RespondentFixture fixture = persistRespondentTree("PS1");
+        RespondentFixture fixture = persistRespondentTree("PS1", "RX-PS1", "2026-03-04T05:06:00-05:00");
         em.createNativeQuery("UPDATE survey.respondents SET last_activity_dt = '2026-03-04T05:06:07-05:00' WHERE id = ?1")
                 .setParameter(1, fixture.respondentId()).executeUpdate();
-        em.createNativeQuery("UPDATE survey.answers SET presented_dt = '2026-03-04T05:06:00-05:00' "
-                        + "WHERE respondent_id = ?1 AND display_key = ?2")
-                .setParameter(1, fixture.respondentId()).setParameter(2, fixture.answerKey1()).executeUpdate();
 
         String exported = respondentExportService.exportRespondent(fixture.respondentId());
         String respondentsLine = exported.lines().filter(l -> l.startsWith("respondents: ")).findFirst().orElseThrow();
