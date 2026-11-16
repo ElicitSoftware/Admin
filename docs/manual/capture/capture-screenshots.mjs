@@ -3,7 +3,7 @@
  * the screen it describes.
  *
  * Drives a real Chromium against a running Admin (the umbrella compose stack) and writes the
- * manual's figures to docs/manual/images/ at 2x for print. See docs/manual/README.md for how
+ * manual's figures to docs/manual/images/ at 1.25x, 1800 px across, for print. See docs/manual/README.md for how
  * to run it.
  *
  * THE DIFFERENCE FROM AUTHOR'S CAPTURE
@@ -36,7 +36,8 @@
  * out, so the banner stays.
  */
 import { chromium } from 'playwright';
-import { mkdir } from 'node:fs/promises';
+import { mkdir, rm, writeFile } from 'node:fs/promises';
+import os from 'node:os';
 import { existsSync, readFileSync } from 'node:fs';
 import path from 'node:path';
 
@@ -114,6 +115,8 @@ const FIGURES = [
   '30-rename-reporting-schema',
   '31-import-clients',
   '32-edit-import-client',
+  '33-participation',
+  '34-csv-import',
 ];
 
 /** The console state the walk leaves behind. Named so a re-run recognises its own work. */
@@ -198,12 +201,109 @@ const button = (text) =>
 
 const pause = (ms) => page.waitForTimeout(ms);
 
+/*
+ * #132: a figure ends a little below the last thing on its screen instead of carrying the empty
+ * band under a short page, and a figure a procedure points into carries that procedure's step
+ * numbers. `marks` is a list of [step number, locator]; their positions are written to
+ * <name>.markers.tex beside the image, which the manual's \screenshot reads, so a recapture moves
+ * the markers with the screen.
+ */
+const MIN_FIGURE_HEIGHT = 420;
+
+/** The lowest visible text, control, image or ruled box: where the screen's content ends. */
+async function contentBottom(fullPage) {
+  return page.evaluate((whole) => {
+    const limit = whole ? document.documentElement.scrollHeight : window.innerHeight;
+    const media = /^(INPUT|TEXTAREA|BUTTON|IMG|SVG|CANVAS|VAADIN-BUTTON|VAADIN-ICON)$/i;
+    let bottom = 0;
+    const walk = (root) => {
+      for (const el of root.querySelectorAll('*')) {
+        if (el.shadowRoot) walk(el.shadowRoot);
+        const r = el.getBoundingClientRect();
+        const top = r.top + window.scrollY;
+        // A container nearly as tall as the window is layout, not content.
+        if (r.width < 2 || r.height < 2 || r.height > window.innerHeight * 0.6) continue;
+        if (top >= limit || r.bottom + window.scrollY <= 0) continue;
+        const st = getComputedStyle(el);
+        if (st.visibility === 'hidden' || st.display === 'none' || Number(st.opacity) === 0) continue;
+        const leaf = el.children.length === 0 || media.test(el.tagName);
+        const drawn = el.textContent.trim() || media.test(el.tagName) || st.backgroundImage !== 'none'
+          || st.borderBottomWidth !== '0px';
+        if (leaf && drawn) bottom = Math.max(bottom, Math.min(r.bottom + window.scrollY, limit));
+      }
+    };
+    walk(document);
+    return bottom;
+  }, fullPage);
+}
+
+/**
+ * Where a step's disc goes: beside the control, on whichever side the screen is empty, so it
+ * covers neither the control's label nor a neighbour's; on its corner when both sides are taken.
+ * The disc is about 48 CSS pixels across at the manual's figure width.
+ */
+async function markerSpot(box) {
+  return page.evaluate((b) => {
+    const media = /^(INPUT|TEXTAREA|BUTTON|IMG|SVG|CANVAS|VAADIN-BUTTON|VAADIN-ICON|LABEL)$/i;
+    const deepest = (x, y) => {
+      let el = document.elementFromPoint(x, y);
+      while (el && el.shadowRoot) {
+        const inner = el.shadowRoot.elementFromPoint(x, y);
+        if (!inner || inner === el) break;
+        el = inner;
+      }
+      return el;
+    };
+    const occupied = (x, y) => {
+      if (x < 4 || y < 4 || x > window.innerWidth - 4 || y > window.innerHeight - 4) return true;
+      const el = deepest(x, y);
+      if (!el) return false;
+      return media.test(el.tagName) || (el.children.length === 0 && el.textContent.trim() !== '');
+    };
+    const free = (cx, cy) => [[0, 0], [-18, 0], [18, 0], [0, -14], [0, 14]]
+      .every(([dx, dy]) => !occupied(cx + dx, cy + dy));
+    const cy = b.y + b.height / 2;
+    for (const [cx, cyy] of [[b.x - 30, cy], [b.x + b.width + 30, cy]]) {
+      if (free(cx, cyy)) return [cx, cyy];
+    }
+    return [Math.max(12, b.x), Math.max(12, b.y)];
+  }, box);
+}
+
+async function framedScreenshot(file, { fullPage = false, marks = [] } = {}) {
+  const { width, height: viewportHeight } = page.viewportSize();
+  const bottom = await contentBottom(fullPage);
+  let height = Math.max(MIN_FIGURE_HEIGHT, Math.ceil(bottom + 28));
+  if (!fullPage) height = Math.min(height, viewportHeight);
+  await page.screenshot({ path: file, fullPage, clip: { x: 0, y: 0, width, height } });
+
+  const markers = file.replace(/\.png$/, '.markers.tex');
+  if (!marks.length) {
+    await rm(markers, { force: true });
+    return;
+  }
+  const scrollY = fullPage ? await page.evaluate(() => window.scrollY) : 0;
+  const lines = ['% Written by capture-screenshots.mjs: the step markers on this figure (#132).'];
+  for (const [step, locator] of marks) {
+    const box = await locator.first().boundingBox().catch(() => null);
+    if (!box) {
+      console.warn(`    ! marker ${step}: its element is not on the screen`);
+      continue;
+    }
+    const [vx, vy] = await markerSpot(box);
+    const x = vx;
+    const y = vy + scrollY;
+    lines.push(`\\elicitmark{${step}}{${(x / width).toFixed(4)}}{${(y / height).toFixed(4)}}`);
+  }
+  await writeFile(markers, lines.join('\n') + '\n');
+}
+
 async function shot(name, options = {}) {
   if (!FIGURES.includes(name)) {
     throw new Error(`${name} is not one of the manual's figures`);
   }
   await pause(700);
-  await page.screenshot({ path: path.join(OUT, `${name}.png`), ...options });
+  await framedScreenshot(path.join(OUT, `${name}.png`), options);
   captured.add(name);
   console.log('  ✓', name);
 }
@@ -346,6 +446,46 @@ async function searchAll() {
 // The walk
 // ---------------------------------------------------------------------------------------------
 
+/** UC-031: one survey's participation, as counts, for the departments the account reaches. */
+async function captureParticipation() {
+  await goto('/participation');
+  const picker = byId('participation-survey');
+  if (!(await picker.isVisible().catch(() => false))) {
+    skip('33-participation', 'the Participation page did not open');
+    return;
+  }
+  if (!(await picker.locator('input').first().inputValue())) {
+    await picker.locator('input').first().click();
+    await pause(400);
+    await page.locator('vaadin-combo-box-item').filter({ hasText: SURVEY }).first().click();
+  }
+  await pause(2500);
+  await shot('33-participation', { fullPage: true });
+}
+
+/**
+ * UC-003 A6: a CSV upload and its result. Two subjects of their own, in the department the walk
+ * created, which is the first on a fresh database (MANUAL_DEPARTMENT_ID otherwise).
+ */
+async function captureCsvImport() {
+  const departmentId = process.env.MANUAL_DEPARTMENT_ID || '1';
+  const csv = path.join(os.tmpdir(), 'elicit-manual-subjects.csv');
+  await writeFile(csv, [
+    '# departmentId,firstName,lastName,middleName,dob,email,phone,xid',
+    `${departmentId},Jordan,Reyes,,1984-03-12,jordan.reyes@example.org,734-555-0101,MRN0101`,
+    `${departmentId},Priya,Nair,,1990-11-02,priya.nair@example.org,,MRN0102`,
+  ].join('\n') + '\n');
+  await goto('/register');
+  await page.locator('#register-csv-upload input[type=file]').setInputFiles(csv);
+  const dialog = page.locator('vaadin-dialog[opened]');
+  await dialog.waitFor({ state: 'attached', timeout: 60_000 });
+  await pause(1200);
+  await shot('34-csv-import');
+  await dialog.locator('vaadin-button').first().click().catch(() => {});
+  await pause(800);
+  await rm(csv, { force: true });
+}
+
 /**
  * UC-001: the identity provider's own sign-in page, then the console.
  *
@@ -402,7 +542,11 @@ async function ensureDepartment() {
     await fill('Default message ID', DEPARTMENT.defaultMessageId);
   }
   await fill('From email', DEPARTMENT.fromEmail);
-  await shot('05-edit-department');
+  // The steps of "Creating one": name, code, default message ID, sender, create.
+  await shot('05-edit-department', { marks: [
+    [2, host('Department name')], [3, host('Department code')], [4, host('Default message ID')],
+    [5, host('From email')], [6, button('Create department')],
+  ] });
 
   if (exists) {
     console.log('    (the department is already there — the form above was not saved)');
@@ -435,7 +579,10 @@ async function applySurveyDefinition() {
     return;
   }
   await goto('/survey-apply');
-  await shot('18-apply-survey-definition');
+  await shot('18-apply-survey-definition', { marks: [
+    [1, page.getByRole('link', { name: 'Apply Survey Definition', exact: true })],
+    [2, page.locator('#survey-apply-upload vaadin-button')],
+  ] });
   await page.locator('#survey-apply-upload input[type=file]').setInputFiles(DEFINITION);
 
   // The apply rebuilds the reporting star schema, so give it room. The dialog host renders with
@@ -487,7 +634,11 @@ async function ensureUsers() {
     }
     // One figure is enough for chapter 4, and the first account is the administrator's.
     if (index === 0) {
-      await shot('07-edit-user');
+      const marks = [[2, host('Username')], [3, host('First name')], [4, host('Active')],
+        [5, host('Departments')]];
+      if (await host('Role').isVisible().catch(() => false)) marks.push([6, host('Role')]);
+      marks.push([7, button('Save')]);
+      await shot('07-edit-user', { marks });
     }
     if (exists) {
       console.log(`    (${account.username} is already there — the form above was not saved)`);
@@ -517,7 +668,10 @@ async function ensureImportClient() {
   await fill('Name', IMPORT_CLIENT.name);
   await fill('Description', IMPORT_CLIENT.description);
   await multiCombo('Departments', DEPARTMENT.name);
-  await shot('32-edit-import-client');
+  await shot('32-edit-import-client', { marks: [
+    [2, host('Name')], [3, host('Description')], [4, host('Active')], [5, host('Departments')],
+    [6, button('Save')],
+  ] });
 
   if (!exists) {
     await button('Save').click();
@@ -544,7 +698,10 @@ async function ensureMessageTemplate() {
   await field('Body').press('Tab');
   // The preview column is debounced by 300 ms; let it catch up before the shutter.
   await pause(900);
-  await shot('09-edit-message-template');
+  await shot('09-edit-message-template', { marks: [
+    [2, host('Department')], [3, host('MIME type')], [4, host('Subject')], [5, host('Body')],
+    [6, button('Save')],
+  ] });
 
   if (!exists) {
     await button('Save').click();
@@ -580,7 +737,10 @@ async function ensureSubject() {
   await fill('Last name', SUBJECT.lastName);
   await fill('Email', SUBJECT.email);
   await fill('Phone', SUBJECT.phone);
-  await shot('10-register-subject');
+  await shot('10-register-subject', { marks: [
+    [2, host('Survey')], [3, host('First name')], [4, host('Email')], [5, host('External ID')],
+    [6, byId('register-save-button')],
+  ] });
 
   if (exists) {
     console.log('    (the subject is already registered — the form above was not saved)');
@@ -612,7 +772,12 @@ async function captureSearch() {
     skip('16-respondent-export', `no subject named ${SUBJECT.lastName} in the results`);
   } else {
     await chooseRowAction(rows[0].block, 'Send email');
-    await shot('12-search-email-action');
+    // Steps 2 and 3 of a reminder: the row's Action, then Submit.
+    await shot('12-search-email-action', { marks: [
+      [2, page.locator('#subject-grid vaadin-grid-cell-content:visible')
+        .nth(rows[0].block * GRID_COLUMNS + COL_ACTION).locator('vaadin-combo-box')],
+      [3, page.locator('#subject-grid vaadin-button').filter({ hasText: 'Submit' })],
+    ] });
 
     await chooseRowAction(rows[0].block, 'Export');
     await shot('16-respondent-export');
@@ -746,7 +911,7 @@ async function main() {
   const browser = await chromium.launch();
   const context = await browser.newContext({
     viewport: { width: 1440, height: 900 },
-    deviceScaleFactor: 2,
+    deviceScaleFactor: 1.25, // 1800 px across: sharp in print at the text width, and a small PDF
   });
   page = await context.newPage();
 
@@ -766,6 +931,8 @@ async function main() {
     await ensureFinishedRespondents();
     await captureSearch();
     await captureTransfers();
+    await captureParticipation();
+    await captureCsvImport();
     await captureSystem();
     await captureLanguageSelector();
   } finally {

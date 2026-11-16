@@ -13,23 +13,20 @@ for the behavior this implements, [`../plan/UC-029-administrators-manual.md`](..
 for the plan it follows, and FR-036 / NFR-017 / C-017 in
 [`../requirements.md`](../requirements.md).
 
-## Status: this is an outline build
+## Its design
 
-`elicit-admin-manual.tex` is **not finished**. It currently carries the title
-page, the 14 chapter headings, and a temporary `\outline{…}` macro under each
-chapter saying what that chapter will cover. The build is real — it typesets and
-produces a PDF — but the procedures and their figures are not written yet.
-
-The change that finishes the manual **deletes the `\outline` macro definition
-along with its uses**, so the build fails on any chapter that was missed rather
-than shipping a placeholder.
+The look is not defined here. The cover, part dividers, chapters, call-outs, tables and
+screenshot frames all come from the umbrella's `docs/manual/elicit-brand.sty`, which every Elicit
+manual shares; `build-manual.sh` finds it through `TEXINPUTS`. A screenshot that a procedure
+points into carries numbered step markers, read from `images/<name>.markers.tex` when the capture
+script has written one. The umbrella's `docs/manual/specimen.tex` shows every element.
 
 ## What is here
 
 | Path | Committed? | What it is |
 | --- | --- | --- |
 | `elicit-admin-manual.tex` | yes | the manual |
-| `images/` | yes | the captured screens, plus `elicit-logo.png` for the title page |
+| `images/` | yes | the captured screens, and the step-marker files the capture script writes beside them |
 | `capture/` | yes | `capture-screenshots.mjs`, its own `package.json`, and `fixtures/` — the survey definition and the three finished respondents the walk installs; regenerates `images/` from a running Admin |
 | `build-manual.sh` | yes | typesets the PDF and puts it where the application packages it |
 | `README.md` | yes | this file |
