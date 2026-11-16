@@ -21,5 +21,14 @@ else
     ./docs/manual/build-manual.sh "${VERSION}" "${BUILD_DATE}"
 fi
 
-./mvnw clean package -Dquarkus.profile=docker -Dquarkus.container-image.build=true
+./mvnw clean package -Dquarkus.profile=docker -Dquarkus.container-image.build=true || exit $?
 # ./mvnw clean package -Dnative -Dquarkus.native.container-build=true -Dquarkus.container-image.build=true -Dquarkus.profile=docker
+
+# An image carries no Vaadin development tooling: the vaadin-dev-tools profile in pom.xml is
+# keyed on -Dquarkus.profile being absent, so the command above leaves vaadin-dev out. Check what
+# was packaged rather than trust the flag, and fail the build if the libraries say otherwise (C-005).
+LIB_DIR="${LIB_DIR:-target/quarkus-app/lib/main}"
+if ls "${LIB_DIR}" 2>/dev/null | grep -qi '^com\.vaadin\.vaadin-dev'; then
+    echo "Aborting: vaadin-dev is among the packaged libraries in ${LIB_DIR}; the image was built without -Dquarkus.profile=docker." >&2
+    exit 1
+fi
