@@ -20,6 +20,9 @@ import com.elicitsoftware.participation.Participation.Kind;
 import com.elicitsoftware.participation.Participation.OptionCount;
 import com.elicitsoftware.participation.Participation.QuestionStats;
 import com.elicitsoftware.test.PostgresTestResource;
+import io.agroal.api.AgroalDataSource;
+import io.quarkus.agroal.DataSource;
+import io.quarkus.narayana.jta.QuarkusTransaction;
 import io.quarkus.test.TestTransaction;
 import io.quarkus.test.common.QuarkusTestResource;
 import io.quarkus.test.junit.QuarkusTest;
@@ -30,6 +33,9 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 
 import java.math.BigDecimal;
+import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.SQLException;
 import java.time.LocalDate;
 import java.time.OffsetDateTime;
 import java.time.YearMonth;
@@ -58,6 +64,11 @@ class ParticipationServiceTest {
     @Inject
     EntityManager em;
 
+    /** The schema owner's connection, for the one fixture statement the console's role may not run. */
+    @Inject
+    @DataSource("owner")
+    AgroalDataSource ownerDataSource;
+
     /** Ids well above anything the sequences hand out in the shared test database. */
     private static final int BASE = 910_000;
     private static final int Q_RADIO = BASE + 1;
@@ -78,11 +89,22 @@ class ParticipationServiceTest {
     Department deptA;
     Department deptB;
     int answerId = BASE;
+    /** When not null, {@link #answer} stamps the rows it inserts as presented then. */
+    OffsetDateTime stampAnswersAt;
     int subjectSeq;
 
     // ---- fixture --------------------------------------------------------------------------------
 
     private void seed() {
+        seed(false);
+    }
+
+    /**
+     * @param presented stamp the step 1 answers as presented, for {@link #seedProgress()}. The
+     *                  stamp goes in with each row, as Survey writes it: the console's role may
+     *                  insert an answer but not update one.
+     */
+    private void seed(boolean presented) {
         // The injected service is a client proxy: fields set on it would never reach the bean.
         ParticipationService bean = ClientProxy.unwrap(service);
         bean.zone = ZoneOffset.UTC;
@@ -99,8 +121,7 @@ class ParticipationServiceTest {
 
         int s = survey.id;
         for (String type : List.of("RADIO", "INTEGER", "TEXT", "CHECKBOX", "DATE_PICKER", "HTML")) {
-            sql("INSERT INTO survey.question_types (id, name, data_type) SELECT (SELECT coalesce(max(id), 0) + 1 FROM survey.question_types), ?1, 'Text' "
-                    + "WHERE NOT EXISTS (SELECT 1 FROM survey.question_types WHERE name = ?1)", type);
+            questionType(type);
         }
         sql("INSERT INTO survey.select_groups (id, survey_id, name, select_group_id) VALUES (?1, ?2, 'UC031 yes/no', ?1)", BASE, s);
         sql("INSERT INTO survey.select_items (id, survey_id, select_group_id, display_text, display_order, coded_value, select_item_id) VALUES (?1, ?2, ?3, 'Yes', 1, '1', ?1)", BASE + 1, s, BASE);
@@ -130,12 +151,15 @@ class ParticipationServiceTest {
         String[] text = {"x", "y", "z", "w", "v", " "};
         String[] checkbox = {"true", "true", "true", null, null, null};
         String[] date = {"2026-01-05", "2026-01-20", "2026-01-31", "2026-02-10", "2026-02-11", "2026-02-12"};
+        stampAnswersAt = presented ? WEEK_3.minusMinutes(30) : null;
         for (int i = 0; i < 6; i++) {
             long r = respondent(deptA, WEEK_1, WEEK_1, WEEK_3);
             answers(r, radio[i], number[i], text[i], checkbox[i], date[i]);
         }
+        stampAnswersAt = presented ? WEEK_1.plusHours(1) : null;
         inProgressWithAnswers = respondent(deptA, WEEK_1, WEEK_1, null);
         answers(inProgressWithAnswers, "1", "99", "q", "true", "2026-01-01");   // in progress: not counted
+        stampAnswersAt = null;
         inProgressLate = respondent(deptA, WEEK_3, WEEK_3, null);
         respondent(deptA, WEEK_3, null, null);
         long b = respondent(deptB, WEEK_3, WEEK_3, WEEK_3);
@@ -204,10 +228,42 @@ class ParticipationServiceTest {
 
     private void answer(long respondent, int question, String value, boolean deleted, int instance) {
         int id = ++answerId;
+        if (stampAnswersAt != null) {
+            sql("INSERT INTO survey.answers (id, survey_id, respondent_id, step, section, section_instance, question_instance, "
+                            + "section_question_id, question_id, display_key, display_text, text_value, deleted, presented_dt) "
+                            + "VALUES (?1, ?2, ?3, 1, 1, ?4, 0, ?5, ?5, ?6, 'q', ?7, ?8, ?9)",
+                    id, survey.id, respondent, instance, question, "UC031-" + id, value, deleted, stampAnswersAt);
+            return;
+        }
         sql("INSERT INTO survey.answers (id, survey_id, respondent_id, step, section, section_instance, question_instance, "
                         + "section_question_id, question_id, display_key, display_text, text_value, deleted) "
                         + "VALUES (?1, ?2, ?3, 1, 1, ?4, 0, ?5, ?5, ?6, 'q', ?7, ?8)",
                 id, survey.id, respondent, instance, question, "UC031-" + id, value, deleted);
+    }
+
+    /**
+     * Adds a question type unless it is there. Question types are Survey's lookup table: the
+     * console's role reads it and may not write it, so this one statement runs as the schema
+     * owner, on a connection of its own and outside the test's transaction (one transaction
+     * cannot span both datasources). It is committed at once and left in place, which is
+     * harmless: the rows are the type names Survey itself seeds.
+     */
+    private void questionType(String name) {
+        QuarkusTransaction.suspendingExisting().run(() -> insertQuestionType(name));
+    }
+
+    private void insertQuestionType(String name) {
+        try (Connection connection = ownerDataSource.getConnection();
+             PreparedStatement insert = connection.prepareStatement(
+                     "INSERT INTO survey.question_types (id, name, data_type) "
+                             + "SELECT (SELECT coalesce(max(id), 0) + 1 FROM survey.question_types), ?, 'Text' "
+                             + "WHERE NOT EXISTS (SELECT 1 FROM survey.question_types WHERE name = ?)")) {
+            insert.setString(1, name);
+            insert.setString(2, name);
+            insert.executeUpdate();
+        } catch (SQLException e) {
+            throw new IllegalStateException("could not seed question type " + name, e);
+        }
     }
 
     private void sql(String sql, Object... params) {
@@ -351,15 +407,16 @@ class ParticipationServiceTest {
     }
 
     /**
-     * UC-031: the console connects as surveyadmin_user, not as the superuser the tests run as, so
-     * every table the page reads must be granted to it (V0.0.21, V0.0.22). The figures are
-     * computed under that role here; a missing grant fails with "permission denied".
+     * UC-031: the console connects as surveyadmin_user, so every table the page reads must be
+     * granted to it (V0.0.21, V0.0.22). The tests connect as that role too
+     * ({@code PostgresTestResource}); this one says so, and a missing grant fails with
+     * "permission denied".
      */
     @Test
     @TestTransaction
     void consoleRoleCanReadEverythingThePageReads() {
         seed();
-        em.createNativeQuery("SET LOCAL ROLE surveyadmin_user").executeUpdate();
+        assertEquals("surveyadmin_user", em.createNativeQuery("SELECT current_user").getSingleResult());
         Participation p = compute(List.of(deptA.id, deptB.id), null, null);
         assertEquals(10, p.overall().registered());
         assertEquals(3, p.cards().size());
@@ -367,7 +424,8 @@ class ParticipationServiceTest {
     }
 
     /**
-     * Adds a second step ("Lifestyle") and stamps presentation (BR-130, BR-132): the six finished
+     * Adds a second step ("Lifestyle") to a fixture seeded with {@code seed(true)}, which stamped
+     * the presentation of step 1 (BR-130, BR-132): the six finished
      * respondents of department A were shown step 1 thirty minutes before finishing and step 2 ten
      * minutes before; department B's finished respondent has no stamp; the respondent in progress
      * with answers last saw step 2; the late one has no presented row and was active ten days after
@@ -387,10 +445,8 @@ class ParticipationServiceTest {
                         WHERE r.survey_id = ?1 AND sub.department_id = ?2 AND r.finalized_dt IS NOT NULL ORDER BY r.id""")
                 .setParameter(1, s).setParameter(2, deptA.id).getResultList().stream().map(o -> ((Number) o).longValue()).toList();
         for (long r : finishedA) {
-            sql("UPDATE survey.answers SET presented_dt = ?1 WHERE respondent_id = ?2", WEEK_3.minusMinutes(30), r);
             stepTwoAnswer(r, qStep2, WEEK_3.minusMinutes(10));
         }
-        sql("UPDATE survey.answers SET presented_dt = ?1 WHERE respondent_id = ?2", WEEK_1.plusHours(1), inProgressWithAnswers);
         stepTwoAnswer(inProgressWithAnswers, qStep2, WEEK_1.plusHours(2));
         sql("UPDATE survey.respondents SET last_activity_dt = ?1 WHERE id = ?2", WEEK_3.plusDays(10), inProgressLate);
         em.flush();
@@ -408,7 +464,7 @@ class ParticipationServiceTest {
     @Test
     @TestTransaction
     void dropOffAndStalledFollowTheLastPresentedRow() {
-        seed();
+        seed(true);
         seedProgress();
         Participation p = compute(List.of(deptA.id, deptB.id), null, null);
         assertEquals(1, p.overall().stalled(), "the late respondent was active inside the threshold");
@@ -426,7 +482,7 @@ class ParticipationServiceTest {
     @Test
     @TestTransaction
     void timePerStepRunsFromStepToStep() {
-        seed();
+        seed(true);
         seedProgress();
         Participation.Progress progress = compute(List.of(deptA.id, deptB.id), null, null).progress();
         assertEquals(new Participation.Durations(6, 1200L, 1200L, 1200L), progress.steps().get(0).time());

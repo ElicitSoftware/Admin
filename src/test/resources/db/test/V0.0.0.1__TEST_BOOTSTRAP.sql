@@ -13,10 +13,12 @@
 -- TEST-ONLY bootstrap migration (version 0.0.0.1 -> runs before V0.0.1).
 -- =============================================================================
 -- The Admin db/migration scripts are NOT self-contained: they FK to and GRANT on
--- objects owned by OTHER Elicit modules (surveys, respondents, answers, ...), and
--- reference DB roles that no migration creates. On the shared production database
--- those objects/roles already exist. On a throwaway test container they do not,
--- so this script creates the minimal set needed for db/migration to apply cleanly.
+-- objects owned by OTHER Elicit modules (surveys, respondents, answers, ...). On the
+-- shared production database Survey's migrations have created those objects. On a
+-- throwaway test container they have not, so this script creates the minimal set
+-- needed for db/migration to apply cleanly. It runs as elicit_owner, like Survey's
+-- migrations, so the objects have the owner they have on a site. The roles and the
+-- two schemas come from db/testcontainers-init.sql, which runs first.
 --
 -- It only creates objects that db/migration ASSUMES pre-exist. Tables that
 -- db/migration creates itself (departments, subjects, users, messages,
@@ -25,32 +27,9 @@
 -- =============================================================================
 
 -- -----------------------------------------------------------------------------
--- 1. Roles. The Dev Services `postgres` user is a superuser, so CREATE ROLE
---    works. PostgreSQL has no CREATE ROLE IF NOT EXISTS, so guard each one.
+-- 1, 2. Roles and schemas: created by db/testcontainers-init.sql, as the
+--    container's superuser, before this script. Nothing here needs one.
 -- -----------------------------------------------------------------------------
-DO $$
-BEGIN
-    IF NOT EXISTS (SELECT FROM pg_roles WHERE rolname = 'surveyadmin_user') THEN
-        CREATE ROLE surveyadmin_user;
-    END IF;
-    IF NOT EXISTS (SELECT FROM pg_roles WHERE rolname = 'survey_user') THEN
-        CREATE ROLE survey_user;
-    END IF;
-    IF NOT EXISTS (SELECT FROM pg_roles WHERE rolname = 'elicit_owner') THEN
-        CREATE ROLE elicit_owner;
-    END IF;
-    IF NOT EXISTS (SELECT FROM pg_roles WHERE rolname = 'surveyreport_user') THEN
-        CREATE ROLE surveyreport_user;
-    END IF;
-END
-$$;
-
--- -----------------------------------------------------------------------------
--- 2. Schemas. `survey` is also auto-created by quarkus.flyway.owner.schemas, so
---    guard it; `surveyreport` is not managed by Flyway and must be created here.
--- -----------------------------------------------------------------------------
-CREATE SCHEMA IF NOT EXISTS survey;
-CREATE SCHEMA IF NOT EXISTS surveyreport;
 
 -- -----------------------------------------------------------------------------
 -- 3. survey.surveys — FK target for subjects/reports/post_survey_actions/
@@ -704,11 +683,15 @@ CREATE INDEX IF NOT EXISTS translations_key_current_idx
 -- -----------------------------------------------------------------------------
 
 -- -----------------------------------------------------------------------------
--- 9. Let the application roles use the schemas (postgres owns every object here,
---    so the later per-object GRANTs succeed regardless).
+-- 9. The grants Survey's migrations give the console's role on Survey's own
+--    tables (Survey V001, V006, V009). Every other grant surveyadmin_user holds
+--    comes from Admin's db/migration, so a table missing from both is refused
+--    in a test as it would be on a site.
 -- -----------------------------------------------------------------------------
-GRANT USAGE ON SCHEMA survey TO surveyadmin_user, survey_user;
-GRANT USAGE ON SCHEMA surveyreport TO surveyadmin_user, surveyreport_user;
+GRANT USAGE ON SEQUENCE survey.surveys_seq TO surveyadmin_user;
+GRANT DELETE, UPDATE, INSERT, SELECT ON TABLE survey.surveys TO surveyadmin_user;
+GRANT DELETE, INSERT, SELECT, UPDATE ON survey.excluded_xids TO surveyadmin_user;
+GRANT DELETE, UPDATE, INSERT, SELECT ON TABLE survey.post_survey_actions TO surveyadmin_user;
 
 -- -----------------------------------------------------------------------------
 -- 10. Seed survey.surveys(id=1). V0.0.3 dev-data (which runs in test because it
