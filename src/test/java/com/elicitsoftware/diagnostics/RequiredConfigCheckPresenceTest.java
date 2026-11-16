@@ -43,7 +43,10 @@ class RequiredConfigCheckPresenceTest {
                 new RequiredSetting("quarkus.oidc.credentials.secret", "OIDC_CLIENT_SECRET",
                         "client secret registered with the identity provider", false),
                 new RequiredSetting("quarkus.mailer.from", "quarkus.mailer.from",
-                        "sender address of every invitation and reminder", false)), settings);
+                        "sender address of every invitation and reminder", false),
+                new RequiredSetting("elicit.service.token", "ELICIT_SERVICE_TOKEN",
+                        "service token the Elicit services authenticate their calls to each other with", false)),
+                settings);
     }
 
     @Test
@@ -54,7 +57,7 @@ class RequiredConfigCheckPresenceTest {
                 "quarkus.oidc.credentials.secret", "${NO_SUCH_ELICIT_TEST_VARIABLE}",
                 "quarkus.mailer.from", "survey@example.org"), check::requiredSettings);
 
-        assertEquals(List.of(true, false, false, true), settings.stream().map(RequiredSetting::present).toList());
+        assertEquals(List.of(true, false, false, true, false), settings.stream().map(RequiredSetting::present).toList());
         assertTrue(settings.stream().noneMatch(s -> s.toString().contains("s3cret")), "NFR-011: never by value");
     }
 

@@ -42,6 +42,8 @@ class ConnectionChecksTest {
 
     private static HttpServer server;
     private static String base;
+    /** The {@code Authorization} header each probe of a protected path presented, "null" for none. */
+    private static final java.util.List<String> presented = new java.util.concurrent.CopyOnWriteArrayList<>();
 
     @Inject
     ConnectionChecks checks;
@@ -51,6 +53,15 @@ class ConnectionChecksTest {
         server = HttpServer.create(new InetSocketAddress("127.0.0.1", 0), 0);
         server.createContext("/ok", exchange -> respond(exchange, 200, "ok"));
         server.createContext("/forbidden", exchange -> respond(exchange, 403, "no license"));
+        server.createContext("/unauthorized", exchange -> {
+            presented.add(String.valueOf(exchange.getRequestHeaders().getFirst("Authorization")));
+            exchange.getResponseHeaders().add("WWW-Authenticate", "Bearer");
+            respond(exchange, 401, "");
+        });
+        server.createContext("/unavailable", exchange -> {
+            presented.add(String.valueOf(exchange.getRequestHeaders().getFirst("Authorization")));
+            respond(exchange, 503, "{\"error\":\"service token not configured\"}");
+        });
         server.createContext("/realm/.well-known/openid-configuration",
                 exchange -> respond(exchange, 200, "{\"issuer\":\"" + base + "/realm\"}"));
         server.createContext("/plain/.well-known/openid-configuration",
@@ -78,6 +89,27 @@ class ConnectionChecksTest {
         try (OutputStream out = exchange.getResponseBody()) {
             out.write(bytes);
         }
+    }
+
+    /**
+     * UC-025 A4, BR-096: a platform service that wants the service token, or has none itself,
+     * is reachable, and the probe presents no credential although this console has a token and
+     * the address is under its Survey address's host.
+     */
+    @Test
+    void protectedPlatformServiceIsReachableAndTheProbeCarriesNoCredential() {
+        presented.clear();
+
+        CheckResult unauthorized = checks.check(new ConnectionChecks.Target("Report service", "t", base + "/unauthorized",
+                ConnectionChecks.Kind.HTTP));
+        CheckResult unavailable = checks.check(new ConnectionChecks.Target("Survey application", "s", base + "/unavailable",
+                ConnectionChecks.Kind.HTTP));
+
+        assertTrue(unauthorized.isUp(), unauthorized.detail());
+        assertEquals("reachable, HTTP 401", unauthorized.detail());
+        assertTrue(unavailable.isUp(), unavailable.detail());
+        assertEquals("reachable, HTTP 503", unavailable.detail());
+        assertEquals(java.util.List.of("null", "null"), presented);
     }
 
     /** UC-025 step 4: any HTTP answer counts as reachable. */

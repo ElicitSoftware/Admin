@@ -41,6 +41,7 @@ public final class SurveyEtlStub {
     private volatile String body = "{\"status\":\"ok\",\"message\":\"stubbed\"}";
     private volatile long delayMillis = 0;
     private final List<String> requests = new ArrayList<>();
+    private final List<String> authorizations = new ArrayList<>();
 
     private SurveyEtlStub(HttpServer server) {
         this.server = server;
@@ -57,6 +58,8 @@ public final class SurveyEtlStub {
                 String query = exchange.getRequestURI().getRawQuery();
                 stub.requests.add(exchange.getRequestMethod() + " " + exchange.getRequestURI().getPath()
                         + (query == null ? "" : "?" + query));
+                // UC-018 BR-159: what each request presented, null when it presented nothing.
+                stub.authorizations.add(exchange.getRequestHeaders().getFirst("Authorization"));
             }
             if (stub.delayMillis > 0) {
                 try {
@@ -97,10 +100,18 @@ public final class SurveyEtlStub {
         }
     }
 
+    /** The {@code Authorization} header of every request received so far, null where there was none. */
+    public List<String> authorizations() {
+        synchronized (requests) {
+            return new ArrayList<>(authorizations);
+        }
+    }
+
     /** Forgets the requests received so far. */
     public void reset() {
         synchronized (requests) {
             requests.clear();
+            authorizations.clear();
         }
         respond(200, "{\"status\":\"ok\",\"message\":\"stubbed\"}");
     }

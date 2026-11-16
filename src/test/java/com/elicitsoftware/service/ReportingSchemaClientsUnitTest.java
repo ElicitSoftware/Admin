@@ -40,10 +40,16 @@ class ReportingSchemaClientsUnitTest {
     private static final UUID KEY = UUID.fromString("11111111-1111-1111-1111-111111111111");
     private static final String BUILD = "http://survey:8080/api/etl/build?survey=" + KEY;
 
+    private static com.elicitsoftware.security.ServiceToken token() {
+        return new com.elicitsoftware.security.ServiceToken(Optional.of("unit-test-service-token-0123456789abcdef"),
+                Optional.empty(), "http://survey:8080");
+    }
+
     private static ReportingSchemaRebuildClient rebuilder(String surveyUrl) {
         ReportingSchemaRebuildClient client = new ReportingSchemaRebuildClient();
         client.surveyUrl = surveyUrl;
         client.enabled = true;
+        client.serviceToken = token();
         return client;
     }
 
@@ -56,6 +62,7 @@ class ReportingSchemaClientsUnitTest {
     private static ReportingSchemaRenameClient renamer(StubHttpClient.Script script) {
         ReportingSchemaRenameClient client = new ReportingSchemaRenameClient();
         client.surveyUrl = "http://survey:8080/";
+        client.serviceToken = token();
         new StubHttpClient(script).installInto(client);
         return client;
     }

@@ -17,8 +17,8 @@
 1. The administrator opens Overview from the System section of the navigation.
 2. The system shows what is running: application name, version, build time, active profile and the time since the service started.
 3. The system shows health: the outcome of the database readiness check and a one-line summary of each diagnostic area (database, branding, email, connections), each linking to its own screen (UC-022 to UC-025).
-4. The system lists every setting that has no default and must be supplied by the deployment (database passwords for both connections, the OIDC client secret, the sender address for email) and reports each as present or absent, never its value.
-5. The system lists the setup work still outstanding: seeded default accounts still present (UC-021), no survey installed (UC-019), no department with a sender address, no message template containing the `<ACCESS_CODE>` placeholder, and any legacy setting that is set but no longer read.
+4. The system lists every setting that has no default and must be supplied by the deployment (database passwords for both connections, the OIDC client secret, the sender address for email, the service token) and reports each as present or absent, never its value.
+5. The system lists the setup work still outstanding: seeded default accounts still present (UC-021), no survey installed (UC-019), no department with a sender address, no message template containing the `<ACCESS_CODE>` placeholder, the service token still at its development value (BR-163), and any legacy setting that is set but no longer read.
 6. Each outstanding item offers the screen where it is resolved.
 7. The administrator works through the list and returns to confirm it is empty.
 
@@ -67,6 +67,10 @@ No password, client secret or token value is rendered on any System screen (NFR-
 ### BR-083: The overview reports what is true now
 
 Setup warnings and summaries are re-established each time the screen is opened, not captured at service start, so that work done since (renaming an account, applying a survey, adding a sender address) is reflected without a restart. The rule follows BR-076.
+
+### BR-163: The development service token is setup work
+
+The compose stack supplies a well-known service token so that an evaluation starts with no setup. A console whose token equals that value lists it among the outstanding setup work, in the manner of the seeded accounts (UC-021), telling the operator to generate a value for the site and give it to every Elicit service; the item names the variable, never the value.
 
 ### BR-084: Configuration is shown, not edited
 

@@ -32,6 +32,7 @@ import com.elicitsoftware.report.ReportResponse;
 import com.elicitsoftware.report.ReportService;
 import com.elicitsoftware.report.pdf.Content;
 import com.elicitsoftware.report.pdf.PDFDocument;
+import com.elicitsoftware.security.ServiceToken;
 import com.vaadin.flow.component.UI;
 import com.vaadin.flow.component.notification.Notification;
 
@@ -124,6 +125,13 @@ public class ReportingService {
      */
     @ConfigProperty(name = "elicit.survey.url")
     String surveyUrl;
+
+    /**
+     * Decides, from the resolved address, whether a report request carries the service token
+     * (UC-018 BR-160).
+     */
+    @Inject
+    ServiceToken serviceToken;
 
     /**
      * Generates and displays comprehensive reports for a completed survey participant.
@@ -308,19 +316,32 @@ public class ReportingService {
     }
 
     ReportResponse callReport(ReportDefinition rpt, int respondent_id) {
+        boolean tokenSent = false;
         try {
             ReportRequest request = new ReportRequest(respondent_id, answeringLanguage(respondent_id));
-            ReportService reportService = RestClientBuilder.newBuilder()
-                    .baseUri(resolveReportUri(surveyUrl, rpt.url))
-                    .followRedirects(false)
-                    .build(ReportService.class);
-            ReportResponse reportResponse = reportService.callReport(request);
+            // UC-018 BR-160: the address is the definition's, so the token goes with the request
+            // only when the resolved address's origin is one this site's configuration trusts.
+            URI address = resolveReportUri(surveyUrl, rpt.url);
+            tokenSent = serviceToken.authorizationFor(address).isPresent();
+            RestClientBuilder builder = RestClientBuilder.newBuilder()
+                    .baseUri(address)
+                    // Never followed, least of all with the token on the request.
+                    .followRedirects(false);
+            if (tokenSent) {
+                builder.register(new ServiceTokenHeader(serviceToken));
+            }
+            ReportResponse reportResponse = builder.build(ReportService.class).callReport(request);
             if (reportResponse == null) {
                 // An answer with no report in it, such as a redirect, which is not followed.
                 Log.warnf("Report '%s' answered without a report", rpt.name);
                 return errorResponse(rpt, Translations.get("reporting.error.unavailable"), false);
             }
             return reportResponse;
+        } catch (ServiceToken.NotConfiguredException e) {
+            // UC-018 BR-161: a trusted service is not called without the token.
+            Log.warnf("Report '%s' was not requested: %s (%s is not set)", rpt.name, ServiceToken.NOT_CONFIGURED,
+                    ServiceToken.VARIABLE);
+            return errorResponse(rpt, Translations.get("serviceToken.notConfigured"), false);
         } catch (jakarta.ws.rs.WebApplicationException e) {
             // UC-005 BR-140: the service answered with an error. The page and the PDF get the
             // status; what the service said goes to the log.
@@ -331,6 +352,10 @@ public class ReportingService {
             int status = e.getResponse().getStatus();
             Log.warnf("Report '%s' answered HTTP %d", rpt.name, status);
             Log.debugf("Report '%s' error body: %s", rpt.name, bodyForLog(e.getResponse()));
+            if (status == 401 && tokenSent) {
+                // UC-005 A2: a trusted service whose token is not this console's.
+                return errorResponse(rpt, Translations.get("serviceToken.refused"), false);
+            }
             String errorMessage = status == 403
                     ? Translations.get("reporting.error.forbidden")
                     : Translations.get("reporting.error.serviceHttp", status);
@@ -340,6 +365,26 @@ public class ReportingService {
             // (network, address, serialization). The cause names hosts and ports; it is logged.
             Log.errorf(e, "Report '%s' could not be retrieved", rpt.name);
             return errorResponse(rpt, Translations.get("reporting.error.unavailable"), false);
+        }
+    }
+
+    /**
+     * Puts the service token on a report request (UC-018 BR-160). The address is judged once more
+     * here, on the request as it is about to leave, so the header is only ever written beside a
+     * trusted origin.
+     */
+    static final class ServiceTokenHeader implements jakarta.ws.rs.client.ClientRequestFilter {
+
+        private final ServiceToken serviceToken;
+
+        ServiceTokenHeader(ServiceToken serviceToken) {
+            this.serviceToken = serviceToken;
+        }
+
+        @Override
+        public void filter(jakarta.ws.rs.client.ClientRequestContext context) {
+            serviceToken.authorizationFor(context.getUri()).ifPresent(value ->
+                    context.getHeaders().putSingle(jakarta.ws.rs.core.HttpHeaders.AUTHORIZATION, value));
         }
     }
 

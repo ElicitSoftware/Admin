@@ -436,6 +436,7 @@ Every row is one key in `translations.properties`. Return a file `translations_<
 | `systemOverviewView.setting.ownerPassword` | password of the owner database user that runs migrations | System overview · purpose of a required setting | 60 |  |
 | `systemOverviewView.setting.oidcSecret` | client secret registered with the identity provider | System overview · purpose of a required setting | 60 |  |
 | `systemOverviewView.setting.mailerFrom` | sender address of every invitation and reminder | System overview · purpose of a required setting | 60 |  |
+| `systemOverviewView.setting.serviceToken` | service token the Elicit services authenticate their calls to each other with | System overview · purpose of a required setting | 90 |  |
 | `systemOverviewView.outstanding` | Setup still outstanding | System overview · section heading | 30 |  |
 | `systemOverviewView.nothingOutstanding` | Nothing outstanding. | System overview · text when no setup work remains | 30 |  |
 | `systemOverviewView.warning.noSurvey` | No survey is installed. Apply a survey definition before registering subjects. | System overview · outstanding setup item | 120 |  |
@@ -445,6 +446,7 @@ Every row is one key in `translations.properties`. Return a file `translations_<
 | `systemOverviewView.warning.noMessageTemplate` | No message template exists, so registering a subject sends no invitation. Create one on the Message Templates screen. | System overview · outstanding setup item | 140 |  |
 | `systemOverviewView.warning.legacySetting` | The setting {0} is configured but no longer read; use {1} instead. | System overview · outstanding setup item | 120 | params: {0} = old property name, {1} = new property name |
 | `systemOverviewView.warning.revealTokensIgnored` | The setting elicit.debug.reveal-tokens is on but is honored only in development mode; tokens stay masked. | System overview · outstanding setup item; keep the property name as written | 140 |  |
+| `systemOverviewView.warning.devServiceToken` | The service token is the development value. Generate one for this site (openssl rand -hex 32) and set ELICIT_SERVICE_TOKEN to it on every Elicit service. | System overview · outstanding setup item; the command and the variable name stay | 220 |  |
 | `systemOverviewView.remedy.users` | Open Users | System overview · link after a setup item | 25 |  |
 | `systemOverviewView.remedy.applySurveyDefinition` | Apply a survey definition | System overview · link after a setup item | 30 |  |
 | `systemOverviewView.remedy.departments` | Open Departments | System overview · link after a setup item | 25 |  |
@@ -668,6 +670,8 @@ Every row is one key in `translations.properties`. Return a file `translations_<
 | `searchView.status.inProgress` | In Progress | Search page · Status column | 30 |  |
 | `searchView.status.finished` | Finished | Search page · Status column | 30 |  |
 | `reportingRebuild.disabled` | Reporting ETL is disabled (elicit.etl.enabled=false) | Apply Survey Definition page · reason the reporting schema was not rebuilt; continues reportingRebuild.notRebuilt; the setting name stays | 160 |  |
+| `serviceToken.notConfigured` | service token not configured (ELICIT_SERVICE_TOKEN is not set) | Apply Survey Definition result, rename dialog, report error block · reason a call to another Elicit service was not made; continues reportingRebuild.notRebuilt; the variable name stays | 160 |  |
+| `serviceToken.refused` | the service refused the service token; ELICIT_SERVICE_TOKEN must have the same value on both services | Apply Survey Definition result, rename dialog, report error block · reason a call to another Elicit service failed; continues reportingRebuild.notRebuilt; the variable name stays | 200 |  |
 | `mainLayout.nav.participation` | Participation | Navigation drawer · menu item | 25 |  |
 | `participationView.title` | Participation | Participation page · page heading and browser tab title | 40 |  |
 | `participationView.intro` | How one survey is doing in your departments: who was registered, started and finished, and how finished respondents answered the questions the survey's author marked for this report. Every figure is a count; no respondent is shown. | Participation page · explanation under the heading | 300 |  |
@@ -1115,6 +1119,7 @@ systemOverviewView.setting.datasourcePassword=password of the application databa
 systemOverviewView.setting.ownerPassword=password of the owner database user that runs migrations
 systemOverviewView.setting.oidcSecret=client secret registered with the identity provider
 systemOverviewView.setting.mailerFrom=sender address of every invitation and reminder
+systemOverviewView.setting.serviceToken=service token the Elicit services authenticate their calls to each other with
 systemOverviewView.outstanding=Setup still outstanding
 systemOverviewView.nothingOutstanding=Nothing outstanding.
 systemOverviewView.warning.noSurvey=No survey is installed. Apply a survey definition before registering subjects.
@@ -1124,6 +1129,7 @@ systemOverviewView.warning.noDepartment=No department exists. Create one on the 
 systemOverviewView.warning.noMessageTemplate=No message template exists, so registering a subject sends no invitation. Create one on the Message Templates screen.
 systemOverviewView.warning.legacySetting=The setting {0} is configured but no longer read; use {1} instead.
 systemOverviewView.warning.revealTokensIgnored=The setting elicit.debug.reveal-tokens is on but is honored only in development mode; tokens stay masked.
+systemOverviewView.warning.devServiceToken=The service token is the development value. Generate one for this site (openssl rand -hex 32) and set ELICIT_SERVICE_TOKEN to it on every Elicit service.
 systemOverviewView.remedy.users=Open Users
 systemOverviewView.remedy.applySurveyDefinition=Apply a survey definition
 systemOverviewView.remedy.departments=Open Departments
@@ -1347,6 +1353,8 @@ searchView.status.notStarted=Not Started
 searchView.status.inProgress=In Progress
 searchView.status.finished=Finished
 reportingRebuild.disabled=Reporting ETL is disabled (elicit.etl.enabled=false)
+serviceToken.notConfigured=service token not configured (ELICIT_SERVICE_TOKEN is not set)
+serviceToken.refused=the service refused the service token; ELICIT_SERVICE_TOKEN must have the same value on both services
 mainLayout.nav.participation=Participation
 participationView.title=Participation
 participationView.intro=How one survey is doing in your departments: who was registered, started and finished, and how finished respondents answered the questions the survey's author marked for this report. Every figure is a count; no respondent is shown.

@@ -12,8 +12,10 @@ package com.elicitsoftware.service;
  */
 
 import com.elicitsoftware.admin.i18n.Translations;
+import com.elicitsoftware.security.ServiceToken;
 import io.quarkus.logging.Log;
 import jakarta.enterprise.context.ApplicationScoped;
+import jakarta.inject.Inject;
 import jakarta.json.Json;
 import jakarta.json.JsonObject;
 import jakarta.json.JsonReader;
@@ -39,7 +41,9 @@ import java.util.regex.Pattern;
  * validates the name, renames the schema and records the new name in one transaction, so a
  * failure leaves the old name everywhere.
  * <p>
- * Same base address ({@code elicit.survey.url}) and bounds as {@link ReportingSchemaRebuildClient}.
+ * Same base address ({@code elicit.survey.url}) and bounds as {@link ReportingSchemaRebuildClient},
+ * and like it the request carries the service token and is not sent without one (UC-018 BR-159,
+ * BR-161).
  */
 @ApplicationScoped
 public class ReportingSchemaRenameClient {
@@ -75,6 +79,10 @@ public class ReportingSchemaRenameClient {
 
     @ConfigProperty(name = "elicit.survey.url", defaultValue = "http://survey:8080")
     String surveyUrl;
+
+    /** The service token every request to Survey's {@code /api} paths carries (UC-018 BR-159). */
+    @Inject
+    ServiceToken serviceToken;
 
     private final HttpClient client = HttpClient.newBuilder()
             .connectTimeout(ReportingSchemaRebuildClient.CONNECT_TIMEOUT)
@@ -125,13 +133,25 @@ public class ReportingSchemaRenameClient {
      */
     public Outcome rename(UUID surveyKey, String newName) {
         String endpoint = endpoint(surveyKey, newName);
+        if (!serviceToken.isConfigured()) {
+            // UC-018 BR-161: nothing is sent without the token.
+            Log.warn("Reporting schema not renamed: " + ServiceToken.NOT_CONFIGURED + " (" + ServiceToken.VARIABLE
+                    + " is not set); " + endpoint + " was not called");
+            return new Outcome(Status.FAILED, Translations.get("serviceToken.notConfigured"), null);
+        }
         try {
             HttpRequest request = HttpRequest.newBuilder(URI.create(endpoint))
                     .POST(HttpRequest.BodyPublishers.noBody())
                     .header("Accept", "application/json")
+                    .header("Authorization", serviceToken.authorization())
                     .timeout(ReportingSchemaRebuildClient.TIMEOUT)
                     .build();
             HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
+            if (response.statusCode() == 401) {
+                // Survey's token is not this console's.
+                Log.warnf("Reporting schema not renamed: %s answered HTTP 401", endpoint);
+                return new Outcome(Status.FAILED, Translations.get("serviceToken.refused"), null);
+            }
             return outcomeOf(response.statusCode(), response.body(), endpoint);
         } catch (HttpTimeoutException e) {
             Log.warn("Reporting schema not renamed: no answer from " + endpoint + " within "

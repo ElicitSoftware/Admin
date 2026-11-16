@@ -21,7 +21,7 @@
 4. If none exists, the system installs the file as a new survey (UC-014).
 5. If one exists, the system applies the file to it in place (UC-017), including that use case's revision-regression check, which routing neither relaxes nor overrides.
 6. The system reports which of the two it performed, along with that use case's own result.
-7. The system asks the Survey application to rebuild the reporting schema of the survey just installed or updated, naming it by its key (Survey UC-008, `POST /api/etl/build?survey=<survey_key>`), so that survey has its own schema, dimensions, fact columns and views without a restart of Survey and no other survey's schema is touched, and adds the outcome to its report: "Reporting schema rebuilt." or "Reporting schema not rebuilt: reason".
+7. The system asks the Survey application to rebuild the reporting schema of the survey just installed or updated, naming it by its key (Survey UC-008, `POST /api/etl/build?survey=<survey_key>`), so that survey has its own schema, dimensions, fact columns and views without a restart of Survey and no other survey's schema is touched, and adds the outcome to its report: "Reporting schema rebuilt." or "Reporting schema not rebuilt: reason". The request carries the deployment's service token (BR-159).
 
 ## Alternative Flows
 
@@ -70,6 +70,23 @@
 
 1. The system asks Survey nothing and adds no reporting line to the result.
 
+### A7: No service token is configured
+
+**Trigger:** `ELICIT_SERVICE_TOKEN` is not set at this console (step 7).
+**Flow:**
+
+1. The system sends Survey nothing (BR-161).
+2. The system reports the apply as successful, with "Reporting schema not rebuilt: service token not configured (ELICIT_SERVICE_TOKEN is not set)" as the last line of the result, and logs the same at WARN.
+3. The operator sets the variable and restarts the console; the administrator re-applies the same file, as in A5.
+
+### A8: Survey refuses the service token
+
+**Trigger:** Survey answers HTTP 401 (step 7): its token differs from this console's.
+**Flow:**
+
+1. The system reports the apply as successful, with "Reporting schema not rebuilt:" and a line saying that Survey refused the service token and that `ELICIT_SERVICE_TOKEN` must have the same value on both, and logs it at WARN.
+2. The operator gives both services the same value; the administrator re-applies the same file.
+
 ## Postconditions
 
 ### Success Postconditions
@@ -104,6 +121,22 @@ Survey builds each survey's reporting star schema from the survey definitions pr
 
 The definition is committed before Survey is asked, and a reporting schema that is behind is recoverable (repeat the apply, or restart Survey) where a rolled-back apply is not. So the rebuild's outcome is reported -- on the result and in the log -- and never fails the apply, changes its title, or is written into the apply's audit record, which was committed with the apply itself.
 
+### BR-159: Calls to Survey carry the service token
+
+Survey answers its `/api` paths only to a caller that presents the deployment's service token. Every request this console sends there -- the rebuild of this use case and the rename of UC-030 -- carries it as `Authorization: Bearer <token>`, read from `elicit.service.token` (environment `ELICIT_SERVICE_TOKEN`). The token is never placed in an address, and neither request follows a redirect. It appears in no log line, no result line, no trace and on no screen (NFR-024); the System pages say only whether it is set.
+
+### BR-160: The service token goes only to origins the configuration names
+
+A report address arrives in a survey definition, so the token is not sent to an address because a definition names it. Before a report is requested (UC-005) the final address, after it has been resolved (UC-005 BR-023), is reduced to its origin: scheme and host in lower case, and the port, 80 or 443 when none is written. The token is attached only when that origin equals a trusted one. The trusted origins are the origin of `elicit.survey.url` and each entry of `elicit.service.trusted-origins` (environment `ELICIT_SERVICE_TRUSTED_ORIGINS`, comma-separated, empty by default). The comparison is equality on the parsed parts: no wildcard, no prefix or suffix match, no name lookup. An address with user information, without a host, or with a scheme other than `http` or `https` never receives the token. An address whose origin is not trusted is called as before, without an `Authorization` header. Each entry is checked when the console starts: one that is not `http` or `https`, has no host, or carries user information, a path, a query or a fragment stops the start with a message naming the variable and the entry's position.
+
+### BR-161: Without a service token the call is not made
+
+When no token is configured the console sends no request that would have carried one: the rebuild and the rename report "service token not configured" where their failure already shows (the apply result, the rename dialog), and a report at a trusted origin shows it in its error block (UC-005 A2). A request is never sent without the token to see whether it would be answered.
+
+### BR-162: The service token is checked at start
+
+A token that is set but shorter than 32 characters stops the start, with a message that names `ELICIT_SERVICE_TOKEN` and the length required and gives neither the value nor its length. A token that is not set, or blank, does not stop the start: the console logs one WARN naming the variable and reports not ready on `/q/health/ready` through a check named `service-token`, with the reason "ELICIT_SERVICE_TOKEN is not set". A token equal to the development value the compose stack supplies (`elicit-dev-service-token-not-for-a-real-site`) is logged at WARN at start and listed as outstanding setup work (UC-020 BR-163).
+
 ### BR-134: A post-survey action carries its method and whether it sends the External ID
 
 A `post_survey_actions` record may carry two fields after its `execution_order`: the action's `method` (`POST`, `GET` or `PUT`) and `sends_external_id` (`true` or `false`), which Survey uses to call it (Survey UC-015 BR-001). A record without them, written before Elicit#95, reads as `POST` and `false`; a method other than the three is refused like any malformed record. The install (UC-014), the update (UC-017) and the export (UC-013) carry both, and an update compares and writes them like the action's other fields.
@@ -116,4 +149,4 @@ The subject's External ID usually identifies a person in another system, so an a
 
 ## Reference
 
-Implemented by `SurveyDefinitionApplyResource` / `SurveyDefinitionApplyService`, which delegate to `SurveyDefinitionImportService` (UC-014) and `SurveyDefinitionUpdateService` (UC-017), and by `ReportingSchemaRebuildClient` for step 7 (Survey's `ETLBuildResource`, its UC-008). The Connections screen (UC-025) lists the Survey application so its address can be checked before an apply. For Survey UC-015 BR-001, migration V0.0.24 appends `department_code` to the `survey.status` view, beside the External ID it already carries, so that Survey can send both for an action that sends the External ID. Verified by `SurveyDefinitionApplyServiceTest`, `SurveyDefinitionApplyViewTest`, `ReportingSchemaRebuildClientTest` and `SurveyDefinitionApplyReportingRebuildTest`. The explicit UC-013/UC-014/UC-017 endpoints remain available for an administrator who wants to assert which operation should occur and have the request fail if that assertion is wrong.
+Implemented by `SurveyDefinitionApplyResource` / `SurveyDefinitionApplyService`, which delegate to `SurveyDefinitionImportService` (UC-014) and `SurveyDefinitionUpdateService` (UC-017), and by `ReportingSchemaRebuildClient` for step 7 (Survey's `ETLBuildResource`, its UC-008). The Connections screen (UC-025) lists the Survey application so its address can be checked before an apply. For Survey UC-015 BR-001, migration V0.0.24 appends `department_code` to the `survey.status` view, beside the External ID it already carries, so that Survey can send both for an action that sends the External ID. The service token (BR-159 to BR-162) is `ServiceToken`, with `ServiceTokenHealthCheck` for readiness; verified by `ServiceTokenTest`, `ServiceTokenHealthCheckTest`, `ServiceTokenCallsTest`, `ReportingServiceServiceTokenTest`, `SetupWarningsServiceTokenTest` and `ConnectionChecksTest`. Verified by `SurveyDefinitionApplyServiceTest`, `SurveyDefinitionApplyViewTest`, `ReportingSchemaRebuildClientTest` and `SurveyDefinitionApplyReportingRebuildTest`. The explicit UC-013/UC-014/UC-017 endpoints remain available for an administrator who wants to assert which operation should occur and have the request fail if that assertion is wrong.
