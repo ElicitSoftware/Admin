@@ -74,7 +74,13 @@ class DebugViewInitUnitTest extends PlainSmallViewTestSupport {
     }
 
     private static DebugView view(Instance<JsonWebToken> id, Instance<AccessTokenCredential> access, boolean reveal) {
+        return view(id, access, reveal, true);
+    }
+
+    private static DebugView view(Instance<JsonWebToken> id, Instance<AccessTokenCredential> access, boolean reveal,
+                                  boolean developmentMode) {
         DebugView view = new DebugView();
+        view.developmentMode = () -> developmentMode;
         view.identity = admin();
         view.idTokenInstance = id;
         view.accessTokenInstance = access;
@@ -112,7 +118,18 @@ class DebugViewInitUnitTest extends PlainSmallViewTestSupport {
     }
 
     @Test
-    void given_revealConfigured_when_opened_then_rawTokensAreShown() {
+    void given_revealConfiguredOutsideDevelopmentMode_when_opened_then_tokensStayMasked() {
+        DebugView view = view(instance(true, DebugViewInitUnitTest::idToken),
+                instance(true, () -> new AccessTokenCredential(ACCESS_TOKEN)), true, false);
+
+        assertEquals(identityLines()
+                + t("debugView.idToken", DebugView.maskToken(ID_TOKEN, false)) + "\n\n"
+                + t("debugView.accessToken", DebugView.maskToken(ACCESS_TOKEN, false)) + "\n\n", info(view).getText(),
+                "UC-009 BR-142: the setting is honored in development mode only");
+    }
+
+    @Test
+    void given_revealConfiguredInDevelopmentMode_when_opened_then_rawTokensAreShown() {
         DebugView view = view(instance(true, DebugViewInitUnitTest::idToken),
                 instance(true, () -> new AccessTokenCredential(ACCESS_TOKEN)), true);
 

@@ -141,7 +141,7 @@ abstract class PlainAdminViewTestSupport extends BrowserlessTest {
         routes.setRoute("debug", DebugView.class);
         routes.setRoute("logout", LogoutView.class);
         routes.setRoute("", HomeStub.class);
-        routes.setRoute("register", RegisterStub.class);
+        routes.setRoute("register/:id?", RegisterStub.class);
         UI.getCurrent().setLocale(Locale.ENGLISH);
     }
 

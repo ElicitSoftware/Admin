@@ -22,6 +22,7 @@ import java.util.List;
 import java.util.function.Function;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -66,29 +67,25 @@ class ReportingServiceUnitTest {
 
     @Test
     void given_aReportThatCannotBePrepared_when_called_then_anErrorPageStandsInForTheReport() throws Exception {
-        String reason = "connection to the database lost";
+        String reason = "connection to db.internal:5432 lost";
         ReportResponse response = callReport(service(call -> new IllegalStateException(reason)), "Pedigree", "/api/x");
 
+        String fixed = "The report could not be retrieved. The details are in the application log.";
         assertEquals("Error - Pedigree", response.title);
         assertEquals("<div style=\"color: red; padding: 20px; border: 1px solid red; background-color: #ffe6e6;\">"
                 + "<h3>Report Generation Error</h3><p><strong>Service:</strong> Pedigree</p><p><strong>Error:</strong> "
-                + reason + "</p></div>", response.innerHTML);
+                + fixed + "</p></div>", response.innerHTML);
         assertEquals("Error - Pedigree", response.pdf.title);
         assertEquals(1, response.pdf.content.length);
-        assertEquals("Report Generation Error - Service: Pedigree - Error: " + reason, response.pdf.content[0].text);
+        assertEquals("Report Generation Error - Service: Pedigree - Error: " + fixed, response.pdf.content[0].text);
+        assertFalse(response.innerHTML.contains("db.internal"), "BR-140: the cause is logged, not shown");
     }
 
     @Test
-    void given_aFailureWithoutMessage_when_called_then_theErrorIsUnknown() throws Exception {
+    void given_aFailureWithoutMessage_when_called_then_theSameFixedTextIsShown() throws Exception {
         ReportResponse response = callReport(service(call -> new IllegalStateException()), "Pedigree", "/api/x");
-        assertEquals("Report Generation Error - Service: Pedigree - Error: Unknown error", response.pdf.content[0].text);
-    }
-
-    @Test
-    void given_aFailureMessageWithLineBreaks_when_called_then_thePdfTextIsOneLine() throws Exception {
-        ReportResponse response = callReport(service(call -> new IllegalStateException(" db\ndown\tnow\r ")), "Pedigree", "/api/x");
-        assertEquals("Report Generation Error - Service: Pedigree - Error: db down now", response.pdf.content[0].text);
-        assertTrue(response.innerHTML.contains("<strong>Error:</strong>  db\ndown\tnow\r </p>"));
+        assertEquals("Report Generation Error - Service: Pedigree - Error: "
+                + "The report could not be retrieved. The details are in the application log.", response.pdf.content[0].text);
     }
 
     @Test

@@ -475,21 +475,6 @@ public class Subject extends PanacheEntityBase {
     }
 
     /**
-     * Finds a subject by their access code.
-     * <p>
-     * Searches for a subject whose associated respondent has the specified
-     * access code. This method is used for access-code-based authentication
-     * and survey access.
-     *
-     * @param accessCode the access code to search for
-     * @return the Subject associated with the access code, or null if not found
-     */
-    public static Subject findSubjectByAccessCode(String accessCode) {
-        // Implement DB lookup here, e.g. using JPA or Panache
-        return Subject.find("respondent.accessCode", accessCode).firstResult();
-    }
-
-    /**
      * Compares this subject to another based on primary key equality.
      *
      * @param o the object to compare with

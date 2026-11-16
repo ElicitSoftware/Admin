@@ -13,6 +13,7 @@
 - The client presents a valid bearer token from the OIDC provider.
 - Single and batch registration require the `elicit_importer`, `elicit_admin`, or `elicit_user` role; CSV upload requires the `elicit_importer` role.
 - The referenced survey and the target department (with its message templates) exist.
+- A client whose principal has a console user record (UC-008) is assigned, in that record, to every department it registers into (BR-137).
 
 ## Main Success Scenario
 
@@ -44,7 +45,7 @@
 **Trigger:** Access code generation fails, or a record is otherwise invalid, during a batch or CSV import (step 4).
 **Flow:**
 
-1. The system records an error for that record only and continues processing the remaining records.
+1. The system records an error for that record only and continues processing the remaining records. An unexpected failure is reported as a fixed phrase with a reference (BR-139).
 
 ### A4: No CSV file provided
 
@@ -59,6 +60,14 @@
 **Flow:**
 
 1. The system collects the line-level errors and reports that the import completed with errors, identifying the failing lines.
+
+### A6: Department not permitted
+
+**Trigger:** A record names a department the caller's console record is not assigned to (before step 2).
+**Flow:**
+
+1. For a single request, the system refuses the request as forbidden and stores nothing.
+2. In a batch, the system records the outcome as "not permitted" for that record; in a CSV import it reports the line. The remaining records are processed (BR-037).
 
 ## Postconditions
 
@@ -88,6 +97,14 @@ Each CSV row requires a parseable department ID, first name, last name, and emai
 ### BR-037: Independent per-record processing
 
 In batch and CSV registration, each record is evaluated independently; one record's exclusion, duplication, or failure does not stop the others.
+
+### BR-137: The caller's departments bound the API
+
+When the caller's principal has a console user record, a record is processed only if its department is one of those the console record is assigned to; a console record that is inactive or has no department permits none. The departments are read from the database for each request, and the check is made before the exclusion and duplicate checks, so a refused record tells the caller nothing about the department's subjects. A caller whose principal has no console user record is not bound by this rule.
+
+### BR-139: An unexpected failure is reported as a fixed phrase
+
+When a record, or a CSV import as a whole, fails for a reason the caller cannot correct (a persistence or other internal failure), the answer says so in fixed words followed by a reference — `Error (ref <id>)` — and nothing of the failure itself. The cause is written to the application log under the same reference (NFR-023). Outcomes the caller can act on (excluded, existing, not permitted, a CSV line's missing or malformed field) keep their own wording.
 
 The exclusion (BR-013), duplicate (BR-012), required-field (BR-009), and message-creation (BR-014) rules from UC-003 apply identically here.
 

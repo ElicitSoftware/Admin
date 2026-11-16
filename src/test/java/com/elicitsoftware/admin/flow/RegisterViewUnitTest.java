@@ -19,6 +19,7 @@ import com.elicitsoftware.request.AddRequest;
 import com.elicitsoftware.response.AddResponse;
 import com.elicitsoftware.response.AddResponseStatus;
 import com.elicitsoftware.rest.AccessCodeService;
+import com.elicitsoftware.security.DepartmentScope;
 import com.vaadin.flow.component.Component;
 import com.vaadin.flow.component.UI;
 import com.vaadin.flow.component.button.Button;
@@ -39,6 +40,7 @@ import com.vaadin.flow.router.BeforeEnterEvent;
 import com.vaadin.flow.router.Location;
 import com.vaadin.flow.router.NavigationEvent;
 import com.vaadin.flow.router.NavigationTrigger;
+import com.vaadin.flow.router.RouteParameters;
 import com.vaadin.flow.router.RouterLink;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -78,6 +80,13 @@ class RegisterViewUnitTest extends PlainAdminViewTestSupport {
     private final List<AddRequest> requests = new ArrayList<>();
     private RegisterView view;
 
+    /** Department ids the signed-in user is not assigned to in the database (NFR-021). */
+    private final List<Long> foreignDepartments = new ArrayList<>();
+    /** The stored subjects, by record id, that the view's lookup finds. */
+    private final java.util.Map<Long, Subject> stored = new java.util.HashMap<>();
+    /** Subjects the view wrote over their stored row. */
+    private final List<Subject> merged = new ArrayList<>();
+
     private final Department oncology = department(3, "Oncology");
     private final Department clinic = department(7, "Clinic");
 
@@ -90,14 +99,37 @@ class RegisterViewUnitTest extends PlainAdminViewTestSupport {
 
     private RegisterView newView(String... roles) {
         view = new RegisterView();
+        view.subjects = new RegisterView.SubjectStore() {
+            @Override
+            Subject find(long id) {
+                return stored.get(id);
+            }
+
+            @Override
+            Subject merge(Subject edited) {
+                merged.add(edited);
+                return edited;
+            }
+        };
         view.uiSessionLogin = login(login);
         view.identity = identity("register.tester", roles);
         view.surveyPresence = presence(presence);
+        view.departmentScope = new DepartmentScope() {
+            @Override
+            public boolean permits(long departmentId) {
+                return !foreignDepartments.contains(departmentId);
+            }
+        };
         view.accessCodeService = new AccessCodeService() {
             @Override
             public AddResponse putSubject(AddRequest request) {
                 requests.add(request);
                 return putSubject.apply(request);
+            }
+
+            @Override
+            public boolean permitsDepartment(long departmentId) {
+                return !foreignDepartments.contains(departmentId);
             }
         };
         UI.getCurrent().add(view);
@@ -131,6 +163,44 @@ class RegisterViewUnitTest extends PlainAdminViewTestSupport {
         NavigationEvent navigation = new NavigationEvent(ui.getInternals().getRouter(), new Location(pathAndQuery), ui,
                 NavigationTrigger.PROGRAMMATIC);
         return new BeforeEnterEvent(navigation, RegisterView.class, List.of());
+    }
+
+    /** An entry by the edit route, {@code register/<id>} (UC-003 A5). */
+    private static BeforeEnterEvent enterToEdit(String id) {
+        UI ui = UI.getCurrent();
+        NavigationEvent navigation = new NavigationEvent(ui.getInternals().getRouter(), new Location("register/" + id), ui,
+                NavigationTrigger.PROGRAMMATIC);
+        return new BeforeEnterEvent(navigation, RegisterView.class,
+                new RouteParameters(RegisterView.ID_PARAMETER, id), List.of());
+    }
+
+    private Subject storedSubject(long id, long departmentId) {
+        Subject subject = new Subject();
+        subject.setId(id);
+        subject.setDepartmentId(departmentId);
+        subject.setFirstName("Ann");
+        subject.setLastName("Lee");
+        stored.put(id, subject);
+        return subject;
+    }
+
+    /** Save and Update as {@code init()} leaves them: Save shown, Update hidden. */
+    private Button[] buttons() {
+        Button save = new Button();
+        Button update = new Button();
+        update.setVisible(false);
+        setField(view, "saveButton", save);
+        setField(view, "updateButton", update);
+        return new Button[]{save, update};
+    }
+
+    /** A binder that always validates and writes the given department into the subject. */
+    private static Binder<Subject> binderChoosing(long departmentId) {
+        Binder<Subject> binder = new Binder<>(Subject.class);
+        TextField department = new TextField();
+        department.setValue(Long.toString(departmentId));
+        binder.forField(department).bind(s -> Long.toString(s.getDepartmentId()), (s, v) -> s.setDepartmentId(Long.parseLong(v)));
+        return binder;
     }
 
     private void upload(String csv) {
@@ -170,7 +240,7 @@ class RegisterViewUnitTest extends PlainAdminViewTestSupport {
         view.init();
         presence.installed = false;
 
-        view.beforeEnter(enter("register?accessCode=ABC"));
+        view.beforeEnter(enterToEdit("5"));
 
         assertEquals(0, presence.calls, "init already explained; the entry is left alone");
         assertEquals(1, view.getComponentCount());
@@ -212,6 +282,132 @@ class RegisterViewUnitTest extends PlainAdminViewTestSupport {
         view.beforeEnter(enter("register?other=1"));
 
         assertFalse(save.isVisible(), "both buttons must exist before either is toggled");
+    }
+
+    // ---- entry to edit a subject (UC-003 A5, A7; BR-138; NFR-022) ---------------------------------
+
+    @Test
+    void given_aSubjectInOneOfTheUsersDepartments_when_enteringByItsId_then_updateModeHoldsThatSubject() {
+        signedIn("elicit_user");
+        Subject ann = storedSubject(5, 3);
+        Button[] buttons = buttons();
+
+        view.beforeEnter(enterToEdit("5"));
+
+        assertEquals(ann, view.currentSubject());
+        assertFalse(buttons[0].isVisible(), "Save is hidden while editing");
+        assertTrue(buttons[1].isVisible());
+        assertTrue(notifications().isEmpty());
+    }
+
+    @Test
+    void given_aSubjectInAnotherDepartment_when_enteringByItsId_then_itIsAnsweredAsNotFound() {
+        signedIn("elicit_user");
+        storedSubject(5, 8);
+        foreignDepartments.add(8L);
+        Button[] buttons = buttons();
+
+        view.beforeEnter(enterToEdit("5"));
+
+        assertEquals(List.of(t("registerView.error.subjectNotFound")), notifications(), "A7: as if it did not exist");
+        assertEquals(0, view.currentSubject().getId(), "BR-138: nothing of the subject is loaded");
+        assertTrue(view.currentSubject().getFirstName() == null || view.currentSubject().getFirstName().isEmpty());
+        assertTrue(buttons[0].isVisible(), "the form stays in registration mode");
+        assertFalse(buttons[1].isVisible());
+    }
+
+    @Test
+    void given_anIdThatNamesNoSubjectOrIsNotANumber_when_entering_then_theNoticeNamesNoIdentifier() {
+        signedIn("elicit_user");
+        Button[] buttons = buttons();
+
+        view.beforeEnter(enterToEdit("404"));
+        view.beforeEnter(enterToEdit("ABC123DEF"));
+
+        assertEquals(List.of("Subject not found.", "Subject not found."), notifications(),
+                "NFR-022: the notice repeats nothing from the address");
+        assertTrue(buttons[0].isVisible());
+        assertFalse(buttons[1].isVisible());
+    }
+
+    @Test
+    void given_anAccessCodeInTheQuery_when_entering_then_noSubjectIsLoaded() {
+        signedIn("elicit_user");
+        storedSubject(5, 3);
+        Button[] buttons = buttons();
+
+        view.beforeEnter(enter("register?accessCode=ABC123DEF"));
+
+        assertEquals(0, view.currentSubject().getId(), "NFR-022: an access code in the address opens nothing");
+        assertTrue(buttons[0].isVisible());
+        assertFalse(buttons[1].isVisible());
+        assertTrue(notifications().isEmpty());
+    }
+
+    // ---- department rule on save and update (UC-003 A7, BR-138) ----------------------------------
+
+    @Test
+    void given_aSubjectStoredInAnotherDepartment_when_updating_then_nothingIsWritten() throws Exception {
+        signedIn("elicit_user");
+        Subject held = storedSubject(5, 8);
+        foreignDepartments.add(8L);
+        setField(view, "subject", held);
+
+        view.updateSubject(binderChoosing(3));
+
+        assertEquals(List.of(t("registerView.error.notYourDepartment")), notifications());
+        assertTrue(merged.isEmpty());
+        assertEquals(8, held.getDepartmentId(), "the form was not even written into the subject");
+    }
+
+    @Test
+    void given_aSubjectThatNoLongerExists_when_updating_then_nothingIsWritten() throws Exception {
+        signedIn("elicit_user");
+        Subject held = new Subject();
+        held.setId(77);
+        setField(view, "subject", held);
+
+        view.updateSubject(binderChoosing(3));
+
+        assertEquals(List.of(t("registerView.error.notYourDepartment")), notifications());
+        assertTrue(merged.isEmpty());
+    }
+
+    @Test
+    void given_aDepartmentTheUserIsNotAssignedTo_when_updatingIntoIt_then_nothingIsWritten() throws Exception {
+        signedIn("elicit_user");
+        setField(view, "subject", storedSubject(5, 3));
+        foreignDepartments.add(8L);
+
+        view.updateSubject(binderChoosing(8));
+
+        assertEquals(List.of(t("registerView.error.notYourDepartment")), notifications());
+        assertTrue(merged.isEmpty());
+    }
+
+    @Test
+    void given_aSubjectAndADepartmentOfTheUsers_when_updating_then_theSubjectIsWritten() throws Exception {
+        signedIn("elicit_user");
+        Subject held = storedSubject(5, 3);
+        setField(view, "subject", held);
+
+        view.updateSubject(binderChoosing(7));
+
+        assertEquals(List.of(t("registerView.subjectUpdated")), notifications());
+        assertEquals(List.of(held), merged);
+        assertEquals(7, held.getDepartmentId(), "moving between two of the user's own departments stays allowed");
+    }
+
+    @Test
+    void given_aDepartmentTheUserIsNotAssignedTo_when_saving_then_nothingIsRegistered() throws Exception {
+        signedIn("elicit_user");
+        foreignDepartments.add(8L);
+
+        view.saveSubject(binderChoosing(8));
+
+        assertEquals(List.of(t("registerView.error.notYourDepartment")), notifications(),
+                "BR-138: refused before the exclusion list or an access code is touched");
+        assertTrue(requests.isEmpty());
     }
 
     // ---- missing survey (UC-019) -----------------------------------------------------------------
@@ -277,6 +473,7 @@ class RegisterViewUnitTest extends PlainAdminViewTestSupport {
     @Test
     void given_aFormFailingValidation_when_updating_then_theUserIsAskedToFixIt() throws Exception {
         signedIn("elicit_user");
+        setField(view, "subject", storedSubject(5, 3));
 
         view.updateSubject(invalidBinder());
 
@@ -408,6 +605,19 @@ class RegisterViewUnitTest extends PlainAdminViewTestSupport {
     }
 
     @Test
+    void given_aRowForADepartmentTheUserIsNotAssignedTo_when_uploading_then_thatLineIsRefusedAndNotRegistered() {
+        signedIn("elicit_user");
+        foreignDepartments.add(8L);
+
+        upload("3,Ann,Lee,,,a@x.org,,ok\n8,Bob,Ray,,,b@x.org,,other\n");
+
+        Dialog dialog = onlyDialog();
+        assertEquals(t("registerView.csvImport.errorTitle"), dialog.getHeaderTitle());
+        assertEquals(List.of(t("definition.line", "2", t("csvImport.departmentNotPermitted", "8"))), errorsIn(dialog));
+        assertEquals(List.of("ok"), requests.stream().map(r -> r.xid).toList(), "UC-010 BR-137: only the user's own department");
+    }
+
+    @Test
     void given_rejectedRows_when_uploading_then_theErrorDialogListsEachRejectedLine() {
         signedIn("elicit_user");
 
@@ -421,21 +631,15 @@ class RegisterViewUnitTest extends PlainAdminViewTestSupport {
     }
 
     @Test
-    void given_anUnreadableUpload_when_uploading_then_theFailureIsShownAsItIs() {
+    void given_anUnreadableUpload_when_uploading_then_theDialogSaysOnlyThatItFailed() {
         signedIn("elicit_user");
-        String expected;
-        try {
-            new java.io.ByteArrayInputStream(null);
-            throw new AssertionError("unreachable");
-        } catch (NullPointerException e) {
-            expected = e.getMessage();
-        }
 
         view.handleCsvUpload(null);
 
         Dialog dialog = onlyDialog();
         assertEquals(t("registerView.csvImport.errorTitle"), dialog.getHeaderTitle());
-        assertEquals(List.of(expected), messagesIn(dialog));
+        assertEquals(List.of("The file could not be imported. The details are in the application log."), messagesIn(dialog),
+                "UC-010 BR-139: no exception text");
     }
 
     // ---- the form's private builders (reached only past init's Panache query) -------------------

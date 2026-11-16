@@ -18,6 +18,8 @@ import com.elicitsoftware.model.*;
 import com.elicitsoftware.request.AddRequest;
 import com.elicitsoftware.response.AddResponse;
 import com.elicitsoftware.response.AddResponseStatus;
+import com.elicitsoftware.security.DepartmentScope;
+import com.elicitsoftware.service.CsvImportException;
 import com.elicitsoftware.service.CsvImportService;
 import com.elicitsoftware.util.LogMasking;
 import com.elicitsoftware.util.RandomString;
@@ -38,6 +40,7 @@ import jakarta.ws.rs.core.UriInfo;
 import java.security.SecureRandom;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.UUID;
 
 /**
  * AccessCodeService registers survey subjects and issues their access codes.
@@ -74,9 +77,20 @@ public class AccessCodeService {
     @Inject
     JsonWebToken jwt;
 
+    /** Decides which departments the caller may register subjects in (UC-010 BR-137). */
+    @Inject
+    DepartmentScope departmentScope;
+
     @Context
     private UriInfo uriInfo;
     private RandomString generator = null;
+
+    /**
+     * The characters an access code is drawn from (UC-015 BR-050): upper-case consonants,
+     * lower-case consonants without {@code l}, and the digits that are not mistaken for a letter.
+     * Each appears once, so each is equally likely at every position.
+     */
+    static final String ACCESS_CODE_ALPHABET = RandomString.upper + "bcdfghjkmnpqrstvwxz" + RandomString.digits;
 
     /** How many candidate access codes {@link #generateAccessCode(int)} tries before giving up. */
     static final int MAX_ACCESS_CODE_ATTEMPTS = 4;
@@ -90,8 +104,7 @@ public class AccessCodeService {
      */
     public AccessCodeService() {
         super();
-        String easy = RandomString.digits + "BCDFGHJKLMNPQRSTVWXZbcdfghjkmnpqrstvwxz2456789";
-        generator = new RandomString(9, new SecureRandom(), easy);
+        generator = new RandomString(9, new SecureRandom(), ACCESS_CODE_ALPHABET);
     }
 
     /**
@@ -111,6 +124,9 @@ public class AccessCodeService {
     @Produces(MediaType.APPLICATION_JSON)
     @Transactional
     public AddResponse putSubject(AddRequest request) {
+        // UC-010 BR-137: before the exclusion and duplicate checks, so a refusal says nothing
+        // about the department's subjects.
+        departmentScope.require(request.departmentId);
         AddResponse response = new AddResponse();
         AddResponseStatus addStatus;
         try {
@@ -194,7 +210,7 @@ public class AccessCodeService {
                 // The per-item transaction failed to commit (e.g. a constraint violation
                 // surfaced only at flush/commit time). Isolated to this item only.
                 Status errorStatus = new Status();
-                addStatus = new AddResponseStatus(errorStatus, "Unexpected error processing " + request.xid + ": " + e.getMessage());
+                addStatus = new AddResponseStatus(errorStatus, "Unexpected error processing " + request.xid + " " + logged(e));
             }
             response.addStatus(addStatus);
         }
@@ -214,6 +230,11 @@ public class AccessCodeService {
      * @return the status for this single request
      */
     private AddResponseStatus processSubjectRequest(AddRequest request) {
+        // UC-010 BR-137: a record for a department the caller is not assigned to is answered
+        // before anything about that department is looked up; the rest of the batch goes on.
+        if (!departmentScope.permits(request.departmentId)) {
+            return new AddResponseStatus(new Status(), "Not permitted: " + request.xid);
+        }
         try {
             // Check if this xid and department should be excluded
             boolean isExcluded = ExcludedXid.isExcluded(request.xid, request.departmentId);
@@ -282,8 +303,9 @@ public class AccessCodeService {
                 tries--;
             }
         } catch (Exception e) {
-            //Pass along the error message.
-            throw new AccessCodeGenerationError(e.getMessage());
+            // UC-010 BR-139: the caller is told that it failed and under which reference; the
+            // cause stays in the log.
+            throw new AccessCodeGenerationError(logged(e));
         }
         //The tries worked but we couldn't find a unique access code. This should never happen.
         throw new AccessCodeGenerationError(Translations.get("accessCode.noUniqueCode"));
@@ -372,12 +394,39 @@ public class AccessCodeService {
             AddResponse response = csvImportService.importSubjects(multipartBody.file);
             return response;
 
-        } catch (Exception e) {
-            // Handle validation errors and other exceptions
+        } catch (CsvImportException e) {
+            // The rejected lines, each with what the caller has to correct.
             AddResponse errorResponse = new AddResponse();
             errorResponse.setError(e.getMessage());
             return errorResponse;
+        } catch (Exception e) {
+            AddResponse errorResponse = new AddResponse();
+            errorResponse.setError(logged(e));
+            return errorResponse;
         }
+    }
+
+    /**
+     * Whether the caller may register subjects in a department (UC-010 BR-137). The CSV import
+     * asks before it hands a line to {@link #putSubject(AddRequest)}, so a refused line is
+     * reported by its number and the other lines go on.
+     *
+     * @param departmentId the department a record names
+     * @return true when the caller may register into it
+     */
+    public boolean permitsDepartment(long departmentId) {
+        return departmentScope.permits(departmentId);
+    }
+
+    /**
+     * Logs an unexpected failure and returns the fixed phrase the caller receives in its place
+     * (UC-010 BR-139): the phrase carries a reference that is on the log line, and nothing of
+     * the failure itself.
+     */
+    static String logged(Exception e) {
+        String reference = UUID.randomUUID().toString().substring(0, 8);
+        Log.errorf(e, "Subject registration failed (ref %s)", reference);
+        return "Error (ref " + reference + ")";
     }
     /**
      * Simple test endpoint to verify service availability.

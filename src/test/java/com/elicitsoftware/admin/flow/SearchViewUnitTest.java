@@ -491,16 +491,16 @@ class SearchViewUnitTest extends PlainAdminViewTestSupport {
     }
 
     @Test
-    void given_aRow_when_editing_then_theRegisterViewOpensWithItsAccessCode() {
+    void given_aRow_when_editing_then_theRegisterViewOpensByTheSubjectsRecordId() {
         buildWithRows("elicit_user");
 
         Button edit = assertInstanceOf(Button.class, cellComponent(1, COL_EDIT));
         assertEquals(t("common.edit"), edit.getElement().getProperty("title"));
         test(edit).click();
 
-        assertEquals("register", activePath());
-        assertEquals(List.of("BBB222"), UI.getCurrent().getInternals().getActiveViewLocation()
-                .getQueryParameters().getParameters().get("accessCode"));
+        assertEquals("register/2", activePath(), "UC-003 A5: addressed by the record id");
+        assertTrue(UI.getCurrent().getInternals().getActiveViewLocation().getQueryParameters().getParameters().isEmpty(),
+                "NFR-022: the address carries no access code");
     }
 
     // ---- row actions (UC-002 BR-007, UC-004, UC-005, UC-011) ------------------------------------

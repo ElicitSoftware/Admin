@@ -61,7 +61,7 @@
 
 ### A5: Update an existing subject
 
-**Trigger:** The user opens the registration view for an existing subject's access code.
+**Trigger:** The user chooses Edit on a subject's row in the search view (UC-002). The edit screen is addressed by the subject's record id, never by the access code (NFR-022).
 **Flow:**
 
 1. The system loads the subject's current details and switches to update mode.
@@ -75,8 +75,16 @@
 **Flow:**
 
 1. The system imports each row through the single-subject flow and shows a per-subject result summary (registered, already existing, or excluded), one line per row.
-2. If any row fails validation, the system reports each rejected row on its own line, named by its line number, and the rows that were accepted are still registered.
+2. If any row fails validation or names a department the user is not assigned to (UC-010 BR-137), the system reports each rejected row on its own line, named by its line number, and the rows that were accepted are still registered.
 3. See UC-010 for the underlying registration and validation rules.
+
+### A7: Subject is not in the user's departments
+
+**Trigger:** The subject addressed for editing belongs to a department the user is not assigned to (A5 step 1), or the department of the subject being saved or updated is not one of the user's (step 5, A5 step 3).
+**Flow:**
+
+1. On opening, the system answers exactly as for a subject that does not exist: the not-found notice and an empty form in registration mode.
+2. On save or update, the system tells the user the subject belongs to a department they are not assigned to and changes nothing.
 
 ## Postconditions
 
@@ -114,6 +122,10 @@ A subject whose external ID is on the department's exclusion list cannot be regi
 ### BR-014: Messages created only at registration
 
 Invitation/reminder messages are generated when a subject is first registered. Updating a subject does not regenerate the access code or messages.
+
+### BR-138: A subject is edited only within the user's departments
+
+A subject is loaded for editing only when its department is one of the user's. On save and on update the system refuses the change when the department chosen is not one of the user's, and on update also when the stored subject's department is not. The user's departments are read from the database at that moment, not from the session (NFR-021).
 
 ---
 

@@ -21,6 +21,7 @@ import com.vaadin.flow.component.UI;
 import com.vaadin.flow.component.button.Button;
 import com.vaadin.flow.component.combobox.ComboBox;
 import com.vaadin.flow.component.html.Div;
+import com.vaadin.flow.component.html.IFrame;
 import com.vaadin.flow.component.textfield.TextArea;
 import com.vaadin.flow.component.textfield.TextField;
 import com.vaadin.flow.router.BeforeEnterEvent;
@@ -190,10 +191,10 @@ class EditMessageTemplatesViewTest extends QuarkusBrowserlessTest {
         bodyField().setValue("<b>hello</b>");
 
         assertEquals("<b>hello</b>", previewContent().getElement().getText());
-        assertEquals("", previewContent().getElement().getProperty("innerHTML"));
+        assertFalse(find(IFrame.class, view).all().stream().anyMatch(IFrame::isVisible), "the frame is for HTML bodies");
     }
 
-    /** UC-007: the preview renders HTML mime-type content via innerHTML, not as literal text. */
+    /** UC-007 BR-141: the preview renders HTML content in the isolated frame, not in the page. */
     @Test
     @TestTransaction
     void htmlMimeTypeRendersBodyAsMarkup() {
@@ -203,7 +204,10 @@ class EditMessageTemplatesViewTest extends QuarkusBrowserlessTest {
         mimeTypeField().setValue("text/html");
         bodyField().setValue("<b>hello</b>");
 
-        assertEquals("<b>hello</b>", previewContent().getElement().getProperty("innerHTML"));
+        IFrame frame = find(IFrame.class, view).single();
+        assertEquals("", frame.getElement().getAttribute("sandbox"));
+        assertEquals(EditMessageTemplatesView.PREVIEW_DOCUMENT_HEAD + "<b>hello</b>" + EditMessageTemplatesView.PREVIEW_DOCUMENT_TAIL,
+                frame.getSrcdoc().orElseThrow());
     }
 
     /** UC-007: Save is disabled while the subject is blank, and enables once the form is valid. */

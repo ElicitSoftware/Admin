@@ -37,7 +37,7 @@
 **Trigger:** The report service is unreachable or rejects the request (step 3).
 **Flow:**
 
-1. The system renders an error block in place of the failed report section and continues assembling the rest of the PDF with the available content.
+1. The system renders an error block in place of the failed report section and continues assembling the rest of the PDF with the available content. The block names the report and says what kind of failure it was (BR-140).
 
 ### A3: PDF assembly fails
 
@@ -75,7 +75,7 @@ A single generated PDF combines the output of all of the survey's report definit
 
 ### BR-021: Download link expiry
 
-A generated report is retrievable through a temporary, unguessable link that expires after a limited time.
+A generated report is retrievable through a temporary, unguessable link that expires after ten minutes. An expired report is removed from memory within a minute of expiring, whether or not it was fetched, and at most 200 reports wait at once; when that limit is reached the oldest is dropped.
 
 ### BR-022: The request names the respondent's language
 
@@ -84,6 +84,14 @@ The report request carries, besides the respondent's id, the BCP-47 tag of the l
 ### BR-023: A relative report address is resolved under Survey
 
 A report definition's URL is used as written when it is absolute. When it is a path, it is resolved under this site's Survey address (`elicit.survey.url`), keeping any path prefix Survey runs under, because a report built into Survey is authored without knowing the site, while a site-specific service such as the Family History Survey's keeps its absolute URL.
+
+### BR-136: A print holds only its own respondent's reports
+
+Each request to print assembles its PDF from the answers the report services gave to that request alone. Nothing gathered for one print is shared with another, whoever started them and however close together.
+
+### BR-140: A failed report shows a status, not the service's answer
+
+The error block that stands in for a failed report names the report and gives the HTTP status the service answered with, the fixed license-check text for a 403, or — when the service could not be called or its answer could not be read — a fixed sentence pointing to the application log. The body of the service's answer and the technical cause are written to the log only and are never reproduced on the page or in the PDF. A redirect answered by a report service is not followed.
 
 ---
 

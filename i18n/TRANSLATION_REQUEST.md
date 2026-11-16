@@ -125,7 +125,9 @@ Every row is one key in `translations.properties`. Return a file `translations_<
 | `registerView.csvImport.errorsHeading` | Errors: | Register subjects page · CSV import result dialog, heading above the list of errors the service returned | 30 |  |
 | `registerView.csvImport.lineErrorsHeading` | Import completed with errors: | Register subjects page · CSV import error dialog, heading above the list of rejected rows | 60 |  |
 | `registerView.apiDoc.title` | REST API instructions | Register subjects page · collapsible section title | 40 |  |
-| `registerView.error.subjectNotFound` | Subject not found for access code: {0} | Register subjects page · notification | 80 | params: {0} = access code |
+| `registerView.error.subjectNotFound` | Subject not found. | Register subjects page · notification | 80 |  |
+| `registerView.error.notYourDepartment` | This subject belongs to a department you are not assigned to. Nothing was changed. | Register subjects page · notification | 120 |  |
+| `registerView.csvImport.failed` | The file could not be imported. The details are in the application log. | Register subjects page, CSV import · text of the error dialog | 120 |  |
 | `registerView.unknownDepartment` | Unknown | Register subjects page · department name fallback | 20 |  |
 | `registerView.error.excludedXid` | External ID {0} is in the exclude list for department {1} | Register subjects page · notification | 100 | params: {0} = external ID, {1} = department name |
 | `registerView.subjectSaved` | Subject saved | Register subjects page · notification | 30 |  |
@@ -176,6 +178,7 @@ Every row is one key in `translations.properties`. Return a file `translations_<
 | `registerView.apiDoc.notes.duplicates` | • Duplicate detection: existing subjects (same XID and department) are identified | Register subjects page (API instructions) · bullet paragraph; keep • and XID | 120 |  |
 | `registerView.apiDoc.notes.individual` | • Individual processing: in bulk requests, each subject is processed independently | Register subjects page (API instructions) · bullet paragraph; keep • | 120 |  |
 | `registerView.apiDoc.notes.auth` | • Authentication: all endpoints require valid Bearer token authentication | Register subjects page (API instructions) · bullet paragraph; keep • and "Bearer" | 120 |  |
+| `registerView.apiDoc.notes.departments` | • Departments: an account that has a console user record registers subjects only in the departments that record is assigned to | Register subjects page (API instructions) · bullet paragraph; keep • | 160 |  |
 | `searchView.pageTitle` | Subject search | Subject search · browser tab title | 30 |  |
 | `searchView.heading` | Subject search | Subject search · heading | 40 |  |
 | `searchView.noUser.loggedIn` | You have successfully signed in with the identity provider. | Subject search (no matching user) · paragraph | 100 |  |
@@ -372,16 +375,14 @@ Every row is one key in `translations.properties`. Return a file `translations_<
 | `loginView.redirecting` | Redirecting to sign-in… | Sign-in redirect page (shown briefly) · text | 40 |  |
 | `logoutView.signingOut` | Signing out… | Sign-out page (shown briefly) · text | 40 |  |
 | `reporting.error.pdf` | Failed to generate PDF: {0} | Subject report · notification | 100 | params: {0} = technical error text |
-| `reporting.error.service` | Service error: {0} | Subject report · error text | 100 | params: {0} = technical error text |
 | `reporting.error.forbidden` | Access forbidden - License validation may have failed. Please check your license configuration. | Subject report · error text | 160 |  |
-| `reporting.error.serviceHttp` | Service error (HTTP {0}): {1} | Subject report · error text | 100 | params: {0} = HTTP status number, {1} = technical error text |
-| `reporting.error.license` | License validation failed - {0} | Subject report · error text | 100 | params: {0} = error text |
+| `reporting.error.serviceHttp` | Service error (HTTP {0}) | Subject report · error text | 100 | params: {0} = HTTP status number |
+| `reporting.error.unavailable` | The report could not be retrieved. The details are in the application log. | Subject report · error text | 120 |  |
 | `reporting.error.title` | Error - {0} | Subject report · error card title | 60 | params: {0} = report name; may be identical |
 | `reporting.error.html` | <div style="color: red; padding: 20px; border: 1px solid red; background-color: #ffe6e6;"><h3>Report Generation Error</h3><p><strong>Service:</strong> {0}</p><p><strong>Error:</strong> {1}</p>{2}</div> | Subject report · error card body | 400 | html params: {0} = report name, {1} = error text, {2} = optional hint paragraph; keep the style attribute |
 | `reporting.error.licenseHint` | <p><em>If this is a license error, please ensure your PREMM5 license is valid and properly configured.</em></p> | Subject report · error card hint | 200 | html |
 | `reporting.error.pdfText` | Report Generation Error - Service: {0} - Error: {1}{2} | Subject report PDF · error paragraph (plain text) | 200 | params: {0} = report name, {1} = error text, {2} = optional hint |
 | `reporting.error.pdfLicenseHint` | - If this is a license error, please ensure your PREMM5 license is valid and properly configured. | Subject report PDF · appended hint; keep the leading " - " | 160 |  |
-| `reporting.error.unknown` | Unknown error | Subject report PDF · fallback error text | 30 |  |
 | `common.listAnd` | {0} and {1} | Any notice · joins two items of a short list | 20 | params: {0} = first item, {1} = second item |
 | `common.none` | none | System screens · value shown when nothing is set | 15 |  |
 | `common.unknown` | unknown | System screens · value shown when a brand field is missing | 15 |  |
@@ -443,6 +444,7 @@ Every row is one key in `translations.properties`. Return a file `translations_<
 | `systemOverviewView.warning.noDepartment` | No department exists. Create one on the Departments screen before registering subjects. | System overview · outstanding setup item | 120 |  |
 | `systemOverviewView.warning.noMessageTemplate` | No message template exists, so registering a subject sends no invitation. Create one on the Message Templates screen. | System overview · outstanding setup item | 140 |  |
 | `systemOverviewView.warning.legacySetting` | The setting {0} is configured but no longer read; use {1} instead. | System overview · outstanding setup item | 120 | params: {0} = old property name, {1} = new property name |
+| `systemOverviewView.warning.revealTokensIgnored` | The setting elicit.debug.reveal-tokens is on but is honored only in development mode; tokens stay masked. | System overview · outstanding setup item; keep the property name as written | 140 |  |
 | `systemOverviewView.remedy.users` | Open Users | System overview · link after a setup item | 25 |  |
 | `systemOverviewView.remedy.applySurveyDefinition` | Apply a survey definition | System overview · link after a setup item | 30 |  |
 | `systemOverviewView.remedy.departments` | Open Departments | System overview · link after a setup item | 25 |  |
@@ -646,6 +648,7 @@ Every row is one key in `translations.properties`. Return a file `translations_<
 | `csvImport.lastNameRequired` | Last name is required | Register page, CSV import · why a line of the CSV file was refused | 60 |  |
 | `csvImport.emailRequired` | Email is required | Register page, CSV import · why a line of the CSV file was refused | 60 |  |
 | `csvImport.badDepartmentId` | Invalid department ID format | Register page, CSV import · why a line of the CSV file was refused | 80 |  |
+| `csvImport.departmentNotPermitted` | You are not assigned to department {0} | Register page, CSV import · why a line of the CSV file was refused; continues definition.line | 80 | params: {0} = department ID number |
 | `registerView.csvImport.outcome.new` | New Subject | Register page, CSV import · what became of one imported row | 40 |  |
 | `registerView.csvImport.outcome.existing` | Existing Subject | Register page, CSV import · what became of one imported row | 40 |  |
 | `registerView.csvImport.outcome.excluded` | Excluded Subject | Register page, CSV import · what became of one imported row | 40 |  |
@@ -794,7 +797,9 @@ registerView.csvImport.summary.accessCode=access code {0}
 registerView.csvImport.errorsHeading=Errors:
 registerView.csvImport.lineErrorsHeading=Import completed with errors:
 registerView.apiDoc.title=REST API instructions
-registerView.error.subjectNotFound=Subject not found for access code: {0}
+registerView.error.subjectNotFound=Subject not found.
+registerView.error.notYourDepartment=This subject belongs to a department you are not assigned to. Nothing was changed.
+registerView.csvImport.failed=The file could not be imported. The details are in the application log.
 registerView.unknownDepartment=Unknown
 registerView.error.excludedXid=External ID {0} is in the exclude list for department {1}
 registerView.subjectSaved=Subject saved
@@ -852,6 +857,7 @@ registerView.apiDoc.notes.exclusion=• XID exclusion: subjects with XIDs in the
 registerView.apiDoc.notes.duplicates=• Duplicate detection: existing subjects (same XID and department) are identified
 registerView.apiDoc.notes.individual=• Individual processing: in bulk requests, each subject is processed independently
 registerView.apiDoc.notes.auth=• Authentication: all endpoints require valid Bearer token authentication
+registerView.apiDoc.notes.departments=• Departments: an account that has a console user record registers subjects only in the departments that record is assigned to
 searchView.pageTitle=Subject search
 searchView.heading=Subject search
 searchView.noUser.loggedIn=You have successfully signed in with the identity provider.
@@ -1048,16 +1054,14 @@ usersView.addUser=Add User
 loginView.redirecting=Redirecting to sign-in…
 logoutView.signingOut=Signing out…
 reporting.error.pdf=Failed to generate PDF: {0}
-reporting.error.service=Service error: {0}
 reporting.error.forbidden=Access forbidden - License validation may have failed. Please check your license configuration.
-reporting.error.serviceHttp=Service error (HTTP {0}): {1}
-reporting.error.license=License validation failed - {0}
+reporting.error.serviceHttp=Service error (HTTP {0})
+reporting.error.unavailable=The report could not be retrieved. The details are in the application log.
 reporting.error.title=Error - {0}
 reporting.error.html=<div style="color: red; padding: 20px; border: 1px solid red; background-color: #ffe6e6;"><h3>Report Generation Error</h3><p><strong>Service:</strong> {0}</p><p><strong>Error:</strong> {1}</p>{2}</div>
 reporting.error.licenseHint=<p><em>If this is a license error, please ensure your PREMM5 license is valid and properly configured.</em></p>
 reporting.error.pdfText=Report Generation Error - Service: {0} - Error: {1}{2}
 reporting.error.pdfLicenseHint=- If this is a license error, please ensure your PREMM5 license is valid and properly configured.
-reporting.error.unknown=Unknown error
 common.listAnd={0} and {1}
 common.none=none
 common.unknown=unknown
@@ -1119,6 +1123,7 @@ systemOverviewView.warning.noAccessCodeTemplate=No message template contains the
 systemOverviewView.warning.noDepartment=No department exists. Create one on the Departments screen before registering subjects.
 systemOverviewView.warning.noMessageTemplate=No message template exists, so registering a subject sends no invitation. Create one on the Message Templates screen.
 systemOverviewView.warning.legacySetting=The setting {0} is configured but no longer read; use {1} instead.
+systemOverviewView.warning.revealTokensIgnored=The setting elicit.debug.reveal-tokens is on but is honored only in development mode; tokens stay masked.
 systemOverviewView.remedy.users=Open Users
 systemOverviewView.remedy.applySurveyDefinition=Apply a survey definition
 systemOverviewView.remedy.departments=Open Departments
@@ -1322,6 +1327,7 @@ csvImport.firstNameRequired=First name is required
 csvImport.lastNameRequired=Last name is required
 csvImport.emailRequired=Email is required
 csvImport.badDepartmentId=Invalid department ID format
+csvImport.departmentNotPermitted=You are not assigned to department {0}
 registerView.csvImport.outcome.new=New Subject
 registerView.csvImport.outcome.existing=Existing Subject
 registerView.csvImport.outcome.excluded=Excluded Subject

@@ -50,7 +50,7 @@
 
 ### BR-050: Human-friendly access code alphabet
 
-Access codes are drawn from a character set that omits visually ambiguous characters (such as `0`/`O` and `1`/`l`/`I`) to reduce transcription errors.
+Access codes are drawn from a character set that omits visually ambiguous characters (such as `0`/`O` and `1`/`l`/`I`) to reduce transcription errors: the 20 upper-case consonants `BCDFGHJKLMNPQRSTVWXZ`, the 19 lower-case consonants without `l`, and the digits `2 4 5 6 7 8 9` — 46 characters, 9 positions. Each permitted character appears in the set once, so each is equally likely at every position.
 
 ### BR-051: Access code uniqueness within a survey
 

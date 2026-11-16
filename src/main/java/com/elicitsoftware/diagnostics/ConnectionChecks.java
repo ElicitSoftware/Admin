@@ -12,6 +12,7 @@ package com.elicitsoftware.diagnostics;
  */
 
 import com.elicitsoftware.admin.i18n.Translations;
+import com.elicitsoftware.service.ReportingService;
 import com.elicitsoftware.model.PostSurveyAction;
 import com.elicitsoftware.model.ReportDefinition;
 import jakarta.enterprise.context.ApplicationScoped;
@@ -24,6 +25,7 @@ import java.net.HttpURLConnection;
 import java.net.InetSocketAddress;
 import java.net.Socket;
 import java.net.URI;
+import java.net.URISyntaxException;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
@@ -97,10 +99,12 @@ public class ConnectionChecks {
                             Translations.get("systemConnectionsView.source.surveyUrl"), url, Kind.HTTP)));
         }
 
+        String surveyUrl = value(config, "elicit.survey.url").orElse(null);
         for (ReportDefinition report : ReportDefinition.<ReportDefinition>listAll()) {
             if (report.url != null && !report.url.isBlank()) {
                 String survey = report.survey != null ? report.survey.name : "?";
-                targets.add(new Target(Translations.get("systemConnectionsView.group.reportService"), report.name + " (" + survey + ")", report.url, Kind.HTTP));
+                targets.add(new Target(Translations.get("systemConnectionsView.group.reportService"), report.name + " (" + survey + ")",
+                        reportAddress(surveyUrl, report.url), Kind.HTTP));
             }
         }
         for (PostSurveyAction action : PostSurveyAction.<PostSurveyAction>listAll()) {
@@ -122,6 +126,22 @@ public class ConnectionChecks {
         otlp.ifPresent(endpoint -> targets.add(new Target(Translations.get("systemConnectionsView.group.telemetryCollector"),
                 "quarkus.otel.exporter.otlp.endpoint", endpoint, Kind.TCP)));
         return targets;
+    }
+
+    /**
+     * The address a report is called at (UC-025 BR-098): an absolute address as stored, a path
+     * resolved under the Survey address exactly as the runtime resolves it (UC-005 BR-023). An
+     * address that cannot be resolved is returned as stored, and the probe reports why it fails.
+     */
+    static String reportAddress(String surveyUrl, String reportUrl) {
+        if (surveyUrl == null) {
+            return reportUrl;
+        }
+        try {
+            return ReportingService.resolveReportUri(surveyUrl, reportUrl).toString();
+        } catch (URISyntaxException | RuntimeException e) {
+            return reportUrl;
+        }
     }
 
     /** Probes one target within {@link #TIMEOUT}. */

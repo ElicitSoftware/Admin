@@ -11,6 +11,8 @@ package com.elicitsoftware.diagnostics;
  * ***LICENSE_END***
  */
 
+import io.quarkus.runtime.LaunchMode;
+import org.eclipse.microprofile.config.ConfigProvider;
 import com.elicitsoftware.model.Department;
 import com.elicitsoftware.model.MessageTemplate;
 import com.elicitsoftware.admin.i18n.Translations;
@@ -90,7 +92,20 @@ public class SetupWarnings {
             warnings.add(new Warning(Translations.get("systemOverviewView.warning.legacySetting",
                     legacy.property(), legacy.replacement()), Remedy.NONE));
         }
+        boolean revealTokens = ConfigProvider.getConfig()
+                .getOptionalValue("elicit.debug.reveal-tokens", Boolean.class).orElse(false);
+        if (revealTokensIgnored(revealTokens, LaunchMode.current())) {
+            warnings.add(new Warning(Translations.get("systemOverviewView.warning.revealTokensIgnored"), Remedy.NONE));
+        }
         return warnings;
+    }
+
+    /**
+     * Whether the token-reveal setting is on where it has no effect (UC-009 BR-142): it is
+     * honored in development mode only.
+     */
+    static boolean revealTokensIgnored(boolean configured, LaunchMode mode) {
+        return configured && mode != LaunchMode.DEVELOPMENT;
     }
 
     /**
