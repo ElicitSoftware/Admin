@@ -67,7 +67,7 @@
 
 /* Brand title styling - uses brand variables */
 .branded-header .brand-title {
-    font-family: var(--brand-font-primary, 'Montserrat', sans-serif);
+    font-family: var(--brand-font-primary, sans-serif);
     color: var(--brand-header-text);
     text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
 }
