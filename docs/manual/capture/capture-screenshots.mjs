@@ -3,7 +3,7 @@
  * the screen it describes.
  *
  * Drives a real Chromium against a running Admin (the umbrella compose stack) and writes the
- * manual's 29 figures to docs/manual/images/ at 2x for print. See docs/manual/README.md for how
+ * manual's figures to docs/manual/images/ at 2x for print. See docs/manual/README.md for how
  * to run it.
  *
  * THE DIFFERENCE FROM AUTHOR'S CAPTURE
@@ -112,6 +112,8 @@ const FIGURES = [
   '28-default-account-warning',
   '29-language-selector',
   '30-rename-reporting-schema',
+  '31-import-clients',
+  '32-edit-import-client',
 ];
 
 /** The console state the walk leaves behind. Named so a re-run recognises its own work. */
@@ -132,6 +134,15 @@ const ACCOUNTS = [
   { username: 'manual.admin', firstName: 'Avery', lastName: 'Stone', role: 'elicit_admin' },
   { username: 'manual.user', firstName: 'Robin', lastName: 'Patel', role: 'elicit_user' },
 ];
+
+/**
+ * The machine client of the registration API (UC-032), under the name the bundled realm's
+ * integration client carries in its tokens.
+ */
+const IMPORT_CLIENT = {
+  name: 'service-account-import-service',
+  description: 'Registration feed from the clinic system',
+};
 
 /**
  * text/plain, not text/html: the preview column then shows the <ACCESS_CODE> placeholder as
@@ -497,6 +508,29 @@ async function ensureUsers() {
   }
 }
 
+/** UC-032: the machine clients of the registration API, and the form that assigns their departments. */
+async function ensureImportClient() {
+  await goto('/import-clients');
+  const exists = await gridHas(IMPORT_CLIENT.name);
+
+  await goto('/edit-import-client/0');
+  await fill('Name', IMPORT_CLIENT.name);
+  await fill('Description', IMPORT_CLIENT.description);
+  await multiCombo('Departments', DEPARTMENT.name);
+  await shot('32-edit-import-client');
+
+  if (!exists) {
+    await button('Save').click();
+    await page.waitForURL((u) => u.pathname.endsWith('/import-clients'), { timeout: 30_000 })
+      .catch(() => {});
+    await pause(1200);
+  } else {
+    console.log(`    (${IMPORT_CLIENT.name} is already there — the form above was not saved)`);
+  }
+  await goto('/import-clients');
+  await shot('31-import-clients');
+}
+
 /** UC-007: the invitation the console sends, and the <ACCESS_CODE> placeholder it carries. */
 async function ensureMessageTemplate() {
   await goto('/message-templates');
@@ -726,6 +760,7 @@ async function main() {
     await goto('/departments');
     await shot('04-departments');
     await ensureUsers();
+    await ensureImportClient();
     await ensureMessageTemplate();
     await ensureSubject();
     await ensureFinishedRespondents();
