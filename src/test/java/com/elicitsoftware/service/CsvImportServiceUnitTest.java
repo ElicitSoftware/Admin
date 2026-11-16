@@ -46,7 +46,7 @@ class CsvImportServiceUnitTest {
     private CsvImportService service(Function<AddRequest, AddResponse> answer) {
         AccessCodeService accessCodes = new AccessCodeService() {
             @Override
-            public AddResponse putSubject(AddRequest request) {
+            public AddResponse registerSubject(AddRequest request) {
                 registered.add(request);
                 return answer.apply(request);
             }

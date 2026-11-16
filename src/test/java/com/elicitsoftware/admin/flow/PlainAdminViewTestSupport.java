@@ -130,6 +130,7 @@ abstract class PlainAdminViewTestSupport extends BrowserlessTest {
         routes.setRoute("departments", DepartmentsView.class);
         routes.setRoute("message-templates", MessageTemplatesView.class);
         routes.setRoute("users", UsersView.class);
+        routes.setRoute("import-clients", ImportClientsView.class);
         routes.setRoute("respondent-import", RespondentImportView.class);
         routes.setRoute("apply-survey-definition", SurveyDefinitionApplyView.class);
         routes.setRoute("export-survey-definition", SurveyDefinitionExportView.class);

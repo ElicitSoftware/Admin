@@ -13,8 +13,10 @@ package com.elicitsoftware.admin.i18n;
 
 import com.elicitsoftware.admin.flow.DepartmentsView;
 import com.elicitsoftware.admin.flow.EditDepartmentView;
+import com.elicitsoftware.admin.flow.EditImportClientView;
 import com.elicitsoftware.admin.flow.EditMessageTemplatesView;
 import com.elicitsoftware.admin.flow.EditUserView;
+import com.elicitsoftware.admin.flow.ImportClientsView;
 import com.elicitsoftware.admin.flow.MessageTemplatesView;
 import com.elicitsoftware.admin.flow.RegisterView;
 import com.elicitsoftware.admin.flow.RespondentImportView;
@@ -83,6 +85,7 @@ class DisplayedStringsSweepTest extends QuarkusBrowserlessTest {
         List<Class<? extends Component>> routes = List.of(
                 SearchView.class, RegisterView.class, DepartmentsView.class, EditDepartmentView.class,
                 MessageTemplatesView.class, EditMessageTemplatesView.class, UsersView.class, EditUserView.class,
+                ImportClientsView.class, EditImportClientView.class,
                 RespondentImportView.class, SurveyDefinitionApplyView.class, SurveyDefinitionExportView.class,
                 SystemOverviewView.class, SystemDatabaseView.class, SystemBrandingView.class, SystemEmailView.class,
                 SystemConnectionsView.class);

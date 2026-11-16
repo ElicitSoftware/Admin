@@ -13,6 +13,7 @@ package com.elicitsoftware.test;
  */
 
 import com.elicitsoftware.model.Department;
+import com.elicitsoftware.model.ImportClient;
 import com.elicitsoftware.model.User;
 import io.quarkus.narayana.jta.QuarkusTransaction;
 
@@ -21,7 +22,7 @@ import java.util.List;
 import java.util.Set;
 
 /**
- * Committed departments and console user records for the tests of the department rule (NFR-021).
+ * Committed departments, console user records and import client records for the tests of the department rule (NFR-021).
  * The rule reads the console record in a transaction of its own, and the integration API is
  * called over HTTP, so the rows have to be committed rather than left in a test transaction.
  */
@@ -95,6 +96,56 @@ public final class DepartmentFixtures {
         QuarkusTransaction.requiringNew().run(() -> {
             List<User> users = User.list("username = ?1", username);
             users.forEach(User::delete);
+        });
+    }
+
+    /**
+     * Creates the import client record for a principal name (UC-032), or resets it, with exactly
+     * these departments.
+     */
+    public static ImportClient importClient(String name, boolean active, Department... departments) {
+        return QuarkusTransaction.requiringNew().call(() -> {
+            ImportClient client = ImportClient.findByName(name);
+            if (client == null) {
+                client = new ImportClient();
+                client.setName(name);
+            }
+            client.setActive(active);
+            Set<Department> assigned = new HashSet<>();
+            for (Department department : departments) {
+                assigned.add(Department.findById(department.id));
+            }
+            client.setDepartments(assigned);
+            client.persist();
+            return client;
+        });
+    }
+
+    /**
+     * Assigns a department to a principal's import client record inside the caller's
+     * transaction, creating the record when there is none: the import client's counterpart of
+     * {@link #assign(String, Department)}.
+     */
+    public static ImportClient assignImportClient(String name, Department department) {
+        ImportClient client = ImportClient.findByName(name);
+        if (client == null) {
+            client = new ImportClient();
+            client.setName(name);
+        }
+        client.setActive(true);
+        if (client.getDepartments() == null) {
+            client.setDepartments(new HashSet<>());
+        }
+        client.getDepartments().add(department);
+        client.persistAndFlush();
+        return client;
+    }
+
+    /** Removes the import client record of a principal name, if there is one. */
+    public static void noImportClient(String name) {
+        QuarkusTransaction.requiringNew().run(() -> {
+            List<ImportClient> clients = ImportClient.list("name = ?1", name);
+            clients.forEach(ImportClient::delete);
         });
     }
 }

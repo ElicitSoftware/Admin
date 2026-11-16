@@ -27,7 +27,7 @@
 
 ### A1: Authenticated but no application user record
 
-**Trigger:** The identity is valid but no active user record exists for the username (step 5).
+**Trigger:** The identity is valid but no active user record exists for the username, or the username is that of an import client (BR-171) (step 5).
 **Flow:**
 
 1. The system shows a message explaining the user is authenticated but has no active application account, and to contact an administrator.
@@ -64,7 +64,7 @@
 
 ### BR-001: Recognized application roles
 
-The application recognizes exactly three roles: `elicit_admin`, `elicit_user`, and `elicit_importer`. Any other role carried by the identity provider is ignored when deciding whether database role fallback is needed.
+The application recognizes exactly three roles: `elicit_admin`, `elicit_user`, and `elicit_importer`. The first two are held by users of the console; `elicit_importer` is held by import clients only (UC-032), admits a machine client to the registration API (UC-010) and opens no console screen. Any other role carried by the identity provider is ignored when deciding whether database role fallback is needed.
 
 ### BR-002: OIDC is the primary authority for roles
 
@@ -84,10 +84,14 @@ The local role table is consulted only when `elicit.authorization.mode=DATABASE`
 
 ### BR-006: Roles are cumulative
 
-Roles imply a hierarchy, independent of source: `elicit_admin` implies `elicit_user` and `elicit_importer`; `elicit_user` implies `elicit_importer`; `elicit_importer` implies only itself. This expansion applies uniformly to roles resolved from OIDC and from the database fallback. Only the raw (unexpanded) role is ever stored in Keycloak or in the local role table; the expanded set exists only at resolution time.
+Roles imply a hierarchy, independent of source: `elicit_admin` implies `elicit_user`; `elicit_user` and `elicit_importer` imply only themselves. No user role implies `elicit_importer`. This expansion applies uniformly to roles resolved from OIDC and from the database fallback. Only the raw (unexpanded) role is ever stored in Keycloak or in the local role table; the expanded set exists only at resolution time.
+
+### BR-171: An import client has no console account
+
+An import client record (UC-032) gives no access to the console. A principal whose name is that of an import client and that arrives in a browser session is treated as having no user record, whatever roles its identity carries and whether or not a user record of that name exists (A1).
 
 ---
 
 ## Reference
 
-Derived from `application.properties` (OIDC and HTTP permission configuration), `RoleSecurityIdentityAugmentor`, `UserRoleDatabaseLookup`, `AuthorizationModeConfig`, `ElicitRoles`, `LoginView`, `LogoutView`, `UnauthorizedView`, and `AccessDeniedErrorView`.
+Derived from `application.properties` (OIDC and HTTP permission configuration), `RoleSecurityIdentityAugmentor`, `UserRoleDatabaseLookup`, `AuthorizationModeConfig`, `ElicitRoles`, `UiSessionLogin`, `LoginView`, `LogoutView`, `UnauthorizedView`, and `AccessDeniedErrorView`.

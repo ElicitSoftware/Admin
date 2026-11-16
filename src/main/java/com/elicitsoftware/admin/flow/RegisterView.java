@@ -920,7 +920,7 @@ public class RegisterView extends HorizontalLayout implements HasDynamicTitle, B
                 new Pre("POST /api/secured/add/subject"), // i18n:ignore
 
                 new H4(getTranslation("registerView.apiDoc.authentication")),
-                new Paragraph(getTranslation("registerView.apiDoc.auth.anyRole")),
+                new Paragraph(getTranslation("registerView.apiDoc.auth.importerRole")),
 
                 new H4(getTranslation("registerView.apiDoc.contentType")),
                 new Pre("application/json"),
@@ -945,7 +945,7 @@ public class RegisterView extends HorizontalLayout implements HasDynamicTitle, B
                 new Pre("POST /api/secured/add/subjects"), // i18n:ignore
 
                 new H4(getTranslation("registerView.apiDoc.authentication")),
-                new Paragraph(getTranslation("registerView.apiDoc.auth.anyRole")),
+                new Paragraph(getTranslation("registerView.apiDoc.auth.importerRole")),
 
                 new H4(getTranslation("registerView.apiDoc.contentType")),
                 new Pre("application/json"),

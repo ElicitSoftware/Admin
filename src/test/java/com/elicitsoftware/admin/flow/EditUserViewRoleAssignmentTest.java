@@ -98,11 +98,13 @@ class EditUserViewRoleAssignmentTest extends QuarkusBrowserlessTest {
                 .orElseThrow(() -> new AssertionError("No Save button"));
     }
 
-    /** UC-016: the role dropdown is visible and offers exactly the three recognized roles. */
+    /** UC-016 BR-054: the role dropdown is visible and offers the two roles a user can hold, not elicit_importer. */
     @Test
-    void roleDropdownVisibleAndOffersRecognizedRoles() {
+    void roleDropdownVisibleAndOffersTheRolesAUserCanHold() {
         ComboBox<String> roleBox = roleBox();
         assertTrue(roleBox.isVisible(), "Role dropdown must be visible when elicit.authorization.mode=DATABASE");
+        assertEquals(java.util.Set.of("elicit_admin", "elicit_user"),
+                roleBox.getListDataView().getItems().collect(java.util.stream.Collectors.toSet()));
     }
 
     /** UC-016: saving a new user with a role selected persists exactly one row in survey.user_roles. */
@@ -138,13 +140,13 @@ class EditUserViewRoleAssignmentTest extends QuarkusBrowserlessTest {
         roleBox().setValue("elicit_admin");
         saveButton().click();
 
-        roleBox().setValue("elicit_importer");
+        roleBox().setValue("elicit_user");
         saveButton().click();
 
         User saved = User.find("username", "uc016.replace@example.org").firstResult();
         assertEquals(1, UserRole.count("id.userId", saved.getId()));
         UserRole role = UserRole.<UserRole>list("id.userId", saved.getId()).get(0);
-        assertEquals("elicit_importer", role.getId().getRoleName());
+        assertEquals("elicit_user", role.getId().getRoleName());
     }
 
     /** UC-016: clearing the selection on a second save removes the grant entirely. */

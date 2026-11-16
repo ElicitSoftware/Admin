@@ -15,6 +15,7 @@ import com.elicitsoftware.model.Department;
 import com.elicitsoftware.model.User;
 import com.elicitsoftware.security.AuthorizationModeConfig;
 import com.elicitsoftware.security.ElicitRoles;
+import com.elicitsoftware.service.ImportClientService;
 import com.elicitsoftware.service.UserRoleService;
 import com.elicitsoftware.service.UserService;
 import com.vaadin.flow.component.button.Button;
@@ -90,6 +91,9 @@ public class EditUserView extends VerticalLayout implements BeforeEnterObserver 
     @Inject
     UserRoleService userRoleService;
 
+    @Inject
+    ImportClientService importClientService;
+
     /** Controls whether the database role-assignment section is shown. */
     @Inject
     AuthorizationModeConfig authorizationModeConfig;
@@ -159,7 +163,8 @@ public class EditUserView extends VerticalLayout implements BeforeEnterObserver 
         List<Department> allDepartments = Department.findAll().list();
         departmentsBox.setItems(allDepartments);
 
-        roleBox.setItems(new ArrayList<>(ElicitRoles.ALL));
+        // UC-016 BR-054: the roles a user can hold. elicit_importer is an import client's (UC-032).
+        roleBox.setItems(new ArrayList<>(ElicitRoles.USER_ROLES));
         roleBox.setClearButtonVisible(true);
         roleBox.setWidthFull();
         Paragraph roleSectionInfo = new Paragraph(getTranslation("editUserView.role.info"));
@@ -305,6 +310,18 @@ public class EditUserView extends VerticalLayout implements BeforeEnterObserver 
             binder.writeBean(user);
         } catch (ValidationException e) {
             Notification.show(getTranslation("editUserView.error.fixValidation"));
+            return;
+        }
+
+        // UC-008 A2, BR-166: a name is a user or an import client, never both.
+        ImportClientService.NameConflict conflict = importClientService.conflictForUser(user.getUsername(), user.getId());
+        if (conflict != ImportClientService.NameConflict.NONE) {
+            String message = getTranslation(conflict == ImportClientService.NameConflict.IMPORT_CLIENT
+                    ? "editUserView.error.usernameIsImportClient"
+                    : "editUserView.error.usernameExists");
+            username.setInvalid(true);
+            username.setErrorMessage(message);
+            Notification.show(message, 5000, Notification.Position.MIDDLE);
             return;
         }
 

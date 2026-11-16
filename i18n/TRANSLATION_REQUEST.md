@@ -155,13 +155,12 @@ Every row is one key in `translations.properties`. Return a file `translations_<
 | `registerView.apiDoc.single.h` | 1. Single subject registration | Register subjects page (API instructions) · heading | 40 |  |
 | `registerView.apiDoc.endpoint` | Endpoint: | Register subjects page (API instructions) · heading | 20 | identical |
 | `registerView.apiDoc.authentication` | Authentication: | Register subjects page (API instructions) · heading | 20 |  |
-| `registerView.apiDoc.auth.anyRole` | Requires a Bearer token with the elicit_admin, elicit_user or elicit_importer role | Register subjects page (API instructions) · paragraph; role names and "Bearer" stay as written | 100 |  |
 | `registerView.apiDoc.contentType` | Content-Type: | Register subjects page (API instructions) · heading; HTTP header name | 20 | identical |
 | `registerView.apiDoc.requestBodyExample` | Request body example: | Register subjects page (API instructions) · heading | 40 |  |
 | `registerView.apiDoc.bulk.h` | 2. Bulk subject registration | Register subjects page (API instructions) · heading | 40 |  |
 | `registerView.apiDoc.requestBodyArray` | Request body example (array of subjects): | Register subjects page (API instructions) · heading | 60 |  |
 | `registerView.apiDoc.csvUpload.h` | 3. CSV file upload (REST API) | Register subjects page (API instructions) · heading | 40 |  |
-| `registerView.apiDoc.auth.importerRole` | Requires a Bearer token with the elicit_importer role | Register subjects page (API instructions) · paragraph; role name and "Bearer" stay as written | 80 |  |
+| `registerView.apiDoc.auth.importerRole` | Requires a Bearer token with the elicit_importer role and no other Elicit role, for a client entered on the Import Clients page | Register subjects page (API instructions) · paragraph; role name and "Bearer" stay as written; Import Clients is the menu item mainLayout.nav.importClients | 160 |  |
 | `registerView.apiDoc.requestBody` | Request body: | Register subjects page (API instructions) · heading | 20 |  |
 | `registerView.apiDoc.requestBodyFile` | Form field 'file' containing a CSV file with subject data | Register subjects page (API instructions) · paragraph; 'file' is the field name | 80 |  |
 | `registerView.apiDoc.csvFormat` | CSV file format: | Register subjects page (API instructions) · heading | 30 |  |
@@ -178,7 +177,7 @@ Every row is one key in `translations.properties`. Return a file `translations_<
 | `registerView.apiDoc.notes.duplicates` | • Duplicate detection: existing subjects (same XID and department) are identified | Register subjects page (API instructions) · bullet paragraph; keep • and XID | 120 |  |
 | `registerView.apiDoc.notes.individual` | • Individual processing: in bulk requests, each subject is processed independently | Register subjects page (API instructions) · bullet paragraph; keep • | 120 |  |
 | `registerView.apiDoc.notes.auth` | • Authentication: all endpoints require valid Bearer token authentication | Register subjects page (API instructions) · bullet paragraph; keep • and "Bearer" | 120 |  |
-| `registerView.apiDoc.notes.departments` | • Departments: an account registers subjects only in the departments its console user record is assigned to; an account with no console user record registers none | Register subjects page (API instructions) · bullet paragraph; keep • | 200 |  |
+| `registerView.apiDoc.notes.departments` | • Departments: an import client registers subjects only in the departments its record on the Import Clients page is assigned to; a client with no active record there is refused | Register subjects page (API instructions) · bullet paragraph; keep • | 200 |  |
 | `searchView.pageTitle` | Subject search | Subject search · browser tab title | 30 |  |
 | `searchView.heading` | Subject search | Subject search · heading | 40 |  |
 | `searchView.noUser.loggedIn` | You have successfully signed in with the identity provider. | Subject search (no matching user) · paragraph | 100 |  |
@@ -249,7 +248,7 @@ Every row is one key in `translations.properties`. Return a file `translations_<
 | `editUserView.departments` | Departments | Edit user · multi-select label | 30 |  |
 | `editUserView.role` | Role | Edit user · dropdown label | 20 |  |
 | `editUserView.role.heading` | Database role assignment | Edit user · section heading | 40 |  |
-| `editUserView.role.info` | Sets this user's database role fallback. Choose the user's highest role; elicit_admin and elicit_user each imply the roles below them. | Edit user · explanatory paragraph; elicit_admin and elicit_user are role identifiers, keep as written | 200 |  |
+| `editUserView.role.info` | Sets this user's database role fallback. Choose the user's highest role; elicit_admin implies elicit_user. | Edit user · explanatory paragraph; elicit_admin and elicit_user are role identifiers, keep as written | 200 |  |
 | `editUserView.saved` | User saved | Edit user · notification | 40 |  |
 | `editUserView.error.usernameRequired` | Username is required | Edit user · field error | 60 |  |
 | `editUserView.error.usernameLength` | Username must be 1-255 characters | Edit user · field error | 60 |  |
@@ -259,6 +258,8 @@ Every row is one key in `translations.properties`. Return a file `translations_<
 | `editUserView.error.lastNameLength` | Last name must be 1-255 characters | Edit user · field error | 60 |  |
 | `editUserView.error.notFound` | User not found | Edit user · notification | 40 |  |
 | `editUserView.error.fixValidation` | Please fix the validation errors before saving | Edit user · notification | 80 |  |
+| `editUserView.error.usernameExists` | A user with this username already exists. | Edit user · field error and notification | 80 |  |
+| `editUserView.error.usernameIsImportClient` | An import client has this name. A name is a user or an import client, never both. | Edit user · field error and notification | 120 |  |
 | `surveyDefinitionExportView.title` | Export survey definition | Export survey definition · heading | 40 |  |
 | `surveyDefinitionExportView.intro` | Download a survey definition file (.elicit) for any survey installed here. The file carries the survey's structure only, never respondent data, and can be applied to another Elicit deployment through Apply Survey Definition or opened in the Author tool. | Export survey definition · paragraph; "Apply Survey Definition" names a console screen, "Author" is a product name | 400 |  |
 | `surveyDefinitionExportView.revisionNote` | Every download is a fresh revision of the definition as it stands right now. To roll one revision out to several sites, download once and distribute that file rather than exporting again at each site. | Export survey definition · paragraph | 300 |  |
@@ -297,6 +298,7 @@ Every row is one key in `translations.properties`. Return a file `translations_<
 | `mainLayout.nav.departments` | Departments | Navigation drawer · menu item | 25 |  |
 | `mainLayout.nav.messageTemplates` | Message Templates | Navigation drawer · menu item | 25 |  |
 | `mainLayout.nav.users` | Users | Navigation drawer · menu item | 20 |  |
+| `mainLayout.nav.importClients` | Import Clients | Navigation drawer · menu item; the machine clients of the registration API | 25 |  |
 | `mainLayout.nav.importRespondent` | Import Respondent | Navigation drawer · menu item | 30 |  |
 | `mainLayout.nav.applySurveyDefinition` | Apply Survey Definition | Navigation drawer · menu item | 30 |  |
 | `mainLayout.nav.exportSurveyDefinition` | Export Survey Definition | Navigation drawer · menu item | 30 |  |
@@ -364,7 +366,7 @@ Every row is one key in `translations.properties`. Return a file `translations_<
 | `unauthorizedView.title` | Access Restricted | Access restricted screen · heading | 30 |  |
 | `unauthorizedView.message` | You are authenticated but do not have the required permissions to access this application. Please contact your administrator to request access with the 'elicit_user' or 'elicit_admin' role. | Access restricted screen · paragraph; elicit_user and elicit_admin are technical role names, keep them | 200 |  |
 | `unauthorizedView.logout` | Logout | Access restricted screen · button | 15 |  |
-| `usersView.info.databaseMode` | Departments are assigned through this interface. Roles (Admin/User/Importer) are also assigned through this interface, on the Edit User screen. | Users screen · explanatory paragraph when roles are managed in the console | 200 |  |
+| `usersView.info.databaseMode` | Departments are assigned through this interface. Roles (Admin/User) are also assigned through this interface, on the Edit User screen. | Users screen · explanatory paragraph when roles are managed in the console | 200 |  |
 | `usersView.info.oidcMode` | Users must be configured in the OpenID Connect (OIDC) authentication system with the roles "Admin" or "User". Departments are assigned through this interface. | Users screen · explanatory paragraph when roles come from the identity provider; "Admin"/"User" are role names, keep them | 200 |  |
 | `usersView.grid.username` | Username | Users screen · grid column header | 15 |  |
 | `usersView.grid.firstName` | First Name | Users screen · grid column header | 15 |  |
@@ -372,6 +374,31 @@ Every row is one key in `translations.properties`. Return a file `translations_<
 | `usersView.grid.active` | Active | Users screen · grid column header | 15 |  |
 | `usersView.grid.department` | Department | Users screen · grid column header | 20 |  |
 | `usersView.addUser` | Add User | Users screen · primary button | 20 |  |
+| `importClientsView.pageTitle` | Import clients | Import clients screen · browser tab title | 30 |  |
+| `importClientsView.info` | An import client is a system that registers subjects through the registration API. Enter the name its tokens carry and the departments it may register into. The elicit_importer role is assigned in the identity provider, and an import client has no access to this console. | Import clients screen · explanatory paragraph; elicit_importer is a role identifier, keep as written | 320 |  |
+| `importClientsView.grid.name` | Name | Import clients screen · grid column header | 15 |  |
+| `importClientsView.grid.description` | Description | Import clients screen · grid column header | 20 |  |
+| `importClientsView.grid.active` | Active | Import clients screen · grid column header | 15 |  |
+| `importClientsView.grid.departments` | Departments | Import clients screen · grid column header | 20 |  |
+| `importClientsView.add` | Add Import Client | Import clients screen · primary button | 30 |  |
+| `editImportClientView.pageTitle` | Import client | Edit import client · browser tab title | 30 |  |
+| `editImportClientView.name` | Name | Edit import client · field label | 30 |  |
+| `editImportClientView.name.helper` | The principal name in the tokens of the client. For a Keycloak service account: service-account-<client id> | Edit import client · helper text under the name field; service-account-<client id> is a pattern, keep "service-account-" as written | 140 |  |
+| `editImportClientView.description` | Description | Edit import client · field label | 30 |  |
+| `editImportClientView.active` | Active | Edit import client · checkbox label | 20 |  |
+| `editImportClientView.departments` | Departments | Edit import client · multi-select label | 30 |  |
+| `editImportClientView.delete` | Delete | Edit import client · button, also the confirm button of the delete dialog | 15 |  |
+| `editImportClientView.delete.title` | Delete import client? | Edit import client · confirmation dialog title | 40 |  |
+| `editImportClientView.delete.text` | {0} will no longer be able to register subjects. The subjects it registered are kept. | Edit import client · confirmation dialog text | 140 | params: {0} = the import client's name |
+| `editImportClientView.saved` | Import client saved | Edit import client · notification | 40 |  |
+| `editImportClientView.deleted` | Import client deleted | Edit import client · notification | 40 |  |
+| `editImportClientView.error.nameRequired` | Name is required | Edit import client · field error | 60 |  |
+| `editImportClientView.error.nameLength` | Name must be 1-100 characters | Edit import client · field error | 60 |  |
+| `editImportClientView.error.descriptionLength` | Description must be 255 characters or less | Edit import client · field error | 70 |  |
+| `editImportClientView.error.notFound` | Import client not found | Edit import client · notification | 40 |  |
+| `editImportClientView.error.fixValidation` | Please fix the validation errors before saving | Edit import client · notification | 80 |  |
+| `editImportClientView.error.nameIsUser` | A user has this name. A name is a user or an import client, never both. | Edit import client · field error and notification | 120 |  |
+| `editImportClientView.error.nameExists` | An import client with this name already exists. | Edit import client · field error and notification | 80 |  |
 | `loginView.redirecting` | Redirecting to sign-in… | Sign-in redirect page (shown briefly) · text | 40 |  |
 | `logoutView.signingOut` | Signing out… | Sign-out page (shown briefly) · text | 40 |  |
 | `reporting.error.pdf` | Failed to generate PDF: {0} | Subject report · notification | 100 | params: {0} = technical error text |
@@ -831,13 +858,12 @@ registerView.apiDoc.intro=You can also add subjects programmatically using the R
 registerView.apiDoc.single.h=1. Single subject registration
 registerView.apiDoc.endpoint=Endpoint:
 registerView.apiDoc.authentication=Authentication:
-registerView.apiDoc.auth.anyRole=Requires a Bearer token with the elicit_admin, elicit_user or elicit_importer role
 registerView.apiDoc.contentType=Content-Type:
 registerView.apiDoc.requestBodyExample=Request body example:
 registerView.apiDoc.bulk.h=2. Bulk subject registration
 registerView.apiDoc.requestBodyArray=Request body example (array of subjects):
 registerView.apiDoc.csvUpload.h=3. CSV file upload (REST API)
-registerView.apiDoc.auth.importerRole=Requires a Bearer token with the elicit_importer role
+registerView.apiDoc.auth.importerRole=Requires a Bearer token with the elicit_importer role and no other Elicit role, for a client entered on the Import Clients page
 registerView.apiDoc.requestBody=Request body:
 registerView.apiDoc.requestBodyFile=Form field 'file' containing a CSV file with subject data
 registerView.apiDoc.csvFormat=CSV file format:
@@ -861,7 +887,7 @@ registerView.apiDoc.notes.exclusion=• XID exclusion: subjects with XIDs in the
 registerView.apiDoc.notes.duplicates=• Duplicate detection: existing subjects (same XID and department) are identified
 registerView.apiDoc.notes.individual=• Individual processing: in bulk requests, each subject is processed independently
 registerView.apiDoc.notes.auth=• Authentication: all endpoints require valid Bearer token authentication
-registerView.apiDoc.notes.departments=• Departments: an account registers subjects only in the departments its console user record is assigned to; an account with no console user record registers none
+registerView.apiDoc.notes.departments=• Departments: an import client registers subjects only in the departments its record on the Import Clients page is assigned to; a client with no active record there is refused
 searchView.pageTitle=Subject search
 searchView.heading=Subject search
 searchView.noUser.loggedIn=You have successfully signed in with the identity provider.
@@ -932,7 +958,7 @@ editUserView.active=Active
 editUserView.departments=Departments
 editUserView.role=Role
 editUserView.role.heading=Database role assignment
-editUserView.role.info=Sets this user's database role fallback. Choose the user's highest role; elicit_admin and elicit_user each imply the roles below them.
+editUserView.role.info=Sets this user's database role fallback. Choose the user's highest role; elicit_admin implies elicit_user.
 editUserView.saved=User saved
 editUserView.error.usernameRequired=Username is required
 editUserView.error.usernameLength=Username must be 1-255 characters
@@ -942,6 +968,8 @@ editUserView.error.lastNameRequired=Last name is required
 editUserView.error.lastNameLength=Last name must be 1-255 characters
 editUserView.error.notFound=User not found
 editUserView.error.fixValidation=Please fix the validation errors before saving
+editUserView.error.usernameExists=A user with this username already exists.
+editUserView.error.usernameIsImportClient=An import client has this name. A name is a user or an import client, never both.
 surveyDefinitionExportView.title=Export survey definition
 surveyDefinitionExportView.intro=Download a survey definition file (.elicit) for any survey installed here. The file carries the survey's structure only, never respondent data, and can be applied to another Elicit deployment through Apply Survey Definition or opened in the Author tool.
 surveyDefinitionExportView.revisionNote=Every download is a fresh revision of the definition as it stands right now. To roll one revision out to several sites, download once and distribute that file rather than exporting again at each site.
@@ -980,6 +1008,7 @@ mainLayout.nav.admin=Admin
 mainLayout.nav.departments=Departments
 mainLayout.nav.messageTemplates=Message Templates
 mainLayout.nav.users=Users
+mainLayout.nav.importClients=Import Clients
 mainLayout.nav.importRespondent=Import Respondent
 mainLayout.nav.applySurveyDefinition=Apply Survey Definition
 mainLayout.nav.exportSurveyDefinition=Export Survey Definition
@@ -1047,7 +1076,7 @@ surveyDefinitionApplyView.errors=Errors:
 unauthorizedView.title=Access Restricted
 unauthorizedView.message=You are authenticated but do not have the required permissions to access this application. Please contact your administrator to request access with the 'elicit_user' or 'elicit_admin' role.
 unauthorizedView.logout=Logout
-usersView.info.databaseMode=Departments are assigned through this interface. Roles (Admin/User/Importer) are also assigned through this interface, on the Edit User screen.
+usersView.info.databaseMode=Departments are assigned through this interface. Roles (Admin/User) are also assigned through this interface, on the Edit User screen.
 usersView.info.oidcMode=Users must be configured in the OpenID Connect (OIDC) authentication system with the roles "Admin" or "User". Departments are assigned through this interface.
 usersView.grid.username=Username
 usersView.grid.firstName=First Name
@@ -1055,6 +1084,31 @@ usersView.grid.lastName=Last Name
 usersView.grid.active=Active
 usersView.grid.department=Department
 usersView.addUser=Add User
+importClientsView.pageTitle=Import clients
+importClientsView.info=An import client is a system that registers subjects through the registration API. Enter the name its tokens carry and the departments it may register into. The elicit_importer role is assigned in the identity provider, and an import client has no access to this console.
+importClientsView.grid.name=Name
+importClientsView.grid.description=Description
+importClientsView.grid.active=Active
+importClientsView.grid.departments=Departments
+importClientsView.add=Add Import Client
+editImportClientView.pageTitle=Import client
+editImportClientView.name=Name
+editImportClientView.name.helper=The principal name in the tokens of the client. For a Keycloak service account: service-account-<client id>
+editImportClientView.description=Description
+editImportClientView.active=Active
+editImportClientView.departments=Departments
+editImportClientView.delete=Delete
+editImportClientView.delete.title=Delete import client?
+editImportClientView.delete.text={0} will no longer be able to register subjects. The subjects it registered are kept.
+editImportClientView.saved=Import client saved
+editImportClientView.deleted=Import client deleted
+editImportClientView.error.nameRequired=Name is required
+editImportClientView.error.nameLength=Name must be 1-100 characters
+editImportClientView.error.descriptionLength=Description must be 255 characters or less
+editImportClientView.error.notFound=Import client not found
+editImportClientView.error.fixValidation=Please fix the validation errors before saving
+editImportClientView.error.nameIsUser=A user has this name. A name is a user or an import client, never both.
+editImportClientView.error.nameExists=An import client with this name already exists.
 loginView.redirecting=Redirecting to sign-in…
 logoutView.signingOut=Signing out…
 reporting.error.pdf=Failed to generate PDF: {0}

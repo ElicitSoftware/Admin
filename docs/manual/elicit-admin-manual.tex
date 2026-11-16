@@ -267,12 +267,14 @@ the account sees; \ui{Role} decides what it may do with them.}
         survey definitions, the System screens, and the export action of Chapter~\ref{sec:move}.
   \item \texttt{elicit\_user} — \ui{Search Subjects}, \ui{Register Subjects} and
         \ui{Participation}, for the departments the account holds, and this manual.
-  \item \texttt{elicit\_importer} — no console screens at all. It exists for the registration
-        API, so that a system that feeds subjects in is not also an account that can read them.
 \end{itemize}
 
-Choose the account's \emph{highest} role: \texttt{elicit\_admin} and \texttt{elicit\_user} each
-imply the ones below them.
+Choose the account's \emph{highest} role: \texttt{elicit\_admin} implies \texttt{elicit\_user}.
+
+A third role, \texttt{elicit\_importer}, is not a user's and is not offered here. It belongs to
+the systems that feed subjects in through the registration API, which are entered on a page of
+their own (Section~\ref{sec:import-clients}), so that such a system is not also an account that
+can read subjects.
 
 \begin{elicitnote}[Where the role is really decided]
 Which of these two places is authoritative depends on the deployment's
@@ -287,6 +289,38 @@ The database migrations create \texttt{admin} and \texttt{user} so that a new in
 signed into at all. Until they are renamed the console carries a warning on every screen
 (Chapter~\ref{sec:system}). Rename them here, and — under \texttt{DATABASE} authorization — rename the matching
 accounts in the identity provider to the same values.
+
+\subsection{Import clients}
+\label{sec:import-clients}
+
+A system that registers subjects through the registration API is an \term{import client}, not a
+user: it has no first or last name and never signs in to the console. \ui{Admin} $>$
+\ui{Import Clients} lists these systems, whether each is active, and the departments it may
+register into.
+
+\begin{enumerate}
+  \item Open \ui{Admin} $>$ \ui{Import Clients} and choose \ui{Add Import Client}, or the pencil
+        on an existing row.
+  \item Fill in \ui{Name} with the name the client's tokens carry. For a Keycloak service
+        account that is \texttt{service-account-} followed by the client id.
+  \item Add a \ui{Description} if it helps to say what the system is.
+  \item Leave \ui{Active} ticked. Clearing it keeps the record and stops the client registering.
+  \item Choose under \ui{Departments} the departments the client may register subjects into.
+  \item \ui{Save}.
+\end{enumerate}
+
+\ui{Delete}, on the form of an existing import client, removes the record after a confirmation.
+The subjects it registered are kept.
+
+\begin{elicitnote}[What the record does and does not do]
+The client holds \texttt{elicit\_importer} in the identity provider, and no other Elicit role;
+this page says only into which departments it registers. The registration API refuses a client
+that has the role and no active record here, a client whose token also carries
+\texttt{elicit\_admin} or \texttt{elicit\_user}, and every caller without the role, users
+included: people register subjects on \ui{Register Subjects}. A name is a user or an import
+client, never both, so each of the two screens refuses a name the other holds, and an import
+client record gives no access to the console.
+\end{elicitnote}
 
 %% ------------------------------------------------------------------ 5
 \section{Message templates}\adminonly
@@ -366,7 +400,8 @@ access code does not change.
 \ui{Upload CSV} takes a file of subjects, one per row. The \ui{CSV file structure} panel on the
 registration screen gives the columns, in order, with an example; rows beginning with
 \texttt{\#} are ignored. \ui{REST API instructions} documents the equivalent endpoints for a
-system that registers subjects programmatically.
+system that registers subjects programmatically; such a system is entered as an import client
+(Section~\ref{sec:import-clients}), and the endpoints are not open to a user's account.
 
 %% ------------------------------------------------------------------ 7
 \section{Inviting and reminding}

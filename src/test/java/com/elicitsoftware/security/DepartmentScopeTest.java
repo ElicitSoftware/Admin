@@ -97,4 +97,64 @@ class DepartmentScopeTest {
         assertFalse(scope.permits(any.id));
         assertThrows(ForbiddenException.class, () -> scope.require(any.id));
     }
+
+    /** UC-010 BR-137: a machine client registers where its import client record (UC-032) is assigned. */
+    @Test
+    @TestSecurity(user = "service-account-scope-bean", roles = {"elicit_importer"})
+    void given_anImportClientAssignedToOneDepartment_when_asked_then_onlyThatDepartmentIsPermitted() {
+        Department own = DepartmentFixtures.department(token());
+        Department other = DepartmentFixtures.department(token());
+        DepartmentFixtures.importClient("service-account-scope-bean", true, own);
+
+        assertDoesNotThrow(() -> scope.requireImportClient());
+        assertTrue(scope.permits(own.id));
+        assertFalse(scope.permits(other.id));
+    }
+
+    /** UC-010 BR-170, UC-032 BR-167: an inactive import client is no import client. */
+    @Test
+    @TestSecurity(user = "service-account-scope-off", roles = {"elicit_importer"})
+    void given_anInactiveImportClient_when_asked_then_itIsRefusedAndNoDepartmentIsPermitted() {
+        Department own = DepartmentFixtures.department(token());
+        DepartmentFixtures.importClient("service-account-scope-off", false, own);
+
+        assertThrows(ForbiddenException.class, () -> scope.requireImportClient());
+        assertFalse(scope.permits(own.id));
+    }
+
+    /** UC-010 BR-170: the role without a record is refused. */
+    @Test
+    @TestSecurity(user = "service-account-scope-none", roles = {"elicit_importer"})
+    void given_theImporterRoleAndNoRecord_when_asked_then_itIsNotAnImportClient() {
+        DepartmentFixtures.noImportClient("service-account-scope-none");
+
+        assertThrows(ForbiddenException.class, () -> scope.requireImportClient());
+    }
+
+    /** UC-010 BR-170: the record without the role, or with a console role beside it, is refused. */
+    @Test
+    @TestSecurity(user = "service-account-scope-mixed", roles = {"elicit_importer", "elicit_user"})
+    void given_anImportClientWhoseIdentityAlsoCarriesAConsoleRole_when_asked_then_itIsRefused() {
+        Department own = DepartmentFixtures.department(token());
+        DepartmentFixtures.importClient("service-account-scope-mixed", true, own);
+
+        assertThrows(ForbiddenException.class, () -> scope.requireImportClient());
+        assertFalse(scope.permits(own.id));
+    }
+
+    /**
+     * UC-001 BR-171: a principal that matches an import client is that and nothing else. A
+     * console user record of the same name, which the screens refuse to create (BR-166), does
+     * not give it a user's departments.
+     */
+    @Test
+    @TestSecurity(user = "service-account-scope-both", roles = {"elicit_user"})
+    void given_aNameHeldByBothKindsOfRecord_when_askedAsAUser_then_theConsoleRecordIsNotConsulted() {
+        Department own = DepartmentFixtures.department(token());
+        DepartmentFixtures.consoleRecord("service-account-scope-both", true, own);
+        DepartmentFixtures.importClient("service-account-scope-both", true, own);
+
+        assertFalse(scope.permits(own.id));
+        assertThrows(ForbiddenException.class, () -> scope.requireImportClient());
+    }
 }

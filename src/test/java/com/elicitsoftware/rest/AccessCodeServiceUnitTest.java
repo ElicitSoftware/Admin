@@ -89,7 +89,7 @@ class AccessCodeServiceUnitTest {
 
     @Test
     void given_noUploadedFile_when_aCsvIsImported_then_theResponseCarriesTheError() {
-        AddResponse response = new AccessCodeService().importCsv(new MultipartBody());
+        AddResponse response = forImportClient().importCsv(new MultipartBody());
         assertEquals(List.of("No CSV file provided in the 'file' field"), response.getErrors());
     }
 
@@ -98,7 +98,7 @@ class AccessCodeServiceUnitTest {
         AddResponse expected = new AddResponse();
         InputStream file = new ByteArrayInputStream(new byte[0]);
         InputStream[] received = new InputStream[1];
-        AccessCodeService service = new AccessCodeService();
+        AccessCodeService service = forImportClient();
         service.csvImportService = new CsvImportService(null) {
             @Override
             public AddResponse importSubjects(InputStream csvInputStream) {
@@ -115,7 +115,7 @@ class AccessCodeServiceUnitTest {
 
     @Test
     void given_aCsvImportWithRejectedLines_when_imported_then_theLinesAreTheError() {
-        AccessCodeService service = new AccessCodeService();
+        AccessCodeService service = forImportClient();
         service.csvImportService = new CsvImportService(null) {
             @Override
             public AddResponse importSubjects(InputStream csvInputStream) throws Exception {
@@ -129,7 +129,7 @@ class AccessCodeServiceUnitTest {
 
     @Test
     void given_aCsvImportThatFailsUnexpectedly_when_imported_then_theErrorIsAFixedPhraseWithAReference() {
-        AccessCodeService service = new AccessCodeService();
+        AccessCodeService service = forImportClient();
         service.csvImportService = new CsvImportService(null) {
             @Override
             public AddResponse importSubjects(InputStream csvInputStream) throws Exception {
@@ -184,7 +184,44 @@ class AccessCodeServiceUnitTest {
                     throw new ForbiddenException();
                 }
             }
+
+            @Override
+            public void requireImportClient() {
+                // The caller is an import client (UC-010 BR-170).
+            }
         };
+    }
+
+    /** A stand-in for a caller that is not an import client: every request is refused (BR-170). */
+    private static DepartmentScope notAnImportClient() {
+        return new DepartmentScope() {
+            @Override
+            public void requireImportClient() {
+                throw new ForbiddenException();
+            }
+        };
+    }
+
+    /** The service as an import client assigned to every department calls it. */
+    private static AccessCodeService forImportClient() {
+        AccessCodeService service = new AccessCodeService();
+        service.departmentScope = scopeWithout();
+        return service;
+    }
+
+    @Test
+    void given_aCallerThatIsNotAnImportClient_when_anyOfTheThreeEndpointsIsCalled_then_theWholeRequestIsForbidden() {
+        AccessCodeService service = new AccessCodeService();
+        service.departmentScope = notAnImportClient();
+        AddRequest request = new AddRequest();
+        request.xid = "X1";
+        MultipartBody body = new MultipartBody();
+        body.file = new ByteArrayInputStream(new byte[0]);
+
+        assertThrows(ForbiddenException.class, () -> service.putSubject(request), "BR-170");
+        assertThrows(ForbiddenException.class, () -> service.putSubjects(List.of(request)), "BR-170");
+        // Not turned into an answer by the CSV endpoint's own error handling.
+        assertThrows(ForbiddenException.class, () -> service.importCsv(body), "BR-170");
     }
 
     @Test
@@ -215,7 +252,7 @@ class AccessCodeServiceUnitTest {
         AddRequest second = new AddRequest();
         second.xid = "X2";
 
-        AddResponse response = new AccessCodeService().putSubjects(List.of(first, second));
+        AddResponse response = forImportClient().putSubjects(List.of(first, second));
 
         assertEquals(2, response.getSubjects().size());
         assertTrue(response.getSubjects().get(0).getImportStatus().matches("Unexpected error processing X1 Error \\(ref [0-9a-f]{8}\\)"),

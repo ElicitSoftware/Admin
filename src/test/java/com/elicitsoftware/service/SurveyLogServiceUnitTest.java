@@ -110,6 +110,6 @@ class SurveyLogServiceUnitTest {
     @Test
     void given_anUnrecognisedRole_when_assigned_then_itIsRefusedBeforeAnythingIsWritten() {
         IllegalArgumentException e = assertThrows(IllegalArgumentException.class, () -> new UserRoleService().setRole(1L, "root"));
-        assertEquals("Unrecognized role: root", e.getMessage());
+        assertEquals("Not a role a user can hold: root", e.getMessage());
     }
 }

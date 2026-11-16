@@ -92,6 +92,7 @@ abstract class PlainSmallViewTestSupport extends BrowserlessTest {
         RouteConfiguration routes = RouteConfiguration.forApplicationScope();
         routes.setRoute("", HomeStub.class);
         routes.setRoute("users", UsersView.class);
+        routes.setRoute("import-clients", ImportClientsView.class);
         routes.setRoute("departments", DepartmentsView.class);
         routes.setRoute("message-templates", MessageTemplatesView.class);
         routes.setRoute("survey-apply", SurveyDefinitionApplyView.class);

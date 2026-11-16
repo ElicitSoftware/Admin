@@ -174,7 +174,7 @@ public class CsvImportService {
      *                   //     * @see #parseCsvLine(String, User)
      * @see #parseCsvLine(String)
      * @see #splitCsvLine(String)
-     * @see AccessCodeService#putSubject(AddRequest)
+     * @see AccessCodeService#registerSubject(AddRequest)
      */
     @Transactional
     public AddResponse importSubjects(InputStream csvInputStream) throws Exception {
@@ -208,7 +208,7 @@ public class CsvImportService {
                         throw new Exception(Translations.get("csvImport.departmentNotPermitted", String.valueOf(request.departmentId)));
                     }
                     try {
-                        AddResponse subjectResponse = accessCodeService.putSubject(request);
+                        AddResponse subjectResponse = accessCodeService.registerSubject(request);
 
                         if (subjectResponse.getErrors().size() > 0) {
                             response.setError(subjectResponse.getErrors().get(0));
@@ -216,7 +216,7 @@ public class CsvImportService {
                             response.addStatus(subjectResponse.getSubjects().getFirst());
                         }
                     } catch (Exception e) {
-                        // Unlike parseCsvLine, putSubject can propagate an unexpected
+                        // Unlike parseCsvLine, registerSubject can propagate an unexpected
                         // infra/persistence failure - log it and keep the client-facing
                         // message generic rather than leaking driver/JPA error text.
                         Log.errorf(e, "CSV import: unexpected error processing line %d", lineNumber);

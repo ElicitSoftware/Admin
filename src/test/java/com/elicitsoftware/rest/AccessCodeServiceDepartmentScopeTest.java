@@ -36,17 +36,18 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 
 /**
- * UC-010: Register Subjects via Integration API — BR-137, the caller's departments bound the API
- * (NFR-021), on the single, batch and CSV endpoints, with a real database behind them.
+ * UC-010: Register Subjects via Integration API — the API is for import clients only (BR-034,
+ * BR-170) and an import client's departments bound it (BR-137, NFR-021), on the single, batch
+ * and CSV endpoints, with a real database behind them.
  */
 @QuarkusTest
 @QuarkusTestResource(PostgresTestResource.class)
 class AccessCodeServiceDepartmentScopeTest {
 
+    private static final String CLIENT = "service-account-scope-client";
+    private static final String INACTIVE = "service-account-scope-inactive";
+    private static final String MACHINE = "service-account-scope-unrecorded";
     private static final String USER = "scope.api.user";
-    private static final String INACTIVE = "scope.api.inactive";
-    private static final String IMPORTER = "scope.api.importer";
-    private static final String MACHINE = "scope.api.machine";
 
     private Department own;
     private Department other;
@@ -57,10 +58,13 @@ class AccessCodeServiceDepartmentScopeTest {
         token = Long.toString(System.nanoTime(), 36);
         own = DepartmentFixtures.department(token + "A");
         other = DepartmentFixtures.department(token + "B");
-        DepartmentFixtures.consoleRecord(USER, true, own);
-        DepartmentFixtures.consoleRecord(INACTIVE, false, own);
-        DepartmentFixtures.consoleRecord(IMPORTER, true, own);
+        DepartmentFixtures.importClient(CLIENT, true, own);
+        DepartmentFixtures.importClient(INACTIVE, false, own);
+        DepartmentFixtures.noImportClient(MACHINE);
         DepartmentFixtures.noConsoleRecord(MACHINE);
+        // A person: a console user record and no import client record.
+        DepartmentFixtures.noImportClient(USER);
+        DepartmentFixtures.consoleRecord(USER, true, own);
     }
 
     private String subjectJson(long departmentId, String xid) {
@@ -72,9 +76,34 @@ class AccessCodeServiceDepartmentScopeTest {
         return QuarkusTransaction.requiringNew().call(() -> Subject.count("xid = ?1", xid));
     }
 
+    /** Posts one subject for the caller's own department to each of the three endpoints and expects 403. */
+    private void assertAllThreeEndpointsForbidden(String suffix) {
+        String single = "SCOPE-" + token + "-" + suffix + "s";
+        String batched = "SCOPE-" + token + "-" + suffix + "b";
+        String uploaded = "SCOPE-" + token + "-" + suffix + "c";
+
+        given().contentType(ContentType.JSON).body(subjectJson(own.id, single))
+                .when().post("/api/secured/add/subject")
+                .then().statusCode(403)
+                .body(not(containsString(single)));
+        given().contentType(ContentType.JSON).body("[" + subjectJson(own.id, batched) + "]")
+                .when().post("/api/secured/add/subjects")
+                .then().statusCode(403)
+                .body(not(containsString(batched)));
+        String csv = own.id + ",Ann,Lee,,,ann." + token + "@example.org,555-010-0102," + uploaded + "\n";
+        given().multiPart("file", "subjects.csv", csv.getBytes(StandardCharsets.UTF_8))
+                .when().post("/api/secured/add/csv")
+                .then().statusCode(403)
+                .body(not(containsString("Line 1")));
+
+        assertEquals(0, subjectsWith(single));
+        assertEquals(0, subjectsWith(batched));
+        assertEquals(0, subjectsWith(uploaded));
+    }
+
     @Test
-    @TestSecurity(user = USER, roles = {"elicit_user"})
-    void given_aDepartmentTheCallerIsNotAssignedTo_when_oneSubjectIsPosted_then_itIsForbiddenAndNothingIsStored() {
+    @TestSecurity(user = CLIENT, roles = {"elicit_importer"})
+    void given_aDepartmentTheClientIsNotAssignedTo_when_oneSubjectIsPosted_then_itIsForbiddenAndNothingIsStored() {
         String xid = "SCOPE-" + token + "-1";
 
         given().contentType(ContentType.JSON).body(subjectJson(other.id, xid))
@@ -86,8 +115,8 @@ class AccessCodeServiceDepartmentScopeTest {
     }
 
     @Test
-    @TestSecurity(user = USER, roles = {"elicit_user"})
-    void given_theCallersOwnDepartment_when_oneSubjectIsPosted_then_itIsRegisteredWithItsAccessCode() {
+    @TestSecurity(user = CLIENT, roles = {"elicit_importer"})
+    void given_theClientsOwnDepartment_when_oneSubjectIsPosted_then_itIsRegisteredWithItsAccessCode() {
         String xid = "SCOPE-" + token + "-2";
 
         given().contentType(ContentType.JSON).body(subjectJson(own.id, xid))
@@ -101,7 +130,7 @@ class AccessCodeServiceDepartmentScopeTest {
     }
 
     @Test
-    @TestSecurity(user = USER, roles = {"elicit_user"})
+    @TestSecurity(user = CLIENT, roles = {"elicit_importer"})
     void given_aBatchAcrossDepartments_when_posted_then_theForeignRecordIsNotPermittedAndTheOthersGoOn() {
         String foreign = "SCOPE-" + token + "-3";
         String mine = "SCOPE-" + token + "-4";
@@ -120,19 +149,7 @@ class AccessCodeServiceDepartmentScopeTest {
     }
 
     @Test
-    @TestSecurity(user = INACTIVE, roles = {"elicit_user"})
-    void given_anInactiveConsoleRecord_when_oneSubjectIsPosted_then_itIsForbidden() {
-        String xid = "SCOPE-" + token + "-5";
-
-        given().contentType(ContentType.JSON).body(subjectJson(own.id, xid))
-                .when().post("/api/secured/add/subject")
-                .then().statusCode(403);
-
-        assertEquals(0, subjectsWith(xid));
-    }
-
-    @Test
-    @TestSecurity(user = IMPORTER, roles = {"elicit_importer"})
+    @TestSecurity(user = CLIENT, roles = {"elicit_importer"})
     void given_aCsvAcrossDepartments_when_uploaded_then_theForeignLineIsReportedAndNotStored() {
         String foreign = "SCOPE-" + token + "-6";
         String mine = "SCOPE-" + token + "-7";
@@ -148,40 +165,56 @@ class AccessCodeServiceDepartmentScopeTest {
         assertEquals(1, subjectsWith(mine));
     }
 
-    /** BR-137: a role without a console record registers nowhere, in a single request. */
+    /** BR-170, UC-032 BR-167: an inactive import client is refused as if it had no record. */
     @Test
-    @TestSecurity(user = MACHINE, roles = {"elicit_importer"})
-    void given_aCallerWithNoConsoleRecord_when_oneSubjectIsPosted_then_itIsForbiddenAndNothingIsStored() {
-        String xid = "SCOPE-" + token + "-8";
-
-        given().contentType(ContentType.JSON).body(subjectJson(other.id, xid))
-                .when().post("/api/secured/add/subject")
-                .then().statusCode(403)
-                .body(not(containsString(xid)));
-
-        assertEquals(0, subjectsWith(xid));
+    @TestSecurity(user = INACTIVE, roles = {"elicit_importer"})
+    void given_anInactiveImportClient_when_anyEndpointIsCalled_then_theWholeRequestIsForbidden() {
+        assertAllThreeEndpointsForbidden("inactive");
     }
 
-    /** BR-137, A6: the same caller's batch is answered record by record, and its CSV line by line. */
+    /** BR-170, A7: the role without an import client record is refused, whole request, all three forms. */
     @Test
     @TestSecurity(user = MACHINE, roles = {"elicit_importer"})
-    void given_aCallerWithNoConsoleRecord_when_aBatchOrACsvIsPosted_then_noRecordIsPermitted() {
-        String batched = "SCOPE-" + token + "-9";
-        String uploaded = "SCOPE-" + token + "-10";
+    void given_theImporterRoleAndNoImportClientRecord_when_anyEndpointIsCalled_then_theWholeRequestIsForbidden() {
+        assertAllThreeEndpointsForbidden("unrecorded");
+    }
 
-        given().contentType(ContentType.JSON).body("[" + subjectJson(own.id, batched) + "]")
-                .when().post("/api/secured/add/subjects")
-                .then().statusCode(200)
-                .body("subjects[0].importStatus", equalTo("Not permitted: " + batched));
+    /**
+     * BR-170: a console user record does not stand in for an import client record. This is the
+     * arrangement the Users screen offered before UC-032.
+     */
+    @Test
+    @TestSecurity(user = USER, roles = {"elicit_importer"})
+    void given_theImporterRoleAndOnlyAConsoleUserRecord_when_anyEndpointIsCalled_then_theWholeRequestIsForbidden() {
+        assertAllThreeEndpointsForbidden("consoleonly");
+    }
 
-        String csv = own.id + ",Ann,Lee,,,ann." + token + "@example.org,555-010-0102," + uploaded + "\n";
-        given().multiPart("file", "subjects.csv", csv.getBytes(StandardCharsets.UTF_8))
-                .when().post("/api/secured/add/csv")
-                .then().statusCode(200)
-                .body(containsString("Line 1: You are not assigned to department " + own.id));
+    /** BR-034: the API accepts elicit_importer and no other role; a user registers on the Register page. */
+    @Test
+    @TestSecurity(user = USER, roles = {"elicit_user"})
+    void given_aUser_when_anyEndpointIsCalled_then_itIsForbidden() {
+        assertAllThreeEndpointsForbidden("user");
+    }
 
-        assertEquals(0, subjectsWith(batched));
-        assertEquals(0, subjectsWith(uploaded));
+    /** BR-034, UC-001 BR-006: elicit_admin does not imply elicit_importer. */
+    @Test
+    @TestSecurity(user = USER, roles = {"elicit_admin"})
+    void given_anAdministrator_when_anyEndpointIsCalled_then_itIsForbidden() {
+        assertAllThreeEndpointsForbidden("admin");
+    }
+
+    /** BR-170: an import client's token that carries a console role beside elicit_importer is refused. */
+    @Test
+    @TestSecurity(user = CLIENT, roles = {"elicit_importer", "elicit_user"})
+    void given_anImportClientWhoseTokenAlsoCarriesElicitUser_when_anyEndpointIsCalled_then_itIsForbidden() {
+        assertAllThreeEndpointsForbidden("mixeduser");
+    }
+
+    /** BR-170: the same with elicit_admin. */
+    @Test
+    @TestSecurity(user = CLIENT, roles = {"elicit_importer", "elicit_admin"})
+    void given_anImportClientWhoseTokenAlsoCarriesElicitAdmin_when_anyEndpointIsCalled_then_itIsForbidden() {
+        assertAllThreeEndpointsForbidden("mixedadmin");
     }
 
     /**
@@ -189,7 +222,7 @@ class AccessCodeServiceDepartmentScopeTest {
      * and the department, and nothing stored; the access code came back once, when it was created.
      */
     @Test
-    @TestSecurity(user = USER, roles = {"elicit_user"})
+    @TestSecurity(user = CLIENT, roles = {"elicit_importer"})
     void given_anExistingSubject_when_postedAgain_then_theAnswerCarriesTheOutcomeAndNoStoredField() {
         String xid = "SCOPE-" + token + "-11";
         String accessCode = given().contentType(ContentType.JSON).body(subjectJson(own.id, xid))

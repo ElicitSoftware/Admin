@@ -52,12 +52,13 @@ public class UserRoleService {
      *
      * @param userId the user's id
      * @param roleName the raw role to grant
-     * @throws IllegalArgumentException if {@code roleName} is not a recognized Elicit role
+     * @throws IllegalArgumentException if {@code roleName} is not a role a user can hold
      */
     @Transactional
     public void setRole(long userId, String roleName) {
-        if (!ElicitRoles.ALL.contains(roleName)) {
-            throw new IllegalArgumentException("Unrecognized role: " + roleName);
+        // UC-016 BR-054: elicit_importer is recognized, but it is an import client's, not a user's.
+        if (!ElicitRoles.USER_ROLES.contains(roleName)) {
+            throw new IllegalArgumentException("Not a role a user can hold: " + roleName);
         }
         UserRole.delete("id.userId", userId);
         new UserRole(userId, roleName).persist();
