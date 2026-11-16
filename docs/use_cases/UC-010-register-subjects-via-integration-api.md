@@ -11,9 +11,9 @@
 ## Preconditions
 
 - The client presents a valid bearer token from the OIDC provider.
-- Single and batch registration require the `elicit_importer`, `elicit_admin`, or `elicit_user` role; CSV upload requires the `elicit_importer` role.
+- The token carries the `elicit_importer` role and neither `elicit_admin` nor `elicit_user` (BR-034, BR-170).
 - The referenced survey and the target department (with its message templates) exist.
-- The client's principal has an active console user record (UC-008), assigned to every department it registers into (BR-137). A machine client is entered on the Users screen under its principal name; for a Keycloak service account that is `service-account-<client id>`.
+- The client's principal has an active import client record (UC-032), assigned to every department it registers into (BR-137). The record carries the client's principal name; for a Keycloak service account that is `service-account-<client id>`.
 
 ## Main Success Scenario
 
@@ -63,11 +63,18 @@
 
 ### A6: Department not permitted
 
-**Trigger:** A record names a department the caller's console record is not assigned to, or the caller has no console record (before step 2).
+**Trigger:** A record names a department the caller's import client record is not assigned to (before step 2).
 **Flow:**
 
 1. For a single request, the system refuses the request as forbidden and stores nothing.
 2. In a batch, the system records the outcome as "not permitted" for that record; in a CSV import it reports the line. The remaining records are processed (BR-037).
+
+### A7: The caller is not an import client
+
+**Trigger:** The token carries `elicit_importer` but its principal has no active import client record, or the token also carries `elicit_admin` or `elicit_user`; or the token does not carry `elicit_importer` at all (before step 1).
+**Flow:**
+
+1. The system refuses the whole request as forbidden, whichever of the three forms it took, reads no record and stores nothing (BR-034, BR-170).
 
 ## Postconditions
 
@@ -82,9 +89,9 @@
 
 ## Business Rules
 
-### BR-034: Role-tiered access to the API
+### BR-034: The API is for import clients only
 
-Single-subject and batch registration accept the importer, admin, or user role; CSV import is restricted to the importer role.
+Single-subject registration, batch registration and CSV import accept the `elicit_importer` role and no other. A person registers subjects on the Register page (UC-003), whose CSV upload is a console function under the user's own role and department assignments and not a use of this API.
 
 ### BR-035: CSV column order
 
@@ -100,7 +107,11 @@ In batch and CSV registration, each record is evaluated independently; one recor
 
 ### BR-137: The caller's departments bound the API
 
-A record is processed only if its department is one of those the caller's console user record is assigned to. A console record that is inactive or has no department permits none, and so does a principal with no console record at all: a role from the identity provider says that a client may call the API, and the console record says for which departments. The departments are read from the database for each request, and the check is made before the exclusion and duplicate checks, so a refused record tells the caller nothing about the department's subjects.
+The department rule reads from two places. A machine client registers where its import client record (UC-032) is assigned, a person, on the Register page, where their console user record (UC-008) is assigned, and a caller with neither registers nowhere. A record is processed only if its department is one of those; a record that is inactive or has no department permits none. A role from the identity provider says that a client may call the API, and the import client record says for which departments. The departments are read from the database for each request, and the check is made before the exclusion and duplicate checks, so a refused record tells the caller nothing about the department's subjects.
+
+### BR-170: An import client is its record and the one role
+
+A caller is an import client when its token carries `elicit_importer`, carries neither `elicit_admin` nor `elicit_user`, and its principal has an active import client record. A token with `elicit_importer` for a principal that has no such record, or whose record is inactive, is refused, and so is one that carries a console role beside it. The refusal is of the whole request, before any record is read, so it is the same for a single subject, a batch and a CSV import.
 
 ### BR-164: The answer does not disclose a stored subject
 
@@ -116,4 +127,4 @@ The exclusion (BR-013), duplicate (BR-012), required-field (BR-009), and message
 
 ## Reference
 
-Derived from `AccessCodeService` (`/secured/add/subject`, `/add/subjects`, `/add/csv`), `CsvImportService`, `AddRequest`, `AddResponse`, `ExcludedXid`, `Subject`, `Respondent`, and `Message`. Note: the CSV path currently registers all rows against survey ID 1.
+Derived from `AccessCodeService` (`/secured/add/subject`, `/add/subjects`, `/add/csv`), `DepartmentScope`, `ImportClient`, `CsvImportService`, `AddRequest`, `AddResponse`, `ExcludedXid`, `Subject`, `Respondent`, and `Message`. Note: the CSV path currently registers all rows against survey ID 1.

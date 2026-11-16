@@ -54,7 +54,7 @@
 
 ### BR-054: Recognized roles enforced at two layers
 
-Only `elicit_admin`, `elicit_user`, and `elicit_importer` may be granted. This is enforced both by the service layer and by a database check constraint on `survey.user_roles.role_name`.
+Only `elicit_admin` and `elicit_user` may be granted to a user. `elicit_importer` belongs to import clients (UC-032), which hold it from the identity provider and never from this table. This is enforced both by the service layer and by a database check constraint on `survey.user_roles.role_name`.
 
 ### BR-055: At most one raw grant per user
 
@@ -72,4 +72,4 @@ A role grant references an existing user record. Grants are not cascaded from an
 
 ## Reference
 
-Derived from `EditUserView`, `UserRoleService`, `UserRole`, `AuthorizationModeConfig`, and `ElicitRoles`, and the migrations `V0.0.10__Add_User_Roles_Check_Constraint.sql` and `V0.0.11__Seed_Admin_And_User_Roles.sql`. See UC-008 for the rest of the user record and UC-001 for role resolution and the cumulative expansion rules.
+Derived from `EditUserView`, `UserRoleService`, `UserRole`, `AuthorizationModeConfig`, and `ElicitRoles`, and the migrations `V0.0.10__Add_User_Roles_Check_Constraint.sql`, `V0.0.11__Seed_Admin_And_User_Roles.sql` and `V0.0.25__Add_Import_Clients.sql`, which removes `elicit_importer` from the grants and from the constraint. See UC-008 for the rest of the user record and UC-001 for role resolution and the cumulative expansion rules.

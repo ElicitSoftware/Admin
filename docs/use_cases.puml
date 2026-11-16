@@ -23,6 +23,7 @@ rectangle "Elicit Admin" {
     usecase "UC-007\nManage Message Templates" as UC007
     usecase "UC-008\nManage Users" as UC008
     usecase "UC-016\nManage User Role Assignments" as UC016
+    usecase "UC-032\nManage Import Clients" as UC032
 
     ' --- Integration and data lifecycle ---
     usecase "UC-010\nRegister Subjects via Integration API" as UC010
@@ -80,8 +81,8 @@ admin --> UC006
 admin --> UC007
 admin --> UC008
 admin --> UC016
+admin --> UC032
 admin --> UC009
-admin --> UC010
 admin --> UC011
 admin --> UC012
 admin --> UC013
@@ -118,6 +119,7 @@ UC025 --> surveyapp : probes reachability
 ' Shared subflows
 UC003 ..> UC015 : <<include>>
 UC010 ..> UC015 : <<include>>
+UC032 ..> UC010 : <<authorizes>>\n(the client's departments)
 UC013 ..> UC017 : <<supplies file>>
 UC013 ..> UC018 : <<supplies file>>
 UC018 ..> UC014 : <<include>>

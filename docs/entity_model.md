@@ -6,8 +6,8 @@ This model is recovered from the Flyway migrations under
 
 Elicit Admin is one module of a multi-module platform. Some entities are
 **owned** by the Admin module (created by its migrations: departments, subjects,
-messages, message types, message templates, users, user roles, and the
-user/department and user/survey associations). Others — **SURVEY**,
+messages, message types, message templates, users, user roles, import clients, and the
+user/department, user/survey and import client/department associations). Others — **SURVEY**,
 **RESPONDENT**, **REPORT_DEFINITION**, **REPORT_ITEM**, **POST_SURVEY_ACTION**, and
 **EXCLUDED_XID** — are owned by sibling modules (Authoring / Survey) but are
 mapped here as JPA entities because Admin reads and, in some flows, writes them.
@@ -41,6 +41,7 @@ erDiagram
     USER ||--o{ USER_ROLE : granted
     USER }o--o{ DEPARTMENT : affiliated_with
     USER }o--o{ SURVEY : assigned_to
+    IMPORT_CLIENT }o--o{ DEPARTMENT : registers_into
 ```
 
 ## Entities
@@ -166,9 +167,20 @@ A role granted to a user. Serves as the database fallback when the identity prov
 | Attribute | Description                     | Data Type | Length/Precision | Validation Rules                    |
 |-----------|---------------------------------|-----------|------------------|-------------------------------------|
 | userId    | User the role is granted to     | Long      |                  | Not Null, Foreign Key (users.id)    |
-| roleName  | Granted role name               | String    | 100              | Not Null, Check: one of `elicit_admin`, `elicit_user`, `elicit_importer` |
+| roleName  | Granted role name               | String    | 100              | Not Null, Check: one of `elicit_admin`, `elicit_user` |
 
 *Primary key is the composite of userId and roleName.*
+
+### IMPORT_CLIENT
+
+A machine client of the registration API (UC-010), matched to a bearer token by its principal name and assigned the departments it may register into (UC-032). It is not a user: it has no first or last name, holds no row in USER_ROLE and gives no access to the console.
+
+| Attribute   | Description                                              | Data Type | Length/Precision | Validation Rules      |
+|-------------|----------------------------------------------------------|-----------|------------------|-----------------------|
+| id          | Unique identifier                                        | Long      |                  | Primary Key, Sequence |
+| name        | Principal name the client's tokens carry                 | String    | 100              | Not Null, Unique; not the username of a USER (BR-166) |
+| description | What the client is, for the administrator                | String    | 255              | Optional              |
+| active      | Whether the client may register                          | Boolean   |                  | Not Null              |
 
 ### EXCLUDED_XID
 
@@ -230,6 +242,10 @@ A role granted to a user. Serves as the database fallback when the identity prov
 ### USER_DEPARTMENTS
 
 Join table linking users to the departments they are affiliated with. Composite key of `user_id` (FK → users.id) and `department_id` (FK → departments.id).
+
+### IMPORT_CLIENT_DEPARTMENTS
+
+Join table linking import clients to the departments they may register into. Composite key of `import_client_id` (FK → import_clients.id) and `department_id` (FK → departments.id). Its rows are removed with the import client.
 
 ### USER_SURVEYS
 

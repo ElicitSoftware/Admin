@@ -29,6 +29,13 @@
 
 1. The system reports the user was not found and returns to the list.
 
+### A2: The username is taken
+
+**Trigger:** The administrator saves a username that another user holds, or that an import client holds (step 4).
+**Flow:**
+
+1. The system says which of the two holds the name, stores nothing and leaves the form open (BR-166).
+
 ## Postconditions
 
 ### Success Postconditions
@@ -56,6 +63,10 @@ An inactive user is not granted database-sourced roles and cannot operate on dat
 ### BR-032: Department affiliation governs visibility
 
 The departments assigned to a user determine which subjects, message-template departments, and registration departments that user can see and use.
+
+### BR-166: A name is a user or an import client, never both
+
+A username that an import client (UC-032) holds is refused here, as a user's name is refused there. A machine client of the registration API is not entered on this screen.
 
 ---
 

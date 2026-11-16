@@ -77,6 +77,7 @@
 1. The system imports each row through the single-subject flow and shows a per-subject result summary (registered, already existing, or excluded), one line per row.
 2. If any row fails validation or names a department the user is not assigned to (UC-010 BR-137), the system reports each rejected row on its own line, named by its line number, and the rows that were accepted are still registered.
 3. See UC-010 for the underlying registration and validation rules.
+4. The upload is a console function: it runs under the user's own role and the departments of their console user record, and is not a use of the registration API or of the `elicit_importer` role (UC-010 BR-034).
 
 ### A7: Subject is not in the user's departments
 
