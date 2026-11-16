@@ -41,16 +41,16 @@ public class DepartmentScope {
      * Whether the current principal may act on subjects of a department.
      *
      * @param departmentId the department a subject belongs to, or is to be registered in
-     * @return true when the principal's console record is active and assigned to the department,
-     *         or when the principal has no console record ({@link #permitsWithoutConsoleRecord()})
+     * @return true when the principal has a console record that is active and assigned to the
+     *         department; false for a principal with no console record, whatever role the
+     *         identity provider gave it (UC-010 BR-137)
      */
     @Transactional
     public boolean permits(long departmentId) {
         User user = consoleRecord();
-        if (user == null) {
-            return permitsWithoutConsoleRecord();
-        }
-        if (!user.isActive() || user.getDepartments() == null) {
+        // No console record, no department: a role says the principal may call, the record says
+        // for which departments. An integration client is entered on the Users screen like a person.
+        if (user == null || !user.isActive() || user.getDepartments() == null) {
             return false;
         }
         return user.getDepartments().stream().anyMatch(department -> department.id == departmentId);
@@ -67,19 +67,6 @@ public class DepartmentScope {
         if (!permits(departmentId)) {
             throw new ForbiddenException();
         }
-    }
-
-    /**
-     * What a principal with no console user record may do. Such a principal — an integration
-     * client that holds a role from the identity provider but was never entered on the Users
-     * screen — is not bound to departments (UC-010 BR-137). This method is the single place that
-     * decides it: returning {@code false} here makes a console record a requirement for every
-     * caller.
-     *
-     * @return whether a principal without a console record is permitted
-     */
-    boolean permitsWithoutConsoleRecord() {
-        return true;
     }
 
     /** The console record of the current principal, active or not; null when there is none. */

@@ -13,7 +13,7 @@
 - The client presents a valid bearer token from the OIDC provider.
 - Single and batch registration require the `elicit_importer`, `elicit_admin`, or `elicit_user` role; CSV upload requires the `elicit_importer` role.
 - The referenced survey and the target department (with its message templates) exist.
-- A client whose principal has a console user record (UC-008) is assigned, in that record, to every department it registers into (BR-137).
+- The client's principal has an active console user record (UC-008), assigned to every department it registers into (BR-137). A machine client is entered on the Users screen under its principal name; for a Keycloak service account that is `service-account-<client id>`.
 
 ## Main Success Scenario
 
@@ -38,7 +38,7 @@
 **Trigger:** A subject with the same external ID already exists in the department (step 3).
 **Flow:**
 
-1. The system records the outcome as "existing" for that record and creates nothing.
+1. The system records the outcome as "existing" for that record and creates nothing. The answer for that record carries the external ID and the department and nothing else of the stored subject (BR-164).
 
 ### A3: Per-record failure in a batch
 
@@ -63,7 +63,7 @@
 
 ### A6: Department not permitted
 
-**Trigger:** A record names a department the caller's console record is not assigned to (before step 2).
+**Trigger:** A record names a department the caller's console record is not assigned to, or the caller has no console record (before step 2).
 **Flow:**
 
 1. For a single request, the system refuses the request as forbidden and stores nothing.
@@ -100,7 +100,11 @@ In batch and CSV registration, each record is evaluated independently; one recor
 
 ### BR-137: The caller's departments bound the API
 
-When the caller's principal has a console user record, a record is processed only if its department is one of those the console record is assigned to; a console record that is inactive or has no department permits none. The departments are read from the database for each request, and the check is made before the exclusion and duplicate checks, so a refused record tells the caller nothing about the department's subjects. A caller whose principal has no console user record is not bound by this rule.
+A record is processed only if its department is one of those the caller's console user record is assigned to. A console record that is inactive or has no department permits none, and so does a principal with no console record at all: a role from the identity provider says that a client may call the API, and the console record says for which departments. The departments are read from the database for each request, and the check is made before the exclusion and duplicate checks, so a refused record tells the caller nothing about the department's subjects.
+
+### BR-164: The answer does not disclose a stored subject
+
+For a subject that already exists, the answer carries the outcome, the external ID and the department, and no other stored field: no name, date of birth, email, phone, status or access code. The access code is returned only for a subject this call created, together with what the caller itself sent. The same holds for a row of a CSV upload on the Register page.
 
 ### BR-139: An unexpected failure is reported as a fixed phrase
 

@@ -178,7 +178,7 @@ Every row is one key in `translations.properties`. Return a file `translations_<
 | `registerView.apiDoc.notes.duplicates` | • Duplicate detection: existing subjects (same XID and department) are identified | Register subjects page (API instructions) · bullet paragraph; keep • and XID | 120 |  |
 | `registerView.apiDoc.notes.individual` | • Individual processing: in bulk requests, each subject is processed independently | Register subjects page (API instructions) · bullet paragraph; keep • | 120 |  |
 | `registerView.apiDoc.notes.auth` | • Authentication: all endpoints require valid Bearer token authentication | Register subjects page (API instructions) · bullet paragraph; keep • and "Bearer" | 120 |  |
-| `registerView.apiDoc.notes.departments` | • Departments: an account that has a console user record registers subjects only in the departments that record is assigned to | Register subjects page (API instructions) · bullet paragraph; keep • | 160 |  |
+| `registerView.apiDoc.notes.departments` | • Departments: an account registers subjects only in the departments its console user record is assigned to; an account with no console user record registers none | Register subjects page (API instructions) · bullet paragraph; keep • | 200 |  |
 | `searchView.pageTitle` | Subject search | Subject search · browser tab title | 30 |  |
 | `searchView.heading` | Subject search | Subject search · heading | 40 |  |
 | `searchView.noUser.loggedIn` | You have successfully signed in with the identity provider. | Subject search (no matching user) · paragraph | 100 |  |
@@ -861,7 +861,7 @@ registerView.apiDoc.notes.exclusion=• XID exclusion: subjects with XIDs in the
 registerView.apiDoc.notes.duplicates=• Duplicate detection: existing subjects (same XID and department) are identified
 registerView.apiDoc.notes.individual=• Individual processing: in bulk requests, each subject is processed independently
 registerView.apiDoc.notes.auth=• Authentication: all endpoints require valid Bearer token authentication
-registerView.apiDoc.notes.departments=• Departments: an account that has a console user record registers subjects only in the departments that record is assigned to
+registerView.apiDoc.notes.departments=• Departments: an account registers subjects only in the departments its console user record is assigned to; an account with no console user record registers none
 searchView.pageTitle=Subject search
 searchView.heading=Subject search
 searchView.noUser.loggedIn=You have successfully signed in with the identity provider.

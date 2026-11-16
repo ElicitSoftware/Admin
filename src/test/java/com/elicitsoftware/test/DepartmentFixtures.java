@@ -66,6 +66,30 @@ public final class DepartmentFixtures {
         });
     }
 
+    /**
+     * Assigns a department to a username's console record inside the caller's transaction,
+     * creating the record when there is none. For a {@code @TestTransaction} test that persists
+     * its own department and then registers into it: the rule (UC-010 BR-137) joins that
+     * transaction, and the rollback removes the record again.
+     */
+    public static User assign(String username, Department department) {
+        User user = User.find("username = ?1", username).firstResult();
+        if (user == null) {
+            user = new User();
+            user.setUsername(username);
+            user.setFirstName("Scope");
+            user.setLastName("Tester");
+            user.setDepartments(new HashSet<>());
+        }
+        user.setActive(true);
+        if (user.getDepartments() == null) {
+            user.setDepartments(new HashSet<>());
+        }
+        user.getDepartments().add(department);
+        user.persistAndFlush();
+        return user;
+    }
+
     /** Removes the console record of a username, if there is one. */
     public static void noConsoleRecord(String username) {
         QuarkusTransaction.requiringNew().run(() -> {
