@@ -99,7 +99,7 @@ carries \ui{Manual}, which opens this document in a new tab, and the language se
 deployment offers more than one language (Chapter~\ref{sec:language}); \ui{Logout} is at the
 foot of the navigation.
 
-\screenshot{01-navigation.png}{The console with both navigation sections open. Search Subjects,
+\screenshot{01-navigation}{The console with both navigation sections open. Search Subjects,
 Register Subjects and Participation are open to every account; the Admin and System sections
 are the administrator's.}
 
@@ -124,7 +124,7 @@ deployment was installed with, and that is where you sign in.
   \item The identity provider returns you to the console.
 \end{enumerate}
 
-\screenshot{02-sign-in.png}{The identity provider's sign-in page. The console itself never
+\screenshot{02-sign-in}{The identity provider's sign-in page. The console itself never
 collects a password, so this page — not the console — is where a forgotten password is reset.}
 
 \subsection{When your account has no department}
@@ -132,7 +132,7 @@ collects a password, so this page — not the console — is where a forgotten p
 A console account that is not assigned to a department has nothing to show. Rather than open an
 empty console, Elicit holds it behind a notice.
 
-\screenshot{03-department-required.png}{The notice an account with no department is held
+\screenshot{03-department-required}{The notice an account with no department is held
 behind. What it offers depends on your role.}
 
 \begin{itemize}
@@ -186,7 +186,7 @@ that department fail with an access-code error.
 \ui{Admin} $>$ \ui{Departments} lists every department with its code, the message templates it
 sends and its sender address.
 
-\screenshot{04-departments.png}{The Departments screen. \ui{New Department} creates one; the
+\screenshot{04-departments}{The Departments screen. \ui{New Department} creates one; the
 pencil in the \ui{Edit} column opens an existing one.}
 
 \subsection{Creating one}
@@ -207,7 +207,7 @@ pencil in the \ui{Edit} column opens an existing one.}
   \item Choose \ui{Create department}.
 \end{enumerate}
 
-\screenshot{05-edit-department.png}{Creating a department. \ui{Create department} stays disabled
+\screenshot{05-edit-department}{Creating a department. \ui{Create department} stays disabled
 until every required field is valid, so a greyed-out button means a field above it is still
 wrong.}
 
@@ -236,7 +236,7 @@ is its department assignment. Both are set here.
 \ui{Admin} $>$ \ui{Users} lists every console account, whether it is active, and the departments
 it reaches.
 
-\screenshot{06-users.png}{The Users screen. The note above the grid says which parts of an
+\screenshot{06-users}{The Users screen. The note above the grid says which parts of an
 account this console controls, which depends on how the deployment authenticates.}
 
 \subsection{Adding or changing one}
@@ -255,7 +255,7 @@ account this console controls, which depends on how the deployment authenticates
   \item \ui{Save}.
 \end{enumerate}
 
-\screenshot{07-edit-user.png}{Editing a console account. \ui{Departments} decides which subjects
+\screenshot{07-edit-user}{Editing a console account. \ui{Departments} decides which subjects
 the account sees; \ui{Role} decides what it may do with them.}
 
 \subsection{What each role reaches}
@@ -296,7 +296,7 @@ user: it has no first or last name and never signs in to the console. \ui{Admin}
 \ui{Import Clients} lists these systems, whether each is active, and the departments it may
 register into.
 
-\screenshot{31-import-clients.png}{The Import Clients page. Each row is a system that registers
+\screenshot{31-import-clients}{The Import Clients page. Each row is a system that registers
 subjects through the registration API, not a person.}
 
 \begin{enumerate}
@@ -310,7 +310,7 @@ subjects through the registration API, not a person.}
   \item \ui{Save}.
 \end{enumerate}
 
-\screenshot{32-edit-import-client.png}{Adding an import client. \ui{Name} is the name the
+\screenshot{32-edit-import-client}{Adding an import client. \ui{Name} is the name the
 client's tokens carry; \ui{Departments} decides where it may register subjects.}
 
 \ui{Delete}, on the form of an existing import client, removes the record after a confirmation.
@@ -339,7 +339,7 @@ message ID} names.
 \ui{Admin} $>$ \ui{Message Templates} lists every template with its department, subject line
 and format.
 
-\screenshot{08-message-templates.png}{The Message Templates screen. The \ui{ID} column is what a
+\screenshot{08-message-templates}{The Message Templates screen. The \ui{ID} column is what a
 department's \ui{Default message ID} refers to.}
 
 \subsection{Writing one}
@@ -355,7 +355,7 @@ department's \ui{Default message ID} refers to.}
   \item \ui{Save} creates it. On an existing template the button reads \ui{Update}.
 \end{enumerate}
 
-\screenshot{09-edit-message-template.png}{A template with the access code placeholder in its
+\screenshot{09-edit-message-template}{A template with the access code placeholder in its
 body. \ui{Message preview} below the form shows the body as the recipient will receive it.}
 
 \begin{elicitnote}[The placeholder]
@@ -391,12 +391,12 @@ survey, and queues the invitation: the message templates their department names
   \item \ui{Save}.
 \end{enumerate}
 
-\screenshot{10-register-subject.png}{The registration form, filled in. The panel on the right
+\screenshot{10-register-subject}{The registration form, filled in. The panel on the right
 documents the two other ways to register: a CSV upload and the REST API.}
 
 The console confirms with \ui{Subject saved} and clears the form for the next one.
 
-\screenshot{11-register-result.png}{What a successful registration looks like. The access code
+\screenshot{11-register-result}{What a successful registration looks like. The access code
 issued at this moment is not shown here — read it from \ui{Search Subjects}.}
 
 \subsection{Changing a subject}
@@ -418,11 +418,16 @@ access code does not change.
         on \ui{Departments} and read the number at the end of the page's address
         (\val{edit-department/3}). First name, last name and email are required; a date of
         birth is \val{yyyy-MM-dd} or \val{MM/dd/yyyy}. Rows beginning with \texttt{\small\#} are ignored.
-  \item Open \ui{Register Subjects}, choose the \ui{Survey}, and choose \ui{Upload CSV}.
-  \item Pick the file. The result lists each subject with its access code and whether it was a
+  \item Open \ui{Register Subjects} and choose \ui{Upload CSV}.
+  \item Pick the file. Every row is registered on the first survey installed at this
+        deployment, whichever survey the form shows (a known fault, Admin\#180); on a deployment
+        with more than one survey, register through the form instead. The result lists each subject with its access code and whether it was a
         \ui{New Subject}, an \ui{Existing Subject} already registered, or an \ui{Excluded
         Subject}; a row that could not be read is listed under \ui{Errors} with its line number.
 \end{enumerate}
+
+\screenshot{34-csv-import}{The result of a CSV upload: each subject with its access code and
+outcome, and any row that could not be read, with its line number.}
 
 The \ui{CSV file structure} panel on the registration screen repeats the columns with an example.
 \ui{REST API instructions} documents the equivalent endpoints for a system that registers
@@ -444,7 +449,7 @@ subject at a time.
   \item A \ui{Submit} button appears beside it. Choose it.
 \end{enumerate}
 
-\screenshot{12-search-email-action.png}{Choosing \ui{Send email} on a subject's row. Nothing is
+\screenshot{12-search-email-action}{Choosing \ui{Send email} on a subject's row. Nothing is
 sent until \ui{Submit} is chosen.}
 
 The console reports \ui{Email sent successfully}, or tells you it failed.
@@ -475,12 +480,12 @@ at all.
 fields narrow the result: \ui{Access code}, \ui{First name}, \ui{Last name}, \ui{Email},
 \ui{Phone}. Leave them empty to list everyone. Choose \ui{Search}.
 
-\screenshot{13-search-filters.png}{The search filters. \ui{Department(s)} carries a required
+\screenshot{13-search-filters}{The search filters. \ui{Department(s)} carries a required
 marker; the rest are optional and combine.}
 
 \subsection{Reading the results}
 
-\screenshot{14-search-results.png}{A result. \ui{Status} is the subject's progress through their
+\screenshot{14-search-results}{A result. \ui{Status} is the subject's progress through their
 survey; \ui{Access code} is the credential they enter to reach it.}
 
 Every column sorts. \ui{Page size} at the foot of the grid sets how many rows are shown at once.
@@ -508,7 +513,7 @@ A report is generated from a respondent's answers, and only once they have finis
   \item Choose \ui{Submit}.
 \end{enumerate}
 
-\screenshot{15-report-download.png}{\ui{Print reports} is offered only on a respondent whose
+\screenshot{15-report-download}{\ui{Print reports} is offered only on a respondent whose
 status is \textbf{Finished}; the other rows offer the actions their status allows.}
 
 The console assembles the report as a PDF and hands it to the browser, then reports \ui{Reports
@@ -542,6 +547,10 @@ shows a respondent: for one person, use \ui{Search Subjects}.
         department your account reaches; choose one or more to narrow it.
   \item Optionally set \ui{Registered from} and \ui{Registered to}. Both days are included.
 \end{enumerate}
+
+\screenshot{33-participation}{The Participation page for one survey: the counts and rates, the
+same by department and by week, where people stop, and the marked questions. A count from 1 to 4
+reads \textbf{< 5}.}
 
 The page recomputes as soon as a filter changes. It has five parts:
 
@@ -609,7 +618,7 @@ imported from it at the other. Both deployments must have the same survey instal
   \item In their row's \ui{Action} column, choose \ui{Export}, then \ui{Submit}.
 \end{enumerate}
 
-\screenshot{16-respondent-export.png}{The \ui{Export} action. It is offered to administrators
+\screenshot{16-respondent-export}{The \ui{Export} action. It is offered to administrators
 only, which is why a user does not see it on the same row.}
 
 The browser downloads a \file{.elicit} file holding that one respondent: their answers, their
@@ -623,7 +632,7 @@ have finished. It does not hold the survey definition.
   \item Choose \ui{Upload} and select the \file{.elicit} file.
 \end{enumerate}
 
-\screenshot{17-respondent-import.png}{The import screen. One respondent file at a time; the
+\screenshot{17-respondent-import}{The import screen. One respondent file at a time; the
 result says how many records were imported, or why it was refused.}
 
 Three things must be true on the receiving deployment, and the import is refused with a reason
@@ -656,10 +665,10 @@ not have to say which.
   \item Choose \ui{Upload} and select the \file{.elicit} file.
 \end{enumerate}
 
-\screenshot{18-apply-survey-definition.png}{The apply screen. The file identifies itself, so
+\screenshot{18-apply-survey-definition}{The apply screen. The file identifies itself, so
 this deployment works out whether it is a new survey or a revision of one already here.}
 
-\screenshot{19-apply-result.png}{The result of an apply. \ui{New Survey Installed} means this
+\screenshot{19-apply-result}{The result of an apply. \ui{New Survey Installed} means this
 deployment had never seen this survey; a revision of one already here reports \ui{Survey
 Updated}.}
 
@@ -690,7 +699,7 @@ Two other endings need someone's attention:
 here. The file carries the survey's structure only — never respondent data — and can be applied
 to another deployment or opened in the Author tool.
 
-\screenshot{20-export-survey-definition.png}{Every installed survey, with its key, the
+\screenshot{20-export-survey-definition}{Every installed survey, with its key, the
 revision this deployment is running and the name of its reporting schema. \ui{Download} takes
 the definition as it stands now; \ui{Rename} is described below.}
 
@@ -716,7 +725,7 @@ Survey and the report services pick the new name up at once.
   \item Choose \ui{Rename} in the dialog. The list shows the new name.
 \end{enumerate}
 
-\screenshot{30-rename-reporting-schema.png}{The rename dialog: the survey, its current schema
+\screenshot{30-rename-reporting-schema}{The rename dialog: the survey, its current schema
 name, the caution about what is outside the console, and the new name. \ui{Rename} stays
 disabled until the name is acceptable.}
 
@@ -736,7 +745,7 @@ them and names the schema, after which \ui{Rename} is offered.
 A deployment with no survey says so on every screen, and nobody can be registered until one is
 applied.
 
-\screenshot{21-missing-survey-notice.png}{The notice a deployment carries until a survey
+\screenshot{21-missing-survey-notice}{The notice a deployment carries until a survey
 definition is applied. An administrator is offered the remedy as a link; a user is told to ask
 for one.}
 
@@ -750,7 +759,7 @@ when the service started, and they are shown as present or absent rather than by
 
 \subsection{Overview}
 
-\screenshot{22-system-overview.png}{\ui{System} $>$ \ui{Overview}: what is running, whether it is
+\screenshot{22-system-overview}{\ui{System} $>$ \ui{Overview}: what is running, whether it is
 healthy, and the setup work still outstanding.}
 
 \ui{Running} gives the application, its version, when it was built and how long it has been up.
@@ -770,7 +779,7 @@ to the screen that fixes it. It names:
 
 \subsection{Database}
 
-\screenshot{23-system-database.png}{\ui{System} $>$ \ui{Database}: both connections, the
+\screenshot{23-system-database}{\ui{System} $>$ \ui{Database}: both connections, the
 migrations each module has applied, and what the database holds.}
 
 The application connection serves the console; the owner connection runs the migrations. The
@@ -778,7 +787,7 @@ readiness probe only tests the first, so a wrong owner password shows up here an
 
 \subsection{Branding}
 
-\screenshot{24-system-branding.png}{\ui{System} $>$ \ui{Branding}: where each brand asset was
+\screenshot{24-system-branding}{\ui{System} $>$ \ui{Branding}: where each brand asset was
 resolved from.}
 
 A brand resolves from the mounted directory first, then the local directory, then the default
@@ -788,7 +797,7 @@ again.
 
 \subsection{Email}
 
-\screenshot{25-system-email.png}{\ui{System} $>$ \ui{Email}: the mail settings the service
+\screenshot{25-system-email}{\ui{System} $>$ \ui{Email}: the mail settings the service
 started with, and a test message.}
 
 \ui{Send test email}, under \ui{Send a test message}, sends through the same service, sender and timeout that invitations use,
@@ -797,7 +806,7 @@ configured.
 
 \subsection{Connections}
 
-\screenshot{26-system-connections.png}{\ui{System} $>$ \ui{Connections}: every outbound
+\screenshot{26-system-connections}{\ui{System} $>$ \ui{Connections}: every outbound
 dependency, checked one at a time or all at once.}
 
 Each check sends one read-only request and gives up after a few seconds. Post-survey actions are
@@ -805,7 +814,7 @@ never invoked and no report is generated, so checking is safe at any time.
 
 \subsection{OIDC}
 
-\screenshot{27-system-oidc.png}{\ui{System} $>$ \ui{OIDC}: the identity the console is currently
+\screenshot{27-system-oidc}{\ui{System} $>$ \ui{OIDC}: the identity the console is currently
 running under.}
 
 This screen answers "why can this account not see that screen?". It shows the signed-in username,
@@ -815,7 +824,7 @@ nothing to do with a respondent's access code.
 
 \subsection{The seeded-account warning}
 
-\screenshot{28-default-account-warning.png}{The warning every screen carries until the seeded
+\screenshot{28-default-account-warning}{The warning every screen carries until the seeded
 accounts are renamed.}
 
 The warning stays on every screen until the two seeded accounts are renamed
@@ -835,7 +844,7 @@ else's console changes.
   \item Choose a language.
 \end{enumerate}
 
-\screenshot{29-language-selector.png}{The language selector, open. The tick marks the language
+\screenshot{29-language-selector}{The language selector, open. The tick marks the language
 in use; the list holds every language this deployment has available.}
 
 The console reloads in the chosen language, laid out right to left for a language such as
