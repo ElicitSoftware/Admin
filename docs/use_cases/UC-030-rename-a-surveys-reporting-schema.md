@@ -54,7 +54,7 @@
 
 ### A4: Survey cannot be reached or fails
 
-**Trigger:** Survey cannot be reached, does not answer in time, or answers 500 (step 7).
+**Trigger:** Survey cannot be reached, does not answer in time, answers 500, or answers 401 because its service token differs from this console's; or this console has no service token, in which case nothing is sent (UC-018 BR-159, BR-161) (step 7).
 **Flow:**
 
 1. The system shows the reason in the dialog and logs it at WARN. Nothing was changed: Survey renames the schema and records the new name in one transaction, so a failure leaves the old name everywhere.

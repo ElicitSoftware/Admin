@@ -16,6 +16,7 @@ import org.eclipse.microprofile.config.ConfigProvider;
 import com.elicitsoftware.model.Department;
 import com.elicitsoftware.model.MessageTemplate;
 import com.elicitsoftware.admin.i18n.Translations;
+import com.elicitsoftware.security.ServiceToken;
 import com.elicitsoftware.service.DefaultAccountCheck;
 import com.elicitsoftware.service.SurveyDefinitionPresenceCheck;
 import jakarta.enterprise.context.ApplicationScoped;
@@ -55,6 +56,9 @@ public class SetupWarnings {
     @Inject
     RequiredConfigCheck requiredConfig;
 
+    @Inject
+    ServiceToken serviceToken;
+
     public SetupWarnings() {
         // CDI managed bean
     }
@@ -87,6 +91,10 @@ public class SetupWarnings {
         } else if (MessageTemplate.count("message like ?1", "%<ACCESS_CODE>%") == 0) {
             warnings.add(new Warning(Translations.get("systemOverviewView.warning.noAccessCodeTemplate"),
                     Remedy.MESSAGE_TEMPLATES));
+        }
+        // UC-020 BR-163: the token the compose stack supplies is public knowledge.
+        if (serviceToken.isDevelopmentValue()) {
+            warnings.add(new Warning(Translations.get("systemOverviewView.warning.devServiceToken"), Remedy.NONE));
         }
         for (RequiredConfigCheck.LegacySetting legacy : requiredConfig.legacySettingsInUse()) {
             warnings.add(new Warning(Translations.get("systemOverviewView.warning.legacySetting",

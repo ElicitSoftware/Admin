@@ -39,6 +39,9 @@ class ReportingServiceUnitTest {
         ReportingService service = new ReportingService();
         service.em = db.entityManager();
         service.surveyUrl = "http://survey:8080";
+        service.serviceToken = new com.elicitsoftware.security.ServiceToken(
+                java.util.Optional.of("unit-test-service-token-0123456789abcdef"), java.util.Optional.empty(),
+                "http://survey:8080");
         return service;
     }
 

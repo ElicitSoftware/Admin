@@ -39,7 +39,8 @@ import java.util.Optional;
  * Bounded, harmless probes of every outbound dependency (UC-025).
  * <p>
  * Web targets get one read-only GET with redirects disabled; a post-survey action is never
- * invoked and no report is generated (BR-096). Socket targets are connected to and closed.
+ * invoked and no report is generated (BR-096). No probe carries a credential, and never the
+ * service token: a platform service that answers 401 or 503 without it is reachable (UC-025 A4). Socket targets are connected to and closed.
  * Every probe gives up after {@link #TIMEOUT} (BR-097, NFR-012). Targets are read from the
  * same stored rows and configuration the runtime uses (BR-098).
  */

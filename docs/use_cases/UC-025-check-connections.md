@@ -39,6 +39,14 @@
 1. The system marks the target reachable and adds that its license validation may have failed, the same reading the report generator gives that status.
 2. Use case continues at step 5.
 
+### A4: A target asks for the service token
+
+**Trigger:** A web target answers HTTP 401, or HTTP 503 (step 4): a platform service that wants the service token, or has none configured itself.
+**Flow:**
+
+1. The system marks the target reachable, with the status. The probe carried no credential (BR-096), so the answer says the address is right, not that a call with the token would succeed.
+2. Use case continues at step 5.
+
 ### A3: The identity provider answers but not with a discovery document
 
 **Trigger:** The discovery address answers without an issuer (step 4).
@@ -61,7 +69,7 @@
 
 ### BR-096: Probes are harmless
 
-A web target is probed with a read-only request and redirects are not followed; a post-survey action is never invoked, and no report is generated. A socket target is only connected to and closed.
+A web target is probed with a read-only request and redirects are not followed; a probe carries no credential, and never the service token (UC-018 BR-159), whatever the target; a post-survey action is never invoked, and no report is generated. A socket target is only connected to and closed.
 
 ### BR-097: Probes are bounded
 

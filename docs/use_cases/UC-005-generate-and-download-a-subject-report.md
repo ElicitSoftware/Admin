@@ -19,7 +19,7 @@
 
 1. The user selects a finished subject and chooses to generate reports.
 2. The system loads the survey and its report definitions.
-3. For each report definition, the system requests the report content from the report service for that respondent, at the definition's address resolved per BR-023, telling the service which language the respondent answered in (BR-022).
+3. For each report definition, the system requests the report content from the report service for that respondent, at the definition's address resolved per BR-023, with the service token when that address's origin is trusted (UC-018 BR-160), telling the service which language the respondent answered in (BR-022).
 4. The system assembles the responses into a single multi-page PDF.
 5. The system caches the PDF and opens it in a new browser tab for viewing or download.
 
@@ -37,7 +37,7 @@
 **Trigger:** The report service is unreachable or rejects the request (step 3).
 **Flow:**
 
-1. The system renders an error block in place of the failed report section and continues assembling the rest of the PDF with the available content. The block names the report and says what kind of failure it was (BR-140).
+1. The system renders an error block in place of the failed report section and continues assembling the rest of the PDF with the available content. The block names the report and says what kind of failure it was (BR-140). A report at a trusted origin is not requested at all when this console has no service token (UC-018 BR-161); its block says that the service token is not configured. A trusted service that answers 401 has a different token; its block says that the service refused the service token.
 
 ### A3: PDF assembly fails
 
@@ -83,7 +83,7 @@ The report request carries, besides the respondent's id, the BCP-47 tag of the l
 
 ### BR-023: A relative report address is resolved under Survey
 
-A report definition's URL is used as written when it is absolute. When it is a path, it is resolved under this site's Survey address (`elicit.survey.url`), keeping any path prefix Survey runs under, because a report built into Survey is authored without knowing the site, while a site-specific service such as the Family History Survey's keeps its absolute URL.
+A report definition's URL is used as written when it is absolute. When it is a path, it is resolved under this site's Survey address (`elicit.survey.url`), keeping any path prefix Survey runs under, because a report built into Survey is authored without knowing the site, while a site-specific service such as the Family History Survey's keeps its absolute URL. The resolved address decides whether the request carries the service token: a path resolves under `elicit.survey.url`, whose origin is always trusted, and an absolute URL receives the token only when its origin is listed in `elicit.service.trusted-origins` (UC-018 BR-160).
 
 ### BR-136: A print holds only its own respondent's reports
 

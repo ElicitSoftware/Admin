@@ -59,7 +59,9 @@ public class RequiredConfigCheck {
             new Required("quarkus.oidc.credentials.secret", "OIDC_CLIENT_SECRET",
                     "systemOverviewView.setting.oidcSecret"),
             new Required("quarkus.mailer.from", "quarkus.mailer.from",
-                    "systemOverviewView.setting.mailerFrom"));
+                    "systemOverviewView.setting.mailerFrom"),
+            new Required("elicit.service.token", "ELICIT_SERVICE_TOKEN",
+                    "systemOverviewView.setting.serviceToken"));
 
     private static final List<LegacySetting> LEGACY = List.of(
             new LegacySetting("token.autoRegister", "accessCode.autoRegister"));

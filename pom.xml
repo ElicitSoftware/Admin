@@ -241,6 +241,13 @@
             <artifactId>testcontainers-postgresql</artifactId>
             <scope>test</scope>
         </dependency>
+        <!-- In-memory span exporter: the test that no span of a call carrying the service token
+             holds the token (NFR-024). Version is managed by the Quarkus BOM. -->
+        <dependency>
+            <groupId>io.opentelemetry</groupId>
+            <artifactId>opentelemetry-sdk-testing</artifactId>
+            <scope>test</scope>
+        </dependency>
         <!-- Vaadin browserless UI testing (Quarkus base class QuarkusBrowserlessTest) -->
         <dependency>
             <groupId>com.vaadin</groupId>

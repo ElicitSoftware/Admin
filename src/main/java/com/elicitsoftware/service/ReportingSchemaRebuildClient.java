@@ -12,8 +12,10 @@ package com.elicitsoftware.service;
  */
 
 import com.elicitsoftware.admin.i18n.Translations;
+import com.elicitsoftware.security.ServiceToken;
 import io.quarkus.logging.Log;
 import jakarta.enterprise.context.ApplicationScoped;
+import jakarta.inject.Inject;
 import jakarta.json.Json;
 import jakarta.json.JsonObject;
 import jakarta.json.JsonReader;
@@ -43,6 +45,9 @@ import java.util.UUID;
  * runs, and a reporting schema that is behind is recoverable (repeat the call, or restart
  * Survey) where a rolled-back apply is not. A failure is returned as a line for the result
  * dialog and logged at WARN.
+ * <p>
+ * The request carries the deployment's service token (BR-159) and is not sent without one
+ * (BR-161); a redirect is never followed.
  * <p>
  * Configuration: {@code elicit.survey.url} (env {@code ELICIT_SURVEY_URL}, default
  * {@code http://survey:8080}, the compose service name) and
@@ -102,6 +107,10 @@ public class ReportingSchemaRebuildClient {
     @ConfigProperty(name = "elicit.survey.etl-build.enabled", defaultValue = "true")
     boolean enabled;
 
+    /** The service token every request to Survey's {@code /api} paths carries (UC-018 BR-159). */
+    @Inject
+    ServiceToken serviceToken;
+
     private final HttpClient client = HttpClient.newBuilder()
             .connectTimeout(CONNECT_TIMEOUT)
             .followRedirects(HttpClient.Redirect.NEVER)
@@ -150,10 +159,17 @@ public class ReportingSchemaRebuildClient {
             return new Outcome(Status.SKIPPED, "");
         }
         String endpoint = endpoint(surveyKey);
+        if (!serviceToken.isConfigured()) {
+            // BR-161: nothing is sent without the token.
+            Log.warn("Reporting schema not rebuilt: " + ServiceToken.NOT_CONFIGURED + " (" + ServiceToken.VARIABLE
+                    + " is not set); " + endpoint + " was not called");
+            return new Outcome(Status.FAILED, Translations.get("serviceToken.notConfigured"));
+        }
         try {
             HttpRequest request = HttpRequest.newBuilder(URI.create(endpoint))
                     .POST(HttpRequest.BodyPublishers.noBody())
                     .header("Accept", "application/json")
+                    .header("Authorization", serviceToken.authorization())
                     .timeout(TIMEOUT)
                     .build();
             HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
@@ -164,6 +180,10 @@ public class ReportingSchemaRebuildClient {
             }
             Log.warnf("Reporting schema not rebuilt: %s answered HTTP %d: %s", endpoint,
                     response.statusCode(), message);
+            if (response.statusCode() == 401) {
+                // UC-018 A8: Survey's token is not this console's.
+                return new Outcome(Status.FAILED, Translations.get("serviceToken.refused"));
+            }
             // Survey answers 409 for exactly one reason, a disabled ETL, and words it in English
             // because a REST call has no reader's language; say it in the administrator's here.
             return new Outcome(Status.FAILED, response.statusCode() == 409
