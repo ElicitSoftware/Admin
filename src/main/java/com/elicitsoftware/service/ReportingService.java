@@ -16,6 +16,7 @@ import io.quarkus.logging.Log;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
 
 import org.eclipse.microprofile.rest.client.RestClientBuilder;
@@ -125,15 +126,6 @@ public class ReportingService {
     String surveyUrl;
 
     /**
-     * Collection of report responses aggregated from external report services.
-     * <p>
-     * This list accumulates responses from multiple report service calls and
-     * is used as input for PDF generation. The list is cleared before each
-     * new report generation cycle to ensure clean state.
-     */
-    ArrayList<ReportResponse> reportResponses = new ArrayList<>();
-
-    /**
      * Generates and displays comprehensive reports for a completed survey participant.
      * <p>
      * This method orchestrates the complete report generation workflow, from calling
@@ -203,17 +195,11 @@ public class ReportingService {
         try {
             Survey survey = Survey.findById(status.getSurveyId());
             int respondent_id = (int) status.getRespondentId();
-            //Make sure this is empty
-            this.reportResponses.clear();
-            ReportResponse reportResponse;
-            for (ReportDefinition rpt : survey.reports) {
-                reportResponse = callReport(rpt, respondent_id);
-                reportResponses.add(reportResponse);
-            }
+            ArrayList<ReportResponse> reportResponses = collectReports(survey.reports, respondent_id);
             String baseUrl = httpRequest.getScheme() + "://" + httpRequest.getServerName() +
                     (httpRequest.getServerPort() != 80 && httpRequest.getServerPort() != 443 ?
                             ":" + httpRequest.getServerPort() : "") + httpRequest.getContextPath();
-            byte[] pdfContent = pdfService.generatePDF(this.reportResponses, baseUrl);
+            byte[] pdfContent = pdfService.generatePDF(reportResponses, baseUrl);
             String pdfKey = PDFDownloadResource.cachePDF(pdfContent);
             String pdfUrl = httpRequest.getContextPath() + "/api/pdf/download?key=" + pdfKey;
 
@@ -253,7 +239,7 @@ public class ReportingService {
      * <p>
      * Fallback response creation:
      * - Creates ReportResponse object for failed service calls
-     * - Sets innerHTML field to exception message for debugging
+     * - Sets innerHTML field to a fixed error text (UC-005 BR-140)
      * - Allows report generation to continue with partial data
      * - Error information is preserved in final PDF output
      * <p>
@@ -267,7 +253,7 @@ public class ReportingService {
      * - **Participant data**: Only respondent ID is shared with external services
      * - **URL validation**: Report definition URLs should be pre-validated
      * - **Authentication**: External services may require additional authentication
-     * - **Error information**: Exception messages may contain sensitive details
+     * - **Error information**: Exception messages and response bodies are logged, never shown
      *
      * @param rpt The report definition containing the external service URL and configuration
      * @param respondent_id The unique identifier for the participant whose report is being generated
@@ -294,7 +280,7 @@ public class ReportingService {
      * under, so {@code /api/reports/respondent} on a Survey at {@code https://host/survey} becomes
      * {@code https://host/survey/api/reports/respondent}.
      */
-    static URI resolveReportUri(String surveyBaseUrl, String reportUrl) throws URISyntaxException {
+    public static URI resolveReportUri(String surveyBaseUrl, String reportUrl) throws URISyntaxException {
         URI url = new URI(reportUrl);
         if (url.isAbsolute()) {
             return url;
@@ -304,84 +290,102 @@ public class ReportingService {
         return new URI(base).resolve(path);
     }
 
-    private ReportResponse callReport(ReportDefinition rpt, int respondent_id) {
+    /**
+     * Asks every report service of a survey for one respondent's report (UC-005 BR-136). The list
+     * is built for this print alone and handed back to it: this bean is shared by every session,
+     * so nothing a print gathers is kept on it.
+     *
+     * @param reports the survey's report definitions, in the order they are printed
+     * @param respondentId the respondent whose reports are printed
+     * @return one response per definition, in the same order
+     */
+    ArrayList<ReportResponse> collectReports(Collection<ReportDefinition> reports, int respondentId) {
+        ArrayList<ReportResponse> reportResponses = new ArrayList<>();
+        for (ReportDefinition rpt : reports) {
+            reportResponses.add(callReport(rpt, respondentId));
+        }
+        return reportResponses;
+    }
+
+    ReportResponse callReport(ReportDefinition rpt, int respondent_id) {
         try {
             ReportRequest request = new ReportRequest(respondent_id, answeringLanguage(respondent_id));
             ReportService reportService = RestClientBuilder.newBuilder()
                     .baseUri(resolveReportUri(surveyUrl, rpt.url))
+                    .followRedirects(false)
                     .build(ReportService.class);
             ReportResponse reportResponse = reportService.callReport(request);
+            if (reportResponse == null) {
+                // An answer with no report in it, such as a redirect, which is not followed.
+                Log.warnf("Report '%s' answered without a report", rpt.name);
+                return errorResponse(rpt, Translations.get("reporting.error.unavailable"), false);
+            }
             return reportResponse;
         } catch (jakarta.ws.rs.WebApplicationException e) {
-            // Handle license validation errors and other HTTP errors specifically
-            String errorMessage = Translations.get("reporting.error.service", e.getMessage());
-
-            // Try to extract more detailed error information
-            if (e.getResponse() != null) {
-                int status = e.getResponse().getStatus();
-
-                // Try to read the response entity if it exists and hasn't been consumed
-                if (e.getResponse().hasEntity()) {
-                    try {
-                        String responseBody = e.getResponse().readEntity(String.class);
-                        if (responseBody != null && !responseBody.trim().isEmpty()) {
-                            errorMessage = responseBody;
-                        }
-                    } catch (Exception readException) {
-                        // Response may have already been consumed, fall back to status-based message
-                        errorMessage = status == 403
-                                ? Translations.get("reporting.error.forbidden")
-                                : Translations.get("reporting.error.serviceHttp", status, e.getMessage());
-                    }
-                } else {
-                    // No response entity, provide status-based error message
-                    errorMessage = status == 403
-                            ? Translations.get("reporting.error.forbidden")
-                            : Translations.get("reporting.error.serviceHttp", status, e.getMessage());
-                }
+            // UC-005 BR-140: the service answered with an error. The page and the PDF get the
+            // status; what the service said goes to the log.
+            if (e.getResponse() == null) {
+                Log.errorf(e, "Report '%s' failed without a response", rpt.name);
+                return errorResponse(rpt, Translations.get("reporting.error.unavailable"), false);
             }
-
-            // Check if the exception message contains clues about license validation
-            if (e.getMessage() != null && e.getMessage().toLowerCase().contains("forbidden")) {
-                if (!errorMessage.toLowerCase().contains("license")) {
-                    errorMessage = Translations.get("reporting.error.license", errorMessage);
-                }
-            }
-
-            ReportResponse reportResponse = new ReportResponse();
-            reportResponse.title = Translations.get("reporting.error.title", rpt.name);
-            reportResponse.innerHTML = Translations.get("reporting.error.html", rpt.name, errorMessage,
-                    Translations.get("reporting.error.licenseHint"));
-
-            PDFDocument pdf = new PDFDocument();
-            pdf.title = Translations.get("reporting.error.title", rpt.name);
-            Content[] content = new Content[1];
-            Content body = new Content();
-            // Remove newlines and other control characters that might cause PDF encoding issues
-            String cleanErrorMessage = errorMessage.replaceAll("[\\r\\n\\t]", " ").trim();
-            body.text = Translations.get("reporting.error.pdfText", rpt.name, cleanErrorMessage,
-                    Translations.get("reporting.error.pdfLicenseHint"));
-            content[0] = body;
-            pdf.content = content;
-            reportResponse.pdf = pdf;
-            return reportResponse;
+            int status = e.getResponse().getStatus();
+            Log.warnf("Report '%s' answered HTTP %d", rpt.name, status);
+            Log.debugf("Report '%s' error body: %s", rpt.name, bodyForLog(e.getResponse()));
+            String errorMessage = status == 403
+                    ? Translations.get("reporting.error.forbidden")
+                    : Translations.get("reporting.error.serviceHttp", status);
+            return errorResponse(rpt, errorMessage, true);
         } catch (Exception e) {
-            // Handle other exceptions (network issues, URI parsing, etc.)
-            ReportResponse reportResponse = new ReportResponse();
-            reportResponse.title = Translations.get("reporting.error.title", rpt.name);
-            reportResponse.innerHTML = Translations.get("reporting.error.html", rpt.name, e.getMessage(), "");
-
-            PDFDocument pdf = new PDFDocument();
-            pdf.title = Translations.get("reporting.error.title", rpt.name);
-            Content[] content = new Content[1];
-            Content body = new Content();
-            // Remove newlines and other control characters that might cause PDF encoding issues
-            String cleanErrorMessage = (e.getMessage() != null ? e.getMessage() : Translations.get("reporting.error.unknown")).replaceAll("[\\r\\n\\t]", " ").trim();
-            body.text = Translations.get("reporting.error.pdfText", rpt.name, cleanErrorMessage, "");
-            content[0] = body;
-            pdf.content = content;
-            reportResponse.pdf = pdf;
-            return reportResponse;
+            // UC-005 BR-140: the service could not be called or its answer could not be read
+            // (network, address, serialization). The cause names hosts and ports; it is logged.
+            Log.errorf(e, "Report '%s' could not be retrieved", rpt.name);
+            return errorResponse(rpt, Translations.get("reporting.error.unavailable"), false);
         }
+    }
+
+    /** At most this much of a failed report service's answer is written to the log. */
+    private static final int LOGGED_BODY_LIMIT = 500;
+
+    /** The start of an error response's body, for the log only; empty when it cannot be read. */
+    private static String bodyForLog(jakarta.ws.rs.core.Response response) {
+        try {
+            if (!response.hasEntity()) {
+                return "";
+            }
+            String body = response.readEntity(String.class);
+            if (body == null) {
+                return "";
+            }
+            String oneLine = body.replaceAll("[\\r\\n\\t]", " ").trim();
+            return oneLine.length() > LOGGED_BODY_LIMIT ? oneLine.substring(0, LOGGED_BODY_LIMIT) : oneLine;
+        } catch (Exception unreadable) {
+            return "";
+        }
+    }
+
+    /**
+     * The page that stands in for a report that failed (UC-005 A2, BR-140): its title, an error
+     * block for the screen and one line of text for the PDF.
+     *
+     * @param rpt the report that failed
+     * @param errorMessage the fixed, translated sentence that says what kind of failure it was
+     * @param licenseHint whether to add the hint about the report service's license
+     */
+    private static ReportResponse errorResponse(ReportDefinition rpt, String errorMessage, boolean licenseHint) {
+        ReportResponse reportResponse = new ReportResponse();
+        reportResponse.title = Translations.get("reporting.error.title", rpt.name);
+        reportResponse.innerHTML = Translations.get("reporting.error.html", rpt.name, errorMessage,
+                licenseHint ? Translations.get("reporting.error.licenseHint") : "");
+
+        PDFDocument pdf = new PDFDocument();
+        pdf.title = Translations.get("reporting.error.title", rpt.name);
+        Content[] content = new Content[1];
+        Content body = new Content();
+        body.text = Translations.get("reporting.error.pdfText", rpt.name, errorMessage,
+                licenseHint ? Translations.get("reporting.error.pdfLicenseHint") : "");
+        content[0] = body;
+        pdf.content = content;
+        reportResponse.pdf = pdf;
+        return reportResponse;
     }
 }

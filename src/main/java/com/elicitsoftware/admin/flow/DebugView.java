@@ -17,6 +17,7 @@ import com.vaadin.flow.component.html.Pre;
 import com.vaadin.flow.component.orderedlayout.VerticalLayout;
 import com.vaadin.flow.router.HasDynamicTitle;
 import com.vaadin.flow.router.Route;
+import io.quarkus.runtime.LaunchMode;
 import io.quarkus.oidc.AccessTokenCredential;
 import io.quarkus.oidc.IdToken;
 import io.quarkus.security.identity.SecurityIdentity;
@@ -24,6 +25,8 @@ import jakarta.annotation.PostConstruct;
 import jakarta.annotation.security.RolesAllowed;
 import jakarta.enterprise.inject.Instance;
 import jakarta.inject.Inject;
+import java.util.function.BooleanSupplier;
+
 import org.eclipse.microprofile.config.inject.ConfigProperty;
 import org.eclipse.microprofile.jwt.JsonWebToken;
 
@@ -33,7 +36,7 @@ import org.eclipse.microprofile.jwt.JsonWebToken;
  * This view provides detailed information about the current user's authentication
  * status, roles, and tokens for debugging purposes. Restricted to {@code elicit_admin}
  * since it can reveal token material; raw tokens are masked unless
- * {@code elicit.debug.reveal-tokens} is explicitly enabled (e.g. in {@code %dev}).
+ * {@code elicit.debug.reveal-tokens} is enabled and the application runs in development mode.
  * </p>
  *
  * @author Elicit Software
@@ -75,12 +78,18 @@ public class DebugView extends VerticalLayout implements HasDynamicTitle {
     Instance<AccessTokenCredential> accessTokenInstance;
 
     /**
-     * Whether raw token values should be rendered in full. Defaults to {@code false}
-     * so tokens are masked everywhere except environments (e.g. {@code %dev}) that
-     * explicitly opt in via {@code ELICIT_DEBUG_REVEAL_TOKENS}.
+     * Whether raw token values were asked for. Defaults to {@code false}; honored only in
+     * development mode (UC-009 BR-142), so a deployed image masks tokens whatever this says.
      */
     @ConfigProperty(name = "elicit.debug.reveal-tokens", defaultValue = "false")
     boolean revealTokens;
+
+    /**
+     * Whether the application runs in development mode. A field, not an overridable method, so
+     * that a test can set it without subclassing the view: {@code @Route} is inherited, and a
+     * subclass on the test classpath would claim this view's path.
+     */
+    BooleanSupplier developmentMode = () -> LaunchMode.current() == LaunchMode.DEVELOPMENT;
 
     /**
      * Initializes the debug view with authentication information.
@@ -90,6 +99,8 @@ public class DebugView extends VerticalLayout implements HasDynamicTitle {
         add(new H1(getTranslation("debugView.title")));
 
         StringBuilder sb = new StringBuilder();
+        // UC-009 BR-142: raw tokens only when asked for and only in development mode
+        boolean reveal = revealTokens && developmentMode.getAsBoolean();
 
         // Basic identity information
         sb.append(getTranslation("debugView.user", identity.getPrincipal().getName())).append("\n");
@@ -105,7 +116,7 @@ public class DebugView extends VerticalLayout implements HasDynamicTitle {
         try {
             if (idTokenInstance.isResolvable()) {
                 JsonWebToken idToken = idTokenInstance.get();
-                sb.append(getTranslation("debugView.idToken", maskToken(idToken.getRawToken(), revealTokens))).append("\n\n");
+                sb.append(getTranslation("debugView.idToken", maskToken(idToken.getRawToken(), reveal))).append("\n\n");
             } else {
                 sb.append(getTranslation("debugView.idTokenUnavailable")).append("\n\n");
             }
@@ -117,7 +128,7 @@ public class DebugView extends VerticalLayout implements HasDynamicTitle {
         try {
             if (accessTokenInstance.isResolvable()) {
                 AccessTokenCredential accessToken = accessTokenInstance.get();
-                sb.append(getTranslation("debugView.accessToken", maskToken(accessToken.getToken(), revealTokens))).append("\n\n");
+                sb.append(getTranslation("debugView.accessToken", maskToken(accessToken.getToken(), reveal))).append("\n\n");
             } else {
                 sb.append(getTranslation("debugView.accessTokenUnavailable")).append("\n\n");
             }

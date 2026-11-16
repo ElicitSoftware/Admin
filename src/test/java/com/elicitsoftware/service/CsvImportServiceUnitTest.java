@@ -40,12 +40,20 @@ class CsvImportServiceUnitTest {
 
     private final List<AddRequest> registered = new ArrayList<>();
 
+    /** Department ids the caller is not assigned to (UC-010 BR-137); none unless a test says so. */
+    private final List<Integer> foreignDepartments = new ArrayList<>();
+
     private CsvImportService service(Function<AddRequest, AddResponse> answer) {
         AccessCodeService accessCodes = new AccessCodeService() {
             @Override
             public AddResponse putSubject(AddRequest request) {
                 registered.add(request);
                 return answer.apply(request);
+            }
+
+            @Override
+            public boolean permitsDepartment(long departmentId) {
+                return !foreignDepartments.contains((int) departmentId);
             }
         };
         return new CsvImportService(accessCodes);
@@ -139,6 +147,19 @@ class CsvImportServiceUnitTest {
                 "Line 5: Last name is required",
                 "Line 6: Email is required"), errors);
         assertEquals(1, registered.size(), "only the valid line reached registration");
+    }
+
+    @Test
+    void given_aLineForADepartmentTheCallerIsNotAssignedTo_when_imported_then_itIsRefusedByNumberAndTheOthersGoOn() {
+        foreignDepartments.add(8);
+
+        List<String> errors = lineErrors("1,a,b,c,,e@x.org\n"
+                + "8,a,b,c,,e@x.org\n"
+                + "1,d,e,f,,g@x.org\n");
+
+        assertEquals(List.of("Line 2: You are not assigned to department 8"), errors);
+        assertEquals(List.of(1, 1), registered.stream().map(r -> r.departmentId).toList(),
+                "BR-137: the refused line never reaches registration; BR-037: the others do");
     }
 
     @Test

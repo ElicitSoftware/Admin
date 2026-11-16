@@ -202,6 +202,11 @@ public class CsvImportService {
                     // parseCsvLine only ever throws user-actionable validation messages
                     // (missing/invalid field values), which are safe to surface as-is.
                     AddRequest request = parseCsvLine(line);
+                    // UC-010 BR-137: a line for a department the caller is not assigned to
+                    // is refused by its number; the other lines go on.
+                    if (!accessCodeService.permitsDepartment(request.departmentId)) {
+                        throw new Exception(Translations.get("csvImport.departmentNotPermitted", String.valueOf(request.departmentId)));
+                    }
                     try {
                         AddResponse subjectResponse = accessCodeService.putSubject(request);
 

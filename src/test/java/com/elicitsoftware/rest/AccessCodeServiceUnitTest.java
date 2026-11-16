@@ -14,7 +14,10 @@ package com.elicitsoftware.rest;
 import com.elicitsoftware.admin.upload.MultipartBody;
 import com.elicitsoftware.request.AddRequest;
 import com.elicitsoftware.response.AddResponse;
+import com.elicitsoftware.security.DepartmentScope;
+import com.elicitsoftware.service.CsvImportException;
 import com.elicitsoftware.service.CsvImportService;
+import jakarta.ws.rs.ForbiddenException;
 import io.quarkus.security.identity.SecurityIdentity;
 import io.quarkus.security.runtime.QuarkusPrincipal;
 import io.quarkus.security.runtime.QuarkusSecurityIdentity;
@@ -33,12 +36,14 @@ import java.util.Set;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
- * UC-015: Generate Survey Access Code and UC-009: View Security Diagnostics — the parts of
- * {@link AccessCodeService} that need no database: the CSV upload hand-off, the per-request
- * isolation of a batch registration, and the role/JWT diagnostic text.
+ * UC-015: Generate Survey Access Code, UC-010: Register Subjects via Integration API and UC-009:
+ * View Security Diagnostics — the parts of {@link AccessCodeService} that need no database: the
+ * access code alphabet, the CSV upload hand-off, the per-request isolation of a batch
+ * registration, the department a caller may register into, and the role/JWT diagnostic text.
  */
 class AccessCodeServiceUnitTest {
 
@@ -109,17 +114,98 @@ class AccessCodeServiceUnitTest {
     }
 
     @Test
-    void given_aCsvImportThatFails_when_imported_then_theFailureMessageIsTheError() {
+    void given_aCsvImportWithRejectedLines_when_imported_then_theLinesAreTheError() {
         AccessCodeService service = new AccessCodeService();
         service.csvImportService = new CsvImportService(null) {
             @Override
             public AddResponse importSubjects(InputStream csvInputStream) throws Exception {
-                throw new Exception("Import completed with errors:\nLine 1: Email is required");
+                throw new CsvImportException(List.of("Line 1: Email is required"));
             }
         };
         MultipartBody body = new MultipartBody();
         body.file = new ByteArrayInputStream(new byte[0]);
         assertEquals(List.of("Import completed with errors:\nLine 1: Email is required"), service.importCsv(body).getErrors());
+    }
+
+    @Test
+    void given_aCsvImportThatFailsUnexpectedly_when_imported_then_theErrorIsAFixedPhraseWithAReference() {
+        AccessCodeService service = new AccessCodeService();
+        service.csvImportService = new CsvImportService(null) {
+            @Override
+            public AddResponse importSubjects(InputStream csvInputStream) throws Exception {
+                throw new IllegalStateException("could not execute statement; SQL [insert into survey.subjects]; constraint fk_x");
+            }
+        };
+        MultipartBody body = new MultipartBody();
+        body.file = new ByteArrayInputStream(new byte[0]);
+
+        List<String> errors = service.importCsv(body).getErrors();
+
+        assertEquals(1, errors.size());
+        assertTrue(errors.get(0).matches("Error \\(ref [0-9a-f]{8}\\)"), "BR-139: " + errors.get(0));
+    }
+
+    @Test
+    void given_anUnexpectedFailure_when_reported_then_nothingOfItReachesTheCaller() {
+        String phrase = AccessCodeService.logged(new IllegalStateException("SQL constraint uk_subject violated at db:5432"));
+
+        assertTrue(phrase.matches("Error \\(ref [0-9a-f]{8}\\)"), phrase);
+        assertFalse(AccessCodeService.logged(new IllegalStateException("x")).equals(phrase), "each failure has its own reference");
+    }
+
+    @Test
+    void given_theAccessCodeAlphabet_when_inspected_then_eachOfIts46CharactersAppearsOnce() {
+        String alphabet = AccessCodeService.ACCESS_CODE_ALPHABET;
+
+        assertEquals(46, alphabet.length());
+        assertEquals(46, alphabet.chars().distinct().count(), "BR-050: no character is more likely than another");
+        assertEquals("BCDFGHJKLMNPQRSTVWXZbcdfghjkmnpqrstvwxz2456789", alphabet);
+        for (char ambiguous : "0O1lIAEUaeiou3".toCharArray()) {
+            assertEquals(-1, alphabet.indexOf(ambiguous), "BR-050: " + ambiguous);
+        }
+    }
+
+    /** A stand-in for the caller's console record: assigned to every department but those listed. */
+    private static DepartmentScope scopeWithout(long... foreign) {
+        return new DepartmentScope() {
+            @Override
+            public boolean permits(long departmentId) {
+                for (long id : foreign) {
+                    if (id == departmentId) {
+                        return false;
+                    }
+                }
+                return true;
+            }
+
+            @Override
+            public void require(long departmentId) {
+                if (!permits(departmentId)) {
+                    throw new ForbiddenException();
+                }
+            }
+        };
+    }
+
+    @Test
+    void given_aDepartmentTheCallerIsNotAssignedTo_when_oneSubjectIsRegistered_then_theRequestIsForbiddenBeforeAnythingIsLookedUp() {
+        AccessCodeService service = new AccessCodeService();
+        service.departmentScope = scopeWithout(8);
+        AddRequest request = new AddRequest();
+        request.xid = "X1";
+        request.departmentId = 8;
+
+        // Nothing but the department rule can answer here: there is no database behind the service.
+        assertThrows(ForbiddenException.class, () -> service.putSubject(request), "BR-137");
+    }
+
+    @Test
+    void given_theCallersDepartments_when_asked_then_theServiceAnswersFromTheDepartmentRule() {
+        AccessCodeService service = new AccessCodeService();
+        service.departmentScope = scopeWithout(8);
+
+        assertFalse(service.permitsDepartment(8));
+        assertTrue(service.permitsDepartment(3));
     }
 
     @Test
@@ -132,9 +218,9 @@ class AccessCodeServiceUnitTest {
         AddResponse response = new AccessCodeService().putSubjects(List.of(first, second));
 
         assertEquals(2, response.getSubjects().size());
-        assertTrue(response.getSubjects().get(0).getImportStatus().startsWith("Unexpected error processing X1: "),
-                response.getSubjects().get(0).getImportStatus());
-        assertTrue(response.getSubjects().get(1).getImportStatus().startsWith("Unexpected error processing X2: "));
+        assertTrue(response.getSubjects().get(0).getImportStatus().matches("Unexpected error processing X1 Error \\(ref [0-9a-f]{8}\\)"),
+                "BR-139: " + response.getSubjects().get(0).getImportStatus());
+        assertTrue(response.getSubjects().get(1).getImportStatus().matches("Unexpected error processing X2 Error \\(ref [0-9a-f]{8}\\)"));
         assertTrue(response.getErrors().isEmpty());
     }
 

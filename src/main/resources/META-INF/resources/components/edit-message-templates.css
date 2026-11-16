@@ -14,3 +14,13 @@
 .template-column {
     flex: 1 1 50%;
 }
+
+/* The isolated frame an HTML body is previewed in (UC-007 BR-141). It is drawn as a sheet of
+   its own — a white page with a border — because the body is a mail, not console chrome. */
+.template-preview-frame {
+    width: 100%;
+    min-height: 24rem;
+    border: 1px solid var(--vaadin-border-color, #d0d5dd);
+    border-radius: var(--vaadin-radius-m, 6px);
+    background: #ffffff;
+}

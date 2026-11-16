@@ -13,6 +13,8 @@ package com.elicitsoftware.report;
 
 import java.security.SecureRandom;
 import java.util.Base64;
+import java.util.Comparator;
+import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
 import jakarta.ws.rs.GET;
@@ -29,7 +31,8 @@ import jakarta.ws.rs.core.Response;
  * ({@code application.properties} permits {@code /api/pdf/*}) so the browser can open the
  * report in a new tab without triggering an OIDC redirect; the key's entropy plus single-use
  * removal are what keep an unguessed/leaked link from being replayed. Cache entries expire
- * after 10 minutes.
+ * after 10 minutes and are then removed whether or not they were fetched
+ * ({@link PDFDownloadCachePurge}); at most {@value #MAX_ENTRIES} wait at once (UC-005 BR-021).
  */
 @Path("/pdf/download")
 public class PDFDownloadResource {
@@ -42,6 +45,8 @@ public class PDFDownloadResource {
 
     private static final ConcurrentHashMap<String, PDFCacheEntry> PDF_CACHE = new ConcurrentHashMap<>();
     private static final long CACHE_EXPIRY_MS = 10 * 60 * 1000;
+    /** How many generated reports may wait to be fetched at once (UC-005 BR-021). */
+    static final int MAX_ENTRIES = 200;
     private static final SecureRandom SECURE_RANDOM = new SecureRandom();
 
     private static class PDFCacheEntry {
@@ -68,8 +73,31 @@ public class PDFDownloadResource {
         byte[] randomBytes = new byte[32];
         SECURE_RANDOM.nextBytes(randomBytes);
         String key = "pdf_" + Base64.getUrlEncoder().withoutPadding().encodeToString(randomBytes);
+        purgeExpired();
         PDF_CACHE.put(key, new PDFCacheEntry(pdfContent));
+        dropOldestBeyondLimit();
         return key;
+    }
+
+    /**
+     * Removes every cached PDF that has expired (UC-005 BR-021), so a report that was never
+     * fetched does not stay in memory.
+     *
+     * @return how many entries were removed
+     */
+    static int purgeExpired() {
+        int before = PDF_CACHE.size();
+        PDF_CACHE.entrySet().removeIf(entry -> entry.getValue().isExpired());
+        return Math.max(0, before - PDF_CACHE.size());
+    }
+
+    /** Drops the oldest waiting PDFs until no more than {@link #MAX_ENTRIES} remain. */
+    private static void dropOldestBeyondLimit() {
+        while (PDF_CACHE.size() > MAX_ENTRIES) {
+            PDF_CACHE.entrySet().stream()
+                    .min(Comparator.comparingLong((Map.Entry<String, PDFCacheEntry> entry) -> entry.getValue().timestamp))
+                    .ifPresent(oldest -> PDF_CACHE.remove(oldest.getKey(), oldest.getValue()));
+        }
     }
 
     /**

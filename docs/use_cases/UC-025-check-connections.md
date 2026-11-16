@@ -69,7 +69,7 @@ Every probe gives up after five seconds (NFR-012). Checking all targets never ta
 
 ### BR-098: Targets come from where the runtime reads them
 
-Report and post-survey addresses are read from the same stored rows the runtime uses (`survey.reports`, `survey.post_survey_actions`), and the provider, Survey application (`elicit.survey.url`), relay and collector addresses from the same configuration, so the screen checks what will actually be called. The Survey application is probed at its root, since its rebuild endpoint only accepts POST.
+Report and post-survey addresses are read from the same stored rows the runtime uses (`survey.reports`, `survey.post_survey_actions`), and the provider, Survey application (`elicit.survey.url`), relay and collector addresses from the same configuration, so the screen checks what will actually be called. The Survey application is probed at its root, since its rebuild endpoint only accepts POST. A report address stored as a path is probed where the runtime calls it: resolved under the Survey address (UC-005 BR-023).
 
 ---
 

@@ -11,10 +11,12 @@ package com.elicitsoftware.diagnostics;
  * ***LICENSE_END***
  */
 
+import io.quarkus.runtime.LaunchMode;
 import org.junit.jupiter.api.Test;
 
 import java.util.List;
 
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
@@ -45,5 +47,14 @@ class SetupWarningsInstructionTest {
         String text = SetupWarnings.instruction(List.of("a", "b", "c"));
 
         assertTrue(text.startsWith("The database migrations seeded the default accounts 'a' and 'b' and 'c'."), text);
+    }
+
+    @Test
+    void given_theTokenRevealSetting_when_itIsOnOutsideDevelopmentMode_then_itCountsAsIgnored() {
+        // UC-009 BR-142
+        assertTrue(SetupWarnings.revealTokensIgnored(true, LaunchMode.NORMAL));
+        assertTrue(SetupWarnings.revealTokensIgnored(true, LaunchMode.TEST));
+        assertFalse(SetupWarnings.revealTokensIgnored(true, LaunchMode.DEVELOPMENT));
+        assertFalse(SetupWarnings.revealTokensIgnored(false, LaunchMode.NORMAL));
     }
 }

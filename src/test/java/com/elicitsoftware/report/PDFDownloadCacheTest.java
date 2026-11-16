@@ -19,6 +19,7 @@ import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -78,6 +79,55 @@ class PDFDownloadCacheTest {
 
         assertEquals(200, resource.downloadPDF(fresh).getStatus(), "inside ten minutes it is still served");
         assertEquals(404, resource.downloadPDF(old).getStatus());
+    }
+
+    @Test
+    void given_anExpiredPdfNobodyFetched_when_purged_then_itLeavesTheCacheAndAFreshOneStays() throws Exception {
+        String fresh = PDFDownloadResource.cachePDF(new byte[]{1});
+        String old = PDFDownloadResource.cachePDF(new byte[]{2});
+        age(old, 10 * 60 * 1000 + 5_000);
+
+        assertTrue(PDFDownloadResource.purgeExpired() >= 1);
+
+        assertTrue(cache().containsKey(fresh), "BR-021: a report inside its ten minutes survives the purge");
+        assertFalse(cache().containsKey(old), "BR-021: an expired report is removed without a fetch");
+        assertEquals(200, resource.downloadPDF(fresh).getStatus());
+        assertEquals(404, resource.downloadPDF(fresh).getStatus(), "and it is still good for one download only");
+    }
+
+    @Test
+    void given_anExpiredPdf_when_anotherIsCached_then_theExpiredOneIsRemoved() throws Exception {
+        String old = PDFDownloadResource.cachePDF(new byte[]{2});
+        age(old, 10 * 60 * 1000 + 5_000);
+
+        PDFDownloadResource.cachePDF(new byte[]{3});
+
+        assertFalse(cache().containsKey(old));
+    }
+
+    @Test
+    void given_theCacheIsFull_when_anotherIsCached_then_theOldestIsDropped() throws Exception {
+        cache().clear();
+        String oldest = PDFDownloadResource.cachePDF(new byte[]{0});
+        age(oldest, 60_000);
+        for (int i = 1; i < PDFDownloadResource.MAX_ENTRIES; i++) {
+            PDFDownloadResource.cachePDF(new byte[]{1});
+        }
+        assertEquals(PDFDownloadResource.MAX_ENTRIES, cache().size());
+
+        String newest = PDFDownloadResource.cachePDF(new byte[]{2});
+
+        assertEquals(PDFDownloadResource.MAX_ENTRIES, cache().size(), "BR-021: at most this many wait at once");
+        assertFalse(cache().containsKey(oldest));
+        assertTrue(cache().containsKey(newest));
+        cache().clear();
+    }
+
+    @SuppressWarnings("unchecked")
+    private static Map<String, Object> cache() throws Exception {
+        Field cacheField = PDFDownloadResource.class.getDeclaredField("PDF_CACHE");
+        cacheField.setAccessible(true);
+        return (Map<String, Object>) cacheField.get(null);
     }
 
     /** Moves a cached entry's timestamp back by the given age. */

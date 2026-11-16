@@ -76,7 +76,7 @@ Database role lookup returns roles only for a user whose account is marked activ
 
 ### BR-004: Public endpoints
 
-Logout, health checks, metrics, brand static resources, the diagnostic test and roles endpoints, and PDF downloads are reachable without authentication; every other path requires an authenticated session.
+Logout, health checks, metrics, brand static resources, the diagnostic test endpoint, and PDF downloads are reachable without authentication; every other path requires an authenticated session. The roles endpoint is not public: it requires the `elicit_admin` role.
 
 ### BR-005: Database fallback is gated by authorization mode
 

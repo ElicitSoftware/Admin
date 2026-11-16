@@ -46,7 +46,7 @@
 **Trigger:** The user selects a row action (step 6).
 **Flow:**
 
-1. The user chooses to edit the subject (UC-003), send an email (UC-004), or generate a report (UC-005).
+1. The user chooses to edit the subject (UC-003, opened by the subject's record id and subject to BR-138), send an email (UC-004), or generate a report (UC-005).
 
 ## Postconditions
 

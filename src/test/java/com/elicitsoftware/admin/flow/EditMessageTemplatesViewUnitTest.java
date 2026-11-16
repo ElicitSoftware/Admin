@@ -21,6 +21,7 @@ import com.vaadin.flow.component.combobox.ComboBoxVariant;
 import com.vaadin.flow.component.formlayout.FormLayout;
 import com.vaadin.flow.component.html.Div;
 import com.vaadin.flow.component.html.H3;
+import com.vaadin.flow.component.html.IFrame;
 import com.vaadin.flow.component.orderedlayout.HorizontalLayout;
 import com.vaadin.flow.component.orderedlayout.VerticalLayout;
 import com.vaadin.flow.component.textfield.TextArea;
@@ -167,6 +168,14 @@ class EditMessageTemplatesViewUnitTest extends PlainSmallViewTestSupport {
         assertEquals("Oncology", departmentBox().getItemLabelGenerator().apply(oncology));
     }
 
+    private IFrame frame() {
+        return (IFrame) previewColumn().getComponentAt(2);
+    }
+
+    private static String document(String body) {
+        return EditMessageTemplatesView.PREVIEW_DOCUMENT_HEAD + body + EditMessageTemplatesView.PREVIEW_DOCUMENT_TAIL;
+    }
+
     @Test
     void given_editor_when_opened_then_previewColumnIsEmptyAndMarkedAsContent() {
         VerticalLayout column = previewColumn();
@@ -177,24 +186,53 @@ class EditMessageTemplatesViewUnitTest extends PlainSmallViewTestSupport {
         assertTrue(preview.getElement().hasAttribute("data-i18n-content"));
         assertEquals("100%", preview.getWidth());
         assertEquals("100%", preview.getHeight());
-        assertEquals("", preview.getElement().getProperty("innerHTML"));
+        assertEquals("", preview.getElement().getText());
+        assertEquals(document(""), frame().getSrcdoc().orElseThrow());
     }
 
     @Test
-    void given_htmlType_when_bodyTyped_then_previewRendersItAsMarkup() {
+    void given_editor_when_opened_then_theHtmlPreviewIsAnIsolatedFrame() {
+        IFrame frame = frame();
+
+        assertTrue(frame.getElement().hasAttribute("sandbox"), "BR-141");
+        assertEquals("", frame.getElement().getAttribute("sandbox"), "BR-141: nothing is allowed back in");
+        assertTrue(frame.getElement().hasAttribute("data-i18n-content"), "UC-026 BR-086: stored content, not chrome");
+        assertEquals(t("editMessageTemplatesView.preview"), frame.getElement().getAttribute("title"));
+        assertTrue(frame.hasClassName("template-preview-frame"));
+        assertTrue(EditMessageTemplatesView.PREVIEW_DOCUMENT_HEAD.contains(
+                "content=\"default-src 'none'; img-src data: https:; style-src 'unsafe-inline'\""));
+    }
+
+    @Test
+    void given_htmlType_when_bodyTyped_then_previewRendersItInTheFrameOnly() {
         mimeType().setValue("text/html");
 
         body().setValue("<b>Hello</b>");
 
-        assertEquals("<b>Hello</b>", preview().getElement().getProperty("innerHTML"));
+        assertEquals(document("<b>Hello</b>"), frame().getSrcdoc().orElseThrow());
+        assertTrue(frame().isVisible());
+        assertFalse(preview().isVisible());
         assertEquals("", preview().getElement().getText());
+        assertNoElementCarriesAsMarkup("<b>Hello</b>");
     }
 
     @Test
-    void given_noType_when_bodyTyped_then_previewRendersItAsMarkup() {
+    void given_noType_when_bodyTyped_then_previewRendersItInTheFrame() {
         body().setValue("<i>x</i>");
 
-        assertEquals("<i>x</i>", preview().getElement().getProperty("innerHTML"));
+        assertEquals(document("<i>x</i>"), frame().getSrcdoc().orElseThrow());
+        assertNoElementCarriesAsMarkup("<i>x</i>");
+    }
+
+    @Test
+    void given_aBodyWithAnEventHandler_when_previewed_then_itReachesOnlyTheIsolatedFrame() {
+        String body = "<img src=x onerror=\"document.title='ran'\">";
+
+        body().setValue(body);
+
+        assertEquals(document(body), frame().getSrcdoc().orElseThrow());
+        assertEquals("", frame().getElement().getAttribute("sandbox"));
+        assertNoElementCarriesAsMarkup(body);
     }
 
     @Test
@@ -204,12 +242,26 @@ class EditMessageTemplatesViewUnitTest extends PlainSmallViewTestSupport {
         mimeType().setValue("text/plain");
 
         assertEquals("<b>Hello</b>", preview().getElement().getText());
-        assertEquals("", preview().getElement().getProperty("innerHTML"));
+        assertTrue(preview().isVisible());
+        assertFalse(frame().isVisible());
+        assertEquals(document(""), frame().getSrcdoc().orElseThrow());
 
         mimeType().setValue("text/html");
 
-        assertEquals("<b>Hello</b>", preview().getElement().getProperty("innerHTML"));
+        assertEquals(document("<b>Hello</b>"), frame().getSrcdoc().orElseThrow());
         assertEquals("", preview().getElement().getText());
+        assertTrue(frame().isVisible());
+        assertFalse(preview().isVisible());
+    }
+
+    /** BR-141: no element of the console's own page is given the body as its markup. */
+    private void assertNoElementCarriesAsMarkup(String body) {
+        view.getElement().getNode().visitNodeTree(node -> {
+            if (node.hasFeature(com.vaadin.flow.internal.nodefeature.ElementPropertyMap.class)) {
+                Object markup = node.getFeature(com.vaadin.flow.internal.nodefeature.ElementPropertyMap.class).getProperty("innerHTML");
+                assertTrue(markup == null || !markup.toString().contains(body), "innerHTML carries the template body");
+            }
+        });
     }
 
 }

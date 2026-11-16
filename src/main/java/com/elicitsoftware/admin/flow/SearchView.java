@@ -59,7 +59,6 @@ import com.vaadin.flow.data.provider.QuerySortOrder;
 import com.vaadin.flow.router.BeforeEnterEvent;
 import com.vaadin.flow.router.BeforeEnterObserver;
 import com.vaadin.flow.router.HasDynamicTitle;
-import com.vaadin.flow.router.QueryParameters;
 import com.vaadin.flow.router.Route;
 
 import io.quarkus.panache.common.Sort;
@@ -543,8 +542,8 @@ public class SearchView extends VerticalLayout implements HasDynamicTitle, Befor
             editButton.addThemeVariants(ButtonVariant.LUMO_ICON, ButtonVariant.LUMO_TERTIARY);
             editButton.getElement().setProperty("title", getTranslation("common.edit"));
             editButton.addClickListener(e -> {
-                // Pass the access code as a query parameter (or use another unique identifier)
-                ui.navigate("register", QueryParameters.simple(Map.of("accessCode", status.getAccessCode())));
+                // UC-003 A5: the edit screen is addressed by the subject's record id (NFR-022)
+                ui.navigate("register/" + status.getId()); // i18n:ignore (route)
             });
             return editButton;
         }).setHeader(getTranslation("common.edit")).setWidth("80px").setFlexGrow(0);

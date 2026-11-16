@@ -19,6 +19,7 @@ import com.elicitsoftware.response.AddResponseStatus;
 import com.elicitsoftware.service.CsvImportException;
 import com.elicitsoftware.service.CsvImportService;
 import com.elicitsoftware.rest.AccessCodeService;
+import com.elicitsoftware.security.DepartmentScope;
 import com.elicitsoftware.service.SurveyDefinitionPresenceCheck;
 import com.vaadin.flow.component.Component;
 import com.vaadin.flow.component.button.Button;
@@ -48,6 +49,7 @@ import com.vaadin.flow.router.BeforeEnterEvent;
 import com.vaadin.flow.router.BeforeEnterObserver;
 import com.vaadin.flow.router.HasDynamicTitle;
 import com.vaadin.flow.router.Route;
+import io.quarkus.logging.Log;
 import io.quarkus.security.identity.SecurityIdentity;
 import jakarta.annotation.PostConstruct;
 import jakarta.annotation.security.RolesAllowed;
@@ -78,7 +80,7 @@ import java.util.Optional;
  * <ul>
  *   <li><strong>Individual Registration:</strong> Complete form with validation for all subject fields</li>
  *   <li><strong>Bulk CSV Import:</strong> Upload CSV files with multiple subjects for batch processing</li>
- *   <li><strong>Subject Updates:</strong> Edit existing subjects via the {@code accessCode} URL parameter</li>
+ *   <li><strong>Subject Updates:</strong> Edit existing subjects, addressed by record id ({@code register/<id>})</li>
  *   <li><strong>Department Integration:</strong> Automatic department filtering based on user permissions</li>
  *   <li><strong>Access Code Generation:</strong> Automatic creation of unique access codes for survey access</li>
  *   <li><strong>Message Creation:</strong> Automatic generation of communication messages for new subjects</li>
@@ -106,7 +108,7 @@ import java.util.Optional;
  * @see AccessCodeService
  * @since 1.0
  */
-@Route(value = "register", layout = MainLayout.class)
+@Route(value = "register/:id?", layout = MainLayout.class)
 @RolesAllowed({"elicit_admin", "elicit_user"})
 public class RegisterView extends HorizontalLayout implements HasDynamicTitle, BeforeEnterObserver {
 
@@ -128,6 +130,16 @@ public class RegisterView extends HorizontalLayout implements HasDynamicTitle, B
      */
     @Inject
     AccessCodeService accessCodeService;
+
+    /** Where the view reads a stored subject and writes an edited one. */
+    SubjectStore subjects = new SubjectStore();
+
+    /** The optional route parameter that names the subject to edit by its record id (UC-003 A5). */
+    static final String ID_PARAMETER = "id";
+
+    /** Decides whether a subject's department is one of the user's (UC-003 BR-138). */
+    @Inject
+    DepartmentScope departmentScope;
 
     /**
      * Security identity for user authentication and role checking.
@@ -427,30 +439,16 @@ public class RegisterView extends HorizontalLayout implements HasDynamicTitle, B
     }
 
     /**
-     * Handles navigation events and determines the view mode based on URL parameters.
+     * Decides between registration mode and update mode from the route (UC-003 A5, A7).
      *
-     * <p>This method processes the "accessCode" query parameter to determine whether the view
-     * should operate in registration mode (new subject) or update mode (existing subject):</p>
+     * <p>{@code register} registers a new subject: Save is shown, Update hidden.
+     * {@code register/<id>} edits the subject with that record id: the form is filled, Update is
+     * shown and the survey is fixed. An id that is not a number, names no subject, or names a
+     * subject in a department the user is not assigned to (BR-138) is answered alike, with the
+     * not-found notice and the form left in registration mode. The address never carries an
+     * access code (NFR-022).</p>
      *
-     * <h4>Access Code Parameter Processing:</h4>
-     * <ul>
-     *   <li><strong>Access Code Present:</strong> Attempts to find and load the subject associated with the access code</li>
-     *   <li><strong>Subject Found:</strong> Switches to update mode, populates form, shows Update button</li>
-     *   <li><strong>Subject Not Found:</strong> Shows error notification, remains in registration mode</li>
-     *   <li><strong>No Access Code:</strong> Operates in registration mode with Save button visible</li>
-     * </ul>
-     *
-     * <h4>UI State Management:</h4>
-     * <ul>
-     *   <li><strong>Registration Mode:</strong> Save button visible, Update button hidden</li>
-     *   <li><strong>Update Mode:</strong> Update button visible, Save button hidden</li>
-     * </ul>
-     *
-     * <p>The method ensures proper form population and button visibility based on the
-     * operational mode, providing a seamless experience for both new registrations
-     * and subject updates.</p>
-     *
-     * @param event the BeforeEnterEvent containing navigation information and query parameters
+     * @param event the BeforeEnterEvent carrying the route parameters
      * @see BeforeEnterObserver#beforeEnter(BeforeEnterEvent)
      */
     @Override
@@ -461,11 +459,9 @@ public class RegisterView extends HorizontalLayout implements HasDynamicTitle, B
         // Authorization is now handled by @RolesAllowed annotation
         refreshMissingSurveyNotice();
 
-        Optional<String> accessCodeOpt = event.getLocation().getQueryParameters().getParameters().getOrDefault("accessCode", List.of()).stream().findFirst();
-        if (accessCodeOpt.isPresent()) {
-            String accessCode = accessCodeOpt.get();
-            // Fetch the subject by access code (implement this in your StatusDataSource or Subject repository)
-            Subject found = Subject.findSubjectByAccessCode(accessCode);
+        Optional<String> idOpt = event.getRouteParameters().get(ID_PARAMETER);
+        if (idOpt.isPresent()) {
+            Subject found = editableSubject(idOpt.get());
             if (found != null) {
                 this.subject = found;
                 if (binder != null) {
@@ -480,7 +476,7 @@ public class RegisterView extends HorizontalLayout implements HasDynamicTitle, B
                     surveyComboBox.setReadOnly(true);
                 }
             } else {
-                Notification.show(getTranslation("registerView.error.subjectNotFound", accessCode), 3000, Notification.Position.MIDDLE);
+                Notification.show(getTranslation("registerView.error.subjectNotFound"), 3000, Notification.Position.MIDDLE);
                 // New: show save, hide update
                 if (updateButton != null && saveButton != null) {
                     updateButton.setVisible(false);
@@ -494,6 +490,38 @@ public class RegisterView extends HorizontalLayout implements HasDynamicTitle, B
                 saveButton.setVisible(true);
             }
         }
+    }
+
+    /**
+     * The subject a route id names, when the user may edit it (UC-003 A5, BR-138).
+     *
+     * @param idParameter the {@code id} route parameter as written in the address
+     * @return the subject, or null when the id is not a number, names no subject, or names one
+     *         in a department the user is not assigned to
+     */
+    private Subject editableSubject(String idParameter) {
+        long id;
+        try {
+            id = Long.parseLong(idParameter);
+        } catch (NumberFormatException e) {
+            return null;
+        }
+        Subject found = findSubject(id);
+        if (found != null && !departmentScope.permits(found.getDepartmentId())) {
+            Log.infof("Subject %d is not in a department of %s; not opened for editing", id, identity.getPrincipal().getName());
+            return null;
+        }
+        return found;
+    }
+
+    /** The subject the form currently registers or edits. */
+    Subject currentSubject() {
+        return subject;
+    }
+
+    /** The stored subject with this record id, or null. */
+    private Subject findSubject(long id) {
+        return subjects.find(id);
     }
 
     /**
@@ -531,6 +559,12 @@ public class RegisterView extends HorizontalLayout implements HasDynamicTitle, B
         try {
             // Write form values to subject first to get current values
             binder.writeBean(subject);
+
+            // UC-003 BR-138: the department is checked here, not left to what the selector offers.
+            if (!departmentScope.permits(subject.getDepartmentId())) {
+                Notification.show(getTranslation("registerView.error.notYourDepartment"), 5000, Notification.Position.MIDDLE);
+                return;
+            }
 
             boolean isExluded = ExcludedXid.isExcluded(this.subject.getXid(), (int) this.subject.getDepartmentId());
             if (isExluded) {
@@ -592,12 +626,46 @@ public class RegisterView extends HorizontalLayout implements HasDynamicTitle, B
     @Transactional
     public void updateSubject(Binder<Subject> binder) throws ValidationException {
         try {
+            // UC-003 BR-138: the subject as it is stored, and the department now chosen for it,
+            // must both be the user's; the stored row is re-read rather than trusted from the form.
+            Subject stored = findSubject(subject.getId());
+            if (stored == null || !departmentScope.permits(stored.getDepartmentId())) {
+                Notification.show(getTranslation("registerView.error.notYourDepartment"), 5000, Notification.Position.MIDDLE);
+                return;
+            }
             binder.writeBean(subject);
-            subject = Subject.getEntityManager().merge(subject);
-            Subject.getEntityManager().flush();
+            if (!departmentScope.permits(subject.getDepartmentId())) {
+                Notification.show(getTranslation("registerView.error.notYourDepartment"), 5000, Notification.Position.MIDDLE);
+                return;
+            }
+            mergeSubject();
             Notification.show(getTranslation("registerView.subjectUpdated"), 3000, Notification.Position.MIDDLE);
         } catch (ValidationException e) {
             Notification.show(getTranslation("registerView.error.fixValidation"), 3000, Notification.Position.MIDDLE);
+        }
+    }
+
+    /** Writes the edited subject over its stored row. */
+    private void mergeSubject() {
+        subject = subjects.merge(subject);
+    }
+
+    /**
+     * Reads a stored subject and writes an edited one back. Kept apart from the view so that the
+     * view's handling of a subject can be tested without a database.
+     */
+    static class SubjectStore {
+
+        /** The stored subject with this record id, or null. */
+        Subject find(long id) {
+            return Subject.findById(id);
+        }
+
+        /** Writes the edited subject over its stored row and returns the managed instance. */
+        Subject merge(Subject edited) {
+            Subject managed = Subject.getEntityManager().merge(edited);
+            Subject.getEntityManager().flush();
+            return managed;
         }
     }
 
@@ -989,7 +1057,8 @@ public class RegisterView extends HorizontalLayout implements HasDynamicTitle, B
                 new Paragraph(getTranslation("registerView.apiDoc.notes.exclusion")),
                 new Paragraph(getTranslation("registerView.apiDoc.notes.duplicates")),
                 new Paragraph(getTranslation("registerView.apiDoc.notes.individual")),
-                new Paragraph(getTranslation("registerView.apiDoc.notes.auth"))
+                new Paragraph(getTranslation("registerView.apiDoc.notes.auth")),
+                new Paragraph(getTranslation("registerView.apiDoc.notes.departments"))
         );
 
         return content;
@@ -1013,8 +1082,11 @@ public class RegisterView extends HorizontalLayout implements HasDynamicTitle, B
             new ResultDialog(getTranslation("registerView.csvImport.errorTitle"),
                     rejectedLines(e), true).open();
         } catch (Exception e) {
-            String message = e.getMessage() != null ? e.getMessage() : e.toString();
-            new ResultDialog(getTranslation("registerView.csvImport.errorTitle"), message, true).open();
+            // The file could not be read or the import failed as a whole: the cause goes to the
+            // log, the dialog says only that it failed (UC-010 BR-139).
+            Log.error("CSV import failed", e);
+            new ResultDialog(getTranslation("registerView.csvImport.errorTitle"),
+                    getTranslation("registerView.csvImport.failed"), true).open();
         }
     }
 

@@ -15,6 +15,7 @@ import com.elicitsoftware.model.Department;
 import com.elicitsoftware.model.ReportDefinition;
 import com.elicitsoftware.model.Status;
 import com.elicitsoftware.model.Survey;
+import com.elicitsoftware.report.ReportResponse;
 import com.elicitsoftware.test.PostgresTestResource;
 import com.sun.net.httpserver.HttpServer;
 import com.vaadin.browserless.quarkus.QuarkusBrowserlessTest;
@@ -33,6 +34,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
@@ -178,5 +180,82 @@ class ReportingServiceTest extends QuarkusBrowserlessTest {
 
         assertEquals(1, okServerRequests.get(), "the healthy endpoint must have been called");
         assertTrue(failingServerRequests.get() >= 1, "the failing endpoint must also have been attempted");
+    }
+
+    private HttpServer stub(int status, String location, String body) throws IOException {
+        HttpServer server = HttpServer.create(new InetSocketAddress("localhost", 0), 0);
+        server.createContext("/", exchange -> {
+            byte[] bytes = body.getBytes(StandardCharsets.UTF_8);
+            if (location != null) {
+                exchange.getResponseHeaders().add("Location", location);
+            }
+            exchange.sendResponseHeaders(status, bytes.length == 0 ? -1 : bytes.length);
+            if (bytes.length > 0) {
+                exchange.getResponseBody().write(bytes);
+            }
+            exchange.close();
+        });
+        server.start();
+        return server;
+    }
+
+    private static ReportDefinition definition(String name, String url) {
+        ReportDefinition rpt = new ReportDefinition();
+        rpt.name = name;
+        rpt.url = url;
+        return rpt;
+    }
+
+    /** UC-005 A2, BR-140: the error page gives the status; what the service said stays out of it. */
+    @Test
+    @TestTransaction
+    void failedReportShowsTheStatusAndNothingOfTheServicesAnswer() throws IOException {
+        String marker = "MARKER-internal-detail-7f3a";
+        HttpServer server = stub(500, null, "<html>" + marker + " at db.internal:5432</html>");
+        try {
+            ReportResponse response = reportingService.callReport(
+                    definition("Risk", "http://localhost:" + server.getAddress().getPort()), 1);
+
+            assertEquals("Error - Risk", response.title);
+            assertTrue(response.innerHTML.contains("Service error (HTTP 500)"), response.innerHTML);
+            assertTrue(response.pdf.content[0].text.contains("Service error (HTTP 500)"), response.pdf.content[0].text);
+            assertFalse(response.innerHTML.contains(marker));
+            assertFalse(response.pdf.content[0].text.contains(marker));
+            assertFalse(response.innerHTML.contains("db.internal"));
+        } finally {
+            server.stop(0);
+        }
+    }
+
+    /** UC-005 BR-140: a report service that cannot be reached is described without its address. */
+    @Test
+    @TestTransaction
+    void unreachableReportServiceIsDescribedWithoutItsAddress() throws IOException {
+        HttpServer server = stub(200, null, "");
+        int closedPort = server.getAddress().getPort();
+        server.stop(0);
+
+        ReportResponse response = reportingService.callReport(definition("Risk", "http://localhost:" + closedPort), 1);
+
+        String fixed = "The report could not be retrieved. The details are in the application log.";
+        assertEquals("Report Generation Error - Service: Risk - Error: " + fixed, response.pdf.content[0].text);
+        assertFalse(response.innerHTML.contains(String.valueOf(closedPort)));
+        assertFalse(response.innerHTML.contains("localhost"));
+    }
+
+    /** UC-005 BR-140: a redirect answered by a report service is not followed. */
+    @Test
+    @TestTransaction
+    void redirectFromAReportServiceIsNotFollowed() throws IOException {
+        HttpServer redirecting = stub(307, "http://localhost:" + okServer.getAddress().getPort() + "/", "");
+        try {
+            ReportResponse response = reportingService.callReport(
+                    definition("Risk", "http://localhost:" + redirecting.getAddress().getPort()), 1);
+
+            assertEquals(0, okServerRequests.get(), "the address the redirect names is never called");
+            assertEquals("Error - Risk", response.title);
+        } finally {
+            redirecting.stop(0);
+        }
     }
 }

@@ -22,6 +22,7 @@ import com.vaadin.flow.component.combobox.ComboBoxVariant;
 import com.vaadin.flow.component.formlayout.FormLayout;
 import com.vaadin.flow.component.html.Div;
 import com.vaadin.flow.component.html.H3;
+import com.vaadin.flow.component.html.IFrame;
 import com.vaadin.flow.component.notification.Notification;
 import com.vaadin.flow.component.orderedlayout.HorizontalLayout;
 import com.vaadin.flow.component.orderedlayout.VerticalLayout;
@@ -96,8 +97,22 @@ public class EditMessageTemplatesView extends VerticalLayout implements BeforeEn
     /** Button for updating existing message templates. */
     private final Button updateBtn = new Button();
 
-    /** Container div for displaying the message preview. */
+    /** Shows a plain-text body literally. */
     private Div content = new Div();
+
+    /** Shows an HTML body, isolated from the console (UC-007 BR-141). */
+    private final IFrame htmlPreview = new IFrame();
+
+    /**
+     * What the preview frame's document starts with: nothing but images and inline styles may be
+     * loaded by a template body (UC-007 BR-141).
+     */
+    static final String PREVIEW_DOCUMENT_HEAD = "<!DOCTYPE html><html><head><meta charset=\"utf-8\">" // i18n:ignore
+            + "<meta http-equiv=\"Content-Security-Policy\" " // i18n:ignore
+            + "content=\"default-src 'none'; img-src data: https:; style-src 'unsafe-inline'\"></head><body>"; // i18n:ignore
+
+    /** Closes the preview frame's document. */
+    static final String PREVIEW_DOCUMENT_TAIL = "</body></html>"; // i18n:ignore
 
     /** Data binder for form validation and data binding. */
     private final Binder<MessageTemplate> binder = new Binder<>(MessageTemplate.class);
@@ -167,10 +182,16 @@ public class EditMessageTemplatesView extends VerticalLayout implements BeforeEn
         content.getElement().setAttribute("data-i18n-content", "");
         content.setWidth("100%");
         content.setHeight("100%");
+        // UC-007 BR-141: an empty sandbox attribute switches off scripts, forms, navigation and
+        // plugins in the frame and gives it an origin of its own.
+        htmlPreview.getElement().setAttribute("sandbox", "");
+        htmlPreview.getElement().setAttribute("data-i18n-content", "");
+        htmlPreview.setTitle(getTranslation("editMessageTemplatesView.preview"));
+        htmlPreview.addClassName("template-preview-frame");
         // Update content
         updatePreview(messageField.getValue());
 
-        preview.add(title, content);
+        preview.add(title, content, htmlPreview);
 
         // Set value change mode and debounce for messageField
         messageField.setValueChangeMode(com.vaadin.flow.data.value.ValueChangeMode.TIMEOUT);
@@ -269,27 +290,28 @@ public class EditMessageTemplatesView extends VerticalLayout implements BeforeEn
     }
 
     /**
-     * Updates the message preview content based on the provided body text and current MIME type.
+     * Updates the message preview from the body text and the current MIME type (UC-007 BR-141).
      *
-     * <p>The preview rendering depends on the selected MIME type:</p>
      * <ul>
-     *   <li>text/plain: Displays content as plain text</li>
-     *   <li>text/html: Renders content as HTML</li>
+     *   <li>text/plain: the body is shown literally</li>
+     *   <li>anything else: the body is rendered as HTML inside the isolated preview frame</li>
      * </ul>
      *
-     * <p>This method is called automatically when the message body or MIME type
-     * fields change, providing real-time feedback to the user.</p>
+     * <p>Called when the message body or the MIME type changes.</p>
      *
      * @param body the message body content to preview
      */
     private void updatePreview(String body) {
-        if (mimeTypeField.getValue() != null && mimeTypeField.getValue().equals("text/plain")) {
-            content.getElement().setProperty("innerHTML", "");
-            content.getElement().setText(body);
+        boolean plain = "text/plain".equals(mimeTypeField.getValue()); // i18n:ignore
+        if (plain) {
+            content.setText(body);
+            htmlPreview.setSrcdoc(PREVIEW_DOCUMENT_HEAD + PREVIEW_DOCUMENT_TAIL);
         } else {
-            content.getElement().setText("");
-            content.getElement().setProperty("innerHTML", body);
+            content.setText("");
+            htmlPreview.setSrcdoc(PREVIEW_DOCUMENT_HEAD + (body == null ? "" : body) + PREVIEW_DOCUMENT_TAIL);
         }
+        content.setVisible(plain);
+        htmlPreview.setVisible(!plain);
     }
 
     /**

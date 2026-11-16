@@ -263,4 +263,19 @@ class ConnectionChecksProbeTest {
         assertTrue(CheckResult.up("n", "d", 0).isUp());
         assertTrue(!CheckResult.down("n", "d", 0).isUp() && !CheckResult.unknown("n", "d").isUp());
     }
+
+    /** UC-025 BR-098: a report address is probed where the runtime calls it (UC-005 BR-023). */
+    @Test
+    void given_aReportAddress_when_itsProbeTargetIsBuilt_then_aPathIsResolvedUnderSurveyAndAnAbsoluteOneIsKept() {
+        assertEquals("http://survey:8080/api/reports/respondent-summary",
+                ConnectionChecks.reportAddress("http://survey:8080", "/api/reports/respondent-summary"));
+        assertEquals("https://host/survey/api/reports/respondent-summary",
+                ConnectionChecks.reportAddress("https://host/survey", "api/reports/respondent-summary"));
+        assertEquals("http://fhhs:8080/proband/report",
+                ConnectionChecks.reportAddress("http://survey:8080", "http://fhhs:8080/proband/report"));
+        assertEquals("/api/reports/respondent-summary",
+                ConnectionChecks.reportAddress(null, "/api/reports/respondent-summary"), "no Survey address configured");
+        assertEquals("not a url", ConnectionChecks.reportAddress("http://survey:8080", "not a url"),
+                "an address that cannot be resolved is left for the probe to report");
+    }
 }
