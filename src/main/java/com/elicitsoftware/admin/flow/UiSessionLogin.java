@@ -11,6 +11,7 @@ package com.elicitsoftware.admin.flow;
  * ***LICENSE_END***
  */
 
+import com.elicitsoftware.model.ImportClient;
 import com.elicitsoftware.model.User;
 import com.vaadin.flow.server.VaadinSession;
 import com.vaadin.quarkus.annotation.UIScoped;
@@ -146,6 +147,11 @@ public class UiSessionLogin implements Serializable {
 
     private User lookup() {
         String principalName = identity.getPrincipal().getName();
+        // UC-001 BR-171: an import client record gives no access to the console. A principal
+        // that matches one has no user record here, whatever roles it holds.
+        if (ImportClient.findByName(principalName) != null) {
+            return null;
+        }
         return User.find("username = ?1 and active = true", principalName).firstResult(); // i18n:ignore (JPQL)
     }
 

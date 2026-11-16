@@ -191,13 +191,13 @@ class MainLayoutUnitTest extends PlainAdminViewTestSupport {
         SideNavItem admin = items.get(3);
         assertEquals("vaadin:cog", icon(admin.getPrefixComponent()));
         assertEquals(List.of(t("mainLayout.nav.departments"), t("mainLayout.nav.messageTemplates"),
-                t("mainLayout.nav.users"), t("mainLayout.nav.importRespondent"),
+                t("mainLayout.nav.users"), t("mainLayout.nav.importClients"), t("mainLayout.nav.importRespondent"),
                 t("mainLayout.nav.applySurveyDefinition"), t("mainLayout.nav.exportSurveyDefinition")),
                 labels(admin.getItems()));
-        assertEquals(List.of("departments", "message-templates", "users", "respondent-import",
+        assertEquals(List.of("departments", "message-templates", "users", "import-clients", "respondent-import",
                 "apply-survey-definition", "export-survey-definition"),
                 admin.getItems().stream().map(SideNavItem::getPath).toList());
-        assertEquals(List.of("vaadin:grid", "vaadin:envelope", "vaadin:group", "vaadin:upload",
+        assertEquals(List.of("vaadin:grid", "vaadin:envelope", "vaadin:group", "vaadin:connect", "vaadin:upload",
                 "vaadin:file-process", "vaadin:download"),
                 admin.getItems().stream().map(i -> icon(i.getPrefixComponent())).toList());
 

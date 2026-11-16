@@ -77,7 +77,7 @@ class RoleSecurityIdentityAugmentorUnitTest {
     void given_anOidcElicitRole_when_augmented_then_itIsExpandedAndStampedOidc() {
         SecurityIdentity result = augment(augmentor(AuthorizationMode.DATABASE, Set.of()), identity("elicit_user", "offline_access"));
 
-        assertEquals(Set.of("elicit_user", "elicit_importer", "offline_access"), result.getRoles());
+        assertEquals(Set.of("elicit_user", "offline_access"), result.getRoles());
         assertEquals("oidc", result.getAttribute("roleSource"));
         assertEquals("alice", result.getPrincipal().getName());
         assertEquals(0, lookups, "OIDC roles win: the database is not consulted");
@@ -94,10 +94,10 @@ class RoleSecurityIdentityAugmentorUnitTest {
 
     @Test
     void given_noElicitRoleInDatabaseMode_when_augmented_then_theDatabaseSuppliesTheRoles() {
-        SecurityIdentity result = augment(augmentor(AuthorizationMode.DATABASE, Set.of("elicit_importer")), identity("offline_access"));
+        SecurityIdentity result = augment(augmentor(AuthorizationMode.DATABASE, Set.of("elicit_user")), identity("offline_access"));
 
         assertEquals(1, lookups);
-        assertTrue(result.getRoles().contains("elicit_importer"));
+        assertTrue(result.getRoles().contains("elicit_user"));
         assertEquals("database", result.getAttribute("roleSource"));
     }
 
@@ -120,7 +120,7 @@ class RoleSecurityIdentityAugmentorUnitTest {
 
         SecurityIdentity result = lookup.augment(identity("offline_access"));
 
-        assertEquals(Set.of("elicit_admin", "elicit_user", "elicit_importer", "offline_access"), result.getRoles());
+        assertEquals(Set.of("elicit_admin", "elicit_user", "offline_access"), result.getRoles());
         assertEquals("database", result.getAttribute("roleSource"));
         assertEquals("alice", db.calls().get(0).param("username"));
         assertTrue(db.calls().get(0).is("u.active = true"), "only active users are looked up");

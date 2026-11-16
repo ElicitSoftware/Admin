@@ -29,19 +29,25 @@ import java.util.Set;
  */
 public final class ElicitRoles {
 
-    /** The administrator role; implies {@link #USER} and {@link #IMPORTER}. */
+    /** The administrator role; implies {@link #USER}. */
     public static final String ADMIN = "elicit_admin";
-    /** The standard user role; implies {@link #IMPORTER}. */
+    /** The standard user role; implies only itself. */
     public static final String USER = "elicit_user";
-    /** The importer role; implies only itself. */
+    /**
+     * The importer role, held by import clients only (UC-032): it admits a machine client to the
+     * registration API and no user holds it, by implication or by assignment.
+     */
     public static final String IMPORTER = "elicit_importer";
 
     /** All roles Elicit Admin recognizes. */
     public static final Set<String> ALL = Set.of(ADMIN, USER, IMPORTER);
 
+    /** The roles a user can hold, and so the ones the role table accepts (UC-016 BR-054). */
+    public static final Set<String> USER_ROLES = Set.of(ADMIN, USER);
+
     private static final Map<String, Set<String>> IMPLIED = Map.of(
-            ADMIN, Set.of(ADMIN, USER, IMPORTER),
-            USER, Set.of(USER, IMPORTER),
+            ADMIN, Set.of(ADMIN, USER),
+            USER, Set.of(USER),
             IMPORTER, Set.of(IMPORTER)
     );
 
@@ -50,7 +56,7 @@ public final class ElicitRoles {
 
     /**
      * Expands a set of raw roles to the full set of roles they imply under the
-     * admin/user/importer hierarchy. Roles outside {@link #ALL} pass through unchanged.
+     * role hierarchy (UC-001 BR-006: admin implies user, and nothing implies importer). Roles outside {@link #ALL} pass through unchanged.
      *
      * @param rawRoles the unexpanded roles, as stored in Keycloak or {@code survey.user_roles}
      * @return the cumulative set of roles implied by {@code rawRoles}

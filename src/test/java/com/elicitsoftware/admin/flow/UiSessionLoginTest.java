@@ -93,6 +93,34 @@ class UiSessionLoginTest extends QuarkusBrowserlessTest {
     void noMatchingUserResultsInNullSessionUser() {
         assertNull(sessionLogin().getUser());
     }
+    /**
+     * UC-001 BR-171: an import client record gives no access to the console. A principal that
+     * matches one has no session user, even with a console role and an active user record.
+     */
+    @Test
+    @TestSecurity(user = "uisessionlogin.machine", roles = {"elicit_admin"})
+    void principalMatchingAnImportClientHasNoSessionUser() {
+        QuarkusTransaction.requiringNew().run(() -> {
+            User user = new User();
+            user.setUsername("uisessionlogin.machine");
+            user.setFirstName("Ma");
+            user.setLastName("Chine");
+            user.setActive(true);
+            user.persist();
+        });
+        UiSessionLogin login = sessionLogin();
+        login.refresh();
+        assertFalse(login.getUser() == null, "a user record alone signs in");
+
+        com.elicitsoftware.test.DepartmentFixtures.importClient("uisessionlogin.machine", true);
+        try {
+            login.refresh();
+            assertNull(login.getUser());
+        } finally {
+            com.elicitsoftware.test.DepartmentFixtures.noImportClient("uisessionlogin.machine");
+        }
+    }
+
     /** UC-028 BR-114: refresh() re-reads the record, so a department assigned after sign-in is seen. */
     @Test
     @TestSecurity(user = "uisessionlogin.refresh", roles = {"elicit_admin"})

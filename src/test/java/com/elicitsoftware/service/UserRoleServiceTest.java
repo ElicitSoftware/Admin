@@ -67,9 +67,9 @@ class UserRoleServiceTest {
         User user = newUser("uc016.svc.replace@example.org");
         userRoleService.setRole(user.getId(), "elicit_admin");
 
-        userRoleService.setRole(user.getId(), "elicit_importer");
+        userRoleService.setRole(user.getId(), "elicit_user");
 
-        assertEquals(Optional.of("elicit_importer"), userRoleService.findRoleName(user.getId()));
+        assertEquals(Optional.of("elicit_user"), userRoleService.findRoleName(user.getId()));
         assertEquals(1, UserRole.count("id.userId", user.getId()));
     }
 
@@ -94,6 +94,30 @@ class UserRoleServiceTest {
         assertThrows(IllegalArgumentException.class,
                 () -> userRoleService.setRole(user.getId(), "not_a_role"));
         assertEquals(Optional.empty(), userRoleService.findRoleName(user.getId()));
+    }
+
+    /** UC-016/BR-054: elicit_importer is an import client's role (UC-032); a user is never granted it. */
+    @Test
+    @TestTransaction
+    void setRoleRejectsTheImporterRole() {
+        User user = newUser("uc016.svc.importer@example.org");
+
+        assertThrows(IllegalArgumentException.class,
+                () -> userRoleService.setRole(user.getId(), "elicit_importer"));
+        assertEquals(Optional.empty(), userRoleService.findRoleName(user.getId()));
+    }
+
+    /** UC-016/BR-054: since V0.0.25 the role table refuses elicit_importer too. */
+    @Test
+    @TestTransaction
+    void checkConstraintRejectsTheImporterRoleAtTheDatabaseLevel() {
+        User user = newUser("uc016.svc.dbimporter@example.org");
+        UserRole importer = new UserRole(user.getId(), "elicit_importer");
+
+        assertThrows(PersistenceException.class, () -> {
+            importer.persist();
+            UserRole.flush();
+        });
     }
 
     /** UC-016/BR-054: the database CHECK constraint independently rejects a bad role name. */

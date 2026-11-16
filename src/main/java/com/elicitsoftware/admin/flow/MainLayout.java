@@ -349,6 +349,8 @@ public class MainLayout extends AppLayout implements AfterNavigationListener {
                     VaadinIcon.ENVELOPE.create()));
             adminSection.addItem(new SideNavItem(getTranslation("mainLayout.nav.users"), UsersView.class,
                     VaadinIcon.GROUP.create()));
+            adminSection.addItem(new SideNavItem(getTranslation("mainLayout.nav.importClients"), ImportClientsView.class,
+                    VaadinIcon.CONNECT.create()));
             adminSection.addItem(new SideNavItem(getTranslation("mainLayout.nav.importRespondent"), RespondentImportView.class,
                     VaadinIcon.UPLOAD.create()));
             adminSection.addItem(new SideNavItem(getTranslation("mainLayout.nav.applySurveyDefinition"), SurveyDefinitionApplyView.class,

@@ -19,6 +19,7 @@ import com.elicitsoftware.request.AddRequest;
 import com.elicitsoftware.response.AddResponse;
 import com.elicitsoftware.response.AddResponseStatus;
 import com.elicitsoftware.security.DepartmentScope;
+import com.elicitsoftware.security.ElicitRoles;
 import com.elicitsoftware.service.CsvImportException;
 import com.elicitsoftware.service.CsvImportService;
 import com.elicitsoftware.util.LogMasking;
@@ -119,11 +120,29 @@ public class AccessCodeService {
      */
     @Path("/add/subject")
     @POST
-    @RolesAllowed({"elicit_importer", "elicit_admin", "elicit_user"})
+    @RolesAllowed(ElicitRoles.IMPORTER)
     @Consumes(MediaType.APPLICATION_JSON)
     @Produces(MediaType.APPLICATION_JSON)
     @Transactional
     public AddResponse putSubject(AddRequest request) {
+        // UC-010 BR-034, BR-170: the API is for import clients only.
+        departmentScope.requireImportClient();
+        return registerSubject(request);
+    }
+
+    /**
+     * Registers one subject for the current principal, in a department its record is assigned
+     * to. This is what {@link #putSubject(AddRequest)} does for an import client and what a row
+     * of a CSV file comes to, on the API and on the Register page alike; it carries no role of
+     * its own, so a user's upload on the Register page runs under the user's role and console
+     * user record (UC-003 A6) and is not a use of the registration API.
+     *
+     * @param request the subject registration request
+     * @return the subject's status (with its access code when this call created it) or an error
+     * @throws jakarta.ws.rs.ForbiddenException when the department is not one of the principal's
+     */
+    @Transactional
+    public AddResponse registerSubject(AddRequest request) {
         // UC-010 BR-137: before the exclusion and duplicate checks, so a refusal says nothing
         // about the department's subjects.
         departmentScope.require(request.departmentId);
@@ -190,10 +209,12 @@ public class AccessCodeService {
      */
     @Path("/add/subjects")
     @POST
-    @RolesAllowed({"elicit_importer", "elicit_admin", "elicit_user"})
+    @RolesAllowed(ElicitRoles.IMPORTER)
     @Consumes(MediaType.APPLICATION_JSON)
     @Produces(MediaType.APPLICATION_JSON)
     public AddResponse putSubjects(List<AddRequest> requests) {
+        // UC-010 BR-034, BR-170: the API is for import clients only.
+        departmentScope.requireImportClient();
         AddResponse response = new AddResponse();
 
         // Each request gets its own transaction (requiringNew()) rather than sharing one
@@ -397,9 +418,12 @@ public class AccessCodeService {
     @Path("/add/csv")
     @POST
     @Consumes(MediaType.MULTIPART_FORM_DATA)
-    @RolesAllowed("elicit_importer")
+    @RolesAllowed(ElicitRoles.IMPORTER)
     @Transactional
     public AddResponse importCsv(MultipartBody multipartBody) {
+        // UC-010 BR-034, BR-170: the API is for import clients only. Outside the try below,
+        // which would turn the refusal into an answer.
+        departmentScope.requireImportClient();
         Log.info("Upload CSV file received");
         try {
             // Validate that a file was provided
@@ -426,7 +450,7 @@ public class AccessCodeService {
 
     /**
      * Whether the caller may register subjects in a department (UC-010 BR-137). The CSV import
-     * asks before it hands a line to {@link #putSubject(AddRequest)}, so a refused line is
+     * asks before it hands a line to {@link #registerSubject(AddRequest)}, so a refused line is
      * reported by its number and the other lines go on.
      *
      * @param departmentId the department a record names

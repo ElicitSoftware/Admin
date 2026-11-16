@@ -24,6 +24,7 @@ import io.smallrye.mutiny.Uni;
 import jakarta.inject.Inject;
 import org.junit.jupiter.api.Test;
 
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
@@ -68,12 +69,12 @@ class RoleSecurityIdentityAugmentorDatabaseModeTest {
 
         assertTrue(augmented.getRoles().contains("elicit_admin"));
         assertTrue(augmented.getRoles().contains("elicit_user"));
-        assertTrue(augmented.getRoles().contains("elicit_importer"));
+        assertFalse(augmented.getRoles().contains("elicit_importer"), "BR-006: no user role implies elicit_importer");
     }
 
-    /** UC-001/A3/BR-006: a raw elicit_user database grant expands to user + importer only. */
+    /** UC-001/A3/BR-006: a raw elicit_user database grant stays elicit_user only. */
     @Test
-    void userGrantExpandsToUserAndImporterOnly() {
+    void userGrantExpandsToUserOnly() {
         SecurityIdentity noRoleIdentity = QuarkusSecurityIdentity.builder()
                 .setPrincipal(new QuarkusPrincipal("user"))
                 .build();
@@ -82,6 +83,7 @@ class RoleSecurityIdentityAugmentorDatabaseModeTest {
                 .await().indefinitely();
 
         assertTrue(augmented.getRoles().contains("elicit_user"));
-        assertTrue(augmented.getRoles().contains("elicit_importer"));
+        assertFalse(augmented.getRoles().contains("elicit_admin"));
+        assertFalse(augmented.getRoles().contains("elicit_importer"));
     }
 }

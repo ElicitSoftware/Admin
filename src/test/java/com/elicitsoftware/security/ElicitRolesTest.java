@@ -25,18 +25,23 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
  */
 class ElicitRolesTest {
 
-    /** UC-001/BR-006: elicit_admin implies elicit_user and elicit_importer. */
+    /** UC-001/BR-006: elicit_admin implies elicit_user, and not elicit_importer. */
     @Test
-    void adminExpandsToAllThreeRoles() {
-        assertEquals(Set.of(ElicitRoles.ADMIN, ElicitRoles.USER, ElicitRoles.IMPORTER),
+    void adminExpandsToAdminAndUser() {
+        assertEquals(Set.of(ElicitRoles.ADMIN, ElicitRoles.USER),
                 ElicitRoles.expand(Set.of(ElicitRoles.ADMIN)));
     }
 
-    /** UC-001/BR-006: elicit_user implies elicit_importer but not elicit_admin. */
+    /** UC-001/BR-006: elicit_user implies only itself; no user role implies elicit_importer. */
     @Test
-    void userExpandsToUserAndImporter() {
-        assertEquals(Set.of(ElicitRoles.USER, ElicitRoles.IMPORTER),
-                ElicitRoles.expand(Set.of(ElicitRoles.USER)));
+    void userExpandsToItselfOnly() {
+        assertEquals(Set.of(ElicitRoles.USER), ElicitRoles.expand(Set.of(ElicitRoles.USER)));
+    }
+
+    /** UC-016/BR-054: the roles a user can hold leave elicit_importer to import clients. */
+    @Test
+    void userRolesAreAdminAndUser() {
+        assertEquals(Set.of(ElicitRoles.ADMIN, ElicitRoles.USER), ElicitRoles.USER_ROLES);
     }
 
     /** UC-001/BR-006: elicit_importer implies only itself. */

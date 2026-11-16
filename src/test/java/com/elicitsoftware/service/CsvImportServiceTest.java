@@ -42,10 +42,10 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * best-practices audit: {@code CsvImportService} had zero test coverage.</p>
  *
  * <p>{@code importSubjects} delegates each row to the real, CDI-intercepted
- * {@link AccessCodeService#putSubject}, which is {@code @RolesAllowed}
- * ({@code elicit_importer}, {@code elicit_admin}, {@code elicit_user}) — that check applies to
- * this direct bean-to-bean call just as it would to an HTTP request, so every test method needs
- * {@code @TestSecurity} with one of those roles.</p>
+ * {@link AccessCodeService#registerSubject}, which carries no role of its own: the API's
+ * {@code elicit_importer} check is made at the endpoint (UC-010 BR-034), and the Register page's
+ * upload reaches the same method under a user's role (UC-003 A6). The department rule is asked
+ * for each row either way, so every test runs as an import client assigned to its department.</p>
  */
 @QuarkusTest
 @QuarkusTestResource(PostgresTestResource.class)
@@ -63,8 +63,8 @@ class CsvImportServiceTest {
         department.defaultMessageId = "1";
         department.fromEmail = "csv-import@example.org";
         department.persist();
-        // UC-010 BR-137: a caller registers only where its console record is assigned.
-        DepartmentFixtures.assign("importer", department);
+        // UC-010 BR-137: an import client registers only where its record is assigned.
+        DepartmentFixtures.assignImportClient("importer", department);
         return department;
     }
 

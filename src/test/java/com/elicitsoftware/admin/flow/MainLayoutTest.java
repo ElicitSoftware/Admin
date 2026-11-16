@@ -72,6 +72,7 @@ class MainLayoutTest extends QuarkusBrowserlessTest {
         assertTrue(hasNavItem(layout, layout.getTranslation("mainLayout.nav.registerSubjects")));
         assertTrue(hasNavItem(layout, layout.getTranslation("mainLayout.nav.admin")), "an admin should see the Admin section");
         assertTrue(hasNavItem(layout, layout.getTranslation("mainLayout.nav.importRespondent")), "an admin should see Import Respondent");
+        assertTrue(hasNavItem(layout, layout.getTranslation("mainLayout.nav.importClients")), "UC-032: an admin should see Import Clients");
         assertTrue(hasNavItem(layout, layout.getTranslation("mainLayout.nav.applySurveyDefinition")), "an admin should see Apply Survey Definition");
         assertTrue(hasNavItem(layout, layout.getTranslation("mainLayout.nav.exportSurveyDefinition")), "an admin should see Export Survey Definition");
         // UC-020..UC-025 and FR-026: the System section and its six entries.
@@ -103,6 +104,7 @@ class MainLayoutTest extends QuarkusBrowserlessTest {
         assertFalse(hasNavItem(layout, layout.getTranslation("mainLayout.nav.system")), "a non-admin must not see the System section");
         assertFalse(hasNavItem(layout, layout.getTranslation("mainLayout.nav.systemOidc")), "a non-admin must not see System > OIDC");
         assertFalse(hasNavItem(layout, layout.getTranslation("mainLayout.nav.importRespondent")), "a non-admin must not see Import Respondent");
+        assertFalse(hasNavItem(layout, layout.getTranslation("mainLayout.nav.importClients")), "UC-032 A5: a non-admin must not see Import Clients");
         assertFalse(hasNavItem(layout, layout.getTranslation("mainLayout.nav.exportSurveyDefinition")),
                 "a non-admin must not see Export Survey Definition");
         // UC-029 BR-006: one manual serves both roles -- this is the entry that must NOT follow

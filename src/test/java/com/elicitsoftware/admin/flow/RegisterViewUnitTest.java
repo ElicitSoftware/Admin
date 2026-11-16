@@ -122,7 +122,7 @@ class RegisterViewUnitTest extends PlainAdminViewTestSupport {
         };
         view.accessCodeService = new AccessCodeService() {
             @Override
-            public AddResponse putSubject(AddRequest request) {
+            public AddResponse registerSubject(AddRequest request) {
                 requests.add(request);
                 return putSubject.apply(request);
             }

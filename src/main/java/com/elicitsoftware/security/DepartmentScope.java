@@ -11,6 +11,7 @@ package com.elicitsoftware.security;
  * ***LICENSE_END***
  */
 
+import com.elicitsoftware.model.ImportClient;
 import com.elicitsoftware.model.User;
 import io.quarkus.security.identity.SecurityIdentity;
 import jakarta.enterprise.context.ApplicationScoped;
@@ -23,7 +24,11 @@ import jakarta.ws.rs.ForbiddenException;
  * UC-010 BR-137, UC-003 BR-138). This is the one place the rule is decided: the integration API,
  * the CSV upload and the registration form all ask here.
  *
- * <p>The console user record is read from the database on every call, in a persistence context
+ * <p>The rule reads from two places. A person registers where their console user record
+ * (UC-008) is assigned, a machine client of the registration API where its import client
+ * record (UC-032) is assigned, and a principal with neither registers nowhere.</p>
+ *
+ * <p>The record is read from the database on every call, in a persistence context
  * of its own when the caller has none, so a department assigned or removed since sign-in counts
  * at once; the copy a browser session holds only feeds what a screen offers.</p>
  */
@@ -38,18 +43,24 @@ public class DepartmentScope {
     }
 
     /**
-     * Whether the current principal may act on subjects of a department.
+     * Whether the current principal may act in a department.
      *
-     * @param departmentId the department a subject belongs to, or is to be registered in
-     * @return true when the principal has a console record that is active and assigned to the
-     *         department; false for a principal with no console record, whatever role the
-     *         identity provider gave it (UC-010 BR-137)
+     * <p>A principal whose name is that of an import client is that import client and nothing
+     * else (UC-001 BR-171): its console user record, should one exist, is not consulted.</p>
+     *
+     * @param departmentId the department a record names
+     * @return true when the principal's record is active and assigned to the department
      */
     @Transactional
     public boolean permits(long departmentId) {
+        ImportClient client = importClient();
+        if (client != null) {
+            return actsAsImportClient(client) && client.getDepartments() != null
+                    && client.getDepartments().stream().anyMatch(department -> department.id == departmentId);
+        }
         User user = consoleRecord();
-        // No console record, no department: a role says the principal may call, the record says
-        // for which departments. An integration client is entered on the Users screen like a person.
+        // No record, no department: a role says the principal may call, the record says for
+        // which departments.
         if (user == null || !user.isActive() || user.getDepartments() == null) {
             return false;
         }
@@ -57,10 +68,10 @@ public class DepartmentScope {
     }
 
     /**
-     * Refuses the request when {@link #permits(long)} does not hold.
+     * Refuses a principal that may not act in a department.
      *
-     * @param departmentId the department a subject belongs to, or is to be registered in
-     * @throws ForbiddenException when the principal may not act on that department
+     * @param departmentId the department a record names
+     * @throws ForbiddenException when {@link #permits(long)} is false
      */
     @Transactional
     public void require(long departmentId) {
@@ -69,7 +80,38 @@ public class DepartmentScope {
         }
     }
 
-    /** The console record of the current principal, active or not; null when there is none. */
+    /**
+     * Refuses a caller of the registration API that is not an import client (UC-010 BR-170).
+     * The refusal is of the whole request, before any record of it is read.
+     *
+     * @throws ForbiddenException when the principal has no active import client record, or its
+     *         identity lacks {@code elicit_importer} or carries a console role beside it
+     */
+    @Transactional
+    public void requireImportClient() {
+        ImportClient client = importClient();
+        if (client == null || !actsAsImportClient(client)) {
+            throw new ForbiddenException();
+        }
+    }
+
+    /**
+     * An import client is its active record and the one role (UC-010 BR-170): a token that also
+     * carries a console role is refused rather than read as either.
+     */
+    private boolean actsAsImportClient(ImportClient client) {
+        return client.isActive()
+                && identity.hasRole(ElicitRoles.IMPORTER)
+                && !identity.hasRole(ElicitRoles.USER)
+                && !identity.hasRole(ElicitRoles.ADMIN);
+    }
+
+    /** The import client record of the current principal, active or not; null when there is none. */
+    ImportClient importClient() {
+        return ImportClient.findByName(identity.getPrincipal().getName());
+    }
+
+    /** The console user record of the current principal, active or not; null when there is none. */
     User consoleRecord() {
         String principalName = identity.getPrincipal().getName();
         return User.find("username = ?1", principalName).firstResult(); // i18n:ignore (JPQL)
