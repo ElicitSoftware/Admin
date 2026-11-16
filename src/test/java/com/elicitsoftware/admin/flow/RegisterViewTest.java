@@ -13,6 +13,7 @@ package com.elicitsoftware.admin.flow;
 
 import com.elicitsoftware.model.Department;
 import com.elicitsoftware.model.User;
+import com.elicitsoftware.test.DepartmentFixtures;
 import com.elicitsoftware.test.PostgresTestResource;
 import com.vaadin.browserless.quarkus.QuarkusBrowserlessTest;
 import com.vaadin.flow.component.UI;
@@ -135,6 +136,8 @@ class RegisterViewTest extends QuarkusBrowserlessTest {
         department.defaultMessageId = "1";
         department.fromEmail = "register-csv@example.org";
         department.persist();
+        // UC-010 BR-137: a caller registers only where its console record is assigned.
+        DepartmentFixtures.assign("register.tester", department);
         return department;
     }
 

@@ -150,7 +150,7 @@ public class AccessCodeService {
                     status = Status.findByXidAndDepartmentId(request.xid, request.departmentId);
                     addStatus = new AddResponseStatus(status, "New Subject");
                 } else {
-                    addStatus = new AddResponseStatus(status, "Existing Subject");
+                    addStatus = new AddResponseStatus(outcomeOnly(status), "Existing Subject");
                 }
             }
             response.addStatus(addStatus);
@@ -219,6 +219,24 @@ public class AccessCodeService {
     }
 
     /**
+     * What an answer says of a subject that already exists (UC-010 BR-164): the external ID and
+     * the department, which the caller sent, and no stored field. The caller did not create
+     * this subject, so its name, contact data, status and access code are not the caller's to
+     * be handed.
+     *
+     * @param existing the stored subject's status row
+     * @return a status carrying only the external ID and the department
+     */
+    static Status outcomeOnly(Status existing) {
+        Status outcome = new Status();
+        outcome.setXid(existing.getXid());
+        outcome.setDepartmentId(existing.getDepartmentId());
+        // Its two dates are the moment of this answer, as in the empty status of an excluded
+        // record; the stored subject's dates are not copied.
+        return outcome;
+    }
+
+    /**
      * Processes a single subject registration request within the caller's transaction.
      * <p>
      * Known/expected failure modes ({@link AccessCodeGenerationError}) are handled here and
@@ -263,7 +281,7 @@ public class AccessCodeService {
                 status = Status.findByXidAndDepartmentId(request.xid, request.departmentId);
                 return new AddResponseStatus(status, "New Subject: " + request.xid);
             } else {
-                return new AddResponseStatus(status, "Existing Subject: " + request.xid);
+                return new AddResponseStatus(outcomeOnly(status), "Existing Subject: " + request.xid);
             }
         } catch (AccessCodeGenerationError e) {
             Status errorStatus = new Status();

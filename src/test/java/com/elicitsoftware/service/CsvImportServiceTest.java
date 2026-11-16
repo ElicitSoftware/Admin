@@ -15,6 +15,7 @@ import com.elicitsoftware.model.Department;
 import com.elicitsoftware.model.Status;
 import com.elicitsoftware.response.AddResponse;
 import com.elicitsoftware.rest.AccessCodeService;
+import com.elicitsoftware.test.DepartmentFixtures;
 import com.elicitsoftware.test.PostgresTestResource;
 import io.quarkus.test.TestTransaction;
 import io.quarkus.test.common.QuarkusTestResource;
@@ -62,6 +63,8 @@ class CsvImportServiceTest {
         department.defaultMessageId = "1";
         department.fromEmail = "csv-import@example.org";
         department.persist();
+        // UC-010 BR-137: a caller registers only where its console record is assigned.
+        DepartmentFixtures.assign("importer", department);
         return department;
     }
 

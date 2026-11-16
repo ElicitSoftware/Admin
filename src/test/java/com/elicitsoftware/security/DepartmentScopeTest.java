@@ -87,14 +87,14 @@ class DepartmentScopeTest {
         assertFalse(scope.permits(any.id));
     }
 
-    /** UC-010 BR-137, last sentence: a principal with no console record is not bound by the rule. */
+    /** UC-010 BR-137: a principal with no console record is permitted no department, whatever its role. */
     @Test
     @TestSecurity(user = "scope.bean.norecord", roles = {"elicit_importer"})
-    void given_noConsoleRecord_when_asked_then_theOnePlaceThatDecidesItAnswers() {
+    void given_noConsoleRecord_when_asked_then_noDepartmentIsPermitted() {
         Department any = DepartmentFixtures.department(token());
         DepartmentFixtures.noConsoleRecord("scope.bean.norecord");
 
-        assertTrue(scope.permitsWithoutConsoleRecord());
-        assertTrue(scope.permits(any.id));
+        assertFalse(scope.permits(any.id));
+        assertThrows(ForbiddenException.class, () -> scope.require(any.id));
     }
 }

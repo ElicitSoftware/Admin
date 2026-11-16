@@ -33,6 +33,7 @@ import static org.hamcrest.Matchers.hasSize;
 import static org.hamcrest.Matchers.not;
 import static org.hamcrest.Matchers.notNullValue;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 
 /**
  * UC-010: Register Subjects via Integration API — BR-137, the caller's departments bound the API
@@ -147,17 +148,79 @@ class AccessCodeServiceDepartmentScopeTest {
         assertEquals(1, subjectsWith(mine));
     }
 
-    /** BR-137, last sentence: a client with no console record registers as it did before the rule. */
+    /** BR-137: a role without a console record registers nowhere, in a single request. */
     @Test
     @TestSecurity(user = MACHINE, roles = {"elicit_importer"})
-    void given_aCallerWithNoConsoleRecord_when_oneSubjectIsPosted_then_itIsRegistered() {
+    void given_aCallerWithNoConsoleRecord_when_oneSubjectIsPosted_then_itIsForbiddenAndNothingIsStored() {
         String xid = "SCOPE-" + token + "-8";
 
         given().contentType(ContentType.JSON).body(subjectJson(other.id, xid))
                 .when().post("/api/secured/add/subject")
-                .then().statusCode(200)
-                .body("subjects[0].importStatus", equalTo("New Subject"));
+                .then().statusCode(403)
+                .body(not(containsString(xid)));
 
+        assertEquals(0, subjectsWith(xid));
+    }
+
+    /** BR-137, A6: the same caller's batch is answered record by record, and its CSV line by line. */
+    @Test
+    @TestSecurity(user = MACHINE, roles = {"elicit_importer"})
+    void given_aCallerWithNoConsoleRecord_when_aBatchOrACsvIsPosted_then_noRecordIsPermitted() {
+        String batched = "SCOPE-" + token + "-9";
+        String uploaded = "SCOPE-" + token + "-10";
+
+        given().contentType(ContentType.JSON).body("[" + subjectJson(own.id, batched) + "]")
+                .when().post("/api/secured/add/subjects")
+                .then().statusCode(200)
+                .body("subjects[0].importStatus", equalTo("Not permitted: " + batched));
+
+        String csv = own.id + ",Ann,Lee,,,ann." + token + "@example.org,555-010-0102," + uploaded + "\n";
+        given().multiPart("file", "subjects.csv", csv.getBytes(StandardCharsets.UTF_8))
+                .when().post("/api/secured/add/csv")
+                .then().statusCode(200)
+                .body(containsString("Line 1: You are not assigned to department " + own.id));
+
+        assertEquals(0, subjectsWith(batched));
+        assertEquals(0, subjectsWith(uploaded));
+    }
+
+    /**
+     * BR-164: the answer for a subject that already exists carries the outcome, the external ID
+     * and the department, and nothing stored; the access code came back once, when it was created.
+     */
+    @Test
+    @TestSecurity(user = USER, roles = {"elicit_user"})
+    void given_anExistingSubject_when_postedAgain_then_theAnswerCarriesTheOutcomeAndNoStoredField() {
+        String xid = "SCOPE-" + token + "-11";
+        String accessCode = given().contentType(ContentType.JSON).body(subjectJson(own.id, xid))
+                .when().post("/api/secured/add/subject")
+                .then().statusCode(200)
+                .body("subjects[0].importStatus", equalTo("New Subject"))
+                .extract().path("subjects[0].status.accessCode");
+
+        String single = given().contentType(ContentType.JSON).body(subjectJson(own.id, xid))
+                .when().post("/api/secured/add/subject")
+                .then().statusCode(200)
+                .body("subjects[0].importStatus", equalTo("Existing Subject"))
+                .body("subjects[0].status.xid", equalTo(xid))
+                .body("subjects[0].status.departmentId", equalTo((int) own.id))
+                .body("subjects[0].status.accessCode", equalTo(null))
+                .body("subjects[0].status.firstName", equalTo(null))
+                .body("subjects[0].status.lastName", equalTo(null))
+                .body("subjects[0].status.email", equalTo(null))
+                .extract().asString();
+        String batch = given().contentType(ContentType.JSON).body("[" + subjectJson(own.id, xid) + "]")
+                .when().post("/api/secured/add/subjects")
+                .then().statusCode(200)
+                .body("subjects[0].importStatus", equalTo("Existing Subject: " + xid))
+                .body("subjects[0].status.accessCode", equalTo(null))
+                .extract().asString();
+
+        for (String answer : new String[]{single, batch}) {
+            assertFalse(answer.contains(accessCode), "the access code of a subject the call did not create");
+            assertFalse(answer.contains("Ann"), "the stored first name");
+            assertFalse(answer.contains("example.org"), "the stored email");
+        }
         assertEquals(1, subjectsWith(xid));
     }
 }
