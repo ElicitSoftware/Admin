@@ -167,8 +167,8 @@ this part is open to the administrator role only.}
 \section{Departments}\adminonly
 \label{sec:departments}
 
-A department groups the subjects you register, and decides which message templates those
-subjects are sent.
+A department groups the subjects you register. It decides which surveys those subjects may be
+registered onto and which message templates they are sent.
 
 A new installation has no department at all, and until one exists nobody can be registered. The
 first department is assigned to whoever creates it.
@@ -184,7 +184,7 @@ that department fail with an access-code error.
 \subsection{The list}
 
 \ui{Admin} $>$ \ui{Departments} lists every department with its code, the message templates it
-sends and its sender address.
+sends, its sender address and its surveys.
 
 \screenshot{04-departments}{The Departments screen. \ui{New Department} creates one; the
 pencil in the \ui{Edit} column opens an existing one.}
@@ -204,6 +204,9 @@ pencil in the \ui{Edit} column opens an existing one.}
   \item Fill in \ui{From email}, the department's sender address. Invitations are sent from the
         address the service was started with (\ui{System} $>$ \ui{Email} shows it); the
         department's address is recorded but not used as the sender today.
+  \item Check \ui{Surveys}: the surveys this department's subjects may be registered onto. A new
+        department starts with every installed survey; remove the ones it does not run. Each
+        survey is shown with its ID, which a CSV upload names it by (Section~\ref{sec:csv}).
   \item Choose \ui{Create department}.
 \end{enumerate}
 
@@ -223,6 +226,13 @@ department pointing at a template that was never created sends nothing at all.
 
 To change a department later, open it from the pencil in the \ui{Edit} column. The form is the
 same one; the button reads \ui{Update department}.
+
+\begin{elicitcaution}[A department registers onto its surveys only]
+Nobody can register a subject in a department onto a survey the department does not list: not on
+\ui{Register Subjects}, not by CSV, not through the registration API. A survey applied after the
+department was created is in none, so add it here before anyone registers onto it
+(Chapter~\ref{sec:install}). A department may list no survey at all.
+\end{elicitcaution}
 
 %% ------------------------------------------------------------------ 4
 \section{Users and roles}\adminonly
@@ -380,8 +390,9 @@ survey, and queues the invitation: the message templates their department names
 
 \begin{enumerate}
   \item Open \ui{Register Subjects}.
-  \item Choose the \ui{Survey} and the \ui{Department}. Either is chosen for you when there is
-        only one.
+  \item Choose the \ui{Department}, then the \ui{Survey}. The survey list offers only the
+        department's surveys (Chapter~\ref{sec:departments}); either is chosen for you when there
+        is only one.
   \item Fill in \ui{First name} and \ui{Last name}. \ui{Middle name}, \ui{Date of birth} and
         \ui{Phone} are optional; a phone number is written \texttt{\small \#\#\#-\#\#\#-\#\#\#\#}.
   \item Fill in \ui{Email}, which is required. The invitation goes to this address.
@@ -406,24 +417,35 @@ registration form reopens with their details and the button reads \ui{Update sub
 access code does not change.
 
 \subsection{Registering many at once}
+\label{sec:csv}
 
 \ui{Upload CSV} takes a file of subjects, one per row, with these columns in order:
 
 \begin{center}\small
-\val{departmentId, firstName, lastName, middleName, dob, email, phone, xid}
+\val{departmentId, firstName, lastName, middleName, dob, email, phone, xid, surveyId}
 \end{center}
+
+Every row names its survey in the ninth column. A file in which any row lacks it is rejected
+with a warning naming those lines, and nothing is imported; the survey chosen in the form plays
+no part in an upload.
 
 \begin{enumerate}
   \item Write the file. The first column is the department's numeric ID: open the department
         on \ui{Departments} and read the number at the end of the page's address
         (\val{edit-department/3}). First name, last name and email are required; a date of
-        birth is \val{yyyy-MM-dd} or \val{MM/dd/yyyy}. Rows beginning with \texttt{\small\#} are ignored.
+        birth is \val{yyyy-MM-dd} or \val{MM/dd/yyyy}. The last column is the survey's ID, shown
+        beside each survey's name in the department's \ui{Surveys}; a row with no phone or
+        External ID keeps their empty columns (\val{...,a@x.org,,,2}). Rows beginning with
+        \texttt{\small\#} are ignored.
   \item Open \ui{Register Subjects} and choose \ui{Upload CSV}.
-  \item Pick the file. Every row is registered on the first survey installed at this
-        deployment, whichever survey the form shows (a known fault, Admin\#180); on a deployment
-        with more than one survey, register through the form instead. The result lists each subject with its access code and whether it was a
-        \ui{New Subject}, an \ui{Existing Subject} already registered, or an \ui{Excluded
-        Subject}; a row that could not be read is listed under \ui{Errors} with its line number.
+  \item Pick the file. Nothing is registered yet: a confirmation says how many subjects the file
+        will register on each survey and in each department, and lists each row it will refuse
+        with its line number and the reason — a department you are not assigned to, a department
+        that does not have the row's survey, or a value that fails its rule.
+  \item Choose \ui{Import} to register them, or \ui{Cancel} to register no one. The result lists
+        each subject with its access code and whether it was a \ui{New Subject}, an
+        \ui{Existing Subject} already registered, or an \ui{Excluded Subject}; the refused rows
+        are listed under \ui{Errors} with their line numbers.
 \end{enumerate}
 
 \screenshot{34-csv-import}{The result of a CSV upload: each subject with its access code and
@@ -672,7 +694,9 @@ this deployment works out whether it is a new survey or a revision of one alread
 deployment had never seen this survey; a revision of one already here reports \ui{Survey
 Updated}.}
 
-The result names the survey key, the number of records installed and a breakdown by kind. When
+The result names the survey key, the number of records installed and a breakdown by kind. A new
+survey is in no department yet, and the result says so: open \ui{Departments} and add it to each
+department that runs it before anyone registers onto it (Chapter~\ref{sec:departments}). When
 it ends with \emph{Reporting schema rebuilt}, the reporting tables were regenerated to match the
 new structure as part of the same apply — nothing needs restarting.
 
