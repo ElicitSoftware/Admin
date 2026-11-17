@@ -5,7 +5,7 @@
 **Use Case ID:** UC-006
 **Use Case Name:** Manage Departments
 **Primary Actor:** Survey Administrator
-**Goal:** Maintain the organizational departments used to segregate subjects, group surveys, and identify outbound email.
+**Goal:** Maintain the organizational departments used to segregate subjects, decide which surveys their subjects may be registered onto, and identify outbound email.
 **Status:** Implemented
 
 ## Preconditions
@@ -14,9 +14,9 @@
 
 ## Main Success Scenario
 
-1. The administrator opens the departments view and sees the list of departments with name, code, default message ID, and sender email.
+1. The administrator opens the departments view and sees the list of departments with name, code, default message ID, sender email, and surveys.
 2. The administrator chooses to create a new department or edit an existing one.
-3. The administrator enters or changes the department name, code, default message ID, and sender email.
+3. The administrator enters or changes the department name, code, default message ID, sender email, and the surveys the department may register subjects onto (BR-172). A new department's surveys start as every installed survey (BR-173).
 4. The administrator saves.
 5. The system validates the values and stores the department, then returns to the list.
 
@@ -71,8 +71,16 @@ A department must have a default message ID, defaulting to the first template, i
 
 A department must have a valid sender email address, used as the "from" address for its outbound mail.
 
+### BR-172: A department's surveys bound registration
+
+A department lists the surveys its subjects may be registered onto. A subject is registered onto a survey only when the subject's department lists it, whether by the Register form, a CSV upload (UC-003) or the registration API (UC-010). A department may list none, and then nobody can be registered in it.
+
+### BR-173: Where a department's surveys start
+
+A department created after this rule starts with every survey installed at that moment, which the administrator may narrow before saving. A survey applied later (UC-018) is in no department until an administrator adds it on this screen. The departments that existed when the rule was introduced were given every survey installed at that time.
+
 ---
 
 ## Reference
 
-Derived from `DepartmentsView`, `EditDepartmentView`, `Department`, and the `survey.departments` schema.
+Derived from `DepartmentsView`, `EditDepartmentView`, `Department`, and the `survey.departments` and `survey.department_surveys` schema.

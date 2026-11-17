@@ -14,6 +14,7 @@ package com.elicitsoftware.admin.flow;
 import java.util.List;
 
 import com.elicitsoftware.model.Department;
+import com.elicitsoftware.service.DepartmentService;
 import com.vaadin.flow.component.button.Button;
 import com.vaadin.flow.component.button.ButtonVariant;
 import com.vaadin.flow.component.grid.Grid;
@@ -24,6 +25,7 @@ import com.vaadin.flow.component.orderedlayout.HorizontalLayout;
 import com.vaadin.flow.component.orderedlayout.VerticalLayout;
 import com.vaadin.flow.router.Route;
 import jakarta.annotation.security.RolesAllowed;
+import jakarta.inject.Inject;
 
 /**
  * A Vaadin Flow view that displays a list of departments in a grid format.
@@ -40,6 +42,21 @@ import jakarta.annotation.security.RolesAllowed;
 @Route(value = "departments", layout = MainLayout.class)
 @RolesAllowed("elicit_admin")
 public class DepartmentsView extends VerticalLayout {
+
+    /**
+     * Reads each department's surveys for the grid (UC-006 BR-172). Injected after the
+     * constructor runs, which is before the grid first renders a row.
+     */
+    @Inject
+    DepartmentService departmentService;
+
+    /** The injected service, or CDI's, for a view a test built with {@code new}. */
+    private DepartmentService departmentService() {
+        if (departmentService == null) {
+            departmentService = jakarta.enterprise.inject.spi.CDI.current().select(DepartmentService.class).get();
+        }
+        return departmentService;
+    }
     /**
      * Constructs a new DepartmentsView.
      * 
@@ -71,6 +88,10 @@ public class DepartmentsView extends VerticalLayout {
         grid.addColumn(Department::getCode).setHeader(getTranslation("departmentsView.grid.code")).setSortable(true).setAutoWidth(true);
         grid.addColumn(Department::getDefaultMessageId).setHeader(getTranslation("departmentsView.grid.defaultMessageId")).setSortable(true).setAutoWidth(true);
         grid.addColumn(Department::getFromEmail).setHeader(getTranslation("departmentsView.grid.fromEmail")).setSortable(true).setAutoWidth(true);
+        // UC-006 step 1, BR-172: the surveys each department registers onto.
+        grid.addColumn(department -> departmentService().surveysOf(department.id).stream()
+                .map(survey -> survey.name).collect(java.util.stream.Collectors.joining(", ")))
+                .setHeader(getTranslation("departmentsView.grid.surveys")).setAutoWidth(true);
         //To be uncommented after notification email system is in place.
 //        grid.addColumn(department -> {
 //            String emails = department.getNotificationEmails();

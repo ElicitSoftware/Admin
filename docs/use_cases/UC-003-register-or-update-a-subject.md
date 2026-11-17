@@ -74,10 +74,12 @@
 **Trigger:** The user uploads a CSV file of subjects.
 **Flow:**
 
-1. The system imports each row through the single-subject flow and shows a per-subject result summary (registered, already existing, or excluded), one line per row.
-2. If any row fails validation or names a department the user is not assigned to (UC-010 BR-137), the system reports each rejected row on its own line, named by its line number, and the rows that were accepted are still registered.
-3. See UC-010 for the underlying registration and validation rules.
-4. The upload is a console function: it runs under the user's own role and the departments of their console user record, and is not a use of the registration API or of the `elicit_importer` role (UC-010 BR-034).
+1. If any data row lacks the survey ID column, or leaves it empty, the system rejects the whole file with a warning naming those lines and imports nothing (BR-175). The survey chosen in the form plays no part in an upload.
+2. The system reads every row without registering anyone and shows a confirmation: how many subjects it will register on each survey and in each department, and each row it will refuse, named by its line number and reason — a department the user is not assigned to (UC-010 BR-137), a department that does not have the row's survey (UC-006 BR-172), a survey that is not installed, or a value that fails validation (BR-176).
+3. If the user cancels, nothing is imported.
+4. If the user confirms, the system imports the rows it reported as accepted through the single-subject flow and shows a per-subject result summary (registered, already existing, or excluded), one line per row, with the refused rows listed by line number.
+5. See UC-010 for the underlying registration and validation rules.
+6. The upload is a console function: it runs under the user's own role and the departments of their console user record, and is not a use of the registration API or of the `elicit_importer` role (UC-010 BR-034).
 
 ### A7: Subject is not in the user's departments
 
@@ -123,6 +125,18 @@ A subject whose external ID is on the department's exclusion list cannot be regi
 ### BR-014: Messages created only at registration
 
 Invitation/reminder messages are generated when a subject is first registered. Updating a subject does not regenerate the access code or messages.
+
+### BR-174: The survey choice follows the department
+
+The form offers only the surveys of the department chosen in it (UC-006 BR-172), and refuses a save whose department does not have the survey chosen.
+
+### BR-175: A CSV upload names its survey on every row
+
+A CSV row carries the survey's ID as its ninth column, after the external ID; a row without phone or external ID keeps their empty columns. A file in which any data row lacks the survey ID is rejected whole, with a warning, and nothing is imported.
+
+### BR-176: A CSV upload is confirmed before anything is registered
+
+On the Register page, an upload registers no one until the user has seen what it will register and refuse and has confirmed it.
 
 ### BR-138: A subject is edited only within the user's departments
 

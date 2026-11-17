@@ -12,6 +12,7 @@ package com.elicitsoftware.admin.flow;
  */
 
 import com.elicitsoftware.model.Department;
+import com.elicitsoftware.model.Survey;
 import com.elicitsoftware.service.DepartmentService;
 import com.vaadin.flow.component.Component;
 import com.vaadin.flow.component.UI;
@@ -19,6 +20,7 @@ import com.vaadin.flow.component.button.Button;
 import com.vaadin.flow.component.button.ButtonVariant;
 import com.vaadin.flow.component.notification.Notification;
 import com.vaadin.flow.component.orderedlayout.HorizontalLayout;
+import com.vaadin.flow.component.combobox.MultiSelectComboBox;
 import com.vaadin.flow.component.textfield.EmailField;
 import com.vaadin.flow.component.textfield.TextField;
 import com.vaadin.flow.component.textfield.TextFieldVariant;
@@ -29,6 +31,9 @@ import org.junit.jupiter.api.Test;
 import java.lang.reflect.Field;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.TreeSet;
+import java.util.Set;
+import java.util.Collection;
 import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -48,6 +53,16 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 class EditDepartmentViewUnitTest extends PlainSmallViewTestSupport {
 
     private final List<String> calls = new ArrayList<>();
+
+    /** Two installed surveys; an existing department in these tests registers onto the second. */
+    private static final List<Survey> INSTALLED = List.of(survey(1, "Household"), survey(2, "Family History"));
+
+    private static Survey survey(int id, String name) {
+        Survey survey = new Survey();
+        survey.id = id;
+        survey.name = name;
+        return survey;
+    }
     private RuntimeException saveFailure;
     private EditDepartmentView view;
 
@@ -71,6 +86,21 @@ class EditDepartmentViewUnitTest extends PlainSmallViewTestSupport {
                     throw saveFailure;
                 }
                 return department;
+            }
+
+            @Override
+            public List<Survey> installedSurveys() {
+                return INSTALLED;
+            }
+
+            @Override
+            public Set<Integer> surveyIdsOf(long departmentId) {
+                return Set.of(2);
+            }
+
+            @Override
+            public void setSurveys(long departmentId, Collection<Integer> surveyIds) {
+                calls.add("surveys:" + new TreeSet<>(surveyIds));
             }
         };
         view.identity = identity("ada");
@@ -103,12 +133,17 @@ class EditDepartmentViewUnitTest extends PlainSmallViewTestSupport {
         return (EmailField) parts().get(3);
     }
 
+    @SuppressWarnings("unchecked")
+    private MultiSelectComboBox<Survey> surveys() {
+        return (MultiSelectComboBox<Survey>) parts().get(4);
+    }
+
     private Button save() {
-        return (Button) ((HorizontalLayout) parts().get(4)).getComponentAt(0);
+        return (Button) ((HorizontalLayout) parts().get(5)).getComponentAt(0);
     }
 
     private Button cancel() {
-        return (Button) ((HorizontalLayout) parts().get(4)).getComponentAt(1);
+        return (Button) ((HorizontalLayout) parts().get(5)).getComponentAt(1);
     }
 
     private void enterNew() {
@@ -161,7 +196,7 @@ class EditDepartmentViewUnitTest extends PlainSmallViewTestSupport {
         assertTrue(save().getThemeNames().contains(ButtonVariant.LUMO_PRIMARY.getVariantName()));
         assertEquals(t("common.cancel"), cancel().getText());
         assertTrue(cancel().getThemeNames().contains(ButtonVariant.LUMO_TERTIARY.getVariantName()));
-        assertTrue(((HorizontalLayout) parts().get(4)).isSpacing());
+        assertTrue(((HorizontalLayout) parts().get(5)).isSpacing());
     }
 
     private static String pendingJs() {
@@ -262,7 +297,8 @@ class EditDepartmentViewUnitTest extends PlainSmallViewTestSupport {
 
         view.saveDepartment();
 
-        assertEquals(List.of("create:Cardiology for ada", "refresh"), calls, "assigned, then re-read (BR-113)");
+        assertEquals(List.of("create:Cardiology for ada", "surveys:[1, 2]", "refresh"), calls,
+                "assigned, given every installed survey (UC-006 BR-173), then re-read (BR-113)");
         assertEquals("CARD", department().code);
         assertEquals("card@example.org", department().fromEmail);
         assertEquals(List.of(t("editDepartmentView.created")), notifications());
@@ -280,7 +316,8 @@ class EditDepartmentViewUnitTest extends PlainSmallViewTestSupport {
 
         view.updateDepartment();
 
-        assertEquals(List.of("save:Cardiology"), calls);
+        assertEquals(List.of("save:Cardiology", "surveys:[1, 2]"), calls,
+                "UC-006 BR-172: the surveys chosen on the form are saved with it");
         assertEquals(List.of(t("editDepartmentView.updated")), notifications());
         assertEquals(List.of("departments"), attemptedPaths);
     }
@@ -337,5 +374,28 @@ class EditDepartmentViewUnitTest extends PlainSmallViewTestSupport {
 
         assertEquals(List.of("departments"), attemptedPaths);
         assertEquals(List.of(), calls);
+    }
+
+    /** UC-006 BR-173: a new department starts with every installed survey selected. */
+    @Test
+    void given_idZero_when_entered_then_everyInstalledSurveyIsSelected() {
+        enterNew();
+
+        assertEquals(Set.of(1, 2), surveys().getValue().stream().map(survey -> survey.id).collect(java.util.stream.Collectors.toSet()));
+        assertEquals("Household (ID 1)", surveys().getItemLabelGenerator().apply(INSTALLED.get(0)),
+                "the ID beside the name, which a CSV file names it by (UC-003 BR-175)");
+    }
+
+    /** UC-006 BR-172: a department may be left with no survey, and is saved that way. */
+    @Test
+    void given_aDepartment_when_everySurveyIsRemoved_then_itIsSavedWithNone() throws Exception {
+        enterNew();
+        department().id = 12;
+        fillValid();
+        surveys().setValue(Set.of());
+
+        view.updateDepartment();
+
+        assertEquals(List.of("save:Cardiology", "surveys:[]"), calls);
     }
 }

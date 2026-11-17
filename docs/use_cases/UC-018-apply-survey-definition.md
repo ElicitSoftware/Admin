@@ -18,7 +18,7 @@
 1. The administrator uploads a survey definition file, without nominating a target survey.
 2. The system reads the stable survey key from the file's survey record.
 3. The system looks for a survey already installed in this deployment under that key.
-4. If none exists, the system installs the file as a new survey (UC-014).
+4. If none exists, the system installs the file as a new survey (UC-014). A new survey is in no department, so nobody can be registered onto it until an administrator adds it to a department (UC-006 BR-173); the result says so.
 5. If one exists, the system applies the file to it in place (UC-017), including that use case's revision-regression check, which routing neither relaxes nor overrides.
 6. The system reports which of the two it performed, along with that use case's own result.
 7. The system asks the Survey application to rebuild the reporting schema of the survey just installed or updated, naming it by its key (Survey UC-008, `POST /api/etl/build?survey=<survey_key>`), so that survey has its own schema, dimensions, fact columns and views without a restart of Survey and no other survey's schema is touched, and adds the outcome to its report: "Reporting schema rebuilt." or "Reporting schema not rebuilt: reason". The request carries the deployment's service token (BR-159).

@@ -117,6 +117,7 @@ const FIGURES = [
   '32-edit-import-client',
   '33-participation',
   '34-csv-import',
+  '35-csv-confirm',
 ];
 
 /** The console state the walk leaves behind. Named so a re-run recognises its own work. */
@@ -469,14 +470,22 @@ async function captureParticipation() {
  */
 async function captureCsvImport() {
   const departmentId = process.env.MANUAL_DEPARTMENT_ID || '1';
+  // UC-003 BR-175: every row names its survey, by the ID the department screen shows.
+  const surveyId = surveyIdOnDepartment ?? process.env.MANUAL_SURVEY_ID ?? '1';
   const csv = path.join(os.tmpdir(), 'elicit-manual-subjects.csv');
   await writeFile(csv, [
-    '# departmentId,firstName,lastName,middleName,dob,email,phone,xid',
-    `${departmentId},Jordan,Reyes,,1984-03-12,jordan.reyes@example.org,734-555-0101,MRN0101`,
-    `${departmentId},Priya,Nair,,1990-11-02,priya.nair@example.org,,MRN0102`,
+    '# departmentId,firstName,lastName,middleName,dob,email,phone,xid,surveyId',
+    `${departmentId},Jordan,Reyes,,1984-03-12,jordan.reyes@example.org,734-555-0101,MRN0101,${surveyId}`,
+    `${departmentId},Priya,Nair,,1990-11-02,priya.nair@example.org,,MRN0102,${surveyId}`,
   ].join('\n') + '\n');
   await goto('/register');
   await page.locator('#register-csv-upload input[type=file]').setInputFiles(csv);
+  // UC-003 BR-176: the upload asks to confirm what it will register before it registers anyone.
+  const confirmation = page.locator('vaadin-confirm-dialog[opened]');
+  await confirmation.waitFor({ state: 'attached', timeout: 60_000 });
+  await pause(1200);
+  await shot('35-csv-confirm', { fullPage: true });
+  await page.getByRole('button', { name: 'Import', exact: true }).click();
   const dialog = page.locator('vaadin-dialog[opened]');
   await dialog.waitFor({ state: 'attached', timeout: 60_000 });
   await pause(1200);
@@ -545,7 +554,7 @@ async function ensureDepartment() {
   // The steps of "Creating one": name, code, default message ID, sender, create.
   await shot('05-edit-department', { marks: [
     [2, host('Department name')], [3, host('Department code')], [4, host('Default message ID')],
-    [5, host('From email')], [6, button('Create department')],
+    [5, host('From email')], [6, byId('edit-department-surveys')], [7, button('Create department')],
   ] });
 
   if (exists) {
@@ -559,6 +568,38 @@ async function ensureDepartment() {
   // A full reload, not a router navigation: the signed-in user's departments are read once per
   // UI, so every later screen needs a UI built after the department existed.
   await goto('/departments');
+}
+
+/** The applied survey's ID as the department screen labels it; the CSV figure names it by it. */
+let surveyIdOnDepartment = null;
+
+/**
+ * UC-006 BR-173: a survey applied after the department exists is in no department, so nobody could
+ * be registered onto it. Add it on the department's edit screen, as the manual says to.
+ */
+async function addSurveyToDepartment() {
+  await goto('/departments');
+  await page.locator('vaadin-grid-cell-content').filter({ hasText: DEPARTMENT.name }).first().waitFor();
+  await page.locator('vaadin-grid vaadin-button').first().click();
+  await page.waitForURL((u) => u.pathname.includes('/edit-department/'));
+  await pause(1200);
+  const surveys = byId('edit-department-surveys');
+  // Decide from the dropdown item, not the chips: several selected surveys fold into an overflow
+  // chip, and clicking an item that is already selected deselects it.
+  const input = surveys.locator('input').first();
+  await input.click();
+  await input.fill(SURVEY);
+  const item = page.locator('vaadin-multi-select-combo-box-item').filter({ hasText: `${SURVEY} (ID ` }).first();
+  await item.waitFor();
+  surveyIdOnDepartment = (await item.innerText()).match(/\(ID (\d+)\)/)?.[1];
+  const selected = (await item.getAttribute('selected')) !== null;
+  if (!selected) await item.click();
+  await input.press('Escape');
+  await pause(400);
+  if (selected) return;
+  await button('Update department').click();
+  await page.waitForURL((u) => u.pathname.endsWith('/departments'), { timeout: 30_000 }).catch(() => {});
+  await pause(1200);
 }
 
 /** UC-019: the banner a deployment carries until a survey definition is applied. */
@@ -920,6 +961,7 @@ async function main() {
     await ensureDepartment();
     await captureMissingSurvey();
     await applySurveyDefinition();
+    await addSurveyToDepartment();
 
     await captureNavigation();
     await goto('/departments');

@@ -42,8 +42,30 @@ public final class DepartmentFixtures {
             department.defaultMessageId = "1";
             department.fromEmail = "scope@example.org";
             department.persist();
+            // UC-006 BR-172: it registers onto the survey the test bootstrap seeds.
+            offerInTransaction(department, SEEDED_SURVEY);
             return department;
         });
+    }
+
+    /** The survey the test bootstrap seeds (V0.0.0.1__TEST_BOOTSTRAP.sql). */
+    public static final int SEEDED_SURVEY = 1;
+
+    /**
+     * Lets a department register onto a survey (UC-006 BR-172), in the caller's transaction, for
+     * a test that persists its own department.
+     */
+    public static void offer(Department department, int surveyId) {
+        offerInTransaction(department, surveyId);
+    }
+
+    private static void offerInTransaction(Department department, int surveyId) {
+        Department.getEntityManager()
+                .createNativeQuery("INSERT INTO survey.department_surveys (department_id, survey_id) VALUES (?1, ?2) "
+                        + "ON CONFLICT DO NOTHING")
+                .setParameter(1, department.id)
+                .setParameter(2, surveyId)
+                .executeUpdate();
     }
 
     /** Creates the console record for a username, or resets it, with exactly these departments. */

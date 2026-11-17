@@ -20,6 +20,9 @@ import io.quarkus.test.junit.QuarkusTest;
 import jakarta.inject.Inject;
 import org.junit.jupiter.api.Test;
 
+import java.util.List;
+import java.util.Set;
+
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
@@ -130,5 +133,32 @@ class DepartmentServiceTest {
         User.getEntityManager().clear();
         User reloaded = User.find("username = ?1", "uc028.editor").firstResult();
         assertFalse(reloaded.hasDepartments(), "save() must not assign departments to anyone");
+    }
+
+    /** UC-006 BR-172: a department's surveys are replaced as a whole, and read back. */
+    @Test
+    @TestTransaction
+    void setSurveysReplacesTheDepartmentsSurveys() {
+        Department saved = departmentService.save(newDepartment("surveys"));
+
+        departmentService.setSurveys(saved.id, Set.of(1));
+        assertEquals(Set.of(1), departmentService.surveyIdsOf(saved.id));
+        assertTrue(departmentService.offersSurvey(saved.id, 1));
+        assertEquals(List.of(1), departmentService.surveysOf(saved.id).stream().map(survey -> survey.id).toList());
+
+        departmentService.setSurveys(saved.id, Set.of());
+        assertTrue(departmentService.surveyIdsOf(saved.id).isEmpty());
+        assertFalse(departmentService.offersSurvey(saved.id, 1), "BR-172: a department may list none");
+        assertTrue(departmentService.surveysOf(saved.id).isEmpty());
+    }
+
+    /** UC-006 BR-172, UC-010 BR-177: a survey that is not installed is never offered. */
+    @Test
+    @TestTransaction
+    void anUninstalledSurveyIsNotOffered() {
+        Department saved = departmentService.save(newDepartment("uninstalled"));
+        departmentService.setSurveys(saved.id, Set.of(1));
+
+        assertFalse(departmentService.offersSurvey(saved.id, 999999));
     }
 }

@@ -42,6 +42,7 @@ erDiagram
     USER }o--o{ DEPARTMENT : affiliated_with
     USER }o--o{ SURVEY : assigned_to
     IMPORT_CLIENT }o--o{ DEPARTMENT : registers_into
+    DEPARTMENT }o--o{ SURVEY : registers_onto
 ```
 
 ## Entities
@@ -246,6 +247,10 @@ Join table linking users to the departments they are affiliated with. Composite 
 ### IMPORT_CLIENT_DEPARTMENTS
 
 Join table linking import clients to the departments they may register into. Composite key of `import_client_id` (FK → import_clients.id) and `department_id` (FK → departments.id). Its rows are removed with the import client.
+
+### DEPARTMENT_SURVEYS
+
+Join table linking departments to the surveys their subjects may be registered onto (UC-006 BR-172). Composite key of `department_id` (FK → departments.id) and `survey_id` (FK → surveys.id). Its rows are removed with the department or the survey. Edited on the department screen; read by every registration path (UC-003, UC-010).
 
 ### USER_SURVEYS
 

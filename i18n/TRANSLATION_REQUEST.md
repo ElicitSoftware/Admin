@@ -127,7 +127,13 @@ Every row is one key in `translations.properties`. Return a file `translations_<
 | `registerView.apiDoc.title` | REST API instructions | Register subjects page · collapsible section title | 40 |  |
 | `registerView.error.subjectNotFound` | Subject not found. | Register subjects page · notification | 80 |  |
 | `registerView.error.notYourDepartment` | This subject belongs to a department you are not assigned to. Nothing was changed. | Register subjects page · notification | 120 |  |
+| `registerView.error.surveyNotOffered` | This department does not register subjects onto that survey. Choose one of its surveys. | Register subjects page · notification when the chosen survey is not one of the department's | 110 |  |
 | `registerView.csvImport.failed` | The file could not be imported. The details are in the application log. | Register subjects page, CSV import · text of the error dialog | 120 |  |
+| `registerView.csvConfirm.title` | Import these subjects? | Register subjects page, CSV import · title of the confirmation dialog | 40 |  |
+| `registerView.csvConfirm.intro` | The file will register {0} subject(s): | Register subjects page, CSV import · confirmation dialog, above the list of surveys and departments | 60 | params: {0} = number of subjects |
+| `registerView.csvConfirm.group` | {0} — {1}: {2} | Register subjects page, CSV import · one line of the confirmation | 80 | params: {0} = survey name, {1} = department name, {2} = number of subjects; punctuation only, so identical in most languages |
+| `registerView.csvConfirm.refused` | These {0} line(s) will be refused: | Register subjects page, CSV import · confirmation dialog, above the refused lines | 50 | params: {0} = number of lines |
+| `registerView.csvConfirm.import` | Import | Register subjects page, CSV import · confirm button of the confirmation dialog | 15 |  |
 | `registerView.unknownDepartment` | Unknown | Register subjects page · department name fallback | 20 |  |
 | `registerView.error.excludedXid` | External ID {0} is in the exclude list for department {1} | Register subjects page · notification | 100 | params: {0} = external ID, {1} = department name |
 | `registerView.subjectSaved` | Subject saved | Register subjects page · notification | 30 |  |
@@ -151,6 +157,7 @@ Every row is one key in `translations.properties`. Return a file `translations_<
 | `registerView.csvDoc.col.email` | String (required) - a valid email address | Register subjects page · CSV column description | 60 |  |
 | `registerView.csvDoc.col.phone` | String (optional) - phone number in ###-###-#### format | Register subjects page · CSV column description; keep ###-###-#### | 60 |  |
 | `registerView.csvDoc.col.xid` | String (optional) - external ID for the subject | Register subjects page · CSV column description | 60 |  |
+| `registerView.csvDoc.col.surveyId` | Integer (required) - the ID of the survey to register the subject onto; the department must have that survey | Register subjects page · CSV column description; follows the bold column name | 120 |  |
 | `registerView.apiDoc.intro` | You can also add subjects programmatically using the REST API endpoints. | Register subjects page (API instructions) · paragraph | 100 |  |
 | `registerView.apiDoc.single.h` | 1. Single subject registration | Register subjects page (API instructions) · heading | 40 |  |
 | `registerView.apiDoc.endpoint` | Endpoint: | Register subjects page (API instructions) · heading | 20 | identical |
@@ -165,7 +172,7 @@ Every row is one key in `translations.properties`. Return a file `translations_<
 | `registerView.apiDoc.requestBodyFile` | Form field 'file' containing a CSV file with subject data | Register subjects page (API instructions) · paragraph; 'file' is the field name | 80 |  |
 | `registerView.apiDoc.csvFormat` | CSV file format: | Register subjects page (API instructions) · heading | 30 |  |
 | `registerView.apiDoc.columnRequirements` | Column requirements: | Register subjects page (API instructions) · paragraph | 30 |  |
-| `registerView.apiDoc.columnRequirementsList` | • departmentId: Integer (required) - valid department ID • firstName: String (required) - the subject's first name • lastName: String (required) - the subject's last name • middleName: String (optional) - the subject's middle name • dob: Date (optional) - format yyyy-MM-dd or MM/dd/yyyy • email: String (required) - a valid email address • phone: String (optional) - format ###-###-#### • xid: String (optional) - external ID for the subject | Register subjects page (API instructions) · preformatted list, one column per line; keep column names, • and | 600 |  |
+| `registerView.apiDoc.columnRequirementsList` | • departmentId: Integer (required) - valid department ID • firstName: String (required) - the subject's first name • lastName: String (required) - the subject's last name • middleName: String (optional) - the subject's middle name • dob: Date (optional) - format yyyy-MM-dd or MM/dd/yyyy • email: String (required) - a valid email address • phone: String (optional) - format ###-###-#### • xid: String (optional) - external ID for the subject • surveyId: Integer (required) - the survey to register onto; the department must have it | Register subjects page (API instructions) · preformatted list, one column per line; keep column names, • and | 600 |  |
 | `registerView.apiDoc.csvExample` | CSV example: | Register subjects page (API instructions) · heading | 30 |  |
 | `registerView.apiDoc.webUpload.h` | 4. CSV file upload (web interface) | Register subjects page (API instructions) · heading | 40 |  |
 | `registerView.apiDoc.webUpload.p` | You can also upload a CSV file using the upload component above in the web interface. | Register subjects page (API instructions) · paragraph | 100 |  |
@@ -220,6 +227,9 @@ Every row is one key in `translations.properties`. Return a file `translations_<
 | `editDepartmentView.defaultMessageId.helper` | ID of an existing message template, sent on registration | Edit department · field helper text | 60 |  |
 | `editDepartmentView.fromEmail` | From email | Edit department · field label | 30 |  |
 | `editDepartmentView.fromEmail.helper` | Email address that appears as the sender of department communications | Edit department · field helper text | 100 |  |
+| `editDepartmentView.surveys` | Surveys | Edit department page · label of the multi-select of surveys | 30 |  |
+| `editDepartmentView.surveys.helper` | The surveys this department's subjects may be registered onto | Edit department page · helper text under the surveys multi-select | 80 |  |
+| `editDepartmentView.surveys.item` | {0} (ID {1}) | Edit department page · one survey in the multi-select: its name and the ID a CSV file names it by | 60 | params: {0} = survey name, {1} = survey ID number; identical in languages that write ID as is |
 | `editDepartmentView.btnCreate` | Create department | Edit department · primary button in create mode | 25 |  |
 | `editDepartmentView.btnUpdate` | Update department | Edit department · primary button in edit mode | 25 |  |
 | `editDepartmentView.title.create` | Create new department | Edit department · browser tab title in create mode | 40 |  |
@@ -324,6 +334,7 @@ Every row is one key in `translations.properties`. Return a file `translations_<
 | `departmentsView.grid.code` | Code | Departments screen · grid column header | 15 |  |
 | `departmentsView.grid.defaultMessageId` | Default Message ID | Departments screen · grid column header | 25 |  |
 | `departmentsView.grid.fromEmail` | From Email | Departments screen · grid column header | 20 |  |
+| `departmentsView.grid.surveys` | Surveys | Departments page · grid column header: the surveys each department registers onto | 20 |  |
 | `departmentsView.newDepartment` | New Department | Departments screen · primary button | 25 |  |
 | `messageTemplatesView.grid.id` | ID | Message templates screen · grid column header | 10 | identical |
 | `messageTemplatesView.grid.department` | Department | Message templates screen · grid column header | 20 |  |
@@ -360,6 +371,7 @@ Every row is one key in `translations.properties`. Return a file `translations_<
 | `surveyDefinitionApplyView.newSurveyInstalled` | New Survey Installed | Apply survey definition screen · result dialog title | 30 |  |
 | `surveyDefinitionApplyView.surveyUpdated` | Survey Updated | Apply survey definition screen · result dialog title | 30 |  |
 | `surveyDefinitionApplyView.surveyKey` | Survey key: {0} | Apply survey definition screen · result summary line | 40 | params: {0} = survey key (identifier) |
+| `surveyDefinitionApplyView.inNoDepartment` | This survey is in no department yet. Add it to a department on the Departments page before registering subjects onto it. | Apply survey definition page · result line after a new survey is installed | 140 |  |
 | `surveyDefinitionApplyView.recordsInstalled` | Records installed: {0} | Apply survey definition screen · result summary line | 40 | params: {0} = count |
 | `surveyDefinitionApplyView.countsHeader` | created / versioned / unchanged / retired: | Apply survey definition screen · heading above per-table counts in that order | 60 |  |
 | `surveyDefinitionApplyView.errors` | Errors: | Apply survey definition screen · result summary heading | 15 |  |
@@ -677,7 +689,10 @@ Every row is one key in `translations.properties`. Return a file `translations_<
 | `csvImport.lastNameRequired` | Last name is required | Register page, CSV import · why a line of the CSV file was refused | 60 |  |
 | `csvImport.emailRequired` | Email is required | Register page, CSV import · why a line of the CSV file was refused | 60 |  |
 | `csvImport.badDepartmentId` | Invalid department ID format | Register page, CSV import · why a line of the CSV file was refused | 80 |  |
+| `csvImport.badSurveyId` | Invalid survey ID format | Register page and registration API, CSV import · why a line was refused; continues definition.line | 50 |  |
+| `csvImport.surveyMissing` | Rejected: every row must name its survey in the ninth column, surveyId. Nothing was imported. Lines without it: {0} | Register page and registration API, CSV import · warning when a row has no survey ID; surveyId is the column name, keep it | 160 | params: {0} = comma-separated line numbers |
 | `csvImport.departmentNotPermitted` | You are not assigned to department {0} | Register page, CSV import · why a line of the CSV file was refused; continues definition.line | 80 | params: {0} = department ID number |
+| `csvImport.surveyNotOffered` | Department {0} does not register subjects onto survey {1} | Register page and registration API, CSV import · why a line was refused; continues definition.line | 80 | params: {0} = department ID number, {1} = survey ID number |
 | `registerView.csvImport.outcome.new` | New Subject | Register page, CSV import · what became of one imported row | 40 |  |
 | `registerView.csvImport.outcome.existing` | Existing Subject | Register page, CSV import · what became of one imported row | 40 |  |
 | `registerView.csvImport.outcome.excluded` | Excluded Subject | Register page, CSV import · what became of one imported row | 40 |  |
@@ -830,7 +845,13 @@ registerView.csvImport.lineErrorsHeading=Import completed with errors:
 registerView.apiDoc.title=REST API instructions
 registerView.error.subjectNotFound=Subject not found.
 registerView.error.notYourDepartment=This subject belongs to a department you are not assigned to. Nothing was changed.
+registerView.error.surveyNotOffered=This department does not register subjects onto that survey. Choose one of its surveys.
 registerView.csvImport.failed=The file could not be imported. The details are in the application log.
+registerView.csvConfirm.title=Import these subjects?
+registerView.csvConfirm.intro=The file will register {0} subject(s):
+registerView.csvConfirm.group={0} — {1}: {2}
+registerView.csvConfirm.refused=These {0} line(s) will be refused:
+registerView.csvConfirm.import=Import
 registerView.unknownDepartment=Unknown
 registerView.error.excludedXid=External ID {0} is in the exclude list for department {1}
 registerView.subjectSaved=Subject saved
@@ -854,6 +875,7 @@ registerView.csvDoc.col.dob=Date (optional) - date of birth in yyyy-MM-dd or MM/
 registerView.csvDoc.col.email=String (required) - a valid email address
 registerView.csvDoc.col.phone=String (optional) - phone number in ###-###-#### format
 registerView.csvDoc.col.xid=String (optional) - external ID for the subject
+registerView.csvDoc.col.surveyId=Integer (required) - the ID of the survey to register the subject onto; the department must have that survey
 registerView.apiDoc.intro=You can also add subjects programmatically using the REST API endpoints.
 registerView.apiDoc.single.h=1. Single subject registration
 registerView.apiDoc.endpoint=Endpoint:
@@ -876,6 +898,7 @@ registerView.apiDoc.columnRequirementsList=• departmentId: Integer (required) 
 • email: String (required) - a valid email address
 • phone: String (optional) - format ###-###-####
 • xid: String (optional) - external ID for the subject
+• surveyId: Integer (required) - the survey to register onto; the department must have it
 registerView.apiDoc.csvExample=CSV example:
 registerView.apiDoc.webUpload.h=4. CSV file upload (web interface)
 registerView.apiDoc.webUpload.p=You can also upload a CSV file using the upload component above in the web interface.
@@ -930,6 +953,9 @@ editDepartmentView.defaultMessageId=Default message ID
 editDepartmentView.defaultMessageId.helper=ID of an existing message template, sent on registration
 editDepartmentView.fromEmail=From email
 editDepartmentView.fromEmail.helper=Email address that appears as the sender of department communications
+editDepartmentView.surveys=Surveys
+editDepartmentView.surveys.helper=The surveys this department's subjects may be registered onto
+editDepartmentView.surveys.item={0} (ID {1})
 editDepartmentView.btnCreate=Create department
 editDepartmentView.btnUpdate=Update department
 editDepartmentView.title.create=Create new department
@@ -1034,6 +1060,7 @@ departmentsView.grid.name=Department Name
 departmentsView.grid.code=Code
 departmentsView.grid.defaultMessageId=Default Message ID
 departmentsView.grid.fromEmail=From Email
+departmentsView.grid.surveys=Surveys
 departmentsView.newDepartment=New Department
 messageTemplatesView.grid.id=ID
 messageTemplatesView.grid.department=Department
@@ -1070,6 +1097,7 @@ surveyDefinitionApplyView.applyFailed=Apply Failed
 surveyDefinitionApplyView.newSurveyInstalled=New Survey Installed
 surveyDefinitionApplyView.surveyUpdated=Survey Updated
 surveyDefinitionApplyView.surveyKey=Survey key: {0}
+surveyDefinitionApplyView.inNoDepartment=This survey is in no department yet. Add it to a department on the Departments page before registering subjects onto it.
 surveyDefinitionApplyView.recordsInstalled=Records installed: {0}
 surveyDefinitionApplyView.countsHeader=created / versioned / unchanged / retired:
 surveyDefinitionApplyView.errors=Errors:
@@ -1387,7 +1415,10 @@ csvImport.firstNameRequired=First name is required
 csvImport.lastNameRequired=Last name is required
 csvImport.emailRequired=Email is required
 csvImport.badDepartmentId=Invalid department ID format
+csvImport.badSurveyId=Invalid survey ID format
+csvImport.surveyMissing=Rejected: every row must name its survey in the ninth column, surveyId. Nothing was imported. Lines without it: {0}
 csvImport.departmentNotPermitted=You are not assigned to department {0}
+csvImport.surveyNotOffered=Department {0} does not register subjects onto survey {1}
 registerView.csvImport.outcome.new=New Subject
 registerView.csvImport.outcome.existing=Existing Subject
 registerView.csvImport.outcome.excluded=Excluded Subject

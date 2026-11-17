@@ -17,6 +17,8 @@ import com.elicitsoftware.test.DepartmentFixtures;
 import com.elicitsoftware.test.PostgresTestResource;
 import com.vaadin.browserless.quarkus.QuarkusBrowserlessTest;
 import com.vaadin.flow.component.UI;
+import com.vaadin.flow.component.ComponentUtil;
+import com.vaadin.flow.component.confirmdialog.ConfirmDialog;
 import com.vaadin.flow.component.dialog.Dialog;
 import com.vaadin.flow.component.html.ListItem;
 import com.vaadin.flow.component.html.UnorderedList;
@@ -65,7 +67,7 @@ class RegisterViewTest extends QuarkusBrowserlessTest {
     /** The CSV columns documented in {@code RegisterView.columnDescriptionsList()}. */
     private static final List<String> EXPECTED_COLUMNS = List.of(
             "departmentId", "firstName", "lastName", "middleName",
-            "dob", "email", "phone", "xid");
+            "dob", "email", "phone", "xid", "surveyId");
 
     private RegisterView view;
 
@@ -123,10 +125,16 @@ class RegisterViewTest extends QuarkusBrowserlessTest {
         }
     }
 
-    /**
-     * Persists a department the CSV rows can be imported into. The import hard-codes survey 1,
-     * which {@code CsvImportServiceTest} relies on too.
-     */
+    /** Confirms the upload's confirmation, when it opened one (UC-003 A6, BR-176). */
+    private void confirmIfAsked() {
+        ConfirmDialog dialog = view.csvConfirmation;
+        if (dialog != null && dialog.isOpened()) {
+            ComponentUtil.fireEvent(dialog, new ConfirmDialog.ConfirmEvent(dialog, false));
+            dialog.close();
+        }
+    }
+
+    /** Persists a department the CSV rows can be imported into. */
     private Department persistDepartment(String token) {
         Department department = new Department();
         department.name = "Register CSV Dept " + token;
@@ -138,6 +146,8 @@ class RegisterViewTest extends QuarkusBrowserlessTest {
         department.persist();
         // UC-010 BR-137: a caller registers only where its console record is assigned.
         DepartmentFixtures.assign("register.tester", department);
+        // UC-006 BR-172: it registers onto the seeded survey, which every CSV row below names.
+        DepartmentFixtures.offer(department, DepartmentFixtures.SEEDED_SURVEY);
         return department;
     }
 
@@ -153,10 +163,11 @@ class RegisterViewTest extends QuarkusBrowserlessTest {
     void csvImportSummaryIsOneLinePerSubject() {
         Department dept = persistDepartment("SUCCESS");
         String csv = String.join("\n",
-                dept.id + ",Alice,Anderson,,1990-01-01,alice@example.org,555-010-0100,RV-XID-1",
-                dept.id + ",Bob,Baker,,1985-02-15,bob@example.org,555-010-0101,RV-XID-2");
+                dept.id + ",Alice,Anderson,,1990-01-01,alice@example.org,555-010-0100,RV-XID-1,1",
+                dept.id + ",Bob,Baker,,1985-02-15,bob@example.org,555-010-0101,RV-XID-2,1");
 
         view.handleCsvUpload(csv.getBytes(StandardCharsets.UTF_8));
+        confirmIfAsked();
 
         Dialog dialog = find(Dialog.class).single();
         assertEquals("CSV import succeeded", dialog.getHeaderTitle());
@@ -178,9 +189,10 @@ class RegisterViewTest extends QuarkusBrowserlessTest {
     @TestTransaction
     void csvImportSummaryCarriesNoPreformattedText() {
         Department dept = persistDepartment("NOBLOB");
-        String csv = dept.id + ",Carla,Cruz,,1992-03-04,carla@example.org,555-010-0102,RV-XID-3";
+        String csv = dept.id + ",Carla,Cruz,,1992-03-04,carla@example.org,555-010-0102,RV-XID-3,1";
 
         view.handleCsvUpload(csv.getBytes(StandardCharsets.UTF_8));
+        confirmIfAsked();
 
         Dialog dialog = find(Dialog.class).single();
         assertEquals(List.of("Successfully imported 1 subject:"), headingsIn(dialog));
@@ -210,10 +222,11 @@ class RegisterViewTest extends QuarkusBrowserlessTest {
     void csvImportErrorsAreOneItemPerRejectedLine() {
         Department dept = persistDepartment("ERRORS");
         String csv = String.join("\n",
-                dept.id + ",NoLastName,,,1991-05-05,nolast@example.org,555-010-0104,RV-XID-4",
-                dept.id + ",NoEmail,Nemo,,1991-05-05,,555-010-0105,RV-XID-5");
+                dept.id + ",NoLastName,,,1991-05-05,nolast@example.org,555-010-0104,RV-XID-4,1",
+                dept.id + ",NoEmail,Nemo,,1991-05-05,,555-010-0105,RV-XID-5,1");
 
         view.handleCsvUpload(csv.getBytes(StandardCharsets.UTF_8));
+        confirmIfAsked();
 
         Dialog dialog = find(Dialog.class).single();
         assertEquals("CSV import error", dialog.getHeaderTitle());
