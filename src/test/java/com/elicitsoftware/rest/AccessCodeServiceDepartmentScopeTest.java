@@ -90,7 +90,7 @@ class AccessCodeServiceDepartmentScopeTest {
                 .when().post("/api/secured/add/subjects")
                 .then().statusCode(403)
                 .body(not(containsString(batched)));
-        String csv = own.id + ",Ann,Lee,,,ann." + token + "@example.org,555-010-0102," + uploaded + "\n";
+        String csv = own.id + ",Ann,Lee,,,ann." + token + "@example.org,555-010-0102," + uploaded + ",1\n";
         given().multiPart("file", "subjects.csv", csv.getBytes(StandardCharsets.UTF_8))
                 .when().post("/api/secured/add/csv")
                 .then().statusCode(403)
@@ -99,6 +99,53 @@ class AccessCodeServiceDepartmentScopeTest {
         assertEquals(0, subjectsWith(single));
         assertEquals(0, subjectsWith(batched));
         assertEquals(0, subjectsWith(uploaded));
+    }
+
+    /** UC-010 BR-177, A8: the client's own department, but a survey that department does not have. */
+    @Test
+    @TestSecurity(user = CLIENT, roles = {"elicit_importer"})
+    void given_aSurveyTheDepartmentDoesNotHave_when_subjectsArePosted_then_eachFormRefusesIt() {
+        QuarkusTransaction.requiringNew().run(() -> Department.getEntityManager()
+                .createNativeQuery("DELETE FROM survey.department_surveys WHERE department_id = ?1")
+                .setParameter(1, own.id).executeUpdate());
+        String single = "SURV-" + token + "-1";
+        String batched = "SURV-" + token + "-2";
+        String uploaded = "SURV-" + token + "-3";
+
+        given().contentType(ContentType.JSON).body(subjectJson(own.id, single))
+                .when().post("/api/secured/add/subject")
+                .then().statusCode(403);
+        given().contentType(ContentType.JSON).body("[" + subjectJson(own.id, batched) + "]")
+                .when().post("/api/secured/add/subjects")
+                .then().statusCode(200)
+                .body(containsString("Not permitted: " + batched));
+        String csv = own.id + ",Ann,Lee,,,ann." + token + "@example.org,555-010-0103," + uploaded + ",1\n";
+        given().multiPart("file", "subjects.csv", csv.getBytes(StandardCharsets.UTF_8))
+                .when().post("/api/secured/add/csv")
+                .then().statusCode(200)
+                .body(containsString("Line 1: Department " + own.id + " does not register subjects onto survey 1"));
+
+        assertEquals(0, subjectsWith(single));
+        assertEquals(0, subjectsWith(batched));
+        assertEquals(0, subjectsWith(uploaded));
+    }
+
+    /** UC-010 BR-178, A9: a CSV row without its survey rejects the whole upload. */
+    @Test
+    @TestSecurity(user = CLIENT, roles = {"elicit_importer"})
+    void given_aCsvRowWithoutItsSurvey_when_uploaded_then_theWholeFileIsRejected() {
+        String named = "NOSURV-" + token + "-1";
+        String unnamed = "NOSURV-" + token + "-2";
+        String csv = own.id + ",Ann,Lee,,,ann." + token + "@example.org,555-010-0104," + named + ",1\n"
+                + own.id + ",Bob,Ray,,,bob." + token + "@example.org,555-010-0105," + unnamed + "\n";
+
+        given().multiPart("file", "subjects.csv", csv.getBytes(StandardCharsets.UTF_8))
+                .when().post("/api/secured/add/csv")
+                .then().statusCode(200)
+                .body(containsString("Lines without it: 2"));
+
+        assertEquals(0, subjectsWith(named), "nothing is imported from a rejected file");
+        assertEquals(0, subjectsWith(unnamed));
     }
 
     @Test
@@ -153,8 +200,8 @@ class AccessCodeServiceDepartmentScopeTest {
     void given_aCsvAcrossDepartments_when_uploaded_then_theForeignLineIsReportedAndNotStored() {
         String foreign = "SCOPE-" + token + "-6";
         String mine = "SCOPE-" + token + "-7";
-        String csv = other.id + ",Bob,Ray,,,bob." + token + "@example.org,555-010-0100," + foreign + "\n"
-                + own.id + ",Ann,Lee,,,ann." + token + "@example.org,555-010-0101," + mine + "\n";
+        String csv = other.id + ",Bob,Ray,,,bob." + token + "@example.org,555-010-0100," + foreign + ",1\n"
+                + own.id + ",Ann,Lee,,,ann." + token + "@example.org,555-010-0101," + mine + ",1\n";
 
         given().multiPart("file", "subjects.csv", csv.getBytes(StandardCharsets.UTF_8))
                 .when().post("/api/secured/add/csv")

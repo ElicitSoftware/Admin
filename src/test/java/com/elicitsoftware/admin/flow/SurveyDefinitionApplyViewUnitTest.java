@@ -120,7 +120,8 @@ class SurveyDefinitionApplyViewUnitTest extends PlainSmallViewTestSupport {
         ResultDialog dialog = openDialog();
         assertEquals(t("surveyDefinitionApplyView.newSurveyInstalled"), dialog.getHeaderTitle());
         assertEquals(List.of("Imported as a new survey", t("surveyDefinitionApplyView.surveyKey", KEY),
-                "Reporting schema rebuilt."), messagesIn(dialog));
+                t("surveyDefinitionApplyView.inNoDepartment"), "Reporting schema rebuilt."), messagesIn(dialog),
+                "UC-018 step 4: a new survey is in no department until one is given it");
         assertEquals(List.of(t("surveyDefinitionApplyView.recordsInstalled", 41)), headingsIn(dialog));
         assertEquals(List.of("surveys: 1", "questions: 40"), detailsIn(dialog));
         assertEquals(List.of(), errorsIn(dialog));
@@ -138,7 +139,8 @@ class SurveyDefinitionApplyViewUnitTest extends PlainSmallViewTestSupport {
         assertEquals(List.of(t("surveyDefinitionApplyView.recordsInstalled", 0), t("surveyDefinitionApplyView.errors")),
                 headingsIn(dialog));
         assertEquals(List.of("bad row 3", "bad row 9"), errorsIn(dialog));
-        assertEquals(List.of("Imported", t("surveyDefinitionApplyView.surveyKey", KEY)), messagesIn(dialog),
+        assertEquals(List.of("Imported", t("surveyDefinitionApplyView.surveyKey", KEY),
+                        t("surveyDefinitionApplyView.inNoDepartment")), messagesIn(dialog),
                 "no reporting line when none was reported");
     }
 

@@ -118,6 +118,10 @@ public class SurveyDefinitionApplyView extends VerticalLayout {
             outcome.add(ResultDialog.Line.message(
                     getTranslation("surveyDefinitionApplyView.surveyKey", result.surveyKey())));
         }
+        // UC-018 step 4, UC-006 BR-173: a new survey is in no department until one is given it.
+        if (result.success() && result.action() == SurveyDefinitionApplyService.ApplyResult.Action.IMPORT) {
+            outcome.add(ResultDialog.Line.message(getTranslation("surveyDefinitionApplyView.inNoDepartment")));
+        }
         sections.add(new ResultDialog.Section(outcome));
 
         switch (result.detail()) {

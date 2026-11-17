@@ -12,9 +12,11 @@ package com.elicitsoftware.admin.flow;
  */
 
 import com.elicitsoftware.model.Department;
+import com.elicitsoftware.model.Survey;
 import com.elicitsoftware.service.DepartmentService;
 import com.vaadin.flow.component.button.Button;
 import com.vaadin.flow.component.button.ButtonVariant;
+import com.vaadin.flow.component.combobox.MultiSelectComboBox;
 import com.vaadin.flow.component.notification.Notification;
 import com.vaadin.flow.component.orderedlayout.HorizontalLayout;
 import com.vaadin.flow.component.orderedlayout.VerticalLayout;
@@ -32,6 +34,11 @@ import com.vaadin.flow.router.Route;
 import jakarta.annotation.security.RolesAllowed;
 import io.quarkus.security.identity.SecurityIdentity;
 import jakarta.inject.Inject;
+
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 /**
  * A Vaadin Flow view for editing department information.
@@ -81,6 +88,12 @@ public class EditDepartmentView extends VerticalLayout implements BeforeEnterObs
     
     /** Email field for the from email address. */
     private EmailField fromEmailField = new EmailField();
+
+    /**
+     * The surveys this department's subjects may be registered onto (UC-006 BR-172). Not bound:
+     * the selection is stored in its own join table, by the service, beside the department.
+     */
+    final MultiSelectComboBox<Survey> surveysField = new MultiSelectComboBox<>();
     
     /** Text area for notification emails. */
 //    private TextArea notificationEmailsField = new TextArea("Notification Emails");
@@ -115,6 +128,12 @@ public class EditDepartmentView extends VerticalLayout implements BeforeEnterObs
         codeField.setLabel(getTranslation("editDepartmentView.code"));
         defaultMessageIdField.setLabel(getTranslation("editDepartmentView.defaultMessageId"));
         fromEmailField.setLabel(getTranslation("editDepartmentView.fromEmail"));
+        surveysField.setLabel(getTranslation("editDepartmentView.surveys"));
+        surveysField.setId("edit-department-surveys");
+        surveysField.setHelperText(getTranslation("editDepartmentView.surveys.helper"));
+        // The ID beside the name: a CSV upload names its survey by it (UC-003 BR-175).
+        surveysField.setItemLabelGenerator(survey -> getTranslation("editDepartmentView.surveys.item", survey.name, survey.id));
+        surveysField.setWidth("300px");
         saveBtn.setText(getTranslation("common.save"));
         cancelBtn.setText(getTranslation("common.cancel"));
         
@@ -146,7 +165,7 @@ public class EditDepartmentView extends VerticalLayout implements BeforeEnterObs
         
         // Add form fields to layout
 //        add(nameField, codeField, defaultMessageIdField, fromEmailField, notificationEmailsField);
-        add(nameField, codeField, defaultMessageIdField, fromEmailField);
+        add(nameField, codeField, defaultMessageIdField, fromEmailField, surveysField);
 
         // Configure buttons
         saveBtn.addClickListener(e -> saveDepartment());
@@ -239,11 +258,16 @@ public class EditDepartmentView extends VerticalLayout implements BeforeEnterObs
         try {
             long id = Long.parseLong(idStr);
             
+            // Every installed survey is offered; the selection is the department's (UC-006 BR-172).
+            List<Survey> installed = departmentService.installedSurveys();
+            surveysField.setItems(installed);
             if (id == 0) {
                 // Create new department
                 department = new Department();
                 department.defaultMessageId = "1"; // Set default value
                 binder.setBean(department);
+                // UC-006 BR-173: a new department starts with every survey installed now.
+                surveysField.setValue(new HashSet<>(installed));
                 
                 // Update page title and button text
                 getUI().ifPresent(ui -> ui.getPage().setTitle(getTranslation("editDepartmentView.title.create")));
@@ -258,6 +282,9 @@ public class EditDepartmentView extends VerticalLayout implements BeforeEnterObs
                 }
                 
                 binder.setBean(department);
+                Set<Integer> offered = departmentService.surveyIdsOf(id);
+                surveysField.setValue(installed.stream().filter(survey -> offered.contains(survey.id))
+                        .collect(Collectors.toSet()));
                 
                 // Update page title and button text
                 getUI().ifPresent(ui -> ui.getPage().setTitle(getTranslation("editDepartmentView.title.edit", department.name)));
@@ -290,14 +317,16 @@ public class EditDepartmentView extends VerticalLayout implements BeforeEnterObs
             binder.writeBean(department);
 
             boolean isNew = department.id == 0;
+            Set<Integer> surveyIds = surveysField.getValue().stream().map(survey -> survey.id)
+                    .collect(Collectors.toSet());
             // Persistence (transaction + insert/merge) lives in the service layer.
             if (isNew) {
                 // A new department is assigned to its creator in the same transaction
                 // (UC-028 BR-113); the session copy is refreshed only once that has committed.
-                departmentService.create(department, identity.getPrincipal().getName());
+                departmentService.create(department, identity.getPrincipal().getName(), surveyIds);
                 uiSessionLogin.refresh();
             } else {
-                departmentService.save(department);
+                departmentService.save(department, surveyIds);
             }
             Notification.show(isNew ? getTranslation("editDepartmentView.created") : getTranslation("editDepartmentView.updated"),
                     3000, Notification.Position.MIDDLE);

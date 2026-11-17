@@ -15,6 +15,7 @@ import com.elicitsoftware.model.Department;
 import com.elicitsoftware.model.Status;
 import com.elicitsoftware.model.Subject;
 import com.elicitsoftware.model.Survey;
+import com.elicitsoftware.service.DepartmentService;
 import com.elicitsoftware.request.AddRequest;
 import com.elicitsoftware.response.AddResponse;
 import com.elicitsoftware.response.AddResponseStatus;
@@ -22,6 +23,8 @@ import com.elicitsoftware.rest.AccessCodeService;
 import com.elicitsoftware.security.DepartmentScope;
 import com.vaadin.flow.component.Component;
 import com.vaadin.flow.component.UI;
+import com.vaadin.flow.component.ComponentUtil;
+import com.vaadin.flow.component.confirmdialog.ConfirmDialog;
 import com.vaadin.flow.component.button.Button;
 import com.vaadin.flow.component.combobox.ComboBox;
 import com.vaadin.flow.component.datepicker.DatePicker;
@@ -48,6 +51,8 @@ import org.junit.jupiter.api.Test;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Set;
+import java.util.HashSet;
 import java.util.Locale;
 import java.util.function.Function;
 
@@ -131,6 +136,17 @@ class RegisterViewUnitTest extends PlainAdminViewTestSupport {
             public boolean permitsDepartment(long departmentId) {
                 return !foreignDepartments.contains(departmentId);
             }
+
+            @Override
+            public boolean offersSurvey(long departmentId, long surveyId) {
+                return !notOffered.contains(departmentId + "/" + surveyId);
+            }
+        };
+        view.departmentService = new DepartmentService() {
+            @Override
+            public List<Survey> installedSurveys() {
+                return List.of(survey(7), survey(9));
+            }
         };
         UI.getCurrent().add(view);
         return view;
@@ -203,8 +219,36 @@ class RegisterViewUnitTest extends PlainAdminViewTestSupport {
         return binder;
     }
 
+    private static Survey survey(int id) {
+        Survey survey = new Survey();
+        survey.id = id;
+        survey.name = "Survey " + id;
+        return survey;
+    }
+
+    /** Department/survey pairs the department does not register onto (UC-006 BR-172). */
+    private final Set<String> notOffered = new HashSet<>();
+
+    /** Uploads a CSV and, when the view asks, confirms it (UC-003 A6, BR-176). */
     private void upload(String csv) {
+        view.csvConfirmation = null;
         view.handleCsvUpload(csv.getBytes(StandardCharsets.UTF_8));
+        if (view.csvConfirmation != null && view.csvConfirmation.isOpened()) {
+            confirm(view.csvConfirmation);
+        }
+    }
+
+    private void confirm(ConfirmDialog dialog) {
+        ComponentUtil.fireEvent(dialog, new ConfirmDialog.ConfirmEvent(dialog, false));
+        dialog.close();
+    }
+
+    /** The confirmation the upload opened, unconfirmed. */
+    private ConfirmDialog confirmationFor(String csv) {
+        view.csvConfirmation = null;
+        view.handleCsvUpload(csv.getBytes(StandardCharsets.UTF_8));
+        assertTrue(view.csvConfirmation != null && view.csvConfirmation.isOpened(), "a confirmation");
+        return view.csvConfirmation;
     }
 
     private Dialog onlyDialog() {
@@ -486,10 +530,10 @@ class RegisterViewUnitTest extends PlainAdminViewTestSupport {
     void given_twoValidRows_when_uploading_then_theSummaryListsEachSubject() {
         signedIn("elicit_user");
 
-        upload("#departmentId,firstName,lastName,middleName,dob,email,phone,xid\n"
+        upload("#departmentId,firstName,lastName,middleName,dob,email,phone,xid,surveyId\n"
                 + "\n"
-                + "3,Ann,Lee,,1990-01-15,ann@example.org,555-123-4567,X1\n"
-                + "7,Bob,Ray,Q,12/10/1992,bob@example.org,,X2\n");
+                + "3,Ann,Lee,,1990-01-15,ann@example.org,555-123-4567,X1,7\n"
+                + "7,Bob,Ray,Q,12/10/1992,bob@example.org,,X2,7\n");
 
         Dialog dialog = onlyDialog();
         assertEquals(t("registerView.csvImport.successTitle"), dialog.getHeaderTitle());
@@ -510,7 +554,7 @@ class RegisterViewUnitTest extends PlainAdminViewTestSupport {
     void given_oneValidRow_when_uploading_then_theHeadingIsSingular() {
         signedIn("elicit_user");
 
-        upload("3,Ann,Lee,,,ann@example.org\n");
+        upload("3,Ann,Lee,,,ann@example.org,,,7\n");
 
         assertEquals(List.of(t("registerView.csvImport.summary.headingOne")), headingsIn(onlyDialog()));
     }
@@ -555,8 +599,8 @@ class RegisterViewUnitTest extends PlainAdminViewTestSupport {
             default -> throw new IllegalStateException(request.xid);
         };
 
-        upload("3,A,B,,,a@x.org,,nameless\n3,A,B,,,a@x.org,,codeOnly\n3,A,B,,,a@x.org,,blank\n"
-                + "3,A,B,,,a@x.org,,noStatus\n3,A,B,,,a@x.org,,lastOnly\n");
+        upload("3,A,B,,,a@x.org,,nameless,7\n3,A,B,,,a@x.org,,codeOnly,7\n3,A,B,,,a@x.org,,blank,7\n"
+                + "3,A,B,,,a@x.org,,noStatus,7\n3,A,B,,,a@x.org,,lastOnly,7\n");
 
         String existing = t("registerView.csvImport.outcome.existing");
         assertEquals(List.of(
@@ -577,7 +621,7 @@ class RegisterViewUnitTest extends PlainAdminViewTestSupport {
             default -> "Exluded Subject";
         }));
 
-        upload("3,A,B,,,a@x.org,,n\n3,A,B,,,a@x.org,,e\n3,A,B,,,a@x.org,,x\n");
+        upload("3,A,B,,,a@x.org,,n,7\n3,A,B,,,a@x.org,,e,7\n3,A,B,,,a@x.org,,x,7\n");
 
         assertEquals(List.of(spanish("registerView.csvImport.outcome.new"), spanish("registerView.csvImport.outcome.existing"),
                 spanish("registerView.csvImport.outcome.excluded")), detailsIn(onlyDialog()));
@@ -595,7 +639,7 @@ class RegisterViewUnitTest extends PlainAdminViewTestSupport {
             return created(request.xid, "Ann", "Lee", "AC1");
         };
 
-        upload("3,Ann,Lee,,,a@x.org,,ok\n3,Ann,Lee,,,a@x.org,,bad\n");
+        upload("3,Ann,Lee,,,a@x.org,,ok,7\n3,Ann,Lee,,,a@x.org,,bad,7\n");
 
         Dialog dialog = onlyDialog();
         assertEquals(t("registerView.csvImport.successTitle"), dialog.getHeaderTitle());
@@ -609,7 +653,7 @@ class RegisterViewUnitTest extends PlainAdminViewTestSupport {
         signedIn("elicit_user");
         foreignDepartments.add(8L);
 
-        upload("3,Ann,Lee,,,a@x.org,,ok\n8,Bob,Ray,,,b@x.org,,other\n");
+        upload("3,Ann,Lee,,,a@x.org,,ok,7\n8,Bob,Ray,,,b@x.org,,other,7\n");
 
         Dialog dialog = onlyDialog();
         assertEquals(t("registerView.csvImport.errorTitle"), dialog.getHeaderTitle());
@@ -621,13 +665,60 @@ class RegisterViewUnitTest extends PlainAdminViewTestSupport {
     void given_rejectedRows_when_uploading_then_theErrorDialogListsEachRejectedLine() {
         signedIn("elicit_user");
 
-        upload("3,Ann,Lee,,,a@x.org\nnot,enough\nx,Ann,Lee,,,a@x.org\n");
+        upload("3,Ann,Lee,,,a@x.org,,,7\n3,,Lee,,,a@x.org,,,7\nx,Ann,Lee,,,a@x.org,,,7\n3,Ann,Lee,,,a@x.org,,,seven\n");
 
         Dialog dialog = onlyDialog();
         assertEquals(t("registerView.csvImport.errorTitle"), dialog.getHeaderTitle());
         assertEquals(List.of(t("registerView.csvImport.lineErrorsHeading")), headingsIn(dialog));
-        assertEquals(List.of(t("definition.line", "2", t("csvImport.badFormat")),
-                t("definition.line", "3", t("csvImport.badDepartmentId"))), errorsIn(dialog));
+        assertEquals(List.of(t("definition.line", "2", t("csvImport.firstNameRequired")),
+                t("definition.line", "3", t("csvImport.badDepartmentId")),
+                t("definition.line", "4", t("csvImport.badSurveyId"))), errorsIn(dialog));
+    }
+
+    /** UC-003 A6 step 1, BR-175: a row without its survey rejects the whole file, unread. */
+    @Test
+    void given_aRowWithoutItsSurvey_when_uploading_then_theFileIsRejectedWithAWarning() {
+        signedIn("elicit_user");
+
+        upload("3,Ann,Lee,,,a@x.org,,ok,7\n3,Bob,Ray,,,b@x.org,,old\n");
+
+        Dialog dialog = onlyDialog();
+        assertEquals(t("registerView.csvImport.errorTitle"), dialog.getHeaderTitle());
+        assertEquals(List.of(t("csvImport.surveyMissing", "2")), messagesIn(dialog));
+        assertTrue(requests.isEmpty(), "nothing may be registered from a rejected file");
+    }
+
+    /**
+     * UC-003 A6 steps 2 and 3, BR-176: the confirmation counts what will be registered on each
+     * survey and department and lists what will be refused; cancelling registers no one.
+     */
+    @Test
+    void given_aMixedFile_when_uploading_then_theConfirmationSaysWhatWillHappenAndCancelImportsNothing() {
+        signedIn("elicit_user");
+        notOffered.add("3/9");
+
+        ConfirmDialog confirmation = confirmationFor(
+                "3,Ann,Lee,,,a@x.org,,a,7\n3,Bob,Ray,,,b@x.org,,b,7\n3,Cy,Day,,,c@x.org,,c,9\n");
+
+        String text = confirmation.getElement().getTextRecursively();
+        assertTrue(text.contains(t("registerView.csvConfirm.intro", 2)), text);
+        assertTrue(text.contains(t("definition.line", "3", t("csvImport.surveyNotOffered", "3", "9"))), text);
+        ComponentUtil.fireEvent(confirmation, new ConfirmDialog.CancelEvent(confirmation, false));
+        assertTrue(requests.isEmpty(), "BR-176: no one is registered before the user confirms");
+    }
+
+    /** UC-006 BR-172, UC-010 BR-177: a row whose department lacks its survey is refused. */
+    @Test
+    void given_aRowWhoseDepartmentLacksItsSurvey_when_confirmed_then_onlyTheOthersAreRegistered() {
+        signedIn("elicit_user");
+        notOffered.add("3/9");
+
+        upload("3,Ann,Lee,,,a@x.org,,ok,7\n3,Cy,Day,,,c@x.org,,other,9\n");
+
+        Dialog dialog = onlyDialog();
+        assertEquals(List.of(t("definition.line", "2", t("csvImport.surveyNotOffered", "3", "9"))), errorsIn(dialog));
+        assertEquals(List.of("ok"), requests.stream().map(r -> r.xid).toList());
+        assertEquals(List.of(7), requests.stream().map(r -> r.surveyId).toList(), "BR-175: the row's own survey");
     }
 
     @Test
@@ -716,7 +807,7 @@ class RegisterViewUnitTest extends PlainAdminViewTestSupport {
         assertEquals(t("registerView.csvDoc.title"), csv.getSummaryText());
 
         List<ListItem> columns = find(ListItem.class, csv).all();
-        List<String> names = List.of("departmentId", "firstName", "lastName", "middleName", "dob", "email", "phone", "xid");
+        List<String> names = List.of("departmentId", "firstName", "lastName", "middleName", "dob", "email", "phone", "xid", "surveyId");
         assertEquals(names.size(), columns.size());
         for (int i = 0; i < names.size(); i++) {
             List<Span> spans = find(Span.class, columns.get(i)).all();

@@ -22,6 +22,8 @@ import com.elicitsoftware.security.DepartmentScope;
 import com.elicitsoftware.security.ElicitRoles;
 import com.elicitsoftware.service.CsvImportException;
 import com.elicitsoftware.service.CsvImportService;
+import com.elicitsoftware.service.CsvSurveyMissingException;
+import com.elicitsoftware.service.DepartmentService;
 import com.elicitsoftware.util.LogMasking;
 import com.elicitsoftware.util.RandomString;
 import io.quarkus.logging.Log;
@@ -65,6 +67,10 @@ public class AccessCodeService {
      */
     @Inject
     CsvImportService csvImportService;
+
+    /** The surveys each department registers onto (UC-006 BR-172, UC-010 BR-177). */
+    @Inject
+    DepartmentService departmentService;
 
     /**
      * Security identity for accessing authenticated user information and roles.
@@ -146,6 +152,10 @@ public class AccessCodeService {
         // UC-010 BR-137: before the exclusion and duplicate checks, so a refusal says nothing
         // about the department's subjects.
         departmentScope.require(request.departmentId);
+        // UC-010 BR-177: refused alike when the department does not register onto the survey.
+        if (!offersSurvey(request.departmentId, request.surveyId)) {
+            throw new ForbiddenException();
+        }
         AddResponse response = new AddResponse();
         AddResponseStatus addStatus;
         try {
@@ -272,6 +282,10 @@ public class AccessCodeService {
         // UC-010 BR-137: a record for a department the caller is not assigned to is answered
         // before anything about that department is looked up; the rest of the batch goes on.
         if (!departmentScope.permits(request.departmentId)) {
+            return new AddResponseStatus(new Status(), "Not permitted: " + request.xid);
+        }
+        // UC-010 BR-177, A8: nor onto a survey the department does not register onto.
+        if (!offersSurvey(request.departmentId, request.surveyId)) {
             return new AddResponseStatus(new Status(), "Not permitted: " + request.xid);
         }
         try {
@@ -436,8 +450,9 @@ public class AccessCodeService {
             AddResponse response = csvImportService.importSubjects(multipartBody.file);
             return response;
 
-        } catch (CsvImportException e) {
-            // The rejected lines, each with what the caller has to correct.
+        } catch (CsvSurveyMissingException | CsvImportException e) {
+            // The rejected lines, each with what the caller has to correct; or the whole file,
+            // when a row names no survey (BR-178).
             AddResponse errorResponse = new AddResponse();
             errorResponse.setError(e.getMessage());
             return errorResponse;
@@ -458,6 +473,19 @@ public class AccessCodeService {
      */
     public boolean permitsDepartment(long departmentId) {
         return departmentScope.permits(departmentId);
+    }
+
+    /**
+     * Whether a subject in this department may be registered onto this survey (UC-006 BR-172,
+     * UC-010 BR-177). The CSV import asks it for each line, as it asks
+     * {@link #permitsDepartment(long)}.
+     *
+     * @param departmentId the department a record names
+     * @param surveyId     the survey it names
+     * @return true when the department lists the survey
+     */
+    public boolean offersSurvey(long departmentId, long surveyId) {
+        return departmentService.offersSurvey(departmentId, surveyId);
     }
 
     /**

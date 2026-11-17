@@ -18,11 +18,14 @@ import com.elicitsoftware.response.AddResponse;
 import com.elicitsoftware.response.AddResponseStatus;
 import com.elicitsoftware.service.CsvImportException;
 import com.elicitsoftware.service.CsvImportService;
+import com.elicitsoftware.service.CsvSurveyMissingException;
+import com.elicitsoftware.service.DepartmentService;
 import com.elicitsoftware.rest.AccessCodeService;
 import com.elicitsoftware.security.DepartmentScope;
 import com.elicitsoftware.service.SurveyDefinitionPresenceCheck;
 import com.vaadin.flow.component.Component;
 import com.vaadin.flow.component.button.Button;
+import com.vaadin.flow.component.confirmdialog.ConfirmDialog;
 import com.vaadin.flow.component.button.ButtonVariant;
 import com.vaadin.flow.component.combobox.ComboBox;
 import com.vaadin.flow.component.combobox.ComboBoxVariant;
@@ -63,6 +66,8 @@ import java.util.Arrays;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
 import java.util.Optional;
 
 /**
@@ -140,6 +145,10 @@ public class RegisterView extends HorizontalLayout implements HasDynamicTitle, B
     /** Decides whether a subject's department is one of the user's (UC-003 BR-138). */
     @Inject
     DepartmentScope departmentScope;
+
+    /** The surveys each department registers onto (UC-006 BR-172, UC-003 BR-174). */
+    @Inject
+    DepartmentService departmentService;
 
     /**
      * Security identity for user authentication and role checking.
@@ -271,6 +280,9 @@ public class RegisterView extends HorizontalLayout implements HasDynamicTitle, B
             surveyComboBox.setValue(surveys.get(0));
             subject.setSurveyId(surveys.get(0).id);
         }
+        // UC-003 BR-174: the survey choice offers the chosen department's surveys only.
+        departmentComboBox.addValueChangeListener(e -> offerSurveysOf(e.getValue(), surveys));
+        offerSurveysOf(departmentComboBox.getValue(), surveys);
 
         TextField firstName = new TextField(getTranslation("registerView.firstName"));
         firstName.setId("register-first-name");
@@ -464,6 +476,11 @@ public class RegisterView extends HorizontalLayout implements HasDynamicTitle, B
             Subject found = editableSubject(idOpt.get());
             if (found != null) {
                 this.subject = found;
+                // Read-only before the bean is read: an existing subject's survey is shown as it
+                // is, whatever the department lists now (UC-003 BR-174 governs new subjects).
+                if (surveyComboBox != null) {
+                    surveyComboBox.setReadOnly(true);
+                }
                 if (binder != null) {
                     binder.readBean(subject);
                 }
@@ -563,6 +580,11 @@ public class RegisterView extends HorizontalLayout implements HasDynamicTitle, B
             // UC-003 BR-138: the department is checked here, not left to what the selector offers.
             if (!departmentScope.permits(subject.getDepartmentId())) {
                 Notification.show(getTranslation("registerView.error.notYourDepartment"), 5000, Notification.Position.MIDDLE);
+                return;
+            }
+            // UC-003 BR-174: and so is the department's survey.
+            if (!departmentService.offersSurvey(subject.getDepartmentId(), subject.getSurveyId())) {
+                Notification.show(getTranslation("registerView.error.surveyNotOffered"), 5000, Notification.Position.MIDDLE);
                 return;
             }
 
@@ -714,6 +736,36 @@ public class RegisterView extends HorizontalLayout implements HasDynamicTitle, B
      * @param surveys the installed surveys, in display order
      * @return a configured ComboBox for survey selection
      */
+    /**
+     * Narrows the survey choice to the department's surveys (UC-003 BR-174), keeping the current
+     * survey when it is still offered and choosing the only one when there is one. A read-only
+     * choice, an existing subject's, offers every survey, so it shows the subject's as it is.
+     *
+     * @param department the department chosen in the form, or null
+     * @param surveys    every installed survey, in display order
+     */
+    void offerSurveysOf(Department department, List<Survey> surveys) {
+        if (surveyComboBox.isReadOnly()) {
+            surveyComboBox.setItems(surveys);
+            return;
+        }
+        Set<Integer> offered = department == null ? Set.of() : departmentService.surveyIdsOf(department.id);
+        Survey current = surveyComboBox.getValue();
+        List<Survey> items = surveys.stream()
+                .filter(survey -> offered.contains(survey.id))
+                .toList();
+        surveyComboBox.setItems(items);
+        Survey keep = current == null ? null
+                : items.stream().filter(survey -> survey.id.equals(current.id)).findFirst().orElse(null);
+        if (keep != null) {
+            surveyComboBox.setValue(keep);
+        } else if (items.size() == 1) {
+            surveyComboBox.setValue(items.get(0));
+        } else {
+            surveyComboBox.clear();
+        }
+    }
+
     private ComboBox<Survey> getSurveyComboBox(List<Survey> surveys) {
         ComboBox<Survey> surveyComboBox = new ComboBox<>(getTranslation("registerView.survey"));
         surveyComboBox.setItems(surveys);
@@ -794,7 +846,7 @@ public class RegisterView extends HorizontalLayout implements HasDynamicTitle, B
 
         content.add(
                 new Paragraph(getTranslation("registerView.csvDoc.columnsIntro")),
-                new Paragraph("#departmentId, firstName, lastName, middleName, dob, email, phone, xid"), // i18n:ignore CSV header line
+                new Paragraph("#departmentId, firstName, lastName, middleName, dob, email, phone, xid, surveyId"), // i18n:ignore CSV header line
                 new Paragraph(getTranslation("registerView.csvDoc.comments")),
 
                 new H4(getTranslation("registerView.csvDoc.columnDescriptions")),
@@ -802,10 +854,10 @@ public class RegisterView extends HorizontalLayout implements HasDynamicTitle, B
 
                 new H4(getTranslation("registerView.csvDoc.example")),
                 // i18n:ignore-start (sample CSV data)
-                new Pre("#departmentId,firstName,lastName,middleName,dob,email,phone,xid\n" +
-                        "1,John,Doe,Michael,1990-01-15,john.doe@email.com,123-456-7890,EXT001\n" +
-                        "2,Jane,Smith,,1985-03-22,jane.smith@email.com,555-123-4567,EXT002\n" +
-                        "1,Bob,Johnson,Robert,12/10/1992,bob.johnson@email.com,999-888-7777,EXT003")
+                new Pre("#departmentId,firstName,lastName,middleName,dob,email,phone,xid,surveyId\n" +
+                        "1,John,Doe,Michael,1990-01-15,john.doe@email.com,123-456-7890,EXT001,1\n" +
+                        "2,Jane,Smith,,1985-03-22,jane.smith@email.com,,,1\n" +
+                        "1,Bob,Johnson,Robert,12/10/1992,bob.johnson@email.com,999-888-7777,EXT003,2")
                 // i18n:ignore-end
         );
 
@@ -831,6 +883,7 @@ public class RegisterView extends HorizontalLayout implements HasDynamicTitle, B
         list.add(columnDescription("email", getTranslation("registerView.csvDoc.col.email")));
         list.add(columnDescription("phone", getTranslation("registerView.csvDoc.col.phone")));
         list.add(columnDescription("xid", getTranslation("registerView.csvDoc.col.xid")));
+        list.add(columnDescription("surveyId", getTranslation("registerView.csvDoc.col.surveyId")));
         return list;
     }
 
@@ -990,16 +1043,16 @@ public class RegisterView extends HorizontalLayout implements HasDynamicTitle, B
 
                 new H4(getTranslation("registerView.apiDoc.csvFormat")),
                 new Paragraph(getTranslation("registerView.csvDoc.columnsIntro")),
-                new Pre("departmentId,firstName,lastName,middleName,dob,email,phone,xid"),
+                new Pre("departmentId,firstName,lastName,middleName,dob,email,phone,xid,surveyId"),
 
                 new Paragraph(getTranslation("registerView.apiDoc.columnRequirements")),
                 new Pre(getTranslation("registerView.apiDoc.columnRequirementsList")),
 
                 new H4(getTranslation("registerView.apiDoc.csvExample")),
                 // i18n:ignore-start (sample CSV data and API responses)
-                new Pre("departmentId,firstName,lastName,middleName,dob,email,phone,xid\n" +
-                        "1,John,Doe,Michael,1990-01-15,john.doe@email.com,123-456-7890,EXT001\n" +
-                        "2,Jane,Smith,,1985-03-22,jane.smith@email.com,555-123-4567,EXT002"),
+                new Pre("departmentId,firstName,lastName,middleName,dob,email,phone,xid,surveyId\n" +
+                        "1,John,Doe,Michael,1990-01-15,john.doe@email.com,123-456-7890,EXT001,1\n" +
+                        "2,Jane,Smith,,1985-03-22,jane.smith@email.com,555-123-4567,EXT002,2"),
                 // i18n:ignore-end
 
                 new H3(getTranslation("registerView.apiDoc.webUpload.h")),
@@ -1065,7 +1118,9 @@ public class RegisterView extends HorizontalLayout implements HasDynamicTitle, B
     }
 
     /**
-     * Imports an uploaded CSV and shows the outcome in a result dialog (UC-003 A6).
+     * Reads an uploaded CSV and asks the user to confirm what it will do before anyone is
+     * registered (UC-003 A6, BR-176). A file with a row that names no survey is rejected with a
+     * warning and nothing is imported (BR-175); the survey chosen in the form plays no part.
      * Package-private so tests can drive it directly without simulating a real file upload,
      * the same way {@code RespondentImportView.handleUpload} is.
      *
@@ -1074,16 +1129,97 @@ public class RegisterView extends HorizontalLayout implements HasDynamicTitle, B
     void handleCsvUpload(byte[] data) {
         try {
             CsvImportService importService = new CsvImportService(accessCodeService);
-            InputStream inputStream = new java.io.ByteArrayInputStream(data);
-            AddResponse response = importService.importSubjects(inputStream);
+            CsvImportService.CsvImportPlan plan = importService.plan(new java.io.ByteArrayInputStream(data));
+            if (plan.rejected()) {
+                new ResultDialog(getTranslation("registerView.csvImport.errorTitle"),
+                        new CsvSurveyMissingException(plan.linesWithoutSurvey()).getMessage(), true).open();
+                return;
+            }
+            if (plan.accepted().isEmpty()) {
+                // Nothing to confirm: the file holds no rows, or every row would be refused.
+                if (plan.refused().isEmpty()) {
+                    new ResultDialog(getTranslation("registerView.csvImport.successTitle"),
+                            importSummary(new AddResponse()), false).open();
+                } else {
+                    new ResultDialog(getTranslation("registerView.csvImport.errorTitle"),
+                            rejectedLines(new CsvImportException(plan.refused())), true).open();
+                }
+                return;
+            }
+            confirmCsvImport(importService, plan);
+        } catch (Exception e) {
+            // The file could not be read: the cause goes to the log, the dialog says only that
+            // it failed (UC-010 BR-139).
+            Log.error("CSV import failed", e);
+            new ResultDialog(getTranslation("registerView.csvImport.errorTitle"),
+                    getTranslation("registerView.csvImport.failed"), true).open();
+        }
+    }
+
+    /**
+     * The confirmation of UC-003 A6 step 2: how many subjects the upload will register on each
+     * survey and in each department, and each row it will refuse. Confirming imports the
+     * accepted rows (step 4); cancelling imports nothing (step 3).
+     */
+    private void confirmCsvImport(CsvImportService importService, CsvImportService.CsvImportPlan plan) {
+        ConfirmDialog dialog = new ConfirmDialog();
+        csvConfirmation = dialog;
+        dialog.setId("register-csv-confirm");
+        dialog.setHeader(getTranslation("registerView.csvConfirm.title"));
+        dialog.setText(csvPlanSummary(plan));
+        dialog.setCancelable(true);
+        dialog.setCancelText(getTranslation("common.cancel"));
+        dialog.setConfirmText(getTranslation("registerView.csvConfirm.import"));
+        dialog.addConfirmListener(e -> runCsvImport(importService, plan));
+        dialog.open();
+    }
+
+    /**
+     * The last upload's confirmation. Package-private so tests can confirm or cancel it: an
+     * opened ConfirmDialog joins the UI only when the response is written.
+     */
+    ConfirmDialog csvConfirmation;
+
+    /** The confirmation's body: one line per survey and department, then the refused rows. */
+    Div csvPlanSummary(CsvImportService.CsvImportPlan plan) {
+        Map<Integer, Map<Long, Long>> counts = new java.util.TreeMap<>();
+        for (CsvImportService.CsvRow row : plan.accepted()) {
+            counts.computeIfAbsent(row.request().surveyId, k -> new java.util.TreeMap<>())
+                    .merge((long) row.request().departmentId, 1L, Long::sum);
+        }
+        Div body = new Div();
+        body.add(new Paragraph(getTranslation("registerView.csvConfirm.intro", plan.accepted().size())));
+        // Accepted rows name installed surveys and the user's own departments only (BR-137, BR-172).
+        Map<Integer, String> surveyNames = new java.util.HashMap<>();
+        departmentService.installedSurveys().forEach(survey -> surveyNames.put(survey.id, survey.name));
+        Map<Long, String> departmentNames = new java.util.HashMap<>();
+        user.getDepartments().forEach(department -> departmentNames.put(department.id, department.getName()));
+        UnorderedList groups = new UnorderedList();
+        counts.forEach((surveyId, byDepartment) -> byDepartment.forEach((departmentId, count) ->
+                groups.add(new ListItem(getTranslation("registerView.csvConfirm.group",
+                        surveyNames.getOrDefault(surveyId, String.valueOf(surveyId)),
+                        departmentNames.getOrDefault(departmentId, String.valueOf(departmentId)),
+                        count)))));
+        body.add(groups);
+        if (!plan.refused().isEmpty()) {
+            body.add(new Paragraph(getTranslation("registerView.csvConfirm.refused", plan.refused().size())));
+            UnorderedList refused = new UnorderedList();
+            plan.refused().forEach(line -> refused.add(new ListItem(line)));
+            body.add(refused);
+        }
+        return body;
+    }
+
+    /** Imports the rows the user confirmed and shows the outcome (UC-003 A6 step 4). */
+    private void runCsvImport(CsvImportService importService, CsvImportService.CsvImportPlan plan) {
+        try {
+            AddResponse response = importService.importAccepted(plan);
             new ResultDialog(getTranslation("registerView.csvImport.successTitle"),
                     importSummary(response), false).open();
         } catch (CsvImportException e) {
             new ResultDialog(getTranslation("registerView.csvImport.errorTitle"),
                     rejectedLines(e), true).open();
         } catch (Exception e) {
-            // The file could not be read or the import failed as a whole: the cause goes to the
-            // log, the dialog says only that it failed (UC-010 BR-139).
             Log.error("CSV import failed", e);
             new ResultDialog(getTranslation("registerView.csvImport.errorTitle"),
                     getTranslation("registerView.csvImport.failed"), true).open();
