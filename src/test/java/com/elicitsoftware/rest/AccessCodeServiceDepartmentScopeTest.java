@@ -90,7 +90,7 @@ class AccessCodeServiceDepartmentScopeTest {
                 .when().post("/api/secured/add/subjects")
                 .then().statusCode(403)
                 .body(not(containsString(batched)));
-        String csv = own.id + ",Ann,Lee,,,ann." + token + "@example.org,555-010-0102," + uploaded + ",1\n";
+        String csv = "1," + own.id + "," + uploaded + ",Ann,Lee,,,ann." + token + "@example.org,555-010-0102\n";
         given().multiPart("file", "subjects.csv", csv.getBytes(StandardCharsets.UTF_8))
                 .when().post("/api/secured/add/csv")
                 .then().statusCode(403)
@@ -119,7 +119,7 @@ class AccessCodeServiceDepartmentScopeTest {
                 .when().post("/api/secured/add/subjects")
                 .then().statusCode(200)
                 .body(containsString("Not permitted: " + batched));
-        String csv = own.id + ",Ann,Lee,,,ann." + token + "@example.org,555-010-0103," + uploaded + ",1\n";
+        String csv = "1," + own.id + "," + uploaded + ",Ann,Lee,,,ann." + token + "@example.org,555-010-0103\n";
         given().multiPart("file", "subjects.csv", csv.getBytes(StandardCharsets.UTF_8))
                 .when().post("/api/secured/add/csv")
                 .then().statusCode(200)
@@ -136,8 +136,8 @@ class AccessCodeServiceDepartmentScopeTest {
     void given_aCsvRowWithoutItsSurvey_when_uploaded_then_theWholeFileIsRejected() {
         String named = "NOSURV-" + token + "-1";
         String unnamed = "NOSURV-" + token + "-2";
-        String csv = own.id + ",Ann,Lee,,,ann." + token + "@example.org,555-010-0104," + named + ",1\n"
-                + own.id + ",Bob,Ray,,,bob." + token + "@example.org,555-010-0105," + unnamed + "\n";
+        String csv = "1," + own.id + "," + named + ",Ann,Lee,,,ann." + token + "@example.org,555-010-0104\n"
+                + "," + own.id + "," + unnamed + ",Bob,Ray,,,bob." + token + "@example.org,555-010-0105\n";
 
         given().multiPart("file", "subjects.csv", csv.getBytes(StandardCharsets.UTF_8))
                 .when().post("/api/secured/add/csv")
@@ -200,8 +200,8 @@ class AccessCodeServiceDepartmentScopeTest {
     void given_aCsvAcrossDepartments_when_uploaded_then_theForeignLineIsReportedAndNotStored() {
         String foreign = "SCOPE-" + token + "-6";
         String mine = "SCOPE-" + token + "-7";
-        String csv = other.id + ",Bob,Ray,,,bob." + token + "@example.org,555-010-0100," + foreign + ",1\n"
-                + own.id + ",Ann,Lee,,,ann." + token + "@example.org,555-010-0101," + mine + ",1\n";
+        String csv = "1," + other.id + "," + foreign + ",Bob,Ray,,,bob." + token + "@example.org,555-010-0100\n"
+                + "1," + own.id + "," + mine + ",Ann,Lee,,,ann." + token + "@example.org,555-010-0101\n";
 
         given().multiPart("file", "subjects.csv", csv.getBytes(StandardCharsets.UTF_8))
                 .when().post("/api/secured/add/csv")
