@@ -18,7 +18,7 @@
 ## Main Success Scenario
 
 1. The client submits one or more subject records (as a single object, an array, or a CSV file).
-2. For each record, the system confirms the external ID is not excluded for the department.
+2. For each record, the system confirms the record's department has the record's survey (BR-177) and the external ID is not excluded for the department.
 3. The system confirms no subject with that external ID already exists in the department.
 4. The system generates a unique access code and creates a respondent (UC-015).
 5. The system stores the subject and generates the department's default messages for it.
@@ -76,6 +76,21 @@
 
 1. The system refuses the whole request as forbidden, whichever of the three forms it took, reads no record and stores nothing (BR-034, BR-170).
 
+### A8: The department does not have the survey
+
+**Trigger:** A record names a survey its department does not list (UC-006 BR-172), or a survey that is not installed (step 2).
+**Flow:**
+
+1. For a single request, the system refuses the request as forbidden and stores nothing.
+2. In a batch, the system records the outcome as "not permitted" for that record; in a CSV import it reports the line. The remaining records are processed (BR-037).
+
+### A9: The CSV names no survey
+
+**Trigger:** A CSV upload in which a data row lacks the survey ID column (BR-178).
+**Flow:**
+
+1. The system rejects the whole upload, naming the lines without a survey ID, and imports nothing.
+
 ## Postconditions
 
 ### Success Postconditions
@@ -95,7 +110,15 @@ Single-subject registration, batch registration and CSV import accept the `elici
 
 ### BR-035: CSV column order
 
-A CSV row supplies fields in the order: department ID, first name, last name, middle name, date of birth, email, phone, external ID. Lines beginning with `#` and blank lines are ignored.
+A CSV row supplies fields in the order: department ID, first name, last name, middle name, date of birth, email, phone, external ID, survey ID. Lines beginning with `#` and blank lines are ignored.
+
+### BR-177: A record's department must have its survey
+
+A record is registered only onto a survey its department lists (UC-006 BR-172). A record naming another survey, or one that is not installed, is refused as not permitted, by the same rule for single, batch and CSV registration.
+
+### BR-178: A CSV names its survey on every row
+
+Every data row of a CSV upload carries its survey ID as the ninth column. An upload in which any row lacks it is rejected whole and nothing is imported; the API does not fall back to any survey of its own choosing.
 
 ### BR-036: CSV required fields
 

@@ -120,6 +120,8 @@ UC025 --> surveyapp : probes reachability
 UC003 ..> UC015 : <<include>>
 UC010 ..> UC015 : <<include>>
 UC032 ..> UC010 : <<authorizes>>\n(the client's departments)
+UC006 ..> UC003 : <<bounds>>\n(the department's surveys)
+UC006 ..> UC010 : <<bounds>>\n(the department's surveys)
 UC013 ..> UC017 : <<supplies file>>
 UC013 ..> UC018 : <<supplies file>>
 UC018 ..> UC014 : <<include>>
