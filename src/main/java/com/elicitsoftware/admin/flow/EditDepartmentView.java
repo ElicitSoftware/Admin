@@ -133,7 +133,9 @@ public class EditDepartmentView extends VerticalLayout implements BeforeEnterObs
         surveysField.setHelperText(getTranslation("editDepartmentView.surveys.helper"));
         // The ID beside the name: a CSV upload names its survey by it (UC-003 BR-175).
         surveysField.setItemLabelGenerator(survey -> getTranslation("editDepartmentView.surveys.item", survey.name, survey.id));
-        surveysField.setWidth("300px");
+        // Wider than the text fields: each survey reads "name (ID n)", and chips that do not fit
+        // fold into an overflow chip.
+        surveysField.setWidth("480px");
         saveBtn.setText(getTranslation("common.save"));
         cancelBtn.setText(getTranslation("common.cancel"));
         
