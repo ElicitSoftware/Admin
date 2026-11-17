@@ -39,7 +39,8 @@ import com.vaadin.flow.component.icon.VaadinIcon;
  * end (BR-112). The dialog takes no close button (nothing is added to its header), no Escape
  * and no click outside.
  * <p>
- * Both variants also offer the administrator's manual when the image carries one (UC-029 A7).
+ * Both variants also offer the administrator's manual when the image carries one (UC-028 BR-179,
+ * UC-029 A7).
  * This modal holds the whole console for an account with no department, and the manual is the
  * document that explains the very procedure the notice demands -- creating the first department
  * and having it assigned -- so it has to stay reachable from behind the modal. It is a link out
@@ -69,7 +70,8 @@ final class MissingDepartmentDialog {
     }
 
     /**
-     * The variant for an administrator: explanation, Add a department, Logout.
+     * The variant for an administrator: explanation, Add a department, Logout, and the manual
+     * when packaged (UC-028 BR-179).
      *
      * @param manualAvailable whether this image carries the administrator's manual (UC-029 A1)
      * @return the configured dialog
@@ -79,7 +81,8 @@ final class MissingDepartmentDialog {
     }
 
     /**
-     * The variant for a user: explanation and Logout only (UC-028 A1).
+     * The variant for a user: explanation, Logout, and the manual when packaged; no remedy of its
+     * own (UC-028 A1, BR-179).
      *
      * @param manualAvailable whether this image carries the administrator's manual (UC-029 A1)
      * @return the configured dialog
