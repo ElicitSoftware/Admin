@@ -390,9 +390,9 @@ public class AccessCodeService {
      *
      * <p><strong>CSV Format:</strong></p>
      * <pre>
-     * departmentId,firstName,lastName,middleName,dob,email,phone,xid
-     * 1,John,Doe,Michael,1990-01-15,john.doe@email.com,123-456-7890,EXT001
-     * 2,Jane,Smith,,1985-03-22,jane.smith@email.com,555-123-4567,EXT002
+     * surveyId,departmentId,xid,firstName,lastName,middleName,dob,email,phone
+     * 1,1,EXT001,John,Doe,Michael,1990-01-15,john.doe@email.com,123-456-7890
+     * 1,2,EXT002,Jane,Smith,,1985-03-22,jane.smith@email.com,555-123-4567
      * </pre>
      *
      * <p><strong>Success Response Example:</strong></p>

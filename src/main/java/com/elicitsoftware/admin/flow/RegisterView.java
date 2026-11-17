@@ -846,7 +846,7 @@ public class RegisterView extends HorizontalLayout implements HasDynamicTitle, B
 
         content.add(
                 new Paragraph(getTranslation("registerView.csvDoc.columnsIntro")),
-                new Paragraph("#departmentId, firstName, lastName, middleName, dob, email, phone, xid, surveyId"), // i18n:ignore CSV header line
+                new Paragraph("#surveyId, departmentId, xid, firstName, lastName, middleName, dob, email, phone"), // i18n:ignore CSV header line
                 new Paragraph(getTranslation("registerView.csvDoc.comments")),
 
                 new H4(getTranslation("registerView.csvDoc.columnDescriptions")),
@@ -854,10 +854,10 @@ public class RegisterView extends HorizontalLayout implements HasDynamicTitle, B
 
                 new H4(getTranslation("registerView.csvDoc.example")),
                 // i18n:ignore-start (sample CSV data)
-                new Pre("#departmentId,firstName,lastName,middleName,dob,email,phone,xid,surveyId\n" +
-                        "1,John,Doe,Michael,1990-01-15,john.doe@email.com,123-456-7890,EXT001,1\n" +
-                        "2,Jane,Smith,,1985-03-22,jane.smith@email.com,,,1\n" +
-                        "1,Bob,Johnson,Robert,12/10/1992,bob.johnson@email.com,999-888-7777,EXT003,2")
+                new Pre("#surveyId,departmentId,xid,firstName,lastName,middleName,dob,email,phone\n" +
+                        "1,1,EXT001,John,Doe,Michael,1990-01-15,john.doe@email.com,123-456-7890\n" +
+                        "1,2,,Jane,Smith,,1985-03-22,jane.smith@email.com\n" +
+                        "2,1,EXT003,Bob,Johnson,Robert,12/10/1992,bob.johnson@email.com,999-888-7777")
                 // i18n:ignore-end
         );
 
@@ -875,15 +875,15 @@ public class RegisterView extends HorizontalLayout implements HasDynamicTitle, B
      */
     private UnorderedList columnDescriptionsList() {
         UnorderedList list = new UnorderedList();
+        list.add(columnDescription("surveyId", getTranslation("registerView.csvDoc.col.surveyId")));
         list.add(columnDescription("departmentId", getTranslation("registerView.csvDoc.col.departmentId")));
+        list.add(columnDescription("xid", getTranslation("registerView.csvDoc.col.xid")));
         list.add(columnDescription("firstName", getTranslation("registerView.csvDoc.col.firstName")));
         list.add(columnDescription("lastName", getTranslation("registerView.csvDoc.col.lastName")));
         list.add(columnDescription("middleName", getTranslation("registerView.csvDoc.col.middleName")));
         list.add(columnDescription("dob", getTranslation("registerView.csvDoc.col.dob")));
         list.add(columnDescription("email", getTranslation("registerView.csvDoc.col.email")));
         list.add(columnDescription("phone", getTranslation("registerView.csvDoc.col.phone")));
-        list.add(columnDescription("xid", getTranslation("registerView.csvDoc.col.xid")));
-        list.add(columnDescription("surveyId", getTranslation("registerView.csvDoc.col.surveyId")));
         return list;
     }
 
@@ -1043,16 +1043,16 @@ public class RegisterView extends HorizontalLayout implements HasDynamicTitle, B
 
                 new H4(getTranslation("registerView.apiDoc.csvFormat")),
                 new Paragraph(getTranslation("registerView.csvDoc.columnsIntro")),
-                new Pre("departmentId,firstName,lastName,middleName,dob,email,phone,xid,surveyId"),
+                new Pre("surveyId,departmentId,xid,firstName,lastName,middleName,dob,email,phone"),
 
                 new Paragraph(getTranslation("registerView.apiDoc.columnRequirements")),
                 new Pre(getTranslation("registerView.apiDoc.columnRequirementsList")),
 
                 new H4(getTranslation("registerView.apiDoc.csvExample")),
                 // i18n:ignore-start (sample CSV data and API responses)
-                new Pre("departmentId,firstName,lastName,middleName,dob,email,phone,xid,surveyId\n" +
-                        "1,John,Doe,Michael,1990-01-15,john.doe@email.com,123-456-7890,EXT001,1\n" +
-                        "2,Jane,Smith,,1985-03-22,jane.smith@email.com,555-123-4567,EXT002,2"),
+                new Pre("surveyId,departmentId,xid,firstName,lastName,middleName,dob,email,phone\n" +
+                        "1,1,EXT001,John,Doe,Michael,1990-01-15,john.doe@email.com,123-456-7890\n" +
+                        "2,2,EXT002,Jane,Smith,,1985-03-22,jane.smith@email.com,555-123-4567"),
                 // i18n:ignore-end
 
                 new H3(getTranslation("registerView.apiDoc.webUpload.h")),

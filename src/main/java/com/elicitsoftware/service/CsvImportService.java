@@ -47,29 +47,30 @@ import java.util.List;
  * CSV Format Requirements:
  * The service expects CSV files with the following column structure:
  * <pre>
- * departmentId,firstName,lastName,middleName,dob,email,phone,xid
+ * surveyId,departmentId,xid,firstName,lastName,middleName,dob,email,phone
  * </pre>
  * <p>
  * Field descriptions:
+ * - **surveyId**: Integer ID of the survey the row is registered onto (required)
  * - **departmentId**: Integer ID of department (must be accessible by importing user)
+ * - **xid**: Optional external identifier for cross-system tracking
  * - **firstName**: Required participant first name
  * - **lastName**: Required participant last name
  * - **middleName**: Optional middle name (may be empty)
  * - **dob**: Date of birth in yyyy-MM-dd or MM/dd/yyyy format
  * - **email**: Required email address
  * - **phone**: Optional phone number
- * - **xid**: Optional external identifier for cross-system tracking
  * <p>
  * CSV Format Features:
  * - Quoted fields supported for values containing commas
  * - Comment lines starting with '#' are ignored
  * - Empty lines are skipped
  * - Field validation with descriptive error messages
- * - Minimum 6 fields required (departmentId through email)
+ * - Minimum 8 fields required (surveyId through email)
  * <p>
  * Security and Validation:
  * - Department ID must be accessible by the importing user
- * - Survey ID is automatically set to 1 (configurable in future versions)
+ * - Survey ID is read from the first column of every row (BR-175)
  * - Required field validation (firstName, lastName, email)
  * - Date format validation with multiple format support
  * - Comprehensive error collection and reporting
@@ -161,7 +162,7 @@ public class CsvImportService {
      * <p>
      * Security considerations:
      * - Department ID validation ensures users can only import to accessible departments
-     * - Every row names its survey in the ninth column; one that does not rejects the file (UC-010 BR-178)
+     * - Every row names its survey in the first column; one that does not rejects the file (UC-010 BR-178)
      * - Input validation prevents injection attacks
      * - Transaction rollback prevents partial imports
      *
@@ -273,8 +274,16 @@ public class CsvImportService {
         return response;
     }
 
-    /** The ninth column, after the external ID: the survey a row is registered onto (BR-175). */
-    static final int SURVEY_COLUMN = 8;
+    /** The first column: the survey a row is registered onto (BR-175). */
+    static final int SURVEY_COLUMN = 0;
+    static final int DEPARTMENT_COLUMN = 1;
+    static final int XID_COLUMN = 2;
+    static final int FIRST_NAME_COLUMN = 3;
+    static final int LAST_NAME_COLUMN = 4;
+    static final int MIDDLE_NAME_COLUMN = 5;
+    static final int DOB_COLUMN = 6;
+    static final int EMAIL_COLUMN = 7;
+    static final int PHONE_COLUMN = 8;
 
     /**
      * One row an import would register, with the line it came from.
@@ -322,7 +331,7 @@ public class CsvImportService {
      * <p>
      * Field parsing and validation:
      * - **Department ID**: Must be integer and accessible by the importing user
-     * - **Survey ID**: The ninth column (UC-003 BR-175, UC-010 BR-178)
+     * - **Survey ID**: The first column (UC-003 BR-175, UC-010 BR-178)
      * - **Personal names**: firstName and lastName are required, middleName optional
      * - **Date of birth**: Supports yyyy-MM-dd and MM/dd/yyyy formats
      * - **Contact info**: Email required, phone optional
@@ -348,15 +357,15 @@ public class CsvImportService {
      * <pre>
      * Position | Field        | Required | Format
      * ---------|--------------|----------|------------------
-     * 0        | departmentId | Yes      | Integer
-     * 1        | firstName    | Yes      | Non-empty string
-     * 2        | lastName     | Yes      | Non-empty string
-     * 3        | middleName   | No       | String (may be empty)
-     * 4        | dob          | No       | yyyy-MM-dd or MM/dd/yyyy
-     * 5        | email        | Yes      | Non-empty string
-     * 6        | phone        | No       | String
-     * 7        | xid          | No       | String
- * 8        | surveyId     | Yes      | Integer (checked before this method, by plan)
+     * 0        | surveyId     | Yes      | Integer (presence checked before this method, by plan)
+     * 1        | departmentId | Yes      | Integer
+     * 2        | xid          | No       | String
+     * 3        | firstName    | Yes      | Non-empty string
+     * 4        | lastName     | Yes      | Non-empty string
+     * 5        | middleName   | No       | String (may be empty)
+     * 6        | dob          | No       | yyyy-MM-dd or MM/dd/yyyy
+     * 7        | email        | Yes      | Non-empty string
+     * 8        | phone        | No       | String
      * </pre>
      *
      * @param fields The CSV line's fields, split by splitCsvLine
@@ -369,35 +378,39 @@ public class CsvImportService {
 //    private AddRequest parseCsvLine(String csvLine, User user) throws Exception {
     private AddRequest parseCsvLine(String[] fields) throws Exception {
 
-        if (fields.length < 6) {
+        if (fields.length <= EMAIL_COLUMN) {
             throw new Exception(Translations.get("csvImport.badFormat"));
         }
 
         AddRequest request = new AddRequest();
 
+        // UC-003 BR-175, UC-010 BR-178: the first column names the survey.
+        try {
+            request.surveyId = Integer.parseInt(fields[SURVEY_COLUMN].trim());
+        } catch (NumberFormatException e) {
+            throw new Exception(Translations.get("csvImport.badSurveyId"));
+        }
+
         try {
             // Parse department ID
-            request.departmentId = Integer.parseInt(fields[0].trim());
+            request.departmentId = Integer.parseInt(fields[DEPARTMENT_COLUMN].trim());
 
-            // UC-003 BR-175, UC-010 BR-178: the ninth column names the survey.
-            try {
-                request.surveyId = Integer.parseInt(fields[SURVEY_COLUMN].trim());
-            } catch (NumberFormatException e) {
-                throw new Exception(Translations.get("csvImport.badSurveyId"));
-            }
+            // Parse external ID
+            request.xid = fields[XID_COLUMN].trim();
 
-            // Parse other fields
-            request.firstName = fields[1].trim();
-            request.lastName = fields[2].trim();
-            request.middleName = fields.length > 3 ? fields[3].trim() : null;
+            // Parse names
+            request.firstName = fields[FIRST_NAME_COLUMN].trim();
+            request.lastName = fields[LAST_NAME_COLUMN].trim();
+            request.middleName = fields[MIDDLE_NAME_COLUMN].trim();
 
             // Parse date of birth
-            if (fields.length > 4 && !fields[4].trim().isEmpty()) {
+            String dob = fields[DOB_COLUMN].trim();
+            if (!dob.isEmpty()) {
                 try {
-                    request.dob = LocalDate.parse(fields[4].trim(), DateTimeFormatter.ofPattern("yyyy-MM-dd"));
+                    request.dob = LocalDate.parse(dob, DateTimeFormatter.ofPattern("yyyy-MM-dd"));
                 } catch (DateTimeParseException e) {
                     try {
-                        request.dob = LocalDate.parse(fields[4].trim(), DateTimeFormatter.ofPattern("MM/dd/yyyy"));
+                        request.dob = LocalDate.parse(dob, DateTimeFormatter.ofPattern("MM/dd/yyyy"));
                     } catch (DateTimeParseException e2) {
                         throw new Exception(Translations.get("csvImport.badDate"));
                     }
@@ -405,13 +418,10 @@ public class CsvImportService {
             }
 
             // Parse email
-            request.email = fields.length > 5 ? fields[5].trim() : null;
+            request.email = fields[EMAIL_COLUMN].trim();
 
             // Parse phone
-            request.phone = fields.length > 6 ? fields[6].trim() : null;
-
-            // Parse external ID
-            request.xid = fields.length > 7 ? fields[7].trim() : null;
+            request.phone = fields.length > PHONE_COLUMN ? fields[PHONE_COLUMN].trim() : null;
 
             // Validate required fields
             if (request.firstName.isEmpty()) {
@@ -420,7 +430,7 @@ public class CsvImportService {
             if (request.lastName.isEmpty()) {
                 throw new Exception(Translations.get("csvImport.lastNameRequired"));
             }
-            if (request.email == null || request.email.isEmpty()) {
+            if (request.email.isEmpty()) {
                 throw new Exception(Translations.get("csvImport.emailRequired"));
             }
 
