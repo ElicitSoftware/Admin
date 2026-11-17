@@ -126,6 +126,7 @@ class CsvImportServiceUnitTest {
         assertEquals("", registered.get(0).xid);
     }
 
+    /** UC-003 BR-175: a row without phone may end at the email. */
     @Test
     void given_aLineEndingAtTheEmail_when_imported_then_thePhoneIsLeftEmpty() throws Exception {
         importCsv(service(r -> registeredAs("ok")), "1,3,X1,A,B,C,,e@x.org\n");
@@ -133,6 +134,7 @@ class CsvImportServiceUnitTest {
         assertNull(registered.get(0).phone);
     }
 
+    /** UC-010 BR-036: the email is required, so a row must reach it. */
     @Test
     void given_aLineShortOfTheEmail_when_imported_then_itIsRefusedAsBadlyFormatted() {
         assertEquals(List.of("Line 1: Invalid CSV format. Expected at least 8 fields: "
@@ -141,7 +143,7 @@ class CsvImportServiceUnitTest {
         assertTrue(registered.isEmpty());
     }
 
-    /** Issue #189: a file in the V2 order (departmentId first, no survey) registers no one. */
+    /** UC-010 BR-035: a file in the V2 order (departmentId first, no survey) registers no one. */
     @Test
     void given_aFileInTheV2Order_when_imported_then_everyLineIsRefusedAndNoOneIsRegistered() {
         List<String> errors = lineErrors("#departmentId,firstName,lastName,middleName,dob,email,phone,xid\n"
