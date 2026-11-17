@@ -27,7 +27,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
- * The test email goes through the same sender and mailer as invitations.
+ * The test email goes through the same mailer and relay as invitations, from the site's address.
  *
  * <p>Traceability: UC-024 (Diagnose Email), BR-093, BR-095.</p>
  */

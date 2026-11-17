@@ -12,6 +12,7 @@ package com.elicitsoftware.service;
  */
 
 import com.elicitsoftware.diagnostics.CheckResult;
+import com.elicitsoftware.model.Department;
 import com.elicitsoftware.model.Message;
 import com.elicitsoftware.model.Status;
 import com.elicitsoftware.model.Subject;
@@ -22,7 +23,9 @@ import org.junit.jupiter.api.Test;
 import java.io.IOException;
 import java.lang.reflect.Method;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.TimeoutException;
 import java.util.function.Supplier;
 
@@ -35,15 +38,24 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * UC-004: Send Invitation or Reminder Email, and UC-024: Diagnose Email — how {@link EmailService}
  * builds each message and reports the relay's answer, with the mailer stubbed (no SMTP).
  * <p>
- * Covers BR-093 (the test email uses the invitation mailer, sender and timeout) and BR-095 (the
- * test email is attributed to the administrator who asked).
+ * Covers BR-093 (the test email uses the invitation mailer, relay and timeout), BR-095 (the test
+ * email is attributed to the administrator who asked) and BR-180 (invitations come from their
+ * department's From email, else the site's address).
  */
 class EmailServiceUnitTest {
 
     private final List<Mail> sent = new ArrayList<>();
 
+    /** The departments the stubbed lookup knows, by id; any other id is not found. */
+    private final Map<Long, Department> departments = new HashMap<>();
+
     private EmailService service(Supplier<Uni<Void>> answer) {
-        EmailService service = new EmailService();
+        EmailService service = new EmailService() {
+            @Override
+            Department departmentOf(long departmentId) {
+                return departments.get(departmentId);
+            }
+        };
         service.mailer = mails -> {
             sent.addAll(List.of(mails));
             return answer.get();
@@ -63,6 +75,13 @@ class EmailServiceUnitTest {
         Method m = EmailService.class.getDeclaredMethod("sendMessage", Message.class);
         m.setAccessible(true);
         return (boolean) m.invoke(service, message);
+    }
+
+    private static Department department(long id, String fromEmail) {
+        Department department = new Department();
+        department.id = id;
+        department.fromEmail = fromEmail;
+        return department;
     }
 
     private static Message message(String mimeType, String email) {
@@ -141,6 +160,7 @@ class EmailServiceUnitTest {
 
     @Test
     void given_anHtmlMessage_when_sent_then_itGoesAsHtmlFromTheConfiguredSender() throws Exception {
+        // No department is known for the subject, so the site's address is the sender (BR-180).
         assertTrue(sendMessage(accepting(), message("text/html", "jane@example.org")));
 
         Mail mail = sent.get(0);
@@ -181,5 +201,35 @@ class EmailServiceUnitTest {
         status.setDepartmentId(1);
         assertFalse(accepting().sendEmail(status));
         assertTrue(sent.isEmpty());
+    }
+
+    /** UC-004 BR-180: a queued message goes out from its subject's department's From email. */
+    @Test
+    void given_aDepartmentWithASender_when_aMessageIsSent_then_itComesFromTheDepartment() throws Exception {
+        departments.put(4L, department(4, " clinic@hospital.example.org "));
+        Message message = message("text/html", "jane@example.org");
+        message.subject.setDepartmentId(4);
+
+        assertTrue(sendMessage(accepting(), message));
+
+        assertEquals("clinic@hospital.example.org", sent.get(0).getFrom());
+    }
+
+    /** UC-004 BR-180: a department with no address, or none at all, falls back to the site's address. */
+    @Test
+    void given_noDepartmentSender_when_theSenderIsChosen_then_theSiteAddressIsUsed() {
+        EmailService service = accepting();
+        assertEquals("elicit@example.org", service.senderFor(null));
+        assertEquals("elicit@example.org", service.senderFor(department(1, null)));
+        assertEquals("elicit@example.org", service.senderFor(department(1, "  ")));
+        assertEquals("unit@example.org", service.senderFor(department(1, "unit@example.org")));
+    }
+
+    /** UC-024 BR-093: the relay test keeps the site's address, whatever the departments say. */
+    @Test
+    void given_aDepartmentSender_when_aTestEmailIsSent_then_itComesFromTheSiteAddress() {
+        departments.put(1L, department(1, "clinic@hospital.example.org"));
+        accepting().sendTestEmail("a@b.org", "alice");
+        assertEquals("elicit@example.org", sent.get(0).getFrom());
     }
 }
