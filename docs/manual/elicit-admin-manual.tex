@@ -201,9 +201,11 @@ pencil in the \ui{Edit} column opens an existing one.}
         department's subjects when they are registered. Templates are written in
         Chapter~\ref{sec:templates}; the ID is the \ui{ID} column of that screen, the one after
         \ui{Edit}.
-  \item Fill in \ui{From email}, the department's sender address. Invitations are sent from the
-        address the service was started with (\ui{System} $>$ \ui{Email} shows it); the
-        department's address is recorded but not used as the sender today.
+  \item Fill in \ui{From email}, the department's sender address: every invitation and
+        reminder to this department's subjects is sent from it. Use an address the mail relay
+        is allowed to send for; ask whoever runs the relay if you are not sure, because a relay
+        may refuse an address it does not accept, and a recipient's server may file the mail as
+        spam.
   \item Check \ui{Surveys}: the surveys this department's subjects may be registered onto. A new
         department starts with every installed survey; remove the ones it does not run. Each
         survey is shown with its ID, which a CSV upload names it by (Section~\ref{sec:csv}).
@@ -482,8 +484,9 @@ The console reports \ui{Email sent successfully}, or tells you it failed.
 
 What is sent is the template — or templates — that the subject's \emph{department} names in its
 \ui{Default message ID}, addressed to the subject's own email address, with
-\val{<ACCESS_CODE>} replaced by their access code. The sender address is the one the service
-was started with; \ui{System} $>$ \ui{Email} shows it.
+\val{<ACCESS_CODE>} replaced by their access code. It is sent from the department's
+\ui{From email}; only when that is blank is the service's own sender address used, the one
+\ui{System} $>$ \ui{Email} shows.
 
 A reminder is the same action again: choose \ui{Send email} a second time and the same template
 goes out with the same code.
@@ -828,9 +831,10 @@ again.
 \screenshot{25-system-email}{\ui{System} $>$ \ui{Email}: the mail settings the service
 started with, and a test message.}
 
-\ui{Send test email}, under \ui{Send a test message}, sends through the same service, sender and timeout that invitations use,
-so a test that passes means invitations will send. Sending is disabled when no sender address is
-configured.
+\ui{Send test email}, under \ui{Send a test message}, sends through the same service, relay and timeout that invitations use,
+so a test that passes means the relay accepts mail. The test is sent from the service's own sender
+address, not from a department's \ui{From email}, so it does not prove that the relay accepts each
+department's address. Sending is disabled when no sender address is configured.
 
 \subsection{Connections}
 

@@ -62,7 +62,7 @@
 
 ### BR-093: The test uses the real path
 
-The test message is sent by the same service, sender and timeout that invitations use (UC-004), so a passing test means invitations will send.
+The test message is sent by the same service, relay and timeout that invitations use (UC-004), so a passing test means the relay accepts mail. It is sent from the site's sender address; invitations are sent from each department's address (UC-004 BR-180), which a relay may still refuse, so a passing test does not prove that every department's mail will send.
 
 ### BR-094: The password is never shown
 
@@ -79,5 +79,5 @@ Every test send is logged with the administrator's username and the masked recip
 Traces to FR-024. Built on `EmailService`, which already logs host and port on failure.
 
 Implemented by `MailerDiagnostics` (the effective settings), `EmailService.sendTestEmail` (the send, through
-the same mailer, sender and timeout as invitations) and `SystemEmailView`. Verified by
+the same mailer, relay and timeout as invitations) and `SystemEmailView`. Verified by
 `EmailServiceTestEmailTest` and `SystemViewsRenderTest`.
