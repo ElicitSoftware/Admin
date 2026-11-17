@@ -27,7 +27,7 @@ public class AuthorizationModeConfig {
 
     /** The two supported authorization sources for Elicit roles. */
     public enum AuthorizationMode {
-        /** Elicit roles come only from OIDC (Keycloak); the database fallback is never consulted. */
+        /** Elicit roles come only from the OIDC provider; the database fallback is never consulted. */
         OIDC,
         /** Elicit roles fall back to {@code survey.user_roles} when OIDC supplies none. */
         DATABASE

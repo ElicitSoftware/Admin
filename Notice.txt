@@ -1,5 +1,5 @@
 
-Lists of 29 third-party dependencies.
+Lists of 28 third-party dependencies.
      (The Apache Software License, Version 2.0) ZXing Core (com.google.zxing:core:3.5.1 - https://github.com/zxing/zxing/core)
      (The Apache Software License, Version 2.0) ZXing Java SE extensions (com.google.zxing:javase:3.5.1 - https://github.com/zxing/zxing/javase)
      (Apache License Version 2.0) Vaadin Quarkus Extension (com.vaadin:vaadin-quarkus-extension:25.3.4 - https://vaadin.com/vaadin-quarkus-extension-parent/vaadin-quarkus-extension)
@@ -13,7 +13,6 @@ Lists of 29 third-party dependencies.
      (The Apache Software License, Version 2.0) Quarkus - Hibernate Validator - Runtime (io.quarkus:quarkus-hibernate-validator:3.40.1.1 - https://github.com/quarkusio/quarkus)
      (The Apache Software License, Version 2.0) Quarkus - Jacoco - Runtime (io.quarkus:quarkus-jacoco:3.40.1.1 - https://github.com/quarkusio/quarkus)
      (The Apache Software License, Version 2.0) Quarkus - JDBC - PostgreSQL - Runtime (io.quarkus:quarkus-jdbc-postgresql:3.40.1.1 - https://github.com/quarkusio/quarkus)
-     (The Apache Software License, Version 2.0) Quarkus - Keycloak Authorization - Runtime (io.quarkus:quarkus-keycloak-authorization:3.40.1.1 - https://github.com/quarkusio/quarkus)
      (The Apache Software License, Version 2.0) Quarkus - Logging - JSON - Runtime (io.quarkus:quarkus-logging-json:3.40.1.1 - https://github.com/quarkusio/quarkus)
      (The Apache Software License, Version 2.0) Quarkus - Mailer - Runtime (io.quarkus:quarkus-mailer:3.40.1.1 - https://github.com/quarkusio/quarkus)
      (The Apache Software License, Version 2.0) Quarkus - Micrometer Registry - Prometheus Runtime (io.quarkus:quarkus-micrometer-registry-prometheus:3.40.1.1 - https://github.com/quarkusio/quarkus)
