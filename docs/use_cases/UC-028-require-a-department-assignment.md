@@ -7,7 +7,7 @@
 **Primary Actor:** Survey Administrator
 **Secondary Actor:** Survey User
 **Goal:** Be told, before touching any screen, that my account is not assigned to a department, and either be given the one action that fixes it or be told who can.
-**Status:** Planned
+**Status:** Implemented
 
 ## Preconditions
 
@@ -20,7 +20,8 @@
 1. An administrator signs in to a fresh deployment.
 2. The system finds no department on their account and shows a dialog that blocks every
    console screen and cannot be dismissed.
-3. The dialog explains the condition and offers one action, Add a department, and Logout.
+3. The dialog explains the condition and offers one action, Add a department, and Logout. When
+   the image carries the administrator's manual, it also offers Open the manual (BR-179).
 4. The administrator follows the action to Departments and creates a department (UC-006).
 5. The system assigns the new department to the administrator in the same transaction as it
    saves the department.
@@ -33,8 +34,9 @@
 **Trigger:** The console user holds `elicit_user` only (step 2).
 **Flow:**
 
-1. The dialog explains that an administrator must assign them to a department, and offers
-   Logout as its only action.
+1. The dialog explains that an administrator must assign them to a department. It offers
+   Logout and, when the image carries the administrator's manual, Open the manual (BR-179); it
+   offers no remedy of its own.
 2. Use case ends; the user returns once an administrator has acted (UC-008).
 
 ### A2: The administrator navigates away without creating a department
@@ -115,6 +117,14 @@ The dev-data migration seeds the two accounts and the `email` message type only.
 department, no message template (a template cannot exist without a department) and no
 department assignments. The first department is created through the console.
 
+### BR-179: The manual stays reachable from behind the dialog
+
+Both variants offer Open the manual when the image carries one (UC-029 A1, A7), because the
+manual describes the procedure the dialog demands: creating the first department and having it
+assigned. It opens `/api/manual` in a new tab rather than navigating, so it neither dismisses
+the dialog nor reaches a blocked screen. A build without the manual omits the link and changes
+nothing else.
+
 ---
 
 ## Reference
@@ -122,7 +132,8 @@ department assignments. The first department is created through the console.
 Traces to FR-035, NFR-016 and C-016. Follows the shape of UC-019 and UC-021 for where the check
 runs (the layout, on every navigation), and departs from them in blocking (BR-110).
 
-Implemented by `MissingDepartmentDialog` (the two variants and their actions),
+Implemented by `MissingDepartmentDialog` (the two variants, their actions and the manual link
+of BR-179),
 `MainLayout.showRouterLayoutContent` (the gate and the remedy-screen exemption, BR-111),
 `UiSessionLogin.refresh` (the re-read, BR-114), `DepartmentService.create` (the assignment,
 BR-113), `EditDepartmentView` and `EditUserView` (which call the re-read after a save) and

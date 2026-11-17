@@ -83,7 +83,7 @@
 **Trigger:** The reader's account is not assigned to a department, so the notice of UC-028 is holding the console (step 1)  
 **Flow:**
 
-1. The notice offers the manual alongside its own action, because the manual is what describes the procedure the notice is demanding.
+1. The notice offers Open the manual in both of its variants, beside Add a department for an administrator and beside Logout for everyone (UC-028 BR-179), because the manual is what describes the procedure the notice is demanding.
 2. The administrator opens the manual and reads the chapter on creating the first department.
 3. Use case continues at step 8.
 
