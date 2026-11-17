@@ -69,7 +69,8 @@ A department must have a default message ID, defaulting to the first template, i
 
 ### BR-025: Sender email required
 
-A department must have a valid sender email address, used as the "from" address for its outbound mail.
+A department must have a valid sender email address, used as the "from" address for its outbound mail
+(UC-004 BR-180).
 
 ### BR-172: A department's surveys bound registration
 

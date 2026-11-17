@@ -20,7 +20,7 @@
 1. The user selects a subject and chooses to send an email.
 2. The system looks up the department's default message templates.
 3. The system builds each message, substituting the subject's access code into the message body.
-4. The system sends the message to the subject's email address from the department's configured sender address.
+4. The system sends the message to the subject's email address from the department's sender address (BR-180).
 5. The system confirms the email was sent.
 
 ## Alternative Flows
@@ -76,8 +76,18 @@ A message is only sent if the subject has an email address; otherwise it is skip
 
 A message is sent as HTML or plain text according to its declared MIME type.
 
+### BR-180: The department is the sender
+
+Every invitation and reminder is sent from the From email of the subject's department, the
+address the department form asks for (UC-006 BR-025). The site's sender address
+(`quarkus.mailer.from`) is used only when the department cannot be found or its address is
+blank. The relay must accept each department's address as a sender, and its domain must allow
+the relay to send for it (SPF, DKIM, DMARC); otherwise the relay may refuse the message (A2) or
+the recipient's server may mark it as spam.
+
 ---
 
 ## Reference
 
-Derived from `EmailService`, `Message`, `MessageTemplate`, `Department`, and `Status`.
+Derived from `EmailService`, `Message`, `MessageTemplate`, `Department`, and `Status`. The sender
+of BR-180 is chosen by `EmailService.senderFor`; verified by `EmailServiceUnitTest`.
