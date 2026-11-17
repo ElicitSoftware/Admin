@@ -29,12 +29,12 @@ import java.util.Set;
  * application's Elicit roles, and expands whichever raw role(s) the identity
  * ends up with to their full cumulative set (see {@link ElicitRoles#expand}).
  *
- * <p>OIDC (Keycloak) remains the primary source of authorization. This
+ * <p>The OIDC provider remains the primary source of authorization. This
  * augmentor only consults the database when {@link AuthorizationModeConfig}
  * is in {@code DATABASE} mode <em>and</em> the identity has none of
  * {@code elicit_admin}, {@code elicit_user}, or {@code elicit_importer} --
- * every other Keycloak-provided role (e.g. {@code offline_access} from the
- * realm's default composite role) is ignored for this check. In the default
+ * every other provider-supplied role (e.g. {@code offline_access} from the
+ * Keycloak example realm's default composite role) is ignored for this check. In the default
  * {@code OIDC} mode, an identity with no OIDC-supplied Elicit role is granted
  * no role at all -- the database is never consulted.</p>
  *
