@@ -110,7 +110,7 @@ Single-subject registration, batch registration and CSV import accept the `elici
 
 ### BR-035: CSV column order
 
-A CSV row supplies fields in the order: department ID, first name, last name, middle name, date of birth, email, phone, external ID, survey ID. Lines beginning with `#` and blank lines are ignored.
+A CSV row supplies fields in the order: survey ID, department ID, external ID, first name, last name, middle name, date of birth, email, phone. Lines beginning with `#` and blank lines are ignored.
 
 ### BR-177: A record's department must have its survey
 
@@ -118,11 +118,11 @@ A record is registered only onto a survey its department lists (UC-006 BR-172). 
 
 ### BR-178: A CSV names its survey on every row
 
-Every data row of a CSV upload carries its survey ID as the ninth column. An upload in which any row lacks it is rejected whole and nothing is imported; the API does not fall back to any survey of its own choosing.
+Every data row of a CSV upload carries its survey ID as the first column. An upload in which any row lacks it is rejected whole and nothing is imported; the API does not fall back to any survey of its own choosing.
 
 ### BR-036: CSV required fields
 
-Each CSV row requires a parseable department ID, first name, last name, and email; date of birth accepts `yyyy-MM-dd` or `MM/dd/yyyy`.
+Each CSV row requires a parseable survey ID and department ID, first name, last name, and email; date of birth accepts `yyyy-MM-dd` or `MM/dd/yyyy`.
 
 ### BR-037: Independent per-record processing
 

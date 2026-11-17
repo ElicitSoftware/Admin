@@ -132,7 +132,7 @@ The form offers only the surveys of the department chosen in it (UC-006 BR-172),
 
 ### BR-175: A CSV upload names its survey on every row
 
-A CSV row carries the survey's ID as its ninth column, after the external ID; a row without phone or external ID keeps their empty columns. A file in which any data row lacks the survey ID is rejected whole, with a warning, and nothing is imported.
+A CSV row carries the survey's ID as its first column, before the department ID; a row without phone may end at the email. A file in which any data row lacks the survey ID is rejected whole, with a warning, and nothing is imported.
 
 ### BR-176: A CSV upload is confirmed before anything is registered
 
