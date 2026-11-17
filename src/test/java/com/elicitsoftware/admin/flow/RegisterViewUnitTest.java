@@ -530,10 +530,10 @@ class RegisterViewUnitTest extends PlainAdminViewTestSupport {
     void given_twoValidRows_when_uploading_then_theSummaryListsEachSubject() {
         signedIn("elicit_user");
 
-        upload("#departmentId,firstName,lastName,middleName,dob,email,phone,xid,surveyId\n"
+        upload("#surveyId,departmentId,xid,firstName,lastName,middleName,dob,email,phone\n"
                 + "\n"
-                + "3,Ann,Lee,,1990-01-15,ann@example.org,555-123-4567,X1,7\n"
-                + "7,Bob,Ray,Q,12/10/1992,bob@example.org,,X2,7\n");
+                + "7,3,X1,Ann,Lee,,1990-01-15,ann@example.org,555-123-4567\n"
+                + "7,7,X2,Bob,Ray,Q,12/10/1992,bob@example.org,\n");
 
         Dialog dialog = onlyDialog();
         assertEquals(t("registerView.csvImport.successTitle"), dialog.getHeaderTitle());
@@ -554,7 +554,7 @@ class RegisterViewUnitTest extends PlainAdminViewTestSupport {
     void given_oneValidRow_when_uploading_then_theHeadingIsSingular() {
         signedIn("elicit_user");
 
-        upload("3,Ann,Lee,,,ann@example.org,,,7\n");
+        upload("7,3,,Ann,Lee,,,ann@example.org,\n");
 
         assertEquals(List.of(t("registerView.csvImport.summary.headingOne")), headingsIn(onlyDialog()));
     }
@@ -599,8 +599,8 @@ class RegisterViewUnitTest extends PlainAdminViewTestSupport {
             default -> throw new IllegalStateException(request.xid);
         };
 
-        upload("3,A,B,,,a@x.org,,nameless,7\n3,A,B,,,a@x.org,,codeOnly,7\n3,A,B,,,a@x.org,,blank,7\n"
-                + "3,A,B,,,a@x.org,,noStatus,7\n3,A,B,,,a@x.org,,lastOnly,7\n");
+        upload("7,3,nameless,A,B,,,a@x.org,\n7,3,codeOnly,A,B,,,a@x.org,\n7,3,blank,A,B,,,a@x.org,\n"
+                + "7,3,noStatus,A,B,,,a@x.org,\n7,3,lastOnly,A,B,,,a@x.org,\n");
 
         String existing = t("registerView.csvImport.outcome.existing");
         assertEquals(List.of(
@@ -621,7 +621,7 @@ class RegisterViewUnitTest extends PlainAdminViewTestSupport {
             default -> "Exluded Subject";
         }));
 
-        upload("3,A,B,,,a@x.org,,n,7\n3,A,B,,,a@x.org,,e,7\n3,A,B,,,a@x.org,,x,7\n");
+        upload("7,3,n,A,B,,,a@x.org,\n7,3,e,A,B,,,a@x.org,\n7,3,x,A,B,,,a@x.org,\n");
 
         assertEquals(List.of(spanish("registerView.csvImport.outcome.new"), spanish("registerView.csvImport.outcome.existing"),
                 spanish("registerView.csvImport.outcome.excluded")), detailsIn(onlyDialog()));
@@ -639,7 +639,7 @@ class RegisterViewUnitTest extends PlainAdminViewTestSupport {
             return created(request.xid, "Ann", "Lee", "AC1");
         };
 
-        upload("3,Ann,Lee,,,a@x.org,,ok,7\n3,Ann,Lee,,,a@x.org,,bad,7\n");
+        upload("7,3,ok,Ann,Lee,,,a@x.org,\n7,3,bad,Ann,Lee,,,a@x.org,\n");
 
         Dialog dialog = onlyDialog();
         assertEquals(t("registerView.csvImport.successTitle"), dialog.getHeaderTitle());
@@ -653,7 +653,7 @@ class RegisterViewUnitTest extends PlainAdminViewTestSupport {
         signedIn("elicit_user");
         foreignDepartments.add(8L);
 
-        upload("3,Ann,Lee,,,a@x.org,,ok,7\n8,Bob,Ray,,,b@x.org,,other,7\n");
+        upload("7,3,ok,Ann,Lee,,,a@x.org,\n7,8,other,Bob,Ray,,,b@x.org,\n");
 
         Dialog dialog = onlyDialog();
         assertEquals(t("registerView.csvImport.errorTitle"), dialog.getHeaderTitle());
@@ -665,7 +665,7 @@ class RegisterViewUnitTest extends PlainAdminViewTestSupport {
     void given_rejectedRows_when_uploading_then_theErrorDialogListsEachRejectedLine() {
         signedIn("elicit_user");
 
-        upload("3,Ann,Lee,,,a@x.org,,,7\n3,,Lee,,,a@x.org,,,7\nx,Ann,Lee,,,a@x.org,,,7\n3,Ann,Lee,,,a@x.org,,,seven\n");
+        upload("7,3,,Ann,Lee,,,a@x.org,\n7,3,,,Lee,,,a@x.org,\n7,x,,Ann,Lee,,,a@x.org,\nseven,3,,Ann,Lee,,,a@x.org,\n");
 
         Dialog dialog = onlyDialog();
         assertEquals(t("registerView.csvImport.errorTitle"), dialog.getHeaderTitle());
@@ -680,7 +680,7 @@ class RegisterViewUnitTest extends PlainAdminViewTestSupport {
     void given_aRowWithoutItsSurvey_when_uploading_then_theFileIsRejectedWithAWarning() {
         signedIn("elicit_user");
 
-        upload("3,Ann,Lee,,,a@x.org,,ok,7\n3,Bob,Ray,,,b@x.org,,old\n");
+        upload("7,3,ok,Ann,Lee,,,a@x.org,\n,3,old,Bob,Ray,,,b@x.org\n");
 
         Dialog dialog = onlyDialog();
         assertEquals(t("registerView.csvImport.errorTitle"), dialog.getHeaderTitle());
@@ -698,7 +698,7 @@ class RegisterViewUnitTest extends PlainAdminViewTestSupport {
         notOffered.add("3/9");
 
         ConfirmDialog confirmation = confirmationFor(
-                "3,Ann,Lee,,,a@x.org,,a,7\n3,Bob,Ray,,,b@x.org,,b,7\n3,Cy,Day,,,c@x.org,,c,9\n");
+                "7,3,a,Ann,Lee,,,a@x.org,\n7,3,b,Bob,Ray,,,b@x.org,\n9,3,c,Cy,Day,,,c@x.org,\n");
 
         String text = confirmation.getElement().getTextRecursively();
         assertTrue(text.contains(t("registerView.csvConfirm.intro", 2)), text);
@@ -713,7 +713,7 @@ class RegisterViewUnitTest extends PlainAdminViewTestSupport {
         signedIn("elicit_user");
         notOffered.add("3/9");
 
-        upload("3,Ann,Lee,,,a@x.org,,ok,7\n3,Cy,Day,,,c@x.org,,other,9\n");
+        upload("7,3,ok,Ann,Lee,,,a@x.org,\n9,3,other,Cy,Day,,,c@x.org,\n");
 
         Dialog dialog = onlyDialog();
         assertEquals(List.of(t("definition.line", "2", t("csvImport.surveyNotOffered", "3", "9"))), errorsIn(dialog));
@@ -807,7 +807,7 @@ class RegisterViewUnitTest extends PlainAdminViewTestSupport {
         assertEquals(t("registerView.csvDoc.title"), csv.getSummaryText());
 
         List<ListItem> columns = find(ListItem.class, csv).all();
-        List<String> names = List.of("departmentId", "firstName", "lastName", "middleName", "dob", "email", "phone", "xid", "surveyId");
+        List<String> names = List.of("surveyId", "departmentId", "xid", "firstName", "lastName", "middleName", "dob", "email", "phone");
         assertEquals(names.size(), columns.size());
         for (int i = 0; i < names.size(); i++) {
             List<Span> spans = find(Span.class, columns.get(i)).all();
@@ -815,7 +815,7 @@ class RegisterViewUnitTest extends PlainAdminViewTestSupport {
             assertTrue(spans.get(0).hasClassName("inline-name"));
             assertEquals(" " + t("registerView.csvDoc.col." + names.get(i)), spans.get(1).getText());
         }
-        assertTrue(find(Pre.class, csv).single().getText().startsWith("#departmentId,firstName,lastName"));
+        assertTrue(find(Pre.class, csv).single().getText().startsWith("#surveyId,departmentId,xid"));
     }
 
     @Test

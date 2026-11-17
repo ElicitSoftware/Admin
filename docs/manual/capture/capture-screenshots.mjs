@@ -474,9 +474,9 @@ async function captureCsvImport() {
   const surveyId = surveyIdOnDepartment ?? process.env.MANUAL_SURVEY_ID ?? '1';
   const csv = path.join(os.tmpdir(), 'elicit-manual-subjects.csv');
   await writeFile(csv, [
-    '# departmentId,firstName,lastName,middleName,dob,email,phone,xid,surveyId',
-    `${departmentId},Jordan,Reyes,,1984-03-12,jordan.reyes@example.org,734-555-0101,MRN0101,${surveyId}`,
-    `${departmentId},Priya,Nair,,1990-11-02,priya.nair@example.org,,MRN0102,${surveyId}`,
+    '# surveyId,departmentId,xid,firstName,lastName,middleName,dob,email,phone',
+    `${surveyId},${departmentId},MRN0101,Jordan,Reyes,,1984-03-12,jordan.reyes@example.org,734-555-0101`,
+    `${surveyId},${departmentId},MRN0102,Priya,Nair,,1990-11-02,priya.nair@example.org`,
   ].join('\n') + '\n');
   await goto('/register');
   await page.locator('#register-csv-upload input[type=file]').setInputFiles(csv);

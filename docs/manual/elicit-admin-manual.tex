@@ -424,21 +424,21 @@ access code does not change.
 \ui{Upload CSV} takes a file of subjects, one per row, with these columns in order:
 
 \begin{center}\small
-\val{departmentId, firstName, lastName, middleName, dob, email, phone, xid, surveyId}
+\val{surveyId, departmentId, xid, firstName, lastName, middleName, dob, email, phone}
 \end{center}
 
-Every row names its survey in the ninth column. A file in which any row lacks it is rejected
+Every row names its survey in the first column. A file in which any row lacks it is rejected
 with a warning naming those lines, and nothing is imported; the survey chosen in the form plays
 no part in an upload.
 
 \begin{enumerate}
-  \item Write the file. The first column is the department's numeric ID: open the department
-        on \ui{Departments} and read the number at the end of the page's address
-        (\val{edit-department/3}). First name, last name and email are required; a date of
-        birth is \val{yyyy-MM-dd} or \val{MM/dd/yyyy}. The last column is the survey's ID, shown
-        beside each survey's name in the department's \ui{Surveys}; a row with no phone or
-        External ID keeps their empty columns (\val{...,a@x.org,,,2}). Rows beginning with
-        \texttt{\small\#} are ignored.
+  \item Write the file. The first column is the survey's ID, shown beside each survey's name in
+        the department's \ui{Surveys}. The second is the department's numeric ID: open the
+        department on \ui{Departments} and read the number at the end of the page's address
+        (\val{edit-department/3}). The third, the External ID, may be left empty
+        (\val{2,3,,Ana,...}). First name, last name and email are required; a date of birth is
+        \val{yyyy-MM-dd} or \val{MM/dd/yyyy}. A row with no phone may end at the email. Rows
+        beginning with \texttt{\small\#} are ignored.
   \item Open \ui{Register Subjects} and choose \ui{Upload CSV}.
   \item Pick the file. Nothing is registered yet: a confirmation says how many subjects the file
         will register on each survey and in each department, and lists each row it will refuse

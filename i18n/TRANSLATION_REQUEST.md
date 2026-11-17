@@ -172,7 +172,7 @@ Every row is one key in `translations.properties`. Return a file `translations_<
 | `registerView.apiDoc.requestBodyFile` | Form field 'file' containing a CSV file with subject data | Register subjects page (API instructions) · paragraph; 'file' is the field name | 80 |  |
 | `registerView.apiDoc.csvFormat` | CSV file format: | Register subjects page (API instructions) · heading | 30 |  |
 | `registerView.apiDoc.columnRequirements` | Column requirements: | Register subjects page (API instructions) · paragraph | 30 |  |
-| `registerView.apiDoc.columnRequirementsList` | • departmentId: Integer (required) - valid department ID • firstName: String (required) - the subject's first name • lastName: String (required) - the subject's last name • middleName: String (optional) - the subject's middle name • dob: Date (optional) - format yyyy-MM-dd or MM/dd/yyyy • email: String (required) - a valid email address • phone: String (optional) - format ###-###-#### • xid: String (optional) - external ID for the subject • surveyId: Integer (required) - the survey to register onto; the department must have it | Register subjects page (API instructions) · preformatted list, one column per line; keep column names, • and | 600 |  |
+| `registerView.apiDoc.columnRequirementsList` | • surveyId: Integer (required) - the survey to register onto; the department must have it • departmentId: Integer (required) - valid department ID • xid: String (optional) - external ID for the subject • firstName: String (required) - the subject's first name • lastName: String (required) - the subject's last name • middleName: String (optional) - the subject's middle name • dob: Date (optional) - format yyyy-MM-dd or MM/dd/yyyy • email: String (required) - a valid email address • phone: String (optional) - format ###-###-#### | Register subjects page (API instructions) · preformatted list, one column per line; keep column names, • and | 600 |  |
 | `registerView.apiDoc.csvExample` | CSV example: | Register subjects page (API instructions) · heading | 30 |  |
 | `registerView.apiDoc.webUpload.h` | 4. CSV file upload (web interface) | Register subjects page (API instructions) · heading | 40 |  |
 | `registerView.apiDoc.webUpload.p` | You can also upload a CSV file using the upload component above in the web interface. | Register subjects page (API instructions) · paragraph | 100 |  |
@@ -683,14 +683,14 @@ Every row is one key in `translations.properties`. Return a file `translations_<
 | `respondentImport.noAnswer` | No answer with display_key ''{0}'' was imported for this respondent; the dependent''s {1} reference cannot be resolved | Respondent import page · why a line of the respondent file was refused; continues definition.line; display_key stays | 320 | params: {0} = the display key, {1} = upstream or downstream |
 | `respondentImport.notInteger` | Invalid {0} ''{1}''; expected an integer | Respondent import page · why a line of the respondent file was refused; continues definition.line | 200 | params: {0} = field name, kept as written, {1} = the value found |
 | `csvImport.unexpected` | failed to process this record due to an unexpected error | Register page, CSV import · why a line of the CSV file was refused; continues definition.line | 160 |  |
-| `csvImport.badFormat` | Invalid CSV format. Expected at least 6 fields: departmentId,firstName,lastName,middleName,dob,email,phone,xid | Register page, CSV import · why a line of the CSV file was refused; the field names stay | 260 |  |
+| `csvImport.badFormat` | Invalid CSV format. Expected at least 8 fields: surveyId,departmentId,xid,firstName,lastName,middleName,dob,email,phone | Register page, CSV import · why a line of the CSV file was refused; the field names stay | 260 |  |
 | `csvImport.badDate` | Invalid date format. Use yyyy-MM-dd or MM/dd/yyyy | Register page, CSV import · why a line of the CSV file was refused; the date patterns stay | 140 |  |
 | `csvImport.firstNameRequired` | First name is required | Register page, CSV import · why a line of the CSV file was refused | 60 |  |
 | `csvImport.lastNameRequired` | Last name is required | Register page, CSV import · why a line of the CSV file was refused | 60 |  |
 | `csvImport.emailRequired` | Email is required | Register page, CSV import · why a line of the CSV file was refused | 60 |  |
 | `csvImport.badDepartmentId` | Invalid department ID format | Register page, CSV import · why a line of the CSV file was refused | 80 |  |
 | `csvImport.badSurveyId` | Invalid survey ID format | Register page and registration API, CSV import · why a line was refused; continues definition.line | 50 |  |
-| `csvImport.surveyMissing` | Rejected: every row must name its survey in the ninth column, surveyId. Nothing was imported. Lines without it: {0} | Register page and registration API, CSV import · warning when a row has no survey ID; surveyId is the column name, keep it | 160 | params: {0} = comma-separated line numbers |
+| `csvImport.surveyMissing` | Rejected: every row must name its survey in the first column, surveyId. Nothing was imported. Lines without it: {0} | Register page and registration API, CSV import · warning when a row has no survey ID; surveyId is the column name, keep it | 160 | params: {0} = comma-separated line numbers |
 | `csvImport.departmentNotPermitted` | You are not assigned to department {0} | Register page, CSV import · why a line of the CSV file was refused; continues definition.line | 80 | params: {0} = department ID number |
 | `csvImport.surveyNotOffered` | Department {0} does not register subjects onto survey {1} | Register page and registration API, CSV import · why a line was refused; continues definition.line | 80 | params: {0} = department ID number, {1} = survey ID number |
 | `registerView.csvImport.outcome.new` | New Subject | Register page, CSV import · what became of one imported row | 40 |  |
@@ -890,15 +890,15 @@ registerView.apiDoc.requestBody=Request body:
 registerView.apiDoc.requestBodyFile=Form field 'file' containing a CSV file with subject data
 registerView.apiDoc.csvFormat=CSV file format:
 registerView.apiDoc.columnRequirements=Column requirements:
-registerView.apiDoc.columnRequirementsList=• departmentId: Integer (required) - valid department ID
+registerView.apiDoc.columnRequirementsList=• surveyId: Integer (required) - the survey to register onto; the department must have it
+• departmentId: Integer (required) - valid department ID
+• xid: String (optional) - external ID for the subject
 • firstName: String (required) - the subject's first name
 • lastName: String (required) - the subject's last name
 • middleName: String (optional) - the subject's middle name
 • dob: Date (optional) - format yyyy-MM-dd or MM/dd/yyyy
 • email: String (required) - a valid email address
 • phone: String (optional) - format ###-###-####
-• xid: String (optional) - external ID for the subject
-• surveyId: Integer (required) - the survey to register onto; the department must have it
 registerView.apiDoc.csvExample=CSV example:
 registerView.apiDoc.webUpload.h=4. CSV file upload (web interface)
 registerView.apiDoc.webUpload.p=You can also upload a CSV file using the upload component above in the web interface.
@@ -1409,14 +1409,14 @@ respondentImport.noDisplayKey=Dependent has no {0} display_key; the export is in
 respondentImport.noAnswer=No answer with display_key ''{0}'' was imported for this respondent; the dependent''s {1} reference cannot be resolved
 respondentImport.notInteger=Invalid {0} ''{1}''; expected an integer
 csvImport.unexpected=failed to process this record due to an unexpected error
-csvImport.badFormat=Invalid CSV format. Expected at least 6 fields: departmentId,firstName,lastName,middleName,dob,email,phone,xid
+csvImport.badFormat=Invalid CSV format. Expected at least 8 fields: surveyId,departmentId,xid,firstName,lastName,middleName,dob,email,phone
 csvImport.badDate=Invalid date format. Use yyyy-MM-dd or MM/dd/yyyy
 csvImport.firstNameRequired=First name is required
 csvImport.lastNameRequired=Last name is required
 csvImport.emailRequired=Email is required
 csvImport.badDepartmentId=Invalid department ID format
 csvImport.badSurveyId=Invalid survey ID format
-csvImport.surveyMissing=Rejected: every row must name its survey in the ninth column, surveyId. Nothing was imported. Lines without it: {0}
+csvImport.surveyMissing=Rejected: every row must name its survey in the first column, surveyId. Nothing was imported. Lines without it: {0}
 csvImport.departmentNotPermitted=You are not assigned to department {0}
 csvImport.surveyNotOffered=Department {0} does not register subjects onto survey {1}
 registerView.csvImport.outcome.new=New Subject

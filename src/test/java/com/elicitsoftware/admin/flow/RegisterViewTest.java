@@ -66,8 +66,8 @@ class RegisterViewTest extends QuarkusBrowserlessTest {
 
     /** The CSV columns documented in {@code RegisterView.columnDescriptionsList()}. */
     private static final List<String> EXPECTED_COLUMNS = List.of(
-            "departmentId", "firstName", "lastName", "middleName",
-            "dob", "email", "phone", "xid", "surveyId");
+            "surveyId", "departmentId", "xid", "firstName", "lastName",
+            "middleName", "dob", "email", "phone");
 
     private RegisterView view;
 
@@ -163,8 +163,8 @@ class RegisterViewTest extends QuarkusBrowserlessTest {
     void csvImportSummaryIsOneLinePerSubject() {
         Department dept = persistDepartment("SUCCESS");
         String csv = String.join("\n",
-                dept.id + ",Alice,Anderson,,1990-01-01,alice@example.org,555-010-0100,RV-XID-1,1",
-                dept.id + ",Bob,Baker,,1985-02-15,bob@example.org,555-010-0101,RV-XID-2,1");
+                "1," + dept.id + ",RV-XID-1,Alice,Anderson,,1990-01-01,alice@example.org,555-010-0100",
+                "1," + dept.id + ",RV-XID-2,Bob,Baker,,1985-02-15,bob@example.org,555-010-0101");
 
         view.handleCsvUpload(csv.getBytes(StandardCharsets.UTF_8));
         confirmIfAsked();
@@ -189,7 +189,7 @@ class RegisterViewTest extends QuarkusBrowserlessTest {
     @TestTransaction
     void csvImportSummaryCarriesNoPreformattedText() {
         Department dept = persistDepartment("NOBLOB");
-        String csv = dept.id + ",Carla,Cruz,,1992-03-04,carla@example.org,555-010-0102,RV-XID-3,1";
+        String csv = "1," + dept.id + ",RV-XID-3,Carla,Cruz,,1992-03-04,carla@example.org,555-010-0102";
 
         view.handleCsvUpload(csv.getBytes(StandardCharsets.UTF_8));
         confirmIfAsked();
@@ -222,8 +222,8 @@ class RegisterViewTest extends QuarkusBrowserlessTest {
     void csvImportErrorsAreOneItemPerRejectedLine() {
         Department dept = persistDepartment("ERRORS");
         String csv = String.join("\n",
-                dept.id + ",NoLastName,,,1991-05-05,nolast@example.org,555-010-0104,RV-XID-4,1",
-                dept.id + ",NoEmail,Nemo,,1991-05-05,,555-010-0105,RV-XID-5,1");
+                "1," + dept.id + ",RV-XID-4,NoLastName,,,1991-05-05,nolast@example.org,555-010-0104",
+                "1," + dept.id + ",RV-XID-5,NoEmail,Nemo,,1991-05-05,,555-010-0105");
 
         view.handleCsvUpload(csv.getBytes(StandardCharsets.UTF_8));
         confirmIfAsked();

@@ -88,13 +88,13 @@ class CsvImportServiceUnitTest {
     @Test
     void given_validLines_when_imported_then_eachBecomesARegistrationRequest() throws Exception {
         AddResponse response = importCsv(service(r -> registeredAs("New Subject " + r.xid)),
-                "# departmentId,firstName,...,surveyId\n\n 1 , Jane , Doe ,, 1980-02-03 , j@x.org , 555 , X1 , 7 \n"
-                        + "2,\"Doe, Jr\",Smith,M,02/03/1981,a@x.org,,,4\n");
+                "# surveyId,departmentId,xid,...,phone\n\n 7 , 1 , X1 , Jane , Doe ,, 1980-02-03 , j@x.org , 555 \n"
+                        + "4,2,,\"Doe, Jr\",Smith,M,02/03/1981,a@x.org,\n");
 
         assertEquals(2, registered.size());
         AddRequest first = registered.get(0);
         assertEquals(1, first.departmentId);
-        assertEquals(7, first.surveyId, "UC-003 BR-175: the row's own survey, from its ninth column");
+        assertEquals(7, first.surveyId, "UC-003 BR-175: the row's own survey, from its first column");
         assertEquals("Jane", first.firstName);
         assertEquals("Doe", first.lastName);
         assertEquals("", first.middleName);
@@ -120,10 +120,37 @@ class CsvImportServiceUnitTest {
 
     @Test
     void given_aLineWithoutDateOfBirth_when_imported_then_theDateIsLeftEmpty() throws Exception {
-        importCsv(service(r -> registeredAs("ok")), "3,A,B,C,,e@x.org,,,1\n");
+        importCsv(service(r -> registeredAs("ok")), "1,3,,A,B,C,,e@x.org,\n");
         assertNull(registered.get(0).dob);
         assertEquals("", registered.get(0).phone);
         assertEquals("", registered.get(0).xid);
+    }
+
+    /** UC-003 BR-175: a row without phone may end at the email. */
+    @Test
+    void given_aLineEndingAtTheEmail_when_imported_then_thePhoneIsLeftEmpty() throws Exception {
+        importCsv(service(r -> registeredAs("ok")), "1,3,X1,A,B,C,,e@x.org\n");
+        assertEquals("e@x.org", registered.get(0).email);
+        assertNull(registered.get(0).phone);
+    }
+
+    /** UC-010 BR-036: the email is required, so a row must reach it. */
+    @Test
+    void given_aLineShortOfTheEmail_when_imported_then_itIsRefusedAsBadlyFormatted() {
+        assertEquals(List.of("Line 1: Invalid CSV format. Expected at least 8 fields: "
+                + "surveyId,departmentId,xid,firstName,lastName,middleName,dob,email,phone"),
+                lineErrors("1,3,X1,A,B,C,\n"));
+        assertTrue(registered.isEmpty());
+    }
+
+    /** UC-010 BR-035: a file in the V2 order (departmentId first, no survey) registers no one. */
+    @Test
+    void given_aFileInTheV2Order_when_imported_then_everyLineIsRefusedAndNoOneIsRegistered() {
+        List<String> errors = lineErrors("#departmentId,firstName,lastName,middleName,dob,email,phone,xid\n"
+                + "1,Jane,Doe,,1980-02-03,j@x.org,555,X1\n"
+                + "1,John,Roe,,1981-04-05,r@x.org,,X2\n");
+        assertEquals(List.of("Line 2: Invalid department ID format", "Line 3: Invalid department ID format"), errors);
+        assertTrue(registered.isEmpty());
     }
 
     @Test
@@ -131,20 +158,20 @@ class CsvImportServiceUnitTest {
         AddResponse refused = new AddResponse();
         refused.setError("invalid departmentid");
         refused.setError("second");
-        AddResponse response = importCsv(service(r -> refused), "9,A,B,C,,e@x.org,,,1\n");
+        AddResponse response = importCsv(service(r -> refused), "1,9,,A,B,C,,e@x.org,\n");
         assertEquals(List.of("invalid departmentid"), response.getErrors());
         assertTrue(response.getSubjects().isEmpty());
     }
 
     @Test
     void given_badLines_when_imported_then_eachIsReportedWithItsLineNumber() {
-        List<String> errors = lineErrors("x,a,b,c,,e@x.org,,,1\n"
-                + "1,a,b,c,31/31/2020,e@x.org,,,1\n"
-                + "1, ,b,c,,e@x.org,,,1\n"
-                + "1,a, ,c,,e@x.org,,,1\n"
-                + "1,a,b,c,, ,,,1\n"
-                + "1,a,b,c,,e@x.org,,,one\n"
-                + "1,a,b,c,,e@x.org,,,1\n");
+        List<String> errors = lineErrors("1,x,,a,b,c,,e@x.org,\n"
+                + "1,1,,a,b,c,31/31/2020,e@x.org,\n"
+                + "1,1,, ,b,c,,e@x.org,\n"
+                + "1,1,,a, ,c,,e@x.org,\n"
+                + "1,1,,a,b,c,, ,\n"
+                + "one,1,,a,b,c,,e@x.org,\n"
+                + "1,1,,a,b,c,,e@x.org,\n");
         assertEquals(List.of(
                 "Line 1: Invalid department ID format",
                 "Line 2: Invalid date format. Use yyyy-MM-dd or MM/dd/yyyy",
@@ -160,9 +187,9 @@ class CsvImportServiceUnitTest {
     void given_aLineWithoutItsSurvey_when_imported_then_theWholeFileIsRejected() {
         CsvSurveyMissingException e = assertThrows(CsvSurveyMissingException.class,
                 () -> importCsv(service(r -> registeredAs("New Subject")),
-                        "1,a,b,c,,e@x.org,,,1\n1,d,e,f,,g@x.org\n# note\n1,h,i,j,,k@x.org,,X,\n"));
+                        "1,1,,a,b,c,,e@x.org,\n,1,,d,e,f,,g@x.org\n# note\n ,1,X,h,i,j,,k@x.org,\n"));
         assertEquals(List.of(2, 4), e.getLines());
-        assertEquals("Rejected: every row must name its survey in the ninth column, surveyId. Nothing was imported. "
+        assertEquals("Rejected: every row must name its survey in the first column, surveyId. Nothing was imported. "
                 + "Lines without it: 2, 4", e.getMessage());
         assertTrue(registered.isEmpty(), "nothing is registered from a rejected file");
     }
@@ -171,9 +198,9 @@ class CsvImportServiceUnitTest {
     void given_aLineForADepartmentTheCallerIsNotAssignedTo_when_imported_then_itIsRefusedByNumberAndTheOthersGoOn() {
         foreignDepartments.add(8);
 
-        List<String> errors = lineErrors("1,a,b,c,,e@x.org,,,1\n"
-                + "8,a,b,c,,e@x.org,,,1\n"
-                + "1,d,e,f,,g@x.org,,,1\n");
+        List<String> errors = lineErrors("1,1,,a,b,c,,e@x.org,\n"
+                + "1,8,,a,b,c,,e@x.org,\n"
+                + "1,1,,d,e,f,,g@x.org,\n");
 
         assertEquals(List.of("Line 2: You are not assigned to department 8"), errors);
         assertEquals(List.of(1, 1), registered.stream().map(r -> r.departmentId).toList(),
@@ -185,8 +212,8 @@ class CsvImportServiceUnitTest {
     void given_aLineWhoseDepartmentLacksItsSurvey_when_imported_then_itIsRefusedByNumberAndTheOthersGoOn() {
         notOffered.add("1/9");
 
-        List<String> errors = lineErrors("1,a,b,c,,e@x.org,,,1\n"
-                + "1,a,b,c,,e@x.org,,,9\n");
+        List<String> errors = lineErrors("1,1,,a,b,c,,e@x.org,\n"
+                + "9,1,,a,b,c,,e@x.org,\n");
 
         assertEquals(List.of("Line 2: Department 1 does not register subjects onto survey 9"), errors);
         assertEquals(List.of(1), registered.stream().map(r -> r.surveyId).toList());
@@ -197,7 +224,7 @@ class CsvImportServiceUnitTest {
     void given_aFile_when_planned_then_nothingIsRegisteredAndEachRowIsSorted() throws Exception {
         foreignDepartments.add(8);
         CsvImportService.CsvImportPlan plan = service(r -> registeredAs("x")).plan(new ByteArrayInputStream(
-                "1,a,b,c,,e@x.org,,,1\n8,a,b,c,,e@x.org,,,1\n".getBytes(StandardCharsets.UTF_8)));
+                "1,1,,a,b,c,,e@x.org,\n1,8,,a,b,c,,e@x.org,\n".getBytes(StandardCharsets.UTF_8)));
 
         assertTrue(registered.isEmpty());
         assertFalse(plan.rejected());
@@ -209,7 +236,7 @@ class CsvImportServiceUnitTest {
     void given_aRegistrationThatFailsUnexpectedly_when_imported_then_theLineGetsAGenericMessage() {
         CsvImportException e = assertThrows(CsvImportException.class, () -> importCsv(service(r -> {
             throw new IllegalStateException("could not execute statement; constraint fk_x");
-        }), "# header\n1,a,b,c,,e@x.org,,,1\n"));
+        }), "# header\n1,1,,a,b,c,,e@x.org,\n"));
         assertEquals(List.of("Line 2: failed to process this record due to an unexpected error"), e.getLineErrors());
     }
 
