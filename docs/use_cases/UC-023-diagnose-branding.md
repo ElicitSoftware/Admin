@@ -16,8 +16,8 @@
 
 1. The administrator opens Branding from the System section.
 2. The system shows the configured brand path, whether that directory exists, and which of the brand metadata files (`brand-config.json`, `brand-info.json`) are present there.
-3. The system shows the brand currently in use: key, display name, organization and version as read from the metadata, and a preview of the logo.
-4. For each expected asset (color stylesheet, typography stylesheet, theme stylesheet, horizontal logo, icon, favicon) the system reports where it resolved: the mounted directory, the local directory, the embedded default, or nowhere.
+3. The system shows the brand currently in use: key, display name, organization and version as read from the metadata, and a preview of the lockup `brand-config.json` names (`logos.horizontal`).
+4. For each expected asset (color stylesheet, typography stylesheet, theme stylesheet, horizontal logo, icon, favicon) the system reports where it resolved: the mounted directory, the local directory, the embedded default, or nowhere. The three logos are reported under the file names `brand-config.json` gives them (BR-184).
 5. The administrator compares the result with the directory they mounted.
 6. After correcting the mount, the administrator chooses Reload brand; the system discards the cached brand and shows the freshly resolved result.
 
@@ -39,6 +39,14 @@
 1. The system reports the asset as unreadable with the reason.
 2. Use case continues at step 5.
 
+### A3: The brand gets its logos wrong
+
+**Trigger:** The mounted `brand-config.json` names a logo file the mount does not hold, or the mount supplies its own favicon but names no `logos.icon` (step 4).
+**Flow:**
+
+1. The system lists each problem under Logo warnings, below the assets, and repeats it on the System overview with a link to Branding (UC-020).
+2. Use case continues at step 5.
+
 ## Postconditions
 
 ### Success Postconditions
@@ -54,6 +62,10 @@
 ### BR-091: Every asset reports its source
 
 Each asset is reported individually, because a partial mount (metadata and colors present, typography and theme absent) is the case that is otherwise invisible: the pages render, with the wrong fonts.
+
+### BR-184: Logos are reported by their configured names
+
+The horizontal logo, the icon and the favicon are looked for under the names the mounted `brand-config.json` gives them (umbrella UC-014 BR-008), and each falls back on its own to the default brand's file. A named file the mount lacks is a warning, and so is a mounted favicon with no mounted icon (umbrella UC-014 BR-009), because the header would show the Elicit mark beside the site's favicon.
 
 ### BR-092: Reload is explicit
 

@@ -21,7 +21,9 @@ import com.vaadin.flow.theme.aura.Aura;
 
 import org.eclipse.microprofile.config.inject.ConfigProperty;
 
+import com.elicitsoftware.admin.util.BrandUtil;
 import jakarta.annotation.PostConstruct;
+import jakarta.inject.Inject;
 import jakarta.enterprise.context.ApplicationScoped;
 import io.quarkus.runtime.Startup;
 import java.nio.file.Files;
@@ -76,6 +78,10 @@ public class AppConfig implements AppShellConfigurator {
     @ConfigProperty(name = "brand.local.path", defaultValue = "brand")
     String brandLocalPath;
 
+    /** Resolves the logo files the brand configuration names (umbrella UC-014 BR-008). */
+    @Inject
+    BrandUtil brandUtil;
+
     /**
      * The resolved brand path after initialization.
      */
@@ -121,26 +127,10 @@ public class AppConfig implements AppShellConfigurator {
         // Add brand information as HTML comment for debugging/identification
         addBrandInfoComment(settings);
 
-        // Favicon logic: Use Elicit favicon for default brand, allow external brands to override
-        boolean externalBrandMounted = Files.exists(Paths.get(getBrandPath()));
-
-        if (externalBrandMounted) {
-            // External brand is mounted - check favicon from brand config
-            String faviconPath = getFaviconPathFromBrand();
-
-            if (faviconPath != null) {
-                settings.addLink("shortcut icon", faviconPath);
-                settings.addFavIcon("icon", faviconPath, "32x32");
-            }
-        } else {
-            // No external brand mounted - check for embedded brand favicon
-            String faviconPath = getFaviconPathFromBrand();
-
-            if (faviconPath != null) {
-                settings.addLink("shortcut icon", faviconPath);
-                settings.addFavIcon("icon", faviconPath, "32x32");
-            }
-        }
+        // The favicon the brand configuration names, else the default brand's (umbrella UC-014 BR-008)
+        String faviconPath = brandUtil.getLogoUrl(BrandUtil.Logo.FAVICON);
+        settings.addLink("shortcut icon", faviconPath);
+        settings.addFavIcon("icon", faviconPath, "32x32");
 
         // Add brand CSS files in specific order - colors first, then typography, then theme
         // This ensures proper CSS cascade and avoids @import issues
@@ -412,76 +402,6 @@ public class AppConfig implements AppShellConfigurator {
             // Silently handle extraction errors
         }
         return null;
-    }
-
-    /**
-     * Gets the favicon path from brand configuration.
-     * Reads the favicon filename from brand-config.json and constructs the appropriate URL.
-     *
-     * @return The favicon URL path, or null if no favicon is configured
-     */
-    private String getFaviconPathFromBrand() {
-        try {
-            // First try to read from external brand
-            if (Files.exists(Paths.get(getBrandPath(), "brand-config.json"))) {
-                String content = Files.readString(Paths.get(getBrandPath(), "brand-config.json"));
-                String faviconFile = extractJsonValue(content, "favicon");
-                if (faviconFile != null) {
-                    String path = "/api/brand/images/" + faviconFile;
-                    return path;
-                }
-            }
-
-            // Then try embedded brand
-            try (var inputStream = getClass().getResourceAsStream("/META-INF/brand/brand-config.json")) {
-                if (inputStream != null) {
-                    String content = new String(inputStream.readAllBytes());
-                    String faviconFile = extractJsonValue(content, "favicon");
-                    if (faviconFile != null) {
-                        String path = "/api/brand/images/" + faviconFile;
-                        return path;
-                    }
-                }
-            }
-
-            // Fallback to common favicon files
-            String fallback = getBrandResourcePath("images/favicon.ico",
-                                      getBrandResourcePath("images/favicon.svg",
-                                      getBrandResourcePath("images/favicon.png", null)));
-            return fallback;
-
-        } catch (Exception e) {
-            // Fallback to common favicon files
-            return getBrandResourcePath("images/favicon.ico",
-                                      getBrandResourcePath("images/favicon.svg",
-                                      getBrandResourcePath("images/favicon.png", null)));
-        }
-    }
-
-    /**
-     * Implements three-tier brand resource fallback logic for favicon and asset resolution.
-     * Checks for brand resources in order of precedence and returns the appropriate URL path.
-     *
-     * Precedence Order:
-     * 1. External brand mount (/brand/{brandPath}) - Docker volume mounts
-     * 2. Local brand directory (brand/{brandPath}) - Development or embedded brand
-     * 3. Default application path (fallbackPath) - Application defaults
-     *
-     * @param brandPath The relative path within the brand directory (e.g., "visual-assets/icons/favicon.svg")
-     * @param fallbackPath The default application path to use if no brand resource is found (can be null)
-     * @return The resolved URL path for the resource, or the fallbackPath if no brand resource exists
-     */
-    private String getBrandResourcePath(String brandPath, String fallbackPath) {
-        // Check if external brand directory exists (for Docker volume mounts)
-        if (Files.exists(Paths.get(getBrandPath(), brandPath))) {
-            return "/api/brand/" + brandPath;
-        }
-        // Check if local brand directory exists (for development or embedded brand)
-        if (Files.exists(Paths.get(getLocalBrandPath(), brandPath))) {
-            return "/api/brand/" + brandPath; // Use /api/brand/ URL path for Admin (served by BrandResourceHandler)
-        }
-        // Use default path
-        return fallbackPath;
     }
 
     /**

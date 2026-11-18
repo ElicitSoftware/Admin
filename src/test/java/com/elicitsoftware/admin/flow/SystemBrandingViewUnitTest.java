@@ -23,7 +23,9 @@ import com.vaadin.flow.component.grid.Grid;
 import com.vaadin.flow.component.html.H3;
 import com.vaadin.flow.component.html.H4;
 import com.vaadin.flow.component.html.Image;
+import com.vaadin.flow.component.html.ListItem;
 import com.vaadin.flow.component.html.Paragraph;
+import com.vaadin.flow.component.html.UnorderedList;
 import com.vaadin.flow.component.notification.Notification;
 import com.vaadin.flow.component.orderedlayout.VerticalLayout;
 import org.junit.jupiter.api.Test;
@@ -32,6 +34,7 @@ import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -114,6 +117,27 @@ class SystemBrandingViewUnitTest extends PlainSmallViewTestSupport {
         assertEquals("/api/brand/images/HorizontalLogo.png", logo.getSrc());
         assertEquals(t("systemBrandingView.logoAlt"), logo.getAlt().orElseThrow());
         assertEquals("80px", logo.getMaxHeight());
+    }
+
+    /** UC-023 A3, BR-184: the configured lockup is previewed and each logo warning is listed. */
+    @Test
+    void given_logoWarnings_when_opened_then_theyAreListedAndTheConfiguredLockupShown() {
+        report = new BrandReport("/brand", "brand", true, false, "brand-config.json", "Acme", null, null, IN_USE,
+                List.of(), "/api/brand/images/Wide.svg", List.of("first warning", "second warning"));
+        init();
+
+        UnorderedList warnings = byId(view, SystemBrandingView.WARNINGS_ID, UnorderedList.class);
+        assertEquals(List.of("first warning", "second warning"),
+                warnings.getChildren().map(c -> ((ListItem) c).getText()).toList());
+        assertEquals("/api/brand/images/Wide.svg", byId(view, SystemBrandingView.LOGO_ID, Image.class).getSrc());
+    }
+
+    /** UC-023 BR-184: a brand without logo problems shows no warnings section. */
+    @Test
+    void given_noLogoWarnings_when_opened_then_noWarningsList() {
+        init();
+
+        assertNull(byId(view, SystemBrandingView.WARNINGS_ID, UnorderedList.class));
     }
 
     @Test

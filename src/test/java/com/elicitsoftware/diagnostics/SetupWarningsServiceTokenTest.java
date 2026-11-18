@@ -51,12 +51,16 @@ class SetupWarningsServiceTokenTest {
     @Inject
     SetupWarnings configured;
 
+    @Inject
+    BrandDiagnostics brand;
+
     private List<SetupWarnings.Warning> warningsWith(String token) {
         SetupWarnings warnings = new SetupWarnings();
         warnings.defaultAccounts = defaultAccounts;
         warnings.surveyPresence = surveyPresence;
         warnings.requiredConfig = requiredConfig;
         warnings.serviceToken = new ServiceToken(Optional.ofNullable(token), Optional.empty(), "http://survey:8080");
+        warnings.brand = brand;
         return warnings.warnings();
     }
 
@@ -77,5 +81,24 @@ class SetupWarningsServiceTokenTest {
         assertEquals(0, warningsWith(null).stream().filter(w -> w.text().equals(WARNING)).count());
         assertEquals(0, configured.warnings().stream().filter(w -> w.text().equals(WARNING)).count(),
                 "the test profile's token is not the development value");
+    }
+
+    /** UC-020 step 5, UC-023 BR-184: a brand's logo warning is setup work, remedied on Branding. */
+    @Test
+    void given_aBrandLogoWarning_when_theSetupWorkIsListed_then_itLinksToBranding() {
+        SetupWarnings warnings = new SetupWarnings();
+        warnings.defaultAccounts = defaultAccounts;
+        warnings.surveyPresence = surveyPresence;
+        warnings.requiredConfig = requiredConfig;
+        warnings.serviceToken = new ServiceToken(Optional.empty(), Optional.empty(), "http://survey:8080");
+        warnings.brand = new BrandDiagnostics() {
+            @Override
+            List<String> warnings() {
+                return List.of("the brand names no icon");
+            }
+        };
+
+        assertTrue(warnings.warnings().contains(
+                new SetupWarnings.Warning("the brand names no icon", SetupWarnings.Remedy.BRANDING)));
     }
 }
