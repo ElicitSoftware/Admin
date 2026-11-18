@@ -18,7 +18,7 @@
 2. The system shows what is running: application name, version, build time, active profile and the time since the service started.
 3. The system shows health: the outcome of the database readiness check and a one-line summary of each diagnostic area (database, branding, email, connections), each linking to its own screen (UC-022 to UC-025).
 4. The system lists every setting that has no default and must be supplied by the deployment (database passwords for both connections, the OIDC client secret, the sender address for email, the service token) and reports each as present or absent, never its value.
-5. The system lists the setup work still outstanding: seeded default accounts still present (UC-021), no survey installed (UC-019), no department with a sender address, no message template containing the `<ACCESS_CODE>` placeholder, the service token still at its development value (BR-163), and any legacy setting that is set but no longer read.
+5. The system lists the setup work still outstanding: seeded default accounts still present (UC-021), no survey installed (UC-019), no department with a sender address, no message template containing the `<ACCESS_CODE>` placeholder, the service token still at its development value (BR-163), a brand whose logos are wrong (UC-023 BR-184, linking to Branding), and any legacy setting that is set but no longer read.
 6. Each outstanding item offers the screen where it is resolved.
 7. The administrator works through the list and returns to confirm it is empty.
 
