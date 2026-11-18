@@ -170,6 +170,13 @@ class SurveyDefinitionFileFieldsUnitTest {
         assertFalse(SurveyDefinitionFileFields.isTranslatable("dimensions", "name"));
     }
 
+    // UC-014 BR-110, UC-017 BR-110: a translation row with no element type is refused, not a NullPointerException
+    @Test
+    void given_noElementType_when_checked_then_itIsRefused() {
+        assertFalse(SurveyDefinitionFileFields.isTranslatable(null, "text"));
+        assertFalse(SurveyDefinitionFileFields.isTranslatable(null, null));
+    }
+
     // ---------------------------------------------------------------- scalar parsers
 
     @Test
