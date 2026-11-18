@@ -379,8 +379,8 @@ Every row is one key in `translations.properties`. Return a file `translations_<
 | `unauthorizedView.title` | Access Restricted | Access restricted screen · heading | 30 |  |
 | `unauthorizedView.message` | You are authenticated but do not have the required permissions to access this application. Please contact your administrator to request access with the 'elicit_user' or 'elicit_admin' role. | Access restricted screen · paragraph; elicit_user and elicit_admin are technical role names, keep them | 200 |  |
 | `unauthorizedView.logout` | Logout | Access restricted screen · button | 15 |  |
-| `usersView.info.databaseMode` | Departments are assigned through this interface. Roles (Admin/User) are also assigned through this interface, on the Edit User screen. | Users screen · explanatory paragraph when roles are managed in the console | 200 |  |
-| `usersView.info.oidcMode` | Users must be configured in the OpenID Connect (OIDC) authentication system with the role elicit_admin or elicit_user. Departments are assigned through this interface. | Users screen · explanatory paragraph when roles come from the identity provider; elicit_admin and elicit_user are role names, keep them untranslated | 200 |  |
+| `usersView.info.databaseMode` | Departments are assigned through this interface. A user's role is assigned here too, on the Edit User screen, unless the identity provider supplies one (elicit_admin, elicit_user or elicit_importer), which then takes precedence. | Users screen · explanatory paragraph when roles are managed in the console unless the identity provider supplies one; elicit_admin, elicit_user and elicit_importer are role names, keep them untranslated | 240 |  |
+| `usersView.info.oidcMode` | Roles are assigned in the OpenID Connect (OIDC) identity provider: elicit_admin, elicit_user or elicit_importer. Departments are assigned through this interface. | Users screen · explanatory paragraph when roles come from the identity provider; elicit_admin, elicit_user and elicit_importer are role names, keep them untranslated | 200 |  |
 | `usersView.grid.username` | Username | Users screen · grid column header | 15 |  |
 | `usersView.grid.firstName` | First Name | Users screen · grid column header | 15 |  |
 | `usersView.grid.lastName` | Last Name | Users screen · grid column header | 15 |  |
@@ -1107,8 +1107,8 @@ surveyDefinitionApplyView.errors=Errors:
 unauthorizedView.title=Access Restricted
 unauthorizedView.message=You are authenticated but do not have the required permissions to access this application. Please contact your administrator to request access with the 'elicit_user' or 'elicit_admin' role.
 unauthorizedView.logout=Logout
-usersView.info.databaseMode=Departments are assigned through this interface. Roles (Admin/User) are also assigned through this interface, on the Edit User screen.
-usersView.info.oidcMode=Users must be configured in the OpenID Connect (OIDC) authentication system with the role elicit_admin or elicit_user. Departments are assigned through this interface.
+usersView.info.databaseMode=Departments are assigned through this interface. A user's role is assigned here too, on the Edit User screen, unless the identity provider supplies one (elicit_admin, elicit_user or elicit_importer), which then takes precedence.
+usersView.info.oidcMode=Roles are assigned in the OpenID Connect (OIDC) identity provider: elicit_admin, elicit_user or elicit_importer. Departments are assigned through this interface.
 usersView.grid.username=Username
 usersView.grid.firstName=First Name
 usersView.grid.lastName=Last Name
