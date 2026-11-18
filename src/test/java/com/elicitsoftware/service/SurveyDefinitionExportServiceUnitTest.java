@@ -156,6 +156,21 @@ class SurveyDefinitionExportServiceUnitTest {
     }
 
     @Test
+    void given_aSurveyNameWithALineBreak_when_exported_then_theHeaderStaysOnOneLine() {
+        // UC-013 BR-182, Admin #136: a raw break ended the comment and the rest was read as a record.
+        Object[] survey = SURVEY.clone();
+        survey[2] = "Two\nlines\r\nand: a colon";
+        rows.put("surveys", List.of((Object) survey));
+
+        String out = service.exportSurvey(5);
+        List<String> header = Arrays.stream(out.split("\n")).takeWhile(l -> !l.isEmpty()).toList();
+
+        assertEquals("# survey_name: Two\\nlines\\r\\nand: a colon", header.get(3));
+        assertTrue(header.stream().allMatch(l -> l.startsWith("# ")), String.valueOf(header));
+        assertEquals(7 + COLUMNS.size(), header.size());
+    }
+
+    @Test
     void given_awkwardValues_when_exported_then_theImportParserReadsThemBack() {
         Object[] step = {41, "k", 1.5, "a|b", "c\\d", "e\nf\rg", 0, null, "9999-12-31 23:59:59+00", "", "\\n literal"};
         rows.put("steps", List.of((Object) step));

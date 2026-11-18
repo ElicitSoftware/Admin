@@ -77,6 +77,10 @@ The console offers Export Survey Definition only to administrators, in the same 
 
 A file downloaded from the console is named the way the Author tool names its own exports: the survey name with characters unsafe for a file system replaced, then the revision to the minute, then `.elicit`. Files from either tool therefore identify themselves and sort chronologically side by side.
 
+### BR-182: Header values stay on one line
+
+The comment lines at the head of the file carry values as they are, except that a line break in one (a survey name, say) is written as the `\n` or `\r` escape a record field uses, the way the Author tool writes its header. Every line after the header is then a record the export wrote as one, and the file always imports again.
+
 ### BR-046: Referenced lookups must pre-exist on import
 
 Static lookup references (such as question type, operator, and action) are exported as-is and must already exist in the target system.
