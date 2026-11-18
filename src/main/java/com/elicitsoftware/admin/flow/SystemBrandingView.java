@@ -19,7 +19,9 @@ import com.vaadin.flow.component.grid.GridVariant;
 import com.vaadin.flow.component.html.H3;
 import com.vaadin.flow.component.html.H4;
 import com.vaadin.flow.component.html.Image;
+import com.vaadin.flow.component.html.ListItem;
 import com.vaadin.flow.component.html.Paragraph;
+import com.vaadin.flow.component.html.UnorderedList;
 import com.vaadin.flow.component.notification.Notification;
 import com.vaadin.flow.component.orderedlayout.VerticalLayout;
 import com.vaadin.flow.router.HasDynamicTitle;
@@ -42,6 +44,7 @@ public class SystemBrandingView extends VerticalLayout implements HasDynamicTitl
     static final String ASSETS_GRID_ID = "system-brand-assets";
     static final String LOGO_ID = "system-brand-logo";
     static final String RELOAD_BUTTON_ID = "system-brand-reload";
+    static final String WARNINGS_ID = "system-brand-warnings";
 
     record Row(String label, String value) {
     }
@@ -122,8 +125,17 @@ public class SystemBrandingView extends VerticalLayout implements HasDynamicTitl
         assets.addThemeVariants(GridVariant.LUMO_COMPACT, GridVariant.LUMO_WRAP_CELL_CONTENT);
         body.add(assets);
 
+        // Umbrella UC-014 BR-008, BR-009: what the brand gets wrong about its logos.
+        if (!report.warnings().isEmpty()) {
+            body.add(new H4(getTranslation("systemBrandingView.warnings")));
+            UnorderedList warnings = new UnorderedList();
+            warnings.setId(WARNINGS_ID);
+            report.warnings().forEach(w -> warnings.add(new ListItem(w)));
+            body.add(warnings);
+        }
+
         body.add(new H4(getTranslation("systemBrandingView.logoPreview")));
-        Image logo = new Image("/api/brand/images/HorizontalLogo.png", getTranslation("systemBrandingView.logoAlt"));
+        Image logo = new Image(report.logoUrl(), getTranslation("systemBrandingView.logoAlt"));
         logo.setId(LOGO_ID);
         logo.setMaxHeight("80px");
         body.add(logo);

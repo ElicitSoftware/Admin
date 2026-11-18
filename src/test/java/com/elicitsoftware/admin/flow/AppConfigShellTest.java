@@ -11,6 +11,7 @@ package com.elicitsoftware.admin.flow;
  * ***LICENSE_END***
  */
 
+import com.elicitsoftware.admin.util.BrandUtil;
 import com.vaadin.flow.component.page.Inline;
 import com.vaadin.flow.server.AppShellSettings;
 import com.vaadin.flow.server.VaadinRequest;
@@ -19,6 +20,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
 import java.io.IOException;
+import java.lang.reflect.Field;
 import java.io.InputStream;
 import java.lang.reflect.Proxy;
 import java.nio.charset.StandardCharsets;
@@ -91,8 +93,22 @@ class AppConfigShellTest {
         config = new AppConfig();
         config.brandFileSystemPath = external.toString();
         config.brandLocalPath = local.toString();
+        config.brandUtil = brandUtilAt(external);
         config.init();
         settings = new RecordingSettings();
+    }
+
+    /** The favicon is resolved by the real {@link BrandUtil} against the test's mount (umbrella UC-014 BR-008). */
+    private static BrandUtil brandUtilAt(Path mount) {
+        BrandUtil util = new BrandUtil();
+        try {
+            Field field = BrandUtil.class.getDeclaredField("brandFileSystemPath");
+            field.setAccessible(true);
+            field.set(util, mount.toString());
+        } catch (ReflectiveOperationException e) {
+            throw new IllegalStateException(e);
+        }
+        return util;
     }
 
     private static void write(Path file, String content) throws IOException {
@@ -134,6 +150,7 @@ class AppConfigShellTest {
     void given_aFullMount_when_configurePage_then_itsMetadataFaviconAndStylesheetsInCascadeOrder() throws IOException {
         write(external.resolve("brand-config.json"), "{\"name\": \"Acme\", \"version\": \"3\", \"organization\": \"Acme Org\","
                 + " \"description\": \"Clinic brand\", \"favicon\": \"acme.png\"}");
+        write(external.resolve("images/acme.png"), "png");
         write(external.resolve("colors/brand-colors.css"), "/* colors */");
         write(external.resolve("typography/brand-typography.css"), "/* typography */");
         write(external.resolve("theme.css"), "/* theme */");

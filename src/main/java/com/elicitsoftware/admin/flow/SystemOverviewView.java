@@ -164,6 +164,7 @@ public class SystemOverviewView extends VerticalLayout implements HasDynamicTitl
             case DEPARTMENTS -> new RouterLink(getTranslation("systemOverviewView.remedy.departments"), DepartmentsView.class);
             case MESSAGE_TEMPLATES -> new RouterLink(getTranslation("systemOverviewView.remedy.messageTemplates"),
                     MessageTemplatesView.class);
+            case BRANDING -> new RouterLink(getTranslation("systemOverviewView.remedy.branding"), SystemBrandingView.class);
             case NONE -> null;
         };
     }

@@ -35,7 +35,7 @@ public class SetupWarnings {
 
     /** Where a warning is resolved. */
     public enum Remedy {
-        USERS, APPLY_SURVEY_DEFINITION, DEPARTMENTS, MESSAGE_TEMPLATES, NONE
+        USERS, APPLY_SURVEY_DEFINITION, DEPARTMENTS, MESSAGE_TEMPLATES, BRANDING, NONE
     }
 
     /**
@@ -58,6 +58,9 @@ public class SetupWarnings {
 
     @Inject
     ServiceToken serviceToken;
+
+    @Inject
+    BrandDiagnostics brand;
 
     public SetupWarnings() {
         // CDI managed bean
@@ -99,6 +102,10 @@ public class SetupWarnings {
         for (RequiredConfigCheck.LegacySetting legacy : requiredConfig.legacySettingsInUse()) {
             warnings.add(new Warning(Translations.get("systemOverviewView.warning.legacySetting",
                     legacy.property(), legacy.replacement()), Remedy.NONE));
+        }
+        // Umbrella UC-014 BR-008, BR-009: a brand's logo mistakes are otherwise visible only in the header.
+        for (String brandWarning : brand.warnings()) {
+            warnings.add(new Warning(brandWarning, Remedy.BRANDING));
         }
         boolean revealTokens = ConfigProvider.getConfig()
                 .getOptionalValue("elicit.debug.reveal-tokens", Boolean.class).orElse(false);

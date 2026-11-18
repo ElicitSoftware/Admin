@@ -491,6 +491,7 @@ Every row is one key in `translations.properties`. Return a file `translations_<
 | `systemOverviewView.remedy.applySurveyDefinition` | Apply a survey definition | System overview · link after a setup item | 30 |  |
 | `systemOverviewView.remedy.departments` | Open Departments | System overview · link after a setup item | 25 |  |
 | `systemOverviewView.remedy.messageTemplates` | Open Message Templates | System overview · link after a setup item | 30 |  |
+| `systemOverviewView.remedy.branding` | Open Branding | System overview · link after a setup item | 30 |  |
 | `systemDatabaseView.pageTitle` | System Database | System database · browser tab title | 40 |  |
 | `systemDatabaseView.title` | Database | System database · page heading | 30 |  |
 | `systemDatabaseView.intro` | The application connection serves the console; the owner connection runs the migrations. Readiness probes only the first, so a wrong owner password shows up here and nowhere else. | System database · introductory paragraph | 300 |  |
@@ -559,6 +560,9 @@ Every row is one key in `translations.properties`. Return a file `translations_<
 | `systemBrandingView.asset.notFound` | not found in any location | System branding · asset location when nothing was found | 40 |  |
 | `systemBrandingView.asset.unreadable` | {0} exists but cannot be read | System branding · asset location when the file cannot be read | 80 | params: {0} = file path |
 | `systemBrandingView.logoPreview` | Logo preview | System branding · section heading | 30 |  |
+| `systemBrandingView.warnings` | Logo warnings | System branding · section heading | 30 |  |
+| `systemBrandingView.warning.iconMissing` | The brand supplies its own favicon but names no header icon (logos.icon in brand-config.json), so the header shows the Elicit mark beside the favicon of the site. Put the mark of the brand under images/ and name it as logos.icon. | System branding and overview · warning; keep logos.icon, brand-config.json and images/ untranslated | 260 |  |
+| `systemBrandingView.warning.namedFileMissing` | brand-config.json names {0}, which the mounted brand does not hold. The file of the default brand is shown instead. | System branding and overview · warning; {0} is a path such as images/icon.svg; keep brand-config.json untranslated | 160 |  |
 | `systemBrandingView.logoAlt` | Brand logo | System branding · logo image alternative text | 30 |  |
 | `systemEmailView.pageTitle` | System Email | System email · browser tab title | 40 |  |
 | `systemEmailView.title` | Email | System email · page heading | 30 |  |
@@ -1219,6 +1223,7 @@ systemOverviewView.remedy.users=Open Users
 systemOverviewView.remedy.applySurveyDefinition=Apply a survey definition
 systemOverviewView.remedy.departments=Open Departments
 systemOverviewView.remedy.messageTemplates=Open Message Templates
+systemOverviewView.remedy.branding=Open Branding
 systemDatabaseView.pageTitle=System Database
 systemDatabaseView.title=Database
 systemDatabaseView.intro=The application connection serves the console; the owner connection runs the migrations. Readiness probes only the first, so a wrong owner password shows up here and nowhere else.
@@ -1287,6 +1292,9 @@ systemBrandingView.asset.favicon=favicon
 systemBrandingView.asset.notFound=not found in any location
 systemBrandingView.asset.unreadable={0} exists but cannot be read
 systemBrandingView.logoPreview=Logo preview
+systemBrandingView.warnings=Logo warnings
+systemBrandingView.warning.iconMissing=The brand supplies its own favicon but names no header icon (logos.icon in brand-config.json), so the header shows the Elicit mark beside the favicon of the site. Put the mark of the brand under images/ and name it as logos.icon.
+systemBrandingView.warning.namedFileMissing=brand-config.json names {0}, which the mounted brand does not hold. The file of the default brand is shown instead.
 systemBrandingView.logoAlt=Brand logo
 systemEmailView.pageTitle=System Email
 systemEmailView.title=Email
