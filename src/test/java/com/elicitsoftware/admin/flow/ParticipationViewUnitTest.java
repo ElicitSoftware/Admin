@@ -233,8 +233,9 @@ class ParticipationViewUnitTest extends PlainAdminViewTestSupport {
         MultiSelectComboBox<Department> departments = byId(view, ParticipationView.DEPARTMENTS_ID, MultiSelectComboBox.class);
         assertEquals(t("participationView.filter.departments"), departments.getLabel());
         List<Department> items = departments.getListDataView().getItems().toList();
-        assertEquals(List.of(-1L, 9L, 7L, 3L), items.stream().map(d -> d.id).toList(),
-                "All departments, then the user's by name (an unnamed one first)");
+        assertEquals(List.of(-1L, -2L, 9L, 7L, 3L), items.stream().map(d -> d.id).toList(),
+                "All departments, Auto-registered (BR-120), then the user's by name (an unnamed one first)");
+        assertEquals(t("participationView.filter.autoRegistered"), departments.getItemLabelGenerator().apply(items.get(1)));
         assertEquals(t("participationView.filter.allDepartments"), departments.getItemLabelGenerator().apply(items.get(0)));
         assertEquals(Set.of(items.get(0)), departments.getValue());
 
@@ -269,15 +270,15 @@ class ParticipationViewUnitTest extends PlainAdminViewTestSupport {
         assertEquals(1, filters.size(), "the page computes once when drawn");
         ParticipationService.Filter filter = lastFilter();
         assertEquals(11, filter.surveyId());
-        assertEquals(List.of(7L, 3L), List.copyOf(filter.departmentIds()));
+        assertEquals(List.of(7L, 3L, -2L), List.copyOf(filter.departmentIds()), "the auto-registered last (BR-120)");
         assertNull(filter.from());
         assertNull(filter.to());
-        assertEquals(Map.of(7L, "Clinic", 3L, "Oncology"), names.get(0));
-        assertEquals(List.of(7L, 3L), List.copyOf(names.get(0).keySet()), "in the order the table lists them");
+        assertEquals(Map.of(7L, "Clinic", 3L, "Oncology", -2L, t("participationView.filter.autoRegistered")), names.get(0));
+        assertEquals(List.of(7L, 3L, -2L), List.copyOf(names.get(0).keySet()), "in the order the table lists them");
 
         ParticipationView.Shown shown = view.shown;
         assertEquals(census.surveyKey.toString(), shown.surveyKey());
-        assertEquals("[7, 3]", shown.departments());
+        assertEquals("[7, 3, -2]", shown.departments());
         assertEquals("participation.viewer", shown.user());
         assertEquals(new SmallCell(5, Locale.ENGLISH), shown.cells());
         assertEquals(new ParticipationExport.Heading("Census, 2026", t("participationView.filter.allDepartments"), null, null),
@@ -315,6 +316,17 @@ class ParticipationViewUnitTest extends PlainAdminViewTestSupport {
     }
 
     @Test
+    void given_autoRegisteredChosen_when_refreshing_then_onlyTheRespondentsWithNoDepartmentAreCounted() {
+        page(List.of(census), oncology, clinic);
+        Department autoRegistered = view.departmentPicker.getListDataView().getItems()
+                .filter(d -> d.id == ParticipationService.AUTO_REGISTERED).findFirst().orElseThrow();
+
+        view.departmentPicker.setValue(Set.of(autoRegistered, clinic));
+
+        assertEquals(List.of(7L, -2L), List.copyOf(lastFilter().departmentIds()), "BR-120, UC-002 BR-181");
+    }
+
+    @Test
     void given_allDepartmentsChosen_when_addingOne_then_allIsDropped() {
         page(List.of(census), oncology, clinic);
 
@@ -332,7 +344,7 @@ class ParticipationViewUnitTest extends PlainAdminViewTestSupport {
         view.departmentPicker.setValue(Set.of(clinic, all()));
 
         assertEquals(Set.of(all()), view.departmentPicker.getValue());
-        assertEquals(List.of(7L, 3L), List.copyOf(lastFilter().departmentIds()));
+        assertEquals(List.of(7L, 3L, -2L), List.copyOf(lastFilter().departmentIds()));
     }
 
     @Test
@@ -345,7 +357,7 @@ class ParticipationViewUnitTest extends PlainAdminViewTestSupport {
 
         assertEquals(Set.of(all()), view.departmentPicker.getValue());
         assertEquals(before + 1, filters.size(), "the restored value refreshes once");
-        assertEquals(List.of(7L, 3L), List.copyOf(lastFilter().departmentIds()));
+        assertEquals(List.of(7L, 3L, -2L), List.copyOf(lastFilter().departmentIds()));
     }
 
     @Test
@@ -353,7 +365,7 @@ class ParticipationViewUnitTest extends PlainAdminViewTestSupport {
         page(List.of(census), oncology, clinic);
         view.departmentPicker = new MultiSelectComboBox<>();
 
-        assertEquals(List.of(7L, 3L), view.chosenDepartments().stream().map(d -> d.id).toList());
+        assertEquals(List.of(7L, 3L, -2L), view.chosenDepartments().stream().map(d -> d.id).toList());
     }
 
     @Test

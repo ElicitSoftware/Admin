@@ -75,7 +75,7 @@
 
 ### BR-120: The population is the user's departments' respondents of one survey
 
-The page counts the `survey.respondents` rows of the chosen survey whose subject (`survey.subjects.respondent_id`) belongs to a department in the filter, and the filter can only hold departments the user belongs to, exactly as Search scopes its grid (UC-002). "All departments" means all of them. A respondent with no subject row — an auto-registered one (Admin #96) — is not counted, as Search does not show it. The optional registration date range keeps respondents whose `created_dt` falls on or after the "from" day and on or before the "to" day, in the server's time zone.
+The page counts the `survey.respondents` rows of the chosen survey whose subject (`survey.subjects.respondent_id`) belongs to a department in the filter, and the filter can only hold departments the user belongs to, exactly as Search scopes its grid (UC-002). "All departments" means all of them. A respondent with no subject row — an auto-registered one — is counted for every user, under "Auto-registered" in the department table, as Search shows it (UC-002 BR-181). The optional registration date range keeps respondents whose `created_dt` falls on or after the "from" day and on or before the "to" day, in the server's time zone.
 
 ### BR-121: Participation states and rates follow the subject status
 

@@ -137,7 +137,8 @@ public class EmailService {
                 LogMasking.maskAccessCode(status.getAccessCode()), LogMasking.maskEmail(status.getEmail()), status.getDepartmentId());
 
         try {
-            Department department = departmentOf(status.getDepartmentId());
+            // An auto-registered respondent has no department and no address (UC-002 BR-181).
+            Department department = status.getDepartmentId() == null ? null : departmentOf(status.getDepartmentId());
             if (department == null) {
                 Log.warnf("sendEmail: no department found for departmentId=%s, accessCode=%s",
                         status.getDepartmentId(), LogMasking.maskAccessCode(status.getAccessCode()));

@@ -118,6 +118,9 @@ public class ParticipationView extends VerticalLayout implements HasDynamicTitle
     final Div results = new Div();
     private Department allDepartments;
 
+    /** The respondents with no department, which every user sees (BR-120, UC-002 BR-181). */
+    private Department autoRegistered;
+
     /**
      * What is on screen, which the downloads export. It is captured when the page is drawn because
      * a download is served by a request of its own, outside the UI's.
@@ -186,8 +189,12 @@ public class ParticipationView extends VerticalLayout implements HasDynamicTitle
         allDepartments = new Department();
         allDepartments.id = ALL_DEPARTMENTS;
         allDepartments.name = getTranslation("participationView.filter.allDepartments");
+        autoRegistered = new Department();
+        autoRegistered.id = ParticipationService.AUTO_REGISTERED;
+        autoRegistered.name = getTranslation("participationView.filter.autoRegistered");
         List<Department> departments = new ArrayList<>();
         departments.add(allDepartments);
+        departments.add(autoRegistered);
         departments.addAll(userDepartments());
         departmentPicker = new MultiSelectComboBox<>(getTranslation("participationView.filter.departments"));
         departmentPicker.setId(DEPARTMENTS_ID);
@@ -245,14 +252,19 @@ public class ParticipationView extends VerticalLayout implements HasDynamicTitle
         return user.getDepartments().stream().sorted(Comparator.comparing(d -> d.name == null ? "" : d.name)).toList();
     }
 
-    /** The departments the filter counts: the chosen ones, or all of the user's (BR-120). */
+    /**
+     * The departments the filter counts: the chosen ones, or all of the user's, with the
+     * auto-registered respondents last when they are chosen or all are (BR-120).
+     */
     List<Department> chosenDepartments() {
         Set<Department> chosen = departmentPicker.getValue();
-        if (chosen.isEmpty() || chosen.contains(allDepartments)) {
-            return userDepartments();
+        boolean all = chosen.isEmpty() || chosen.contains(allDepartments);
+        List<Department> departments = new ArrayList<>(all ? userDepartments()
+                : userDepartments().stream().filter(d -> chosen.stream().anyMatch(c -> c.id == d.id)).toList());
+        if (all || chosen.contains(autoRegistered)) {
+            departments.add(autoRegistered);
         }
-        Set<Long> mine = userDepartments().stream().map(d -> d.id).collect(Collectors.toSet());
-        return userDepartments().stream().filter(d -> mine.contains(d.id) && chosen.stream().anyMatch(c -> c.id == d.id)).toList();
+        return departments;
     }
 
     boolean rangeValid() {

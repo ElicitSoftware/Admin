@@ -281,8 +281,10 @@ class SearchViewUnitTest extends PlainAdminViewTestSupport {
         assertEquals(t("searchView.filter.departments"), departments.getLabel());
         assertTrue(departments.isRequiredIndicatorVisible());
         List<Department> items = departments.getListDataView().getItems().toList();
-        assertEquals(3, items.size(), "All departments, then the user's own");
+        assertEquals(4, items.size(), "All departments, Auto-registered, then the user's own");
         assertEquals(-1, items.get(0).id);
+        assertEquals(SearchView.AUTO_REGISTERED_ID, items.get(1).id);
+        assertEquals(t("searchView.filter.autoRegistered"), departments.getItemLabelGenerator().apply(items.get(1)));
         assertEquals(t("searchView.filter.allDepartments"), departments.getItemLabelGenerator().apply(items.get(0)));
         assertEquals("Oncology", departments.getItemLabelGenerator().apply(oncology));
         assertEquals(Set.of(items.get(0)), departments.getValue());
@@ -296,7 +298,8 @@ class SearchViewUnitTest extends PlainAdminViewTestSupport {
         search();
 
         StatusQuery query = lastCount();
-        assertEquals("departmentId in :departments", query.whereClause());
+        assertEquals("(departmentId in :departments or departmentId is null)", query.whereClause(),
+                "All departments also takes the auto-registered (BR-181)");
         assertEquals(Map.of("departments", List.of(3L, 7L)), query.params());
         assertNull(query.sort());
     }
@@ -313,7 +316,7 @@ class SearchViewUnitTest extends PlainAdminViewTestSupport {
         search();
 
         StatusQuery query = lastCount();
-        assertEquals("departmentId in :departments"
+        assertEquals("(departmentId in :departments or departmentId is null)"
                 + " and lower(accessCode) like :accessCode"
                 + " and lower(firstName) like :firstName"
                 + " and lower(lastName) like :lastName"
@@ -331,6 +334,20 @@ class SearchViewUnitTest extends PlainAdminViewTestSupport {
         search();
 
         assertEquals(List.of(7L), lastCount().params().get("departments"));
+        assertEquals("departmentId in :departments", lastCount().whereClause(), "a department alone takes no auto-registered");
+    }
+
+    @Test
+    void given_autoRegisteredChosenAlone_when_searching_then_onlyRespondentsWithNoDepartmentMatch() {
+        buildWithRows("elicit_user");
+        Department autoRegistered = departments().getListDataView().getItems()
+                .filter(d -> d.id == SearchView.AUTO_REGISTERED_ID).findFirst().orElseThrow();
+        departments().setValue(Set.of(autoRegistered));
+
+        search();
+
+        assertEquals("(departmentId in :departments or departmentId is null)", lastCount().whereClause(), "BR-181");
+        assertEquals(List.of(), lastCount().params().get("departments"), "no real department is chosen");
     }
 
     @Test
@@ -434,6 +451,43 @@ class SearchViewUnitTest extends PlainAdminViewTestSupport {
         build("elicit_user");
 
         assertEquals(10, test(grid()).size(), "a page holds ten rows by default");
+    }
+
+    // ---- auto-registered respondents (BR-181) ---------------------------------------------------
+
+    /** A respondent Survey auto-registered, as the status view gives it: a negative id and no subject. */
+    private static Status autoRegistered(long respondentId, String accessCode, String state) {
+        Status status = new Status();
+        status.setId(-respondentId);
+        status.setRespondentId(respondentId);
+        status.setAccessCode(accessCode);
+        status.setStatus(state);
+        return status;
+    }
+
+    @Test
+    void given_anAutoRegisteredRow_when_rendering_then_itIsLabelledAndOffersNoEditOrEmail() {
+        login.user = user("search.tester", oncology);
+        data.rows = new ArrayList<>(List.of(autoRegistered(41, "SELF0001", "Finished"), autoRegistered(42, "SELF0002", "In Progress")));
+        data.total = 2;
+        build("elicit_admin");
+
+        assertEquals(t("searchView.filter.autoRegistered"), cellText(0, 1), "where the department would be");
+        assertInstanceOf(Span.class, cellComponent(0, COL_EDIT), "no subject to edit");
+        assertEquals(List.of(SearchView.ACTION_PRINT_REPORTS, SearchView.ACTION_EXPORT), view.buildActionOptions(data.rows.get(0)),
+                "no address to write to; the report and the export stay");
+        assertEquals("/api/secured/respondent/export?id=41", view.buildExportUrl(data.rows.get(0)));
+        assertEquals(List.of(SearchView.ACTION_EXPORT), view.buildActionOptions(data.rows.get(1)));
+    }
+
+    @Test
+    void given_anUnfinishedAutoRegisteredRowForAConsoleUser_when_rendering_then_noActionBoxIsShown() {
+        login.user = user("search.tester", oncology);
+        data.rows = new ArrayList<>(List.of(autoRegistered(42, "SELF0002", "In Progress")));
+        data.total = 1;
+        build("elicit_user");
+
+        assertEquals(0, actionCell(0).getComponentCount(), "nothing this user may do with it");
     }
 
     @Test

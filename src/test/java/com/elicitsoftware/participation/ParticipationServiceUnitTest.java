@@ -64,7 +64,7 @@ class ParticipationServiceUnitTest {
 
     private static final ZoneId PARIS = ZoneId.of("Europe/Paris");
     private static final Instant NOW = Instant.parse("2026-03-01T12:00:00Z");
-    private static final String RESPONDENTS = "SELECT r.id, s.department_id";
+    private static final String RESPONDENTS = "SELECT r.id, COALESCE(s.department_id, -2)";
     private static final String STEPS = "SELECT display_order, name FROM survey.steps";
     private static final String LAST_STEPS = "DISTINCT ON (a.respondent_id)";
     private static final String STEP_STARTS = "min(a.presented_dt)";
@@ -193,7 +193,7 @@ class ParticipationServiceUnitTest {
 
         NativeQueryStub.Executed respondents = db.executed(RESPONDENTS).getFirst();
         assertTrue(respondents.sql().contains(
-                "r.survey_id = :surveyId AND s.department_id IN (:departments) AND r.created_dt >= :from"
+                "r.survey_id = :surveyId AND COALESCE(s.department_id, -2) IN (:departments) AND r.created_dt >= :from"
                         + " AND r.created_dt < :toExclusive"), respondents.sql());
         assertEquals(Map.of("surveyId", 7, "departments", List.of(10L),
                 "from", OffsetDateTime.of(2026, 1, 1, 0, 0, 0, 0, ZoneOffset.ofHours(1)),

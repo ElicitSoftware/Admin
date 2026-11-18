@@ -105,7 +105,8 @@ public class ParticipationService {
      * What to count.
      *
      * @param surveyId      the survey
-     * @param departmentIds the departments to count, already limited to the user's (BR-120); empty counts nobody
+     * @param departmentIds the departments to count, already limited to the user's (BR-120); empty counts nobody.
+     *                      {@link #AUTO_REGISTERED} stands for the respondents with no subject
      * @param from          the first registration day, or {@code null}
      * @param to            the last registration day, inclusive, or {@code null}
      */
@@ -134,6 +135,16 @@ public class ParticipationService {
     /** One aggregated answer row: per question, or per question and stored value. */
     record AnswerGroup(int questionId, String value, boolean perValue, long rows, long respondents, long answered) {
     }
+
+    /**
+     * The department id the auto-registered respondents are counted under: they have no subject
+     * and so no department, and every user sees them (BR-120, UC-002 BR-181). No department has a
+     * negative id.
+     */
+    public static final long AUTO_REGISTERED = -2;
+
+    /** A respondent's department as the queries read it: the subject's, or {@link #AUTO_REGISTERED}. */
+    private static final String DEPARTMENT = "COALESCE(s.department_id, " + AUTO_REGISTERED + ")";
 
     @Inject
     EntityManager em;
@@ -171,8 +182,12 @@ public class ParticipationService {
                 continue;
             }
             long id = department.getKey();
-            departments.add(new DepartmentCounts(department.getValue(),
-                    counts(respondents.stream().filter(r -> r.departmentId() == id).toList(), cutoff)));
+            List<Respondent> theirs = respondents.stream().filter(r -> r.departmentId() == id).toList();
+            if (id == AUTO_REGISTERED && theirs.isEmpty()) {
+                // A site that does not auto-register gets no empty row for it
+                continue;
+            }
+            departments.add(new DepartmentCounts(department.getValue(), counts(theirs, cutoff)));
         }
         return new Participation(overall, departments, weeks(respondents), cards(filter),
                 progress(filter, respondents, cutoff), stalledDays);
@@ -180,9 +195,12 @@ public class ParticipationService {
 
     // ---- participation (BR-120, BR-121, BR-128) -------------------------------------------------
 
-    /** The population's WHERE clause; the respondent is {@code r} and their subject {@code s}. */
+    /**
+     * The population's WHERE clause; the respondent is {@code r} and their subject {@code s}, left-joined
+     * so that an auto-registered respondent, which has none, is counted under {@link #AUTO_REGISTERED}.
+     */
     private String population(Filter filter) {
-        StringBuilder where = new StringBuilder("r.survey_id = :surveyId AND s.department_id IN (:departments)");
+        StringBuilder where = new StringBuilder("r.survey_id = :surveyId AND " + DEPARTMENT + " IN (:departments)");
         if (filter.from() != null) {
             where.append(" AND r.created_dt >= :from");
         }
@@ -207,11 +225,11 @@ public class ParticipationService {
     @SuppressWarnings("unchecked")
     List<Respondent> respondents(Filter filter) {
         String sql = """
-                SELECT r.id, s.department_id, r.created_dt, r.first_access_dt, r.finalized_dt, r.last_activity_dt
+                SELECT r.id, %s, r.created_dt, r.first_access_dt, r.finalized_dt, r.last_activity_dt
                 FROM survey.respondents r
-                JOIN survey.subjects s ON s.respondent_id = r.id
+                LEFT JOIN survey.subjects s ON s.respondent_id = r.id
                 WHERE %s
-                """.formatted(population(filter));
+                """.formatted(DEPARTMENT, population(filter));
         List<Object[]> rows = bind(em.createNativeQuery(sql), filter).getResultList();
         List<Respondent> respondents = new ArrayList<>(rows.size());
         for (Object[] row : rows) {
@@ -360,7 +378,7 @@ public class ParticipationService {
                 SELECT DISTINCT ON (a.respondent_id) a.respondent_id, a.step
                 FROM survey.answers a
                 JOIN survey.respondents r ON r.id = a.respondent_id
-                JOIN survey.subjects s ON s.respondent_id = r.id
+                LEFT JOIN survey.subjects s ON s.respondent_id = r.id
                 WHERE %s AND r.first_access_dt IS NOT NULL AND r.finalized_dt IS NULL
                   AND a.presented_dt IS NOT NULL AND a.deleted = false
                 ORDER BY a.respondent_id, a.presented_dt DESC, a.display_key DESC
@@ -379,7 +397,7 @@ public class ParticipationService {
                 SELECT a.respondent_id, a.step, min(a.presented_dt)
                 FROM survey.answers a
                 JOIN survey.respondents r ON r.id = a.respondent_id
-                JOIN survey.subjects s ON s.respondent_id = r.id
+                LEFT JOIN survey.subjects s ON s.respondent_id = r.id
                 WHERE %s AND r.finalized_dt IS NOT NULL AND a.presented_dt IS NOT NULL AND a.deleted = false
                 GROUP BY a.respondent_id, a.step
                 """.formatted(population(filter));
@@ -474,7 +492,7 @@ public class ParticipationService {
                              (t.name = 'CHECKBOX' OR btrim(coalesce(a.text_value, '')) <> '') AS answered
                       FROM survey.answers a
                       JOIN survey.respondents r ON r.id = a.respondent_id
-                      JOIN survey.subjects s ON s.respondent_id = r.id
+                      LEFT JOIN survey.subjects s ON s.respondent_id = r.id
                       JOIN survey.questions q ON q.id = a.question_id
                       JOIN survey.question_types t ON t.id = q.type_id
                       LEFT JOIN survey.sections_questions sq ON sq.id = a.section_question_id

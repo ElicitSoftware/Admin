@@ -198,7 +198,7 @@ class EmailServiceUnitTest {
         Status status = new Status();
         status.setAccessCode("ABCDEFGH");
         status.setEmail("j@x.org");
-        status.setDepartmentId(1);
+        status.setDepartmentId(1L);
         assertFalse(accepting().sendEmail(status));
         assertTrue(sent.isEmpty());
     }

@@ -125,6 +125,8 @@ public class SearchView extends VerticalLayout implements HasDynamicTitle, Befor
     static final String ACTION_SEND_EMAIL = "sendEmail";
     static final String ACTION_PRINT_REPORTS = "printReports";
     static final String ACTION_EXPORT = "export";
+    /** Id of the department filter's "Auto-registered" entry; "All Departments" is -1 (UC-002 BR-181). */
+    static final long AUTO_REGISTERED_ID = -2;
     /** Tracks the currently active action access code (only one row can have a selection at a time). */
     private String activeActionAccessCode = null;
     /** Tracks the current action value for the active row. */
@@ -439,9 +441,16 @@ public class SearchView extends VerticalLayout implements HasDynamicTitle, Befor
         allDepartments.name = getTranslation("searchView.filter.allDepartments");
         allDepartments.id = -1; // Use a special ID or flag to identify this entry
 
-        // Combine "All Departments" with user's departments
+        // "Auto-registered" stands for the respondents with no department, which every user sees
+        // (UC-002 BR-181)
+        Department autoRegistered = new Department();
+        autoRegistered.name = getTranslation("searchView.filter.autoRegistered");
+        autoRegistered.id = AUTO_REGISTERED_ID;
+
+        // Combine "All Departments" and "Auto-registered" with user's departments
         List<Department> departmentsWithAll = new ArrayList<>();
         departmentsWithAll.add(allDepartments);
+        departmentsWithAll.add(autoRegistered);
         departmentsWithAll.addAll(user.getDepartments());
         departmentComboBox.setItems(departmentsWithAll);
 
@@ -524,7 +533,7 @@ public class SearchView extends VerticalLayout implements HasDynamicTitle, Befor
         // alongside this -- Vaadin ignores setAllRowsVisible when the grid also has one.
         subjectGrid.setAllRowsVisible(true);
         subjectGrid.addColumn(Status::getAccessCode).setHeader(getTranslation("searchView.grid.accessCode")).setSortable(true).setSortProperty(Status.PROP_ACCESS_CODE).setWidth("150px").setFlexGrow(0);
-        subjectGrid.addColumn(Status::getDepartmentName).setHeader(getTranslation("searchView.grid.department")).setSortable(true).setSortProperty(Status.PROP_DEPARTMENT_NAME);
+        subjectGrid.addColumn(this::departmentLabel).setHeader(getTranslation("searchView.grid.department")).setSortable(true).setSortProperty(Status.PROP_DEPARTMENT_NAME);
         subjectGrid.addColumn(Status::getFirstName).setHeader(getTranslation("searchView.grid.firstName")).setSortable(true).setSortProperty(Status.PROP_FIRST_NAME);
         subjectGrid.addColumn(Status::getMiddleName).setHeader(getTranslation("searchView.grid.middleName")).setSortable(true).setSortProperty(Status.PROP_MIDDLE_NAME);
         subjectGrid.addColumn(Status::getLastName).setHeader(getTranslation("searchView.grid.lastName")).setSortable(true).setSortProperty(Status.PROP_LAST_NAME);
@@ -538,6 +547,10 @@ public class SearchView extends VerticalLayout implements HasDynamicTitle, Befor
 
         // --- Add edit icon column ---
         subjectGrid.addComponentColumn(status -> {
+            if (status.isAutoRegistered()) {
+                // No subject to edit (UC-002 BR-181)
+                return new Span();
+            }
             Button editButton = new Button(new Icon(VaadinIcon.EDIT));
             editButton.addThemeVariants(ButtonVariant.LUMO_ICON, ButtonVariant.LUMO_TERTIARY);
             editButton.getElement().setProperty("title", getTranslation("common.edit"));
@@ -560,7 +573,12 @@ public class SearchView extends VerticalLayout implements HasDynamicTitle, Befor
             actionComboBox.setWidth("120px");
             actionComboBox.addThemeVariants(ComboBoxVariant.LUMO_SMALL);
 
-            actionComboBox.setItems(buildActionOptions(status));
+            List<String> actionOptions = buildActionOptions(status);
+            if (actionOptions.isEmpty()) {
+                // Nothing this user may do with the row, e.g. an unfinished auto-registered one
+                return actionLayout;
+            }
+            actionComboBox.setItems(actionOptions);
 
             String accessCode = status.getAccessCode();
             // Set value only if this is the active row
@@ -677,7 +695,10 @@ public class SearchView extends VerticalLayout implements HasDynamicTitle, Befor
      */
     List<String> buildActionOptions(Status status) {
         List<String> actionOptions = new ArrayList<>();
-        actionOptions.add(ACTION_SEND_EMAIL);
+        if (!status.isAutoRegistered()) {
+            // An auto-registered respondent has no address to write to (UC-002 BR-181)
+            actionOptions.add(ACTION_SEND_EMAIL);
+        }
         if ("Finished".equals(status.getStatus())) {
             actionOptions.add(ACTION_PRINT_REPORTS);
         }
@@ -772,7 +793,14 @@ public class SearchView extends VerticalLayout implements HasDynamicTitle, Befor
 
         // Department IDs (required). An empty selection yields an empty "in ()" that matches
         // nothing, which is the intended behavior when the user clears the required filter.
-        where.append(Status.PROP_DEPARTMENT_ID).append(" in :departments"); // i18n:ignore (SQL)
+        // "All Departments" and "Auto-registered" also take the respondents with no department
+        // (UC-002 BR-181).
+        if (includesAutoRegistered(departmentComboBox)) {
+            where.append("(").append(Status.PROP_DEPARTMENT_ID).append(" in :departments or ") // i18n:ignore (SQL)
+                    .append(Status.PROP_DEPARTMENT_ID).append(" is null)"); // i18n:ignore (SQL)
+        } else {
+            where.append(Status.PROP_DEPARTMENT_ID).append(" in :departments"); // i18n:ignore (SQL)
+        }
         params.put("departments", departmentIds);
 
         // Optional filters — values bound as parameters, wildcards added to the value only.
@@ -834,10 +862,35 @@ public class SearchView extends VerticalLayout implements HasDynamicTitle, Befor
                     }
                     break;
                 }
-                ids.add(department.id);
+                if (department.id != AUTO_REGISTERED_ID) {
+                    ids.add(department.id);
+                }
             }
         }
         return ids;
+    }
+
+    /**
+     * Whether the department selection takes the auto-registered respondents, which have no
+     * department: "All Departments" and "Auto-registered" both do (UC-002 BR-181).
+     *
+     * @param departmentComboBox the multi-select combo box containing department selections
+     * @return {@code true} when respondents with no department belong in the results
+     */
+    private static boolean includesAutoRegistered(MultiSelectComboBox<Department> departmentComboBox) {
+        return departmentComboBox.getSelectedItems().stream()
+                .anyMatch(d -> d.id == -1 || d.id == AUTO_REGISTERED_ID);
+    }
+
+    /**
+     * The department column's text: the department's name, or "Auto-registered" for a respondent
+     * with no subject (UC-002 BR-181).
+     *
+     * @param status the row
+     * @return the label to show
+     */
+    String departmentLabel(Status status) {
+        return status.isAutoRegistered() ? getTranslation("searchView.filter.autoRegistered") : status.getDepartmentName();
     }
 
     /**

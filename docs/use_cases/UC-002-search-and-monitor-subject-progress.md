@@ -47,6 +47,7 @@
 **Flow:**
 
 1. The user chooses to edit the subject (UC-003, opened by the subject's record id and subject to BR-138), send an email (UC-004), or generate a report (UC-005).
+2. For an auto-registered respondent (BR-181) only the report and the export are offered: there is no subject to edit and no address to write to.
 
 ## Postconditions
 
@@ -62,7 +63,7 @@
 
 ### BR-005: Department-scoped visibility
 
-A user may only search and view subjects within departments they are affiliated with. "All Departments" expands only to the user's own departments, never the whole system.
+A user may only search and view subjects within departments they are affiliated with. "All Departments" expands only to the user's own departments, never the whole system. The one exception is the auto-registered respondent, which has no department (BR-181).
 
 ### BR-006: Progress status derivation
 
@@ -76,8 +77,12 @@ Only one subject row may have an action selected at a time; selecting an action 
 
 Access code, first name, last name, and email filters match case-insensitively as partial matches; a blank filter is ignored.
 
+### BR-181: Auto-registered respondents are listed for every user
+
+A respondent Survey auto-registered from an unrecognized access code (Survey UC-001 A2, `accessCode.autoRegister`) has no subject row and so no department, no name and no contact details. The list still shows it, identified by its access code and status, with "Auto-registered" where the department would be. It holds no personal data, so it is visible to every console user regardless of their departments (an exception to BR-005): the department filter offers "Auto-registered" to everyone, and "All Departments" includes these respondents. Its row offers the report and the export, but not editing (UC-003) or email (UC-004).
+
 ---
 
 ## Reference
 
-Derived from `SearchView`, `StatusDataSource`, the `survey.status` view (`V0.0.1__CREATE_ADMIN_SCHEMA.sql`), and `Status`.
+Derived from `SearchView`, `StatusDataSource`, the `survey.status` view (`V0.0.1__CREATE_ADMIN_SCHEMA.sql`), and `Status`. BR-181 (Admin #96): `V0.0.27__Status_Auto_Registered.sql` makes the view start from `survey.respondents` and left-join the subject and its department, so an auto-registered respondent is a row with no department; its `id` is the respondent's id negated, so it can never equal a subject's.

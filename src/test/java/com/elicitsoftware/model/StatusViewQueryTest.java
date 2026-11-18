@@ -22,6 +22,8 @@ import java.util.Date;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * Booted Panache/DB test for the {@code survey.status} view.
@@ -29,7 +31,7 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
  * <p>Traceability: UC-002 (Search and Monitor Subject Progress). The console
  * lists subjects with their derived progress status (Not Started / In Progress /
  * Finished). That status comes from the {@code survey.status} database view,
- * which joins respondents ⋈ subjects ⋈ departments and derives the label from
+ * which left-joins each respondent to its subject and department and derives the label from
  * the respondent's first-access and finalized timestamps. This test persists a
  * full subject graph through Panache and asserts the view computes the expected
  * status, exercising the real schema (Flyway-migrated on a throwaway PostgreSQL
@@ -118,5 +120,35 @@ class StatusViewQueryTest {
         Status status = Status.find("accessCode", accessCode).firstResult();
         assertNotNull(status);
         assertEquals("Finished", status.getStatus());
+    }
+
+    /**
+     * UC-002 BR-181: a respondent Survey auto-registered has no subject; the view still lists it,
+     * with no department, its id negated and its own survey and creation date, and the department
+     * filter's "Auto-registered" query finds it.
+     */
+    @Test
+    @TestTransaction
+    void autoRegisteredRespondentIsListedWithNoDepartment() {
+        Respondent respondent = new Respondent();
+        respondent.survey = Survey.findById(1L);
+        respondent.accessCode = "SELF-REG1";
+        respondent.active = true;
+        respondent.firstAccessDt = new Date();
+        respondent.persistAndFlush();
+
+        Status status = Status.find("accessCode", "SELF-REG1").firstResult();
+        assertNotNull(status, "a respondent with no subject is in the view");
+        assertEquals(-respondent.id, status.getId());
+        assertTrue(status.isAutoRegistered());
+        assertEquals((long) respondent.id, status.getRespondentId());
+        assertEquals(1L, status.getSurveyId());
+        assertNull(status.getDepartmentId());
+        assertNull(status.getDepartmentName());
+        assertNull(status.getFirstName());
+        assertNotNull(status.getCreatedDt(), "the respondent's creation date stands in");
+        assertEquals("In Progress", status.getStatus());
+        assertEquals(1L, Status.count("accessCode = ?1 and (departmentId in ?2 or departmentId is null)",
+                "SELF-REG1", java.util.List.of(-99L)));
     }
 }
