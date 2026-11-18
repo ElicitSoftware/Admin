@@ -45,12 +45,17 @@ public final class ParticipationExport {
     /**
      * What the exports print above the tables.
      *
-     * @param surveyName  the survey's name
+     * @param surveyName  the survey's name; {@code null} (a survey with no name) is held as empty
      * @param departments the departments counted, comma-separated
      * @param from        the first registration day, or {@code null}
      * @param to          the last registration day, or {@code null}
      */
     public record Heading(String surveyName, String departments, LocalDate from, LocalDate to) {
+        public Heading {
+            // BR-126: a survey with no name still exports.
+            surveyName = surveyName == null ? "" : surveyName;
+            departments = departments == null ? "" : departments;
+        }
     }
 
     private ParticipationExport() {

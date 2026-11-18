@@ -107,4 +107,16 @@ class ParticipationExportTest {
         assertEquals("participation-Census_2026-20261022.csv",
                 ParticipationExport.fileName("Census, 2026", LocalDate.of(2026, 10, 22), "csv"));
     }
+
+    @Test
+    void aSurveyWithNoNameStillExports() {
+        // Admin #134: a NULL surveys.name made both downloads throw.
+        ParticipationExport.Heading unnamed = new ParticipationExport.Heading(null, null, null, null);
+        String csv = new String(ParticipationExport.csv(sample(), new SmallCell(5, Locale.ENGLISH), unnamed), StandardCharsets.UTF_8);
+        assertTrue(csv.contains("Survey,\r\n"), csv);
+        ReportResponse pdf = ParticipationExport.pdf(sample(), new SmallCell(5, Locale.ENGLISH), unnamed);
+        assertFalse(pdf.pdf.title.contains("null"), pdf.pdf.title);
+        assertEquals("participation-survey-20261022.pdf",
+                ParticipationExport.fileName(unnamed.surveyName(), LocalDate.of(2026, 10, 22), "pdf"));
+    }
 }
