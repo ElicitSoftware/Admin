@@ -108,7 +108,7 @@ Derived from `SurveyDefinitionImportResource` and `SurveyDefinitionImportService
 
 ### BR-076: Retired records are not installed
 
-A versioned record whose validity window is closed in the file describes an element removed before this site ever had it; it is skipped and counted separately in the import summary rather than installed.
+A versioned record whose validity window is closed in the file describes an element removed before this site ever had it; it is skipped and counted separately in the import summary rather than installed. The number of records installed counts only the records actually installed, never a skipped one.
 
 ### BR-110: Content translations install with the survey they belong to
 

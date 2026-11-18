@@ -98,6 +98,9 @@ public class SurveyDefinitionImportService {
 
     private static final String FORMAT_VERSION = SurveyDefinitionExportService.FORMAT_VERSION;
 
+    /** The import summary's count of retired records skipped (BR-076); not part of the installed total. */
+    static final String SKIPPED_RETIRED = "skipped_retired";
+
     @Inject
     EntityManager em;
 
@@ -303,7 +306,7 @@ public class SurveyDefinitionImportService {
                     // A removal made in the authoring tool: nothing to install here (BR: the
                     // element never existed at this site), but count it so the summary explains
                     // why the file's header count and the installed count differ.
-                    counts.merge("skipped_retired", 1, Integer::sum);
+                    counts.merge(SKIPPED_RETIRED, 1, Integer::sum);
                     continue;
                 }
                 try {
@@ -482,7 +485,10 @@ public class SurveyDefinitionImportService {
                 return new ImportResult(false, 0, errors, counts);
             }
 
-            int total = counts.values().stream().mapToInt(Integer::intValue).sum();
+            // BR-076: a skipped retired record is reported on its own, never as installed.
+            int total = counts.entrySet().stream()
+                    .filter(e -> !SKIPPED_RETIRED.equals(e.getKey()))
+                    .mapToInt(Map.Entry::getValue).sum();
             logAttempt(surveyInsert[0], fileName, errors.isEmpty(), errors, counts, fileRevision[0]);
             return new ImportResult(errors.isEmpty(), total, errors, counts,
                     surveyInsert[0] == null ? null : surveyInsert[0].surveyKey());

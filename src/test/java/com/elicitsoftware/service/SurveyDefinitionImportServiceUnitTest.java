@@ -593,6 +593,8 @@ class SurveyDefinitionImportServiceUnitTest {
         assertTrue(result.isSuccess());
         assertEquals(0, result.getCounts().get("steps"));
         assertEquals(1, result.getCounts().get("skipped_retired"));
+        // Admin #135: only the survey record was installed.
+        assertEquals(1, result.getRecordsImported());
         assertTrue(db.callsContaining("INSERT INTO survey.steps\n").isEmpty());
         assertTrue(db.callsContaining("survey.steps_seq").isEmpty());
     }
