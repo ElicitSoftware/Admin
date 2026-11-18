@@ -317,6 +317,40 @@ class ParticipationServiceTest {
         assertEquals(0, only(none.cards().get(0)).presented());
     }
 
+    /**
+     * UC-031 BR-120, UC-002 BR-181: a respondent Survey auto-registered has no subject; it is
+     * counted under {@link ParticipationService#AUTO_REGISTERED} when that is in the filter, with
+     * a department row of its own, and not otherwise. A filter that takes them while there are
+     * none lists no empty row for them.
+     */
+    @Test
+    @TestTransaction
+    void autoRegisteredRespondentsAreCountedUnderTheirOwnRow() {
+        seed();
+        Map<Long, String> names = new LinkedHashMap<>();
+        names.put(deptB.id, deptB.name);
+        names.put(ParticipationService.AUTO_REGISTERED, "Auto-registered");
+        List<Long> withAuto = List.of(deptB.id, ParticipationService.AUTO_REGISTERED);
+
+        Participation none = service.compute(new ParticipationService.Filter(survey.id, withAuto, null, null), names);
+        assertEquals(1, none.departments().size(), "no empty Auto-registered row");
+
+        Respondent r = new Respondent();
+        r.survey = survey;
+        r.accessCode = "UC031-SELF";
+        r.active = true;
+        r.firstAccessDt = Date.from(WEEK_3.toInstant());
+        r.persistAndFlush();
+        sql("UPDATE survey.respondents SET created_dt = ?1 WHERE id = ?2", WEEK_3, r.id);
+
+        Participation p = service.compute(new ParticipationService.Filter(survey.id, withAuto, null, null), names);
+        assertEquals(2, p.overall().registered(), "deptB's one, and the auto-registered one");
+        assertEquals(2, p.departments().size());
+        assertEquals("Auto-registered", p.departments().get(1).department());
+        assertEquals(new Participation.Counts(1, 0, 1, 0, 1), p.departments().get(1).counts(), "in progress and stalled (BR-131)");
+        assertEquals(1, compute(List.of(deptB.id), null, null).overall().registered(), "left out unless chosen");
+    }
+
     /** UC-031 BR-120: the registration range is inclusive of both days. */
     @Test
     @TestTransaction

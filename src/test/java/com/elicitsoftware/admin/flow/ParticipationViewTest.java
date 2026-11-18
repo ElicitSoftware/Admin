@@ -76,12 +76,12 @@ class ParticipationViewTest extends QuarkusBrowserlessTest {
         assertNotNull(view.shown, "the figures on screen are kept for the downloads");
     }
 
-    /** UC-031 BR-120: only "All departments" and the user's own departments are offered. */
+    /** UC-031 BR-120: only "All departments", the user's own departments and the auto-registered are offered. */
     @Test
     @TestSecurity(user = "participation.tester", roles = {"elicit_user"})
     void departmentFilterOffersOnlyTheUsersDepartments() {
-        assertEquals(List.of("Participation Dept"), view.chosenDepartments().stream().map(d -> d.name).toList());
-        assertEquals(List.of(1L), view.filter().departmentIds());
+        assertEquals(List.of("Participation Dept", "Auto-registered"), view.chosenDepartments().stream().map(d -> d.name).toList());
+        assertEquals(List.of(1L, -2L), view.filter().departmentIds());
     }
 
     /** UC-031 BR-120: clearing the department filter falls back to all departments and recomputes. */

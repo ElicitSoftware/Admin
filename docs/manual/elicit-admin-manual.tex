@@ -529,6 +529,16 @@ without the page being reloaded.
   \item \textbf{Finished} — they have completed it. Only then is a report available.
 \end{itemize}
 
+\subsection{Auto-registered respondents}
+
+Where the survey site lets anyone start a survey by typing an access code of their own (the
+setting \opt{accessCode.autoRegister}), the people who do so were never registered here. They
+are listed with \ui{Auto-registered} where the department would be, and with no name or contact
+details: only the access code they chose and their status. Every console account sees them,
+whatever its departments, and \ui{Department(s)} offers \ui{Auto-registered} to show only them.
+Their row has no \ui{Edit} and no \ui{Send email}, because there is no subject to edit and no
+address to write to; reports and the export are offered as for anyone else.
+
 %% ------------------------------------------------------------------ 9
 \section{Reports}
 \label{sec:reports}
@@ -573,7 +583,9 @@ shows a respondent: for one person, use \ui{Search Subjects}.
 \begin{enumerate}
   \item Open \ui{Participation}.
   \item Choose the \ui{Survey}. \ui{Departments} starts at \ui{All departments}, which is every
-        department your account reaches; choose one or more to narrow it.
+        department your account reaches and the auto-registered respondents
+        (Section~\ref{sec:search}); choose one or more to narrow it. The auto-registered get a
+        row of their own in the department table when there are any.
   \item Optionally set \ui{Registered from} and \ui{Registered to}. Both days are included.
 \end{enumerate}
 

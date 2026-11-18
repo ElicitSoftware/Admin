@@ -193,6 +193,7 @@ Every row is one key in `translations.properties`. Return a file `translations_<
 | `searchView.noUser.help` | Please ask an Elicit administrator for help. | Subject search (no matching user) · paragraph | 60 |  |
 | `searchView.filter.departments` | Department(s) | Subject search · department filter label | 20 |  |
 | `searchView.filter.allDepartments` | All departments | Subject search · department filter option selecting every department | 30 |  |
+| `searchView.filter.autoRegistered` | Auto-registered | Subject search · department filter option, and the department column, for respondents Survey auto-registered from an access code (they have no department) | 30 |  |
 | `searchView.filter.accessCode` | Access code | Subject search · filter field label | 20 |  |
 | `searchView.filter.firstName` | First name | Subject search · filter field label | 20 |  |
 | `searchView.filter.lastName` | Last name | Subject search · filter field label | 20 |  |
@@ -721,6 +722,7 @@ Every row is one key in `translations.properties`. Return a file `translations_<
 | `participationView.filter.survey` | Survey | Participation page · filter label | 25 |  |
 | `participationView.filter.departments` | Departments | Participation page · filter label | 25 |  |
 | `participationView.filter.allDepartments` | All departments | Participation page · department filter entry that selects every department of the user | 30 |  |
+| `participationView.filter.autoRegistered` | Auto-registered | Participation page · department filter option and department-table row for respondents Survey auto-registered from an access code (they have no department) | 30 |  |
 | `participationView.filter.from` | Registered from | Participation page · date filter label: first registration day | 25 |  |
 | `participationView.filter.to` | Registered to | Participation page · date filter label: last registration day, inclusive | 25 |  |
 | `participationView.filter.rangeInvalid` | The end date is before the start date. | Participation page · date filter error | 80 |  |
@@ -919,6 +921,7 @@ searchView.noUser.after=in the application, or the user is inactive.
 searchView.noUser.help=Please ask an Elicit administrator for help.
 searchView.filter.departments=Department(s)
 searchView.filter.allDepartments=All departments
+searchView.filter.autoRegistered=Auto-registered
 searchView.filter.accessCode=Access code
 searchView.filter.firstName=First name
 searchView.filter.lastName=Last name
@@ -1447,6 +1450,7 @@ participationView.empty=No survey is installed yet, so there is no participation
 participationView.filter.survey=Survey
 participationView.filter.departments=Departments
 participationView.filter.allDepartments=All departments
+participationView.filter.autoRegistered=Auto-registered
 participationView.filter.from=Registered from
 participationView.filter.to=Registered to
 participationView.filter.rangeInvalid=The end date is before the start date.

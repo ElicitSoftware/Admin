@@ -60,9 +60,11 @@ import java.util.Date;
  *   <li><strong>Date Tracking:</strong> Comprehensive audit trail with creation and finalization timestamps</li>
  * </ul>
  *
- * <p><strong>Read-only view:</strong> {@code survey.status} is a SQL {@code VIEW} (joining
- * respondents, subjects, and departments - see {@code V0.0.1__CREATE_ADMIN_SCHEMA.sql}
- * and {@code V0.0.7__Convert_Timestamps_To_Timestamptz.sql}), not a table. Instances of
+ * <p><strong>Read-only view:</strong> {@code survey.status} is a SQL {@code VIEW} (each
+ * respondent, left-joined to its subject and the subject's department - see
+ * {@code V0.0.27__Status_Auto_Registered.sql}), not a table. A respondent Survey auto-registered
+ * has no subject: its row has no department, name or contact details and a negative id
+ * (UC-002 BR-181, {@link #isAutoRegistered()}). Instances of
  * this entity must never be {@code .persist()}-ed or {@code .update()}-ed; {@link Immutable}
  * makes Hibernate itself reject writes rather than relying on convention.</p>
  *
@@ -217,10 +219,11 @@ public class Status extends PanacheEntityBase {
      *
      * <p>Numeric reference to the participant's department for
      * database relationships and efficient querying. Used in
-     * conjunction with departmentName for organizational tracking.</p>
+     * conjunction with departmentName for organizational tracking. {@code null} for an
+     * auto-registered respondent, which has no subject (UC-002 BR-181).</p>
      */
     @Column(name = "department_id")
-    private long departmentId;
+    private Long departmentId;
 
     /**
      * Unique access code for survey participation.
@@ -521,7 +524,7 @@ public class Status extends PanacheEntityBase {
      * Sets the department name this participant belongs to.
      *
      * @param departmentName the department name to set
-     * @see #setDepartmentId(long)
+     * @see #setDepartmentId(Long)
      */
     public void setDepartmentName(String departmentName) {
         this.departmentName = departmentName;
@@ -530,11 +533,11 @@ public class Status extends PanacheEntityBase {
     /**
      * Gets the department identifier this participant belongs to.
      *
-     * @return the department ID
+     * @return the department ID, or {@code null} for an auto-registered respondent
      * @since 1.0
      * @see #getDepartmentName()
      */
-    public long getDepartmentId() {
+    public Long getDepartmentId() {
         return departmentId;
     }
 
@@ -545,8 +548,19 @@ public class Status extends PanacheEntityBase {
      * @since 1.0
      * @see #setDepartmentName(String)
      */
-    public void setDepartmentId(long departmentId) {
+    public void setDepartmentId(Long departmentId) {
         this.departmentId = departmentId;
+    }
+
+    /**
+     * Whether this row is a respondent Survey auto-registered from an unrecognized access code:
+     * it has no subject, and so no department, name or contact details (UC-002 BR-181). The view
+     * gives such a row the respondent's id negated, so it is told by its id.
+     *
+     * @return {@code true} when the row is a respondent with no subject
+     */
+    public boolean isAutoRegistered() {
+        return id < 0;
     }
 
     /**
@@ -576,12 +590,12 @@ public class Status extends PanacheEntityBase {
      * timestamp for display in reports and user interfaces. The format
      * is locale-independent and consistent across the application.</p>
      *
-     * @return the creation date formatted as MM/dd/yyyy string, or formatted
-     *         representation of current date if createdDt is null
+     * @return the creation date formatted as MM/dd/yyyy string, or an empty string if createdDt
+     *         is null
      * @see #getCreatedDt()
      */
     public String getCreated(){
-        return sdf.format(createdDt);
+        return createdDt == null ? "" : sdf.format(createdDt);
     }
 
     /**
