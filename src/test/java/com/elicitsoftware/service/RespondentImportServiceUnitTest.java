@@ -500,6 +500,21 @@ class RespondentImportServiceUnitTest {
                 ImportValidationException.class, "Line 3: No post_survey_action named 'PSA1' found for survey FHHS (id 7) in this instance");
     }
 
+    // UC-012 A3: a subject index that is not a number is refused by name, not with a NullPointerException
+    @Test
+    void given_aSubjectWithANonNumericIndex_when_imported_then_theLineIsRefusedBeforeTheSubjectIsInserted() {
+        ScriptedEntityManager db = database();
+        assertFailsWith(db, HEADER + RESPONDENT + "subjects: x|X1|Jane|Doe||1980-02-03|j@x.org|555|DEPT|" + T1 + "\n",
+                ImportValidationException.class, "Line 3: Invalid subject_index 'x'; expected an integer");
+        assertTrue(db.calls("INSERT INTO survey.subjects").isEmpty());
+    }
+
+    @Test
+    void given_aMessageWithANonNumericIndex_when_imported_then_theLineIsRefused() {
+        assertFailsWith(HEADER + RESPONDENT + SUBJECT + "messages: x|1|text/plain|Hi|Body|" + T1 + "|\n",
+                ImportValidationException.class, "Line 4: Invalid subject_index 'x'; expected an integer");
+    }
+
     @Test
     void given_aValidationFailure_when_rethrown_then_theOriginalIsTheCause() {
         RespondentImportService service = new RespondentImportService();

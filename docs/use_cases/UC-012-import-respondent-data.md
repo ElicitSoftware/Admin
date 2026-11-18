@@ -42,6 +42,7 @@
 **Flow:**
 
 1. The system aborts the import, rolls back all inserted records, and reports the failing line.
+2. A field the format defines as an integer, such as the subject index that leads a `subjects` or `messages` record, is malformed when it is not one; the report names the field and the value found.
 
 ### A4: No matching survey in this instance
 
