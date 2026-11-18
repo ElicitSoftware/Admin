@@ -120,8 +120,8 @@ public class UsersView extends VerticalLayout {
      * clarify that:</p>
      * <ul>
      *   <li>User authentication is handled by the OIDC system</li>
-     *   <li>Roles (Admin/User/Importer) must be configured in OIDC, or through the Edit User
-     *       screen when {@code elicit.authorization.mode=DATABASE}</li>
+     *   <li>In {@code OIDC} mode roles are assigned in the identity provider; in {@code DATABASE}
+     *       mode on the Edit User screen, unless the identity provider supplies one (UC-008 BR-183)</li>
      *   <li>Department assignments are managed through this interface</li>
      * </ul>
      *

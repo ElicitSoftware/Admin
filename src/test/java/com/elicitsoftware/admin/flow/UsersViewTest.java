@@ -28,6 +28,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
@@ -71,12 +72,15 @@ class UsersViewTest extends QuarkusBrowserlessTest {
         assertTrue(grid().getColumns().size() >= 6);
     }
 
-    /** UC-008: in the default OIDC mode, the info text explains OIDC-managed roles. */
+    /** UC-008 BR-183: in the default OIDC mode, the info text explains OIDC-managed roles and names every role. */
     @Test
     void infoTextExplainsOidcMode() {
         Paragraph info = find(Paragraph.class, view).single();
         assertTrue(info.getText().contains("OpenID Connect"),
                 "OIDC mode should explain that roles are configured in the OIDC provider");
+        for (String role : List.of("elicit_admin", "elicit_user", "elicit_importer")) {
+            assertTrue(info.getText().contains(role), "the OIDC text should name " + role + ": " + info.getText());
+        }
     }
 
     /**
