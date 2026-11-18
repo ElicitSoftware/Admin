@@ -160,7 +160,7 @@ public class SurveyDefinitionExportService {
         out.append("# ").append(FORMAT_VERSION).append("\n");
         out.append("# survey_id: ").append(surveyId).append("\n");
         out.append("# survey_key: ").append(survey[1]).append("\n");
-        out.append("# survey_name: ").append(survey[2]).append("\n");
+        out.append("# survey_name: ").append(headerValue(survey[2])).append("\n");
         out.append("# surveys: 1\n");
         out.append("# select_groups: ").append(selectGroups.size()).append("\n");
         out.append("# select_items: ").append(selectItems.size()).append("\n");
@@ -765,6 +765,15 @@ public class SurveyDefinitionExportService {
      * @param value field value (nullable)
      * @return escaped string safe for export format
      */
+    /**
+     * A header comment's value: as it is, but on one line (BR-182). A line break is written as the
+     * escape a field would use, like the Author tool's export, so every line after the header is a
+     * record this export wrote as one.
+     */
+    static String headerValue(Object value) {
+        return value == null ? "" : value.toString().replace("\n", "\\n").replace("\r", "\\r");
+    }
+
     private String escapeField(Object value) {
         if (value == null) {
             return "";
