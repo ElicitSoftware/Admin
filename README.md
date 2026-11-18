@@ -294,7 +294,7 @@ Don't forget to give the project a star! Thank you!
 <!-- LICENSE -->
 ## License
 
-Distributed under the PolyForm Noncommercial License 1.0.0. See `LICENSE.txt` for more information.
+Distributed under the PolyForm Noncommercial License 1.0.0. See [`LICENSE.MD`](LICENSE.MD) for more information.
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 
@@ -333,7 +333,7 @@ Project link: [https://github.com/ElicitSoftware/admin](https://github.com/Elici
 [issues-shield]: https://img.shields.io/github/issues/ElicitSoftware/admin.svg?style=for-the-badge
 [issues-url]: https://github.com/ElicitSoftware/admin/issues
 [license-shield]: https://img.shields.io/github/license/ElicitSoftware/admin.svg?style=for-the-badge
-[license-url]: https://github.com/ElicitSoftware/admin/blob/master/LICENSE.txt
+[license-url]: LICENSE.MD
 [linkedin-shield]: https://img.shields.io/badge/-LinkedIn-black.svg?style=for-the-badge&logo=linkedin&colorB=555
 [linkedin-url]: https://linkedin.com/in/linkedin_username
 [product-screenshot]: images/screenshot.png
