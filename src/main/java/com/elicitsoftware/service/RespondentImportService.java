@@ -280,9 +280,9 @@ public class RespondentImportService {
                                 errors.add(Translations.get("definition.line", String.valueOf(lineNumber), Translations.get("respondentImport.beforeRespondent", "subject")));
                                 continue;
                             }
-                            Long subjectId = insertSubject(fields, newRespondentId, context);
                             // Store subject ID at the index specified in the first field
-                            int subjectIndex = parseIntOrNull(fields[0]);
+                            int subjectIndex = requireInt(fields[0], "subject_index");
+                            Long subjectId = insertSubject(fields, newRespondentId, context);
                             while (subjectIds.size() <= subjectIndex) {
                                 subjectIds.add(null);
                             }
@@ -290,7 +290,7 @@ public class RespondentImportService {
                             counts.put("subjects", counts.get("subjects") + 1);
                             break;
                         case "messages":
-                            int msgSubjectIndex = parseIntOrNull(fields[0]);
+                            int msgSubjectIndex = requireInt(fields[0], "subject_index");
                             if (msgSubjectIndex < 0 || msgSubjectIndex >= subjectIds.size() || subjectIds.get(msgSubjectIndex) == null) {
                                 errors.add(Translations.get("definition.line", String.valueOf(lineNumber), Translations.get("respondentImport.badSubjectIndex", String.valueOf(msgSubjectIndex))));
                                 continue;
