@@ -115,9 +115,13 @@ final class SurveyDefinitionFileFields {
      *
      * @param elementType the table the translated element lives in
      * @param field       the base column's name
-     * @return true when the pair is in {@link #TRANSLATABLE_FIELDS}
+     * @return true when the pair is in {@link #TRANSLATABLE_FIELDS}; false when the element type
+     *         is missing
      */
     static boolean isTranslatable(String elementType, String field) {
+        if (elementType == null) {
+            return false;
+        }
         java.util.Set<String> fields = TRANSLATABLE_FIELDS.get(elementType);
         return fields != null && fields.contains(field);
     }
