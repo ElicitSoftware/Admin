@@ -588,8 +588,8 @@ public class RegisterView extends HorizontalLayout implements HasDynamicTitle, B
                 return;
             }
 
-            boolean isExluded = ExcludedXid.isExcluded(this.subject.getXid(), (int) this.subject.getDepartmentId());
-            if (isExluded) {
+            boolean isExcluded = ExcludedXid.isExcluded(this.subject.getXid(), (int) this.subject.getDepartmentId());
+            if (isExcluded) {
                 // Find the department name from the user's departments by ID
                 String departmentName = user.getDepartments().stream()
                     .filter(dept -> dept.id == this.subject.getDepartmentId())
@@ -1284,7 +1284,7 @@ public class RegisterView extends HorizontalLayout implements HasDynamicTitle, B
         return switch (importStatus) {
             case "New Subject" -> getTranslation("registerView.csvImport.outcome.new"); // i18n:ignore
             case "Existing Subject" -> getTranslation("registerView.csvImport.outcome.existing"); // i18n:ignore
-            case "Exluded Subject" -> getTranslation("registerView.csvImport.outcome.excluded"); // i18n:ignore
+            case "Excluded Subject" -> getTranslation("registerView.csvImport.outcome.excluded"); // i18n:ignore
             default -> importStatus;
         };
     }
