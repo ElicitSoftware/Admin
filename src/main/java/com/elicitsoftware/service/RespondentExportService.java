@@ -320,6 +320,22 @@ public class RespondentExportService {
         return results;
     }
 
+    /**
+     * UC-011 BR-185: the departments of the respondent's subjects, which decide whether the
+     * caller may export it. Empty for a respondent with no subject (auto-registered, UC-002 BR-181).
+     *
+     * @param respondentId the respondent
+     * @return the distinct department ids of its subjects
+     */
+    @Transactional
+    public List<Long> subjectDepartmentIds(Integer respondentId) {
+        List<?> ids = em.createNativeQuery(
+                        "SELECT DISTINCT s.department_id FROM survey.subjects s WHERE s.respondent_id = :respondentId")
+                .setParameter("respondentId", respondentId)
+                .getResultList();
+        return ids.stream().map(id -> ((Number) id).longValue()).toList();
+    }
+
     private List<Object[]> getSubjects(Integer respondentId) {
         String querySql = """
                 SELECT s.id, s.xid, s.firstname, s.lastname, s.middlename, s.dob,

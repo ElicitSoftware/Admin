@@ -11,6 +11,7 @@ package com.elicitsoftware.rest;
  * ***LICENSE_END***
  */
 
+import com.elicitsoftware.security.DepartmentScope;
 import com.elicitsoftware.service.RespondentExportService;
 import jakarta.annotation.security.RolesAllowed;
 import jakarta.enterprise.context.ApplicationScoped;
@@ -39,13 +40,17 @@ public class RespondentExportResource {
     @Inject
     RespondentExportService respondentExportService;
 
+    @Inject
+    DepartmentScope departmentScope;
+
     /**
      * Export respondent data as a custom format file. Preferred query parameter is "id".
      *
      * @param id respondent id
      * @param respondentIdAlias optional alias query parameter: respondent_id
-     * @return Export file as a downloadable text file; 404 when the respondent does not exist,
-     *         409 when the export is refused because a subject's department has no code (UC-011 A3)
+     * @return Export file as a downloadable text file; 404 when the respondent does not exist or
+     *         a subject of it is outside the caller's departments (UC-011 A4, BR-185), 409 when the
+     *         export is refused because a subject's department has no code (UC-011 A3)
      */
     @GET
     @RolesAllowed("elicit_admin")
@@ -56,6 +61,15 @@ public class RespondentExportResource {
         if (respondentId == null) {
             return Response.status(Response.Status.BAD_REQUEST)
                     .entity("Missing required query parameter: id")
+                    .type(MediaType.TEXT_PLAIN)
+                    .build();
+        }
+
+        // UC-011 BR-185, A4: every subject in one of the caller's departments, refused as "not
+        // found" so the answer does not tell a respondent outside them from one that is absent.
+        if (!respondentExportService.subjectDepartmentIds(respondentId).stream().allMatch(departmentScope::permits)) {
+            return Response.status(Response.Status.NOT_FOUND)
+                    .entity("Respondent not found: " + respondentId)
                     .type(MediaType.TEXT_PLAIN)
                     .build();
         }
