@@ -11,6 +11,7 @@ package com.elicitsoftware.rest;
  * ***LICENSE_END***
  */
 
+import com.elicitsoftware.test.DepartmentFixtures;
 import com.elicitsoftware.admin.upload.MultipartBody;
 import com.elicitsoftware.rest.RespondentImportResource.ImportResponse;
 import com.elicitsoftware.service.RespondentExportService;
@@ -66,7 +67,13 @@ class RespondentTransferResourceUnitTest {
             public String exportRespondent(Integer respondentId) {
                 return behaviour.apply(respondentId);
             }
+
+            @Override
+            public java.util.List<Long> subjectDepartmentIds(Integer respondentId) {
+                return java.util.List.of();
+            }
         };
+        resource.departmentScope = DepartmentFixtures.everyDepartment();
         return resource;
     }
 

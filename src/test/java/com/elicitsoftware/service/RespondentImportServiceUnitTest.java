@@ -11,6 +11,7 @@ package com.elicitsoftware.service;
  * ***LICENSE_END***
  */
 
+import com.elicitsoftware.test.DepartmentFixtures;
 import com.elicitsoftware.service.RespondentImportService.ImportResult;
 import com.elicitsoftware.service.RespondentImportService.ImportValidationException;
 import com.elicitsoftware.test.ScriptedEntityManager;
@@ -120,6 +121,7 @@ class RespondentImportServiceUnitTest {
     private static ImportResult run(ScriptedEntityManager db, String text) {
         RespondentImportService service = new RespondentImportService();
         service.em = db.entityManager();
+        service.departmentScope = DepartmentFixtures.everyDepartment();
         return service.importFromFile(new ByteArrayInputStream(text.getBytes(StandardCharsets.UTF_8)));
     }
 
@@ -463,6 +465,22 @@ class RespondentImportServiceUnitTest {
                 ImportValidationException.class, "Line 3: No department with code 'DEPT' exists in this instance; create the department before importing");
     }
 
+    /** UC-012 BR-186, A9: a department outside the administrator's own reads as one with no match. */
+    @Test
+    void given_aDepartmentOutsideTheAdministratorsOwn_when_imported_then_itIsRefusedAsUnmatched() {
+        ScriptedEntityManager db = database();
+        RespondentImportService service = new RespondentImportService();
+        service.em = db.entityManager();
+        service.departmentScope = DepartmentFixtures.permitting(id -> id != 5L); // DEPT resolves to 5
+
+        ImportValidationException e = assertThrows(ImportValidationException.class, () -> service.importFromFile(
+                new ByteArrayInputStream((HEADER + RESPONDENT + SUBJECT).getBytes(StandardCharsets.UTF_8))));
+
+        assertEquals("Line 3: No department with code 'DEPT' exists in this instance; create the department before importing",
+                e.getMessage());
+        assertEquals(0, db.calls("INSERT INTO survey.subjects").size(), "no subject is written");
+    }
+
     @Test
     void given_anUnresolvableElement_when_imported_then_theElementKindAndVersionAreNamed() {
         String answer = "answers: 1|0|2|0|3|0|%s|%s|%s|%s|k|t|v|f|" + T1 + "|\n";
@@ -519,6 +537,7 @@ class RespondentImportServiceUnitTest {
     void given_aValidationFailure_when_rethrown_then_theOriginalIsTheCause() {
         RespondentImportService service = new RespondentImportService();
         service.em = database().entityManager();
+        service.departmentScope = DepartmentFixtures.everyDepartment();
         ImportValidationException e = assertThrows(ImportValidationException.class, () -> service.importFromFile(
                 new ByteArrayInputStream((HEADER + "respondents: nope|AC|t|1|" + T1 + "||\n").getBytes(StandardCharsets.UTF_8))));
         ImportValidationException cause = assertInstanceOf(ImportValidationException.class, e.getCause());
@@ -540,6 +559,7 @@ class RespondentImportServiceUnitTest {
     void given_anUnreadableStream_when_imported_then_theReadFailureIsReported() {
         RespondentImportService service = new RespondentImportService();
         service.em = database().entityManager();
+        service.departmentScope = DepartmentFixtures.everyDepartment();
         InputStream broken = new InputStream() {
             @Override
             public int read() throws IOException {
