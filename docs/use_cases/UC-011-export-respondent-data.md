@@ -11,7 +11,7 @@
 ## Preconditions
 
 - The administrator presents a valid bearer token and holds the `elicit_admin` role (UC-001).
-- A respondent with the requested identifier exists.
+- A respondent with the requested identifier exists, and every one of its subjects belongs to a department the administrator is assigned to (BR-185).
 
 ## Main Success Scenario
 
@@ -43,6 +43,14 @@
 
 1. The system refuses the export and names the department, instructing the administrator to assign a department code first.
 2. No file is produced.
+
+### A4: Respondent outside the administrator's departments
+
+**Trigger:** A subject of the respondent belongs to a department the administrator is not assigned to (step 2).
+**Flow:**
+
+1. The system reports the respondent was not found, exactly as in A2, so the answer does not reveal that the respondent exists (BR-185).
+2. No file is produced. Use case ends.
 
 ## Postconditions
 
@@ -79,6 +87,10 @@ Every reference from a respondent's data into the survey structure — an answer
 ### BR-100: Department carried by code
 
 A subject's department is exported by its department code, the only department identity that is stable across instances. A department without a code cannot be carried portably, so the export is refused rather than emitting a local identifier.
+
+### BR-185: Export only within the administrator's departments
+
+An administrator exports a respondent only when every subject of the respondent belongs to a department the administrator's console user record is assigned to (NFR-021); the file carries every subject, so one outside those departments refuses the whole export. The refusal reads as "not found" (A4), the same answer as an identifier that does not exist. A respondent with no subject, auto-registered at the survey, belongs to no department and is exported as Search lists it, for every administrator (UC-002 BR-181). The rule is checked on the server for every request, whatever the screen offered.
 
 ### BR-101: Progress state exported faithfully
 
