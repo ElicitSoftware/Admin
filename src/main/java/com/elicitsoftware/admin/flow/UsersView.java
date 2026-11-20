@@ -64,8 +64,6 @@ import java.util.List;
  * the Edit User screen (see {@link EditUserView}, UC-016).</p>
  *
  * @author Elicit Software
- * @version 1.0
- * @since 1.0
  * @see User
  * @see EditUserView
  */

@@ -50,7 +50,6 @@ import java.util.UUID;
  * The access code is the credential the respondent enters to reach the survey.
  *
  * @author Elicit Software
- * @since 1.0.0
  */
 @Path("/secured")
 @ApplicationScoped
@@ -144,11 +143,11 @@ public class AccessCodeService {
         AddResponse response = new AddResponse();
         AddResponseStatus addStatus;
         try {
-            // Check if this xid and department should be exluded.
-            boolean isExluded = ExcludedXid.isExcluded(request.xid, request.departmentId);
-            if (isExluded) {
+            // Check if this xid and department should be excluded.
+            boolean isExcluded = ExcludedXid.isExcluded(request.xid, request.departmentId);
+            if (isExcluded) {
                 Status status = new Status();
-                addStatus = new AddResponseStatus(status, "Exluded Subject");
+                addStatus = new AddResponseStatus(status, "Excluded Subject");
             } else {
                 // Check if they are an existing respondent.
                 Status status = Status.findByXidAndDepartmentId(request.xid, request.departmentId);
@@ -410,7 +409,6 @@ public class AccessCodeService {
      *
      * @param multipartBody the multipart form data containing the CSV file and metadata
      * @return Response with import results or error information
-    //     * @see CsvImportService#importSubjects(java.io.InputStream, User)
      * @see CsvImportService#importSubjects(java.io.InputStream)
      * @see MultipartBody
      */

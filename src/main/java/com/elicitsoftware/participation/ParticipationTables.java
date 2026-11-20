@@ -48,6 +48,13 @@ public final class ParticipationTables {
      */
     public record Table(String title, List<String> headers, List<List<String>> rows, String chart) {
 
+        /**
+         * A table with no chart.
+         *
+         * @param title   a caption, or {@code null}
+         * @param headers the column headers
+         * @param rows    the cells, row by row
+         */
         public Table(String title, List<String> headers, List<List<String>> rows) {
             this(title, headers, rows, null);
         }
@@ -68,6 +75,8 @@ public final class ParticipationTables {
     private final Locale locale;
 
     /**
+     * Creates the renderer for one suppression rule and locale.
+     *
      * @param cells the suppression rule and the locale every value is rendered in
      */
     public ParticipationTables(SmallCell cells) {

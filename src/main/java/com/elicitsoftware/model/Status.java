@@ -69,8 +69,6 @@ import java.util.Date;
  * makes Hibernate itself reject writes rather than relying on convention.</p>
  *
  * @author Elicit Software
- * @version 1.0
- * @since 1.0
  * @see io.quarkus.hibernate.orm.panache.PanacheEntityBase
  * @see jakarta.persistence.Entity
  * @see jakarta.persistence.Table
@@ -314,7 +312,6 @@ public class Status extends PanacheEntityBase {
      * Gets the respondent identifier associated with this status record.
      *
      * @return the respondent ID
-     * @since 1.0
      */
     public long getRespondentId() {
         return respondentId;
@@ -324,7 +321,6 @@ public class Status extends PanacheEntityBase {
      * Sets the respondent identifier associated with this status record.
      *
      * @param respondentId the respondent ID to set
-     * @since 1.0
      */
     public void setRespondentId(long respondentId) {
         this.respondentId = respondentId;
@@ -534,7 +530,6 @@ public class Status extends PanacheEntityBase {
      * Gets the department identifier this participant belongs to.
      *
      * @return the department ID, or {@code null} for an auto-registered respondent
-     * @since 1.0
      * @see #getDepartmentName()
      */
     public Long getDepartmentId() {
@@ -545,7 +540,6 @@ public class Status extends PanacheEntityBase {
      * Sets the department identifier this participant belongs to.
      *
      * @param departmentId the department ID to set
-     * @since 1.0
      * @see #setDepartmentName(String)
      */
     public void setDepartmentId(Long departmentId) {

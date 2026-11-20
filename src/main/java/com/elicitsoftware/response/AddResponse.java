@@ -22,7 +22,7 @@ import java.util.ArrayList;
  * {@code subjects} holds one {@link AddResponseStatus} per subject processed. Each carries the
  * subject's {@link com.elicitsoftware.model.Status} row, serialized as {@code status}, which
  * includes the respondent's {@code accessCode}, plus an {@code importStatus} such as
- * "New Subject", "Existing Subject" or "Exluded Subject". {@code error} lists any failures.
+ * "New Subject", "Existing Subject" or "Excluded Subject". {@code error} lists any failures.
  * <p>
  * Example:
  * <pre>
@@ -36,7 +36,6 @@ import java.util.ArrayList;
  *
  * @see com.elicitsoftware.request.AddRequest
  * @see com.elicitsoftware.model.Respondent
- * @since 1.0.0
  */
 public class AddResponse {
     @JsonProperty("subjects")

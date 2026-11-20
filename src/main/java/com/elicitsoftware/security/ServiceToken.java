@@ -88,6 +88,9 @@ public class ServiceToken {
          * The origin of an address, or empty when the address can never receive the token: it
          * has user information, no host, or a scheme other than {@code http} and {@code https}.
          * Only the parts {@link URI} parsed are read; the address is never compared as text.
+         *
+         * @param address the address, or null
+         * @return the address's origin, or empty for null or an address that has none
          */
         public static Optional<Origin> of(URI address) {
             if (address == null || address.getScheme() == null || address.getHost() == null
@@ -122,6 +125,14 @@ public class ServiceToken {
     private final String surveyUrl;
     private volatile Set<Origin> trusted;
 
+    /**
+     * Reads the service token, the trusted origins and the Survey address from configuration.
+     * A token that is blank after trimming counts as not configured.
+     *
+     * @param configured     {@code elicit.service.token}, if set
+     * @param trustedOrigins {@code elicit.service.trusted-origins}, if set
+     * @param surveyUrl      {@code elicit.survey.url}, whose origin is always trusted
+     */
     public ServiceToken(@ConfigProperty(name = "elicit.service.token") Optional<String> configured,
                         @ConfigProperty(name = "elicit.service.trusted-origins") Optional<String> trustedOrigins,
                         @ConfigProperty(name = "elicit.survey.url", defaultValue = "http://survey:8080") String surveyUrl) {
@@ -161,12 +172,20 @@ public class ServiceToken {
         }
     }
 
-    /** Whether a token is configured. */
+    /**
+     * Whether a token is configured.
+     *
+     * @return true when a non-blank token is configured
+     */
     public boolean isConfigured() {
         return token != null;
     }
 
-    /** Whether the configured token is the development value. */
+    /**
+     * Whether the configured token is the development value.
+     *
+     * @return true when the token equals the well-known development value
+     */
     public boolean isDevelopmentValue() {
         return DEVELOPMENT_VALUE.equals(token);
     }
@@ -177,6 +196,7 @@ public class ServiceToken {
      * BR-159). Never for an address that came from a survey definition; that is
      * {@link #authorizationFor(URI)}.
      *
+     * @return the header value, {@code Bearer} followed by the token
      * @throws NotConfiguredException when no token is configured: the call must not be made
      */
     public String authorization() {
@@ -203,7 +223,12 @@ public class ServiceToken {
         return Optional.of(authorization());
     }
 
-    /** Whether the token may be sent to this address: its origin equals a trusted one. */
+    /**
+     * Whether the token may be sent to this address: its origin equals a trusted one.
+     *
+     * @param destination the address the request is about to be sent to, or null
+     * @return true when the address has an origin and it is trusted
+     */
     public boolean isTrusted(URI destination) {
         return Origin.of(destination).filter(trustedOrigins()::contains).isPresent();
     }

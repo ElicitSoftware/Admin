@@ -73,7 +73,7 @@ public class ReportingSchemaRebuildClient {
     public enum Status {
         /** Survey answered 200: the schema is current. */
         REBUILT,
-        /** Survey answered anything else, or could not be reached. */
+        /** Survey answered anything else or could not be reached, or no service token is set. */
         FAILED,
         /** {@code elicit.survey.etl-build.enabled=false}: no call was made. */
         SKIPPED
@@ -91,6 +91,8 @@ public class ReportingSchemaRebuildClient {
          * The line appended to an apply result: "Reporting schema rebuilt." or "Reporting
          * schema not rebuilt: reason", or {@code null} when the call was skipped so a
          * deployment that turned it off sees nothing about it.
+         *
+         * @return the line in the administrator's language, or {@code null} when skipped
          */
         public String summaryLine() {
             return switch (status) {
@@ -123,7 +125,11 @@ public class ReportingSchemaRebuildClient {
         // CDI managed bean
     }
 
-    /** The address the call goes to, for diagnostics. */
+    /**
+     * The address the call goes to, for diagnostics.
+     *
+     * @return {@code elicit.survey.url} without a trailing slash, followed by {@link #PATH}
+     */
     public String endpoint() {
         return baseUrl(surveyUrl) + PATH;
     }
@@ -141,6 +147,7 @@ public class ReportingSchemaRebuildClient {
      * The address a rebuild of one survey goes to: the endpoint with the survey named.
      *
      * @param surveyKey the survey's portable key, or null to ask Survey to build every survey
+     * @return {@link #endpoint()} with {@code ?survey=<key>}, or without it when the key is null
      */
     public String endpoint(UUID surveyKey) {
         return surveyKey == null ? endpoint() : endpoint() + "?survey=" + surveyKey;

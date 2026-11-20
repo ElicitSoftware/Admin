@@ -68,8 +68,6 @@ import java.util.Set;
  * </ul>
  * 
  * @author Elicit Software
- * @version 1.0
- * @since 1.0
  */
 @Route(value = "edit-user/:id?", layout = MainLayout.class)
 @RolesAllowed("elicit_admin")

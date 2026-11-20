@@ -69,8 +69,6 @@ import java.util.List;
  * }</pre>
  * 
  * @author Elicit Software
- * @version 1.0
- * @since 1.0
  * @see Subject
  */
 public class ListResponse {

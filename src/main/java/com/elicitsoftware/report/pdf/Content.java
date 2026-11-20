@@ -72,8 +72,6 @@ import com.fasterxml.jackson.annotation.JsonInclude;
  * Copyright (C) 2025 The Regents of the University of Michigan - Rogel Cancer Center.</p>
  *
  * @author Elicit Software
- * @version 1.0
- * @since 1.0
  * @see PDFDocument
  * @see Table
  * @see Style

@@ -61,6 +61,7 @@ import com.vaadin.flow.router.BeforeEnterObserver;
 import com.vaadin.flow.router.HasDynamicTitle;
 import com.vaadin.flow.router.Route;
 
+import io.quarkus.logging.Log;
 import io.quarkus.panache.common.Sort;
 import io.quarkus.security.identity.SecurityIdentity;
 import jakarta.annotation.PostConstruct;
@@ -109,8 +110,6 @@ import jakarta.inject.Inject;
  * </ul>
  *
  * @author Elicit Software
- * @version 1.0
- * @since 1.0
  * @see Status
  * @see StatusDataSource
  * @see com.elicitsoftware.service.EmailService
@@ -254,33 +253,13 @@ public class SearchView extends VerticalLayout implements HasDynamicTitle, Befor
     }
 
     /**
-     * Initializes the search view components and layout after dependency injection.
+     * Shows or removes the notice that no survey is installed on every entry (UC-019 BR-076).
+     * Who may enter is decided by the class's {@code @RolesAllowed}.
      *
-     * <p>This method performs the following initialization steps:</p>
-     *
-     * <ol>
-     *   <li><strong>UI Context Setup:</strong> Captures current UI instance for background operations</li>
-     *   <li><strong>User Authentication:</strong> Retrieves and validates current user session</li>
-     *   <li><strong>Error Handling:</strong> Displays appropriate error message for invalid users</li>
-     *   <li><strong>Locale Configuration:</strong> Sets up RTL layout for Arabic locales</li>
-     *   <li><strong>Component Creation:</strong> Builds search interface and data grid</li>
-     * </ol>
-     *
-     * <p>If the user is not found or inactive, an error message is displayed explaining
-     * the authentication issue and directing them to contact an administrator.</p>
-     *
-     * <p>For valid users, the method sets up the complete search interface including
-     * the search bar with multiple filter options and the sortable data grid with
-     * pagination controls.</p>
-     */
-
-    /**
-     * Checks user authentication and authorization before entering the view.
-     * Authorization is now handled by @RolesAllowed annotation.
+     * @param event the navigation event
      */
     @Override
     public void beforeEnter(BeforeEnterEvent event) {
-        // Authorization is now handled by @RolesAllowed annotation
         refreshMissingSurveyNotice();
     }
 
@@ -633,14 +612,14 @@ public class SearchView extends VerticalLayout implements HasDynamicTitle, Befor
                                 Notification.show(getTranslation("searchView.action.emailFailed"), 5000, Notification.Position.TOP_CENTER);
                             }
                         } catch (Exception ex) {
-                            Notification.show(getTranslation("searchView.action.emailError", ex.getMessage()), 5000, Notification.Position.TOP_CENTER);
+                            Notification.show(getTranslation("searchView.action.emailError", logged("Sending an email", ex)), 5000, Notification.Position.TOP_CENTER); // i18n:ignore (log text)
                         }
                     } else if (ACTION_PRINT_REPORTS.equals(selectedAction)) {
                         try {
                             reportingService.printReports(status);
                             Notification.show(getTranslation("searchView.action.reportsGenerated"), 3000, Notification.Position.TOP_CENTER);
                         } catch (Exception ex) {
-                            Notification.show(getTranslation("searchView.action.reportsError", ex.getMessage()), 5000, Notification.Position.TOP_CENTER);
+                            Notification.show(getTranslation("searchView.action.reportsError", logged("Printing reports", ex)), 5000, Notification.Position.TOP_CENTER); // i18n:ignore (log text)
                         }
                     } else if (ACTION_EXPORT.equals(selectedAction)) {
                         UI.getCurrent().getPage().executeJs("window.open($0, '_blank')", buildExportUrl(status));
@@ -720,17 +699,6 @@ public class SearchView extends VerticalLayout implements HasDynamicTitle, Befor
     }
 
     /**
-     * Creates a vertical layout container for the grid and pagination components.
-     *
-     * <p>This utility method wraps the provided components in a properly configured
-     * vertical layout with optimized spacing and padding settings for the data
-     * display area.</p>
-     *
-     * @param component1 the first component (typically the data grid)
-     * @param component2 the second component (typically pagination controls)
-     * @return a configured VerticalLayout containing both components
-     */
-    /**
      * The respondent status in the administrator's language. The {@code survey.status} view reports
      * it in English, and the code compares against that value, so it is translated only where it is
      * shown; an unknown value is shown as the view sent it.
@@ -747,6 +715,14 @@ public class SearchView extends VerticalLayout implements HasDynamicTitle, Befor
         };
     }
 
+    /**
+     * Wraps the grid and its pagination controls in one vertical layout, without padding and with
+     * extra-small spacing.
+     *
+     * @param component1 the first component (the data grid)
+     * @param component2 the second component (the pagination controls)
+     * @return a VerticalLayout containing both components
+     */
     private VerticalLayout wrapWithVerticalLayout(Component component1, Component component2) {
         var gridWithPaginationLayout = new VerticalLayout(component1, component2);
         gridWithPaginationLayout.setPadding(false);
@@ -920,6 +896,20 @@ public class SearchView extends VerticalLayout implements HasDynamicTitle, Befor
     @Override
     public String getPageTitle() {
         return getTranslation("searchView.pageTitle");
+    }
+
+    /**
+     * Logs an action's unexpected failure and returns the reference shown in its place (NFR-023):
+     * the reference is on the log line with the cause, and nothing of the cause reaches the page.
+     *
+     * @param action what failed, for the log line
+     * @param e      the failure
+     * @return {@code ref <8 hex digits>}
+     */
+    static String logged(String action, Exception e) {
+        String reference = java.util.UUID.randomUUID().toString().substring(0, 8);
+        Log.errorf(e, "%s failed (ref %s)", action, reference);
+        return "ref " + reference; // i18n:ignore (a log reference, the same in every language)
     }
 
     /**

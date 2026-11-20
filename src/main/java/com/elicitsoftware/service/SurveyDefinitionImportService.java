@@ -142,6 +142,10 @@ public class SurveyDefinitionImportService {
         /**
          * Creates a new ImportResult naming the survey it installed.
          *
+         * @param success whether the import succeeded
+         * @param recordsImported number of records imported
+         * @param errors list of error messages
+         * @param counts breakdown of records by table
          * @param surveyKey the installed survey's portable key, or null when the file never got far enough to have one
          */
         public ImportResult(boolean success, int recordsImported, List<String> errors, Map<String, Integer> counts, UUID surveyKey) {

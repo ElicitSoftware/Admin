@@ -21,8 +21,6 @@ package com.elicitsoftware.exception;
  * <p>
  * This is an unchecked exception. Callers at the UI and REST boundaries catch it and report a
  * short message; the message must not contain an access code.
- *
- * @since 1.0
  */
 public class AccessCodeGenerationError extends RuntimeException {
 

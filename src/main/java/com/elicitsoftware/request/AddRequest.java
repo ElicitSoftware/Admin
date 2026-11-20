@@ -63,7 +63,6 @@ import java.time.LocalDate;
  * @see com.elicitsoftware.model.Survey
  * @see com.elicitsoftware.model.Department
  * @see com.elicitsoftware.model.Respondent
- * @since 1.0.0
  */
 public class AddRequest {
 

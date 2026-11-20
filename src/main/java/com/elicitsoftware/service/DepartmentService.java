@@ -32,8 +32,6 @@ import java.util.stream.Collectors;
  * department create/update behavior.</p>
  *
  * @author Elicit Software
- * @version 1.0
- * @since 1.0
  * @see Department
  */
 @ApplicationScoped

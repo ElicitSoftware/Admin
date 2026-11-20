@@ -70,10 +70,6 @@ final class SurveyDefinitionFileFields {
         }
     }
 
-    /**
-     * Parses one data line's pipe-delimited fields with escape sequence handling
-     * ({@code \|}, {@code \\}, {@code \n}, {@code \r}).
-     */
     /** Zero-based index of {@code effective_to} within each Type 2 record (post-V015 layout). */
     static final java.util.Map<String, Integer> EFFECTIVE_TO_INDEX = java.util.Map.ofEntries(
             java.util.Map.entry("select_groups", 7),
@@ -147,6 +143,13 @@ final class SurveyDefinitionFileFields {
         }
     }
 
+    /**
+     * Parses one data line's pipe-delimited fields with escape sequence handling
+     * ({@code \|}, {@code \\}, {@code \n}, {@code \r}).
+     *
+     * @param data the part of the line after its record type and colon
+     * @return the fields, unescaped
+     */
     static String[] parseFields(String data) {
         List<String> fieldList = new ArrayList<>();
         StringBuilder current = new StringBuilder();

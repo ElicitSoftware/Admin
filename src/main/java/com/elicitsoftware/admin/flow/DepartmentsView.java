@@ -36,8 +36,6 @@ import jakarta.inject.Inject;
  * with edit buttons for each row and includes a button to create new departments.</p>
  * 
  * @author Elicit Software
- * @version 1.0
- * @since 1.0
  */
 @Route(value = "departments", layout = MainLayout.class)
 @RolesAllowed("elicit_admin")
@@ -92,16 +90,6 @@ public class DepartmentsView extends VerticalLayout {
         grid.addColumn(department -> departmentService().surveysOf(department.id).stream()
                 .map(survey -> survey.name).collect(java.util.stream.Collectors.joining(", ")))
                 .setHeader(getTranslation("departmentsView.grid.surveys")).setAutoWidth(true);
-        //To be uncommented after notification email system is in place.
-//        grid.addColumn(department -> {
-//            String emails = department.getNotificationEmails();
-//            if (emails == null || emails.trim().isEmpty()) {
-//                return "(none)";
-//            }
-//            // Truncate long email lists for display
-//            return emails.length() > 50 ? emails.substring(0, 47) + "..." : emails;
-//        }).setHeader("Notification Emails").setSortable(true).setAutoWidth(true);
-
         // Eager load: acceptable for the small departments table. If the department count grows
         // past ~1000 rows, switch to a lazy CallbackDataProvider (see the data-providers skill).
         List<Department> departments = Department.findAll().list();

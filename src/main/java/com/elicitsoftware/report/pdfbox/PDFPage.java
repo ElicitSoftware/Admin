@@ -41,7 +41,6 @@ import org.apache.pdfbox.pdmodel.PDPage;
  * </pre>
  * 
  * @see PDPage
- * @since 1.0.0
  */
 public class PDFPage extends PDPage {
     

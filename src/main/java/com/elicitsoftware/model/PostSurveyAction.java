@@ -16,33 +16,10 @@ import jakarta.json.bind.annotation.JsonbTransient;
 import jakarta.persistence.*;
 
 /**
- * The PostSurveyAction class represents an entity in the "post_survey_actions" table
- * within the "survey" schema. This entity defines actions to be executed after a survey
- * is completed.
- * <p>
- * Attributes:
- * - id: The unique identifier for the post-survey action.
- * - survey: The associated survey to which this action belongs, represented as a
- * many-to-one relationship with the Survey entity.
- * - name: The name of the post-survey action.
- * - description: A textual description of the action.
- * - url: The URL associated with the action, which may point to further resources
- * or actions.
- * - executionOrder: The order in which this action should be executed, relative to
- * other actions associated with the same survey.
- */
-/**
- * PostSurveyAction represents actions to be executed after a survey is completed.
- * <p>
- * This entity defines post-completion actions that can be automatically triggered
- * when a survey respondent finishes their survey. Actions can include redirects
- * to external URLs, triggering notifications, or executing custom business logic.
- * <p>
- * Actions are associated with specific surveys and can be ordered for sequential
- * execution using the executionOrder field.
- *
- * @author Elicit Software
- * @since 1.0.0
+ * One post-survey action of a survey, a row of {@code survey.post_survey_actions}: an address the
+ * Survey application calls after a respondent finishes the survey, in {@code executionOrder} among
+ * the survey's actions. Admin imports and updates these with the survey definition and probes their
+ * addresses in its connection checks; it does not call them.
  */
 @Entity
 @Table(name = "post_survey_actions", schema = "survey")

@@ -35,7 +35,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 /**
  * UC-012: Import Respondent Data and UC-018: Apply Survey Definition — the outcome dialog both
  * screens open, {@link ResultDialog}, rendered in a plain browserless UI: sentences, headings and
- * detail lists laid out as structure, error lines marked, success and failure coloured apart.
+ * detail lists laid out as structure, error lines marked, success and failure colored apart.
  */
 class ResultDialogUnitTest extends PlainSmallViewTestSupport {
 

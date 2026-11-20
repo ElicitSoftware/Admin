@@ -68,11 +68,9 @@ import java.util.List;
  * </ul>
  *
  * @author Elicit Software
- * @version 1.0
  * @see AppLayout
  * @see AfterNavigationListener
  * @see UiSessionLogin
- * @since 1.0
  */
 @PermitAll
 public class MainLayout extends AppLayout implements AfterNavigationListener {
@@ -368,16 +366,6 @@ public class MainLayout extends AppLayout implements AfterNavigationListener {
     }
 
     /**
-     * Registers this layout as a navigation listener when attached to the UI.
-     *
-     * <p>This method is part of the component lifecycle and ensures that the layout
-     * can respond to navigation events. It adds this instance as an after-navigation
-     * listener to the current UI, enabling the scroll-to-top functionality.</p>
-     *
-     * @param attachEvent the event fired when this component is attached to the UI
-     * @see AfterNavigationListener
-     */
-    /**
      * The System section: setup and diagnostics for the administrator or operator wiring up a
      * deployment (UC-020 to UC-025, and the OIDC entry for UC-009 / FR-026).
      */
@@ -399,6 +387,12 @@ public class MainLayout extends AppLayout implements AfterNavigationListener {
         return systemSection;
     }
 
+    /**
+     * Registers this layout as an after-navigation listener of its UI when it is attached, so it can
+     * scroll each new page to the top.
+     *
+     * @param attachEvent the attach event
+     */
     @Override
     protected void onAttach(AttachEvent attachEvent) {
         getUI().ifPresent(ui -> ui.addAfterNavigationListener(this));

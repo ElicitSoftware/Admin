@@ -162,32 +162,62 @@ public class SurveyDefinitionUpdateResource {
             this.counts = counts;
         }
 
-        /** @return whether the update succeeded */
+        /**
+         * Returns whether the update succeeded.
+         *
+         * @return whether the update succeeded
+         */
         public boolean isSuccess() { return success; }
 
-        /** @param success whether the update succeeded */
+        /**
+         * Sets whether the update succeeded.
+         *
+         * @param success whether the update succeeded
+         */
         public void setSuccess(boolean success) { this.success = success; }
 
-        /** @return status or error message */
+        /**
+         * Returns the status or error message.
+         *
+         * @return status or error message
+         */
         public String getMessage() { return message; }
 
-        /** @param message status or error message */
+        /**
+         * Sets the status or error message.
+         *
+         * @param message status or error message
+         */
         public void setMessage(String message) { this.message = message; }
 
         /**
+         * Returns the reporting schema rebuild's summary line.
+         *
          * @return after a successful update, whether the Survey application rebuilt its reporting
          *     schema ("Reporting schema rebuilt." or "Reporting schema not rebuilt: ..."); {@code null}
          *     if nothing was updated or the call is disabled
          */
         public String getReporting() { return reporting; }
 
-        /** @param reporting the reporting schema rebuild's summary line */
+        /**
+         * Sets the reporting schema rebuild's summary line.
+         *
+         * @param reporting the reporting schema rebuild's summary line
+         */
         public void setReporting(String reporting) { this.reporting = reporting; }
 
-        /** @return per-table created/versioned/unchanged breakdown */
+        /**
+         * Returns the per-table breakdown of the update.
+         *
+         * @return per-table created/versioned/unchanged breakdown
+         */
         public Map<String, SurveyDefinitionUpdateService.TableUpdateCounts> getCounts() { return counts; }
 
-        /** @param counts per-table created/versioned/unchanged breakdown */
+        /**
+         * Sets the per-table breakdown of the update.
+         *
+         * @param counts per-table created/versioned/unchanged breakdown
+         */
         public void setCounts(Map<String, SurveyDefinitionUpdateService.TableUpdateCounts> counts) { this.counts = counts; }
     }
 }

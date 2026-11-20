@@ -64,8 +64,6 @@ import java.util.stream.Collectors;
  * </ul>
  * 
  * @author Elicit Software
- * @version 1.0
- * @since 1.0
  * @see ConstraintViolation
  * @see jakarta.validation.Validator
  */

@@ -51,8 +51,6 @@ import java.util.List;
  * </ul>
  * 
  * @author Elicit Software
- * @version 1.0
- * @since 1.0
  * @see MessageTemplate
  * @see EditMessageTemplatesView
  */

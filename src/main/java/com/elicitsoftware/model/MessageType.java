@@ -67,8 +67,6 @@ import jakarta.persistence.*;
  * </ul>
  * 
  * @author Elicit Software
- * @version 1.0
- * @since 1.0
  * @see MessageTemplate
  * @see PanacheEntityBase
  */
@@ -114,12 +112,6 @@ public class MessageType extends PanacheEntityBase {
      */
     @Column(name = "name", nullable = false)
     private String name;
-
-    /**
-     * Gets the unique identifier for this message type.
-     * 
-     * @return the message type ID
-     */
 
     /**
      * Default constructor for MessageType.

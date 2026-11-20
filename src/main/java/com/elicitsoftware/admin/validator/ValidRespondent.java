@@ -95,8 +95,6 @@ import java.lang.annotation.Target;
  * frameworks to provide user-friendly error feedback.</p>
  * 
  * @author Elicit Software
- * @version 1.0
- * @since 1.0
  * @see RespondentValidator
  * @see com.elicitsoftware.model.Subject
  * @see Constraint

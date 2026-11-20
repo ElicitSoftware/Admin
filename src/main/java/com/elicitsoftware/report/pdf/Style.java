@@ -70,8 +70,6 @@ import com.fasterxml.jackson.annotation.JsonInclude;
  * different content types within a document.</p>
  *
  * @author Elicit Software
- * @version 1.0
- * @since 1.0
  * @see Content
  * @see PDFDocument
  */

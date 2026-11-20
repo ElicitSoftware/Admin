@@ -42,7 +42,6 @@ package com.elicitsoftware.report;
  * 
  * @see ReportService#callReport(ReportRequest)
  * @see ReportResponse
- * @since 1.0.0
  */
 public class ReportRequest {
     /**
@@ -76,15 +75,31 @@ public class ReportRequest {
      */
     private String language;
 
+    /**
+     * Constructs a report request with the language the respondent answered in.
+     *
+     * @param id       the unique identifier for the report request
+     * @param language the BCP-47 tag of the respondent's language, or {@code null} for the survey's base language
+     */
     public ReportRequest(int id, String language) {
         this(id);
         this.language = language;
     }
 
+    /**
+     * Returns the language the respondent answered in.
+     *
+     * @return the BCP-47 tag, or {@code null} for the survey's base language
+     */
     public String getLanguage() {
         return language;
     }
 
+    /**
+     * Sets the language the respondent answered in.
+     *
+     * @param language the BCP-47 tag, or {@code null} for the survey's base language
+     */
     public void setLanguage(String language) {
         this.language = language;
     }

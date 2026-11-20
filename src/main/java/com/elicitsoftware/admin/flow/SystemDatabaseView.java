@@ -49,6 +49,7 @@ public class SystemDatabaseView extends VerticalLayout implements HasDynamicTitl
     @Inject
     DefaultAccountCheck defaultAccounts;
 
+    /** Lays out the view; its content is added once the diagnostics are injected. */
     public SystemDatabaseView() {
         // Size to the content, not the viewport, so the bottom padding follows the last grid.
         // The padding itself lives in components/system-views.css.

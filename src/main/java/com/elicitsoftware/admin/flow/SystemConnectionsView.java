@@ -60,6 +60,7 @@ public class SystemConnectionsView extends VerticalLayout implements HasDynamicT
     private final Grid<TargetRow> grid = new Grid<>();
     private final List<TargetRow> rows = new ArrayList<>();
 
+    /** Sizes the view to its content and styles it as a System view; the content is built after injection. */
     public SystemConnectionsView() {
         // Size to the content, not the viewport, so the bottom padding follows the last grid.
         // The padding itself lives in components/system-views.css.
