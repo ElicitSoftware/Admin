@@ -13,7 +13,6 @@ package com.elicitsoftware.report.pdfbox;
 
 import jakarta.enterprise.context.RequestScoped;
 import org.apache.pdfbox.pdmodel.PDDocument;
-import org.apache.pdfbox.pdmodel.PDPage;
 import org.apache.pdfbox.pdmodel.PDPageContentStream;
 import org.apache.pdfbox.util.Matrix;
 
@@ -57,7 +56,6 @@ import java.util.Arrays;
  * @see Table
  * @see TableBuilder
  * @see PDDocument
- * @since 1.0.0
  */
 @RequestScoped
 public class PDFTableGenerator {
@@ -133,14 +131,7 @@ public class PDFTableGenerator {
     // Draws current page table grid and borderlines and content
     private void drawCurrentPage(PDDocument document, Table table, String[][] currentPageContent, PDPageContentStream contentStream)
             throws IOException {
-        PDPage page = document.getPage(document.getNumberOfPages() - 1);
         float tableTopY = table.isLandscape() ? table.getPageSize().getWidth() - table.getMargin() : table.getPageSize().getHeight() - table.getMargin();
-//        float tableTopY = 0;
-//        if (page.cursorY == 0) {
-//            tableTopY = table.isLandscape() ? table.getPageSize().getWidth() - table.getMargin() : table.getPageSize().getHeight() - table.getMargin();
-//        } else {
-//            tableTopY = page.cursorY - table.getMargin();
-//        }
 
         // Draws grid and borders
         drawTableGrid(table, currentPageContent, contentStream, tableTopY);
@@ -215,15 +206,6 @@ public class PDFTableGenerator {
         }
         return Arrays.copyOfRange(table.getContent(), startRange, endRange);
     }
-
-    // We will need this when we have a table larger that one page.
-//    private PDFPage generatePage(PDDocument doc, Table table) {
-//        PDFPage page = new PDFPage();
-//        page.setMediaBox(table.getPageSize());
-//        page.setRotation(table.isLandscape() ? 90 : 0);
-//        doc.addPage(page);
-//        return page;
-//    }
 
     private PDPageContentStream generateContentStream(PDDocument document, Table table) throws IOException {
 

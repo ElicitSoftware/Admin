@@ -52,9 +52,11 @@ public class PDFDownloadResource {
     private static class PDFCacheEntry {
         byte[] content;
         long timestamp;
+        final String fileName;
 
-        PDFCacheEntry(byte[] content) {
+        PDFCacheEntry(byte[] content, String fileName) {
             this.content = content;
+            this.fileName = fileName;
             this.timestamp = System.currentTimeMillis();
         }
 
@@ -70,13 +72,39 @@ public class PDFDownloadResource {
      * @return a unique key for the cached PDF
      */
     public static String cachePDF(byte[] pdfContent) {
+        return cachePDF(pdfContent, null);
+    }
+
+    /**
+     * Caches PDF bytes under the name of the survey they were generated for (UC-005 BR-187) and
+     * returns the unique key used by the download endpoint.
+     *
+     * @param pdfContent the generated PDF bytes
+     * @param surveyName the survey's name; null offers the PDF as {@code report.pdf}
+     * @return a unique key for the cached PDF
+     */
+    public static String cachePDF(byte[] pdfContent, String surveyName) {
         byte[] randomBytes = new byte[32];
         SECURE_RANDOM.nextBytes(randomBytes);
         String key = "pdf_" + Base64.getUrlEncoder().withoutPadding().encodeToString(randomBytes);
         purgeExpired();
-        PDF_CACHE.put(key, new PDFCacheEntry(pdfContent));
+        PDF_CACHE.put(key, new PDFCacheEntry(pdfContent, fileName(surveyName)));
         dropOldestBeyondLimit();
         return key;
+    }
+
+    /**
+     * The name a survey's PDF is offered under (UC-005 BR-187): {@code <name>-report.pdf}, the name
+     * in lower case with every run of characters other than {@code a}-{@code z} and the digits made
+     * one hyphen and none at either end.
+     *
+     * @param surveyName the survey's name; may be null
+     * @return the file name; {@code report.pdf} when the name leaves nothing
+     */
+    static String fileName(String surveyName) {
+        String slug = surveyName == null ? ""
+                : surveyName.toLowerCase(java.util.Locale.ROOT).replaceAll("[^a-z0-9]+", "-").replaceAll("^-+|-+$", "");
+        return slug.isEmpty() ? "report.pdf" : slug + "-report.pdf";
     }
 
     /**
@@ -124,7 +152,7 @@ public class PDFDownloadResource {
 
         return Response.ok(entry.content)
                 .header("Content-Type", "application/pdf")
-                .header("Content-Disposition", "inline; filename=\"family_history_report.pdf\"")
+                .header("Content-Disposition", "inline; filename=\"" + entry.fileName + "\"")
                 .header("Cache-Control", "no-cache, no-store, must-revalidate")
                 .header("Pragma", "no-cache")
                 .header("Expires", "0")

@@ -88,6 +88,13 @@ public class LocaleConfig {
     record Entry(Boolean rightToLeft, Double fontScale) {
     }
 
+    /**
+     * Whether this locale is written right to left: a {@code i18n.direction.<tag>} property first,
+     * then the manifests, then whether its language is one of the well-known RTL scripts.
+     *
+     * @param locale the locale to look up; {@code null} is left to right
+     * @return {@code true} if the locale is right to left
+     */
     public boolean isRightToLeft(Locale locale) {
         if (locale == null) {
             return false;
@@ -101,9 +108,12 @@ public class LocaleConfig {
 
     /**
      * The multiplier to apply to the root font size for this locale, {@value #DEFAULT_FONT_SCALE}
-     * unless the manifest declares another. A script whose apparent x-height is smaller than
-     * Latin's -- Arabic is the case this exists for -- reads at the same size as English only when
-     * it is set a little larger.
+     * unless an {@code i18n.font-scale.<tag>} property or a manifest declares another. A script
+     * whose apparent x-height is smaller than Latin's -- Arabic is the case this exists for -- reads
+     * at the same size as English only when it is set a little larger.
+     *
+     * @param locale the locale to look up; {@code null} gets {@value #DEFAULT_FONT_SCALE}
+     * @return the font scale for the locale
      */
     public double fontScale(Locale locale) {
         if (locale == null) {
@@ -173,6 +183,7 @@ public class LocaleConfig {
         }
     }
 
+    /** Discards the loaded manifests, so the next lookup reads both {@code i18n-config.json} files again. */
     public void clearCache() {
         entries = null;
     }

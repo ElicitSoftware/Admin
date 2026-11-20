@@ -590,7 +590,7 @@ class RegisterViewUnitTest extends PlainAdminViewTestSupport {
                 status.setAccessCode("");
                 yield response(new AddResponseStatus(status, "Mystery"));
             }
-            case "noStatus" -> response(new AddResponseStatus(null, "Exluded Subject"));
+            case "noStatus" -> response(new AddResponseStatus(null, "Excluded Subject"));
             case "lastOnly" -> {
                 Status status = new Status();
                 status.setLastName("Lee");
@@ -618,7 +618,7 @@ class RegisterViewUnitTest extends PlainAdminViewTestSupport {
         putSubject = request -> response(new AddResponseStatus(null, switch (request.xid) {
             case "n" -> "New Subject";
             case "e" -> "Existing Subject";
-            default -> "Exluded Subject";
+            default -> "Excluded Subject";
         }));
 
         upload("7,3,n,A,B,,,a@x.org,\n7,3,e,A,B,,,a@x.org,\n7,3,x,A,B,,,a@x.org,\n");
@@ -690,7 +690,7 @@ class RegisterViewUnitTest extends PlainAdminViewTestSupport {
 
     /**
      * UC-003 A6 steps 2 and 3, BR-176: the confirmation counts what will be registered on each
-     * survey and department and lists what will be refused; cancelling registers no one.
+     * survey and department and lists what will be refused; canceling registers no one.
      */
     @Test
     void given_aMixedFile_when_uploading_then_theConfirmationSaysWhatWillHappenAndCancelImportsNothing() {

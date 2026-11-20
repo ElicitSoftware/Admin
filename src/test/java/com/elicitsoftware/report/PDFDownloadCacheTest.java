@@ -41,7 +41,7 @@ class PDFDownloadCacheTest {
         assertEquals(200, response.getStatus());
         assertArrayEquals(pdf, (byte[]) response.getEntity());
         assertEquals("application/pdf", response.getHeaderString("Content-Type"));
-        assertEquals("inline; filename=\"family_history_report.pdf\"", response.getHeaderString("Content-Disposition"));
+        assertEquals("inline; filename=\"report.pdf\"", response.getHeaderString("Content-Disposition"));
         assertEquals("no-cache, no-store, must-revalidate", response.getHeaderString("Cache-Control"));
         assertEquals("no-cache", response.getHeaderString("Pragma"));
         assertEquals("0", response.getHeaderString("Expires"));
@@ -138,5 +138,24 @@ class PDFDownloadCacheTest {
         Field timestamp = entry.getClass().getDeclaredField("timestamp");
         timestamp.setAccessible(true);
         timestamp.setLong(entry, System.currentTimeMillis() - millis);
+    }
+
+    /** UC-005 BR-187: the PDF is offered under the survey's name. */
+    @Test
+    void given_aPdfOfASurvey_when_downloaded_then_itIsNamedAfterTheSurvey() {
+        String key = PDFDownloadResource.cachePDF(new byte[]{'%', 'P'}, "Family History Survey");
+
+        assertEquals("inline; filename=\"family-history-survey-report.pdf\"",
+                resource.downloadPDF(key).getHeaderString("Content-Disposition"));
+    }
+
+    /** UC-005 BR-187: only a-z and digits are kept, as one hyphen per run of anything else. */
+    @Test
+    void given_surveyNames_when_namingThePdf_then_onlyLettersAndDigitsAreKept() {
+        assertEquals("family-history-survey-report.pdf", PDFDownloadResource.fileName("Family History Survey"));
+        assertEquals("premm5-v2-report.pdf", PDFDownloadResource.fileName("  PREMM5 (v2) "));
+        assertEquals("report.pdf", PDFDownloadResource.fileName("استبيان"));
+        assertEquals("report.pdf", PDFDownloadResource.fileName(""));
+        assertEquals("report.pdf", PDFDownloadResource.fileName(null));
     }
 }

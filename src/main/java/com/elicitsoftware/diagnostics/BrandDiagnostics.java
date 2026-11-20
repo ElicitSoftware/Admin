@@ -85,7 +85,20 @@ public class BrandDiagnostics {
                               BrandUtil.BrandInfo inUse, List<AssetReport> assets, String logoUrl,
                               List<String> warnings) {
 
-        /** A report of the default lockup and no warnings. */
+        /**
+         * A report of the default lockup and no warnings.
+         *
+         * @param configuredPath {@code brand.file.system.path}
+         * @param localPath      {@code brand.local.path}
+         * @param externalExists whether the configured directory exists
+         * @param localExists    whether the local directory exists
+         * @param metadataFile   the metadata file the resolved directory carries, or null
+         * @param brandName      the brand name from the metadata, or null
+         * @param organization   the organization from the metadata, or null
+         * @param version        the brand version from the metadata, or null
+         * @param inUse          the brand the application resolved and cached
+         * @param assets         every expected asset and its source
+         */
         public BrandReport(String configuredPath, String localPath, boolean externalExists, boolean localExists,
                            String metadataFile, String brandName, String organization, String version,
                            BrandUtil.BrandInfo inUse, List<AssetReport> assets) {
@@ -93,7 +106,12 @@ public class BrandDiagnostics {
                     version, inUse, assets, "/api/brand/images/HorizontalLogo.png", List.of());
         }
 
-        /** A one-line summary for the overview (UC-020 step 3). */
+        /**
+         * A one-line summary for the overview (UC-020 step 3).
+         *
+         * @return where the brand comes from (the mounted directory, the local directory or the embedded
+         *         copy) in the administrator's language
+         */
         public String summary() {
             if (externalExists) {
                 return brandName != null
@@ -159,10 +177,18 @@ public class BrandDiagnostics {
     @Inject
     BrandUtil brandUtil;
 
+    /** Creates the bean; CDI injects the configuration and {@link BrandUtil}. */
     public BrandDiagnostics() {
         // CDI managed bean
     }
 
+    /**
+     * Inspects the brand directories, their metadata ({@code brand-info.json}, else
+     * {@code brand-config.json}) and every expected asset. Metadata that cannot be read leaves the
+     * name, organization and version null.
+     *
+     * @return the brand picture as of this call
+     */
     public BrandReport report() {
         Path external = Paths.get(brandFileSystemPath);
         Path local = Paths.get(brandLocalPath);

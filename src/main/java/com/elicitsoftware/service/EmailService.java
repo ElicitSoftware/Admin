@@ -40,7 +40,6 @@ import java.util.concurrent.TimeoutException;
  * and actual email delivery through the configured email provider.</p>
  *
  * @author Elicit Software
- * @version 1.0
  * @see Message
  */
 @ApplicationScoped
@@ -82,39 +81,6 @@ public class EmailService {
 
     @ConfigProperty(name = "quarkus.mailer.port", defaultValue = "25")
     int mailerPort;
-
-    /**
-     * Sends an immediate email notification for a participant status update.
-     * <p>
-     * This method provides immediate email delivery for status notifications,
-     * typically used for urgent participant communications or system alerts.
-     * The method uses a simple text format with hardcoded content suitable
-     * for basic status notifications.
-     * <p>
-     * Email content:
-     * - Subject: "Ahoy from Quarkus"
-     * - Body: Simple notification message
-     * - Format: Plain text
-     * - Recipient: Extracted from status email field
-     * <p>
-     * Delivery process:
-     * 1. Extract recipient email from status object
-     * 2. Create plain text email with standard content
-     * 3. Set the department's sender address (UC-004 BR-180)
-     * 4. Send via reactive mailer with indefinite await
-     * 5. Return success/failure status
-     * <p>
-     * Error handling:
-     * - Catches all exceptions during email sending
-     * - Logs success and failure messages to console
-     * - Returns boolean indicating delivery success
-     * - Does not throw exceptions (fail-safe behavior)
-     *
-     * @param status The participant status containing recipient email and notification context
-     * @return true if email was sent successfully, false if sending failed
-     * @see Status#getEmail()
-     * @see Status#getAccessCode()
-     */
 
     /**
      * Default constructor for EmailService.
@@ -287,59 +253,6 @@ public class EmailService {
     }
 
     /**
-     * Sends an individual message with dynamic content type support and comprehensive validation.
-     * <p>
-     * This private method handles the actual email delivery for queued messages,
-     * supporting both plain text and HTML content types. It performs thorough
-     * validation before attempting delivery and provides detailed error handling
-     * for troubleshooting failed sends.
-     * <p>
-     * Content type handling:
-     * - **HTML emails**: When mimeType is "text/html", uses Mail.withHtml()
-     * - **Plain text emails**: Default format for all other mime types
-     * - **Dynamic selection**: Content type determined at runtime per message
-     * - **Consistent formatting**: Same sender and recipient handling for both types
-     * <p>
-     * Validation process:
-     * 1. **Message validation**: Ensures message object is not null
-     * 2. **Subject validation**: Verifies message.subject is populated
-     * 3. **Recipient validation**: Confirms subject.getEmail() returns valid email
-     * 4. **Content validation**: Implicit validation of subject line and body
-     * <p>
-     * Email construction:
-     * - **Recipient**: Extracted from message.subject.getEmail()
-     * - **Subject line**: Uses message.subjectLine for email subject
-     * - **Body content**: Uses message.body for email content
-     * - **Sender**: The subject's department's From email, else the site's address (UC-004 BR-180)
-     * - **Content type**: Determined by message.mimeType field
-     * <p>
-     * Delivery process:
-     * 1. Validate message and recipient information
-     * 2. Create appropriate Mail object based on content type
-     * 3. Set the department's sender address
-     * 4. Send via reactive mailer with indefinite await
-     * 5. Return success status for database update
-     * <p>
-     * Error handling:
-     * - **Validation failures**: Log specific validation errors and return false
-     * - **Delivery failures**: Catch exceptions, log details, return false
-     * - **Null pointer protection**: Defensive coding for missing data
-     * - **Exception isolation**: Failures don't propagate to calling methods
-     * <p>
-     * Performance considerations:
-     * - **Blocking operation**: Uses await().indefinitely() for delivery confirmation
-     * - **Individual processing**: Each message processed separately for isolation
-     * - **Error recovery**: Failed messages can be retried in subsequent runs
-     * - **Resource management**: Relies on mailer's connection pooling
-     *
-     * @param message The message object containing recipient, content, and formatting information
-     * @return true if message was sent successfully, false if validation or sending failed
-     * @see Message#subject
-     * @see Message#subjectLine
-     * @see Message#body
-     * @see Message#mimeType
-     */
-    /**
      * Sends a short plain-text message to prove the relay works (UC-024).
      * <p>
      * Uses the same mailer, sender and timeout as invitations (BR-093), so a passing test means
@@ -403,6 +316,15 @@ public class EmailService {
         return Department.findById(departmentId);
     }
 
+    /**
+     * Sends one queued message to its subject's email address, as HTML when its MIME type is
+     * {@code text/html} and as plain text otherwise, from the subject's department's sender address
+     * (UC-004 BR-180). The send waits at most {@code mailSendTimeoutSeconds}.
+     *
+     * @param message the message to send
+     * @return true when the mailer accepted it; false when the subject has no email address, or the
+     *         send timed out, was refused or failed (the cause is logged)
+     */
     private boolean sendMessage(Message message) {
         Log.debugf("sendMessage: validating message id=%d", message.id);
         try {

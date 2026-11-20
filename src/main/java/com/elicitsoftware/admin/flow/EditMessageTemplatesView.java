@@ -62,8 +62,6 @@ import jakarta.transaction.Transactional;
  * </ul>
  *
  * @author Elicit Software
- * @version 1.0
- * @since 1.0
  */
 @Route(value = "edit-message-template/:id?", layout = MainLayout.class)
 @RolesAllowed("elicit_admin")

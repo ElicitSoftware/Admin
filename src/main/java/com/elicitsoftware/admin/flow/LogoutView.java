@@ -47,8 +47,6 @@ import jakarta.annotation.security.PermitAll;
  * </ol>
  * 
  * @author Elicit Software
- * @version 1.0
- * @since 1.0
  * @see VaadinSession
  */
 @Route("logout")

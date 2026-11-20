@@ -39,7 +39,7 @@
 **Trigger:** The mail server rejects the message or is unreachable (step 4 or A1).
 **Flow:**
 
-1. The system reports the failure to the user (manual send) or logs it and leaves the message unsent for retry (scheduled send).
+1. The system reports the failure to the user (manual send) or logs it and leaves the message unsent for retry (scheduled send). An unexpected failure of a manual send is reported with a reference the log carries with its cause; the cause itself is not shown (NFR-023).
 
 ### A3: Subject has no email
 

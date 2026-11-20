@@ -77,8 +77,6 @@ import org.hibernate.validator.constraints.Length;
  * </ul>
  *
  * @author Elicit Software
- * @version 1.0
- * @since 1.0
  * @see Department
  * @see MessageType
  * @see PanacheEntityBase

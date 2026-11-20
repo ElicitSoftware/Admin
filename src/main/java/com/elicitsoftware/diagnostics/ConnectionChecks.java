@@ -78,11 +78,17 @@ public class ConnectionChecks {
             .followRedirects(HttpClient.Redirect.NEVER)
             .build();
 
+    /** Creates the bean; CDI manages its lifecycle. */
     public ConnectionChecks() {
         // CDI managed bean
     }
 
-    /** Every target this deployment knows, in display order. */
+    /**
+     * Every target this deployment knows, in display order.
+     *
+     * @return the identity provider, the Survey application, the reports, the post-survey actions,
+     *         the mail relay and the telemetry collector, each only where configured or stored
+     */
     @Transactional
     public List<Target> targets() {
         Config config = ConfigProvider.getConfig();
@@ -145,7 +151,12 @@ public class ConnectionChecks {
         }
     }
 
-    /** Probes one target within {@link #TIMEOUT}. */
+    /**
+     * Probes one target within {@link #TIMEOUT}.
+     *
+     * @param target the dependency to probe
+     * @return the outcome; a timeout, an I/O failure or an interruption is reported as down, never thrown
+     */
     public CheckResult check(Target target) {
         long start = System.nanoTime();
         try {
@@ -165,6 +176,11 @@ public class ConnectionChecks {
         }
     }
 
+    /**
+     * Probes every target, one after another.
+     *
+     * @return one result per target, in the order of {@link #targets()}
+     */
     public List<CheckResult> checkAll() {
         return targets().stream().map(this::check).toList();
     }

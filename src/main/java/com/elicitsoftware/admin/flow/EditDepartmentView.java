@@ -21,7 +21,6 @@ import com.vaadin.flow.component.notification.Notification;
 import com.vaadin.flow.component.orderedlayout.HorizontalLayout;
 import com.vaadin.flow.component.orderedlayout.VerticalLayout;
 import com.vaadin.flow.component.textfield.EmailField;
-import com.vaadin.flow.component.textfield.TextArea;
 import com.vaadin.flow.component.textfield.TextField;
 import com.vaadin.flow.component.textfield.TextFieldVariant;
 import com.vaadin.flow.data.binder.Binder;
@@ -55,8 +54,6 @@ import java.util.stream.Collectors;
  * </ul>
  *
  * @author Elicit Software
- * @version 1.0
- * @since 1.0
  */
 @Route(value = "edit-department/:id?", layout = MainLayout.class)
 @RolesAllowed("elicit_admin")
@@ -94,9 +91,6 @@ public class EditDepartmentView extends VerticalLayout implements BeforeEnterObs
      * the selection is stored in its own join table, by the service, beside the department.
      */
     final MultiSelectComboBox<Survey> surveysField = new MultiSelectComboBox<>();
-    
-    /** Text area for notification emails. */
-//    private TextArea notificationEmailsField = new TextArea("Notification Emails");
     
     /** Data binder for form validation and data binding. */
     private final Binder<Department> binder = new Binder<>(Department.class);
@@ -161,12 +155,7 @@ public class EditDepartmentView extends VerticalLayout implements BeforeEnterObs
         fromEmailField.setHelperText(getTranslation("editDepartmentView.fromEmail.helper"));
         fromEmailField.setWidth("300px");
         
-//        notificationEmailsField.setHelperText("Comma-separated list of emails to notify when respondents finish surveys");
-//        notificationEmailsField.setHeight("100px");
-//        notificationEmailsField.setWidth("300px");
-        
         // Add form fields to layout
-//        add(nameField, codeField, defaultMessageIdField, fromEmailField, notificationEmailsField);
         add(nameField, codeField, defaultMessageIdField, fromEmailField, surveysField);
 
         // Configure buttons
@@ -227,11 +216,6 @@ public class EditDepartmentView extends VerticalLayout implements BeforeEnterObs
                 .bind("fromEmail");
         
         // Notification Emails validation (optional, max 2000 chars)
-//        binder.forField(notificationEmailsField)
-//                .withValidator(new StringLengthValidator(
-//                        "Notification emails must be 2000 characters or less", 0, 2000))
-//                .bind("notificationEmails");
-        
         // Enable/disable save button based on validation
         binder.addStatusChangeListener(event -> 
                 saveBtn.setEnabled(binder.isValid()));

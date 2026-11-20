@@ -64,8 +64,6 @@ import java.io.Serializable;
  * }</pre>
  *
  * @author Elicit Software
- * @version 1.0
- * @since 1.0
  * @see User
  * @see SecurityIdentity
  * @see VaadinSession

@@ -49,23 +49,23 @@ class RespondentTransferResourceUnitTest {
         return body;
     }
 
-    private static RespondentImportResource importer(Function<InputStream, ImportResult> behaviour) {
+    private static RespondentImportResource importer(Function<InputStream, ImportResult> behavior) {
         RespondentImportResource resource = new RespondentImportResource();
         resource.respondentImportService = new RespondentImportService() {
             @Override
             public ImportResult importFromFile(InputStream inputStream) {
-                return behaviour.apply(inputStream);
+                return behavior.apply(inputStream);
             }
         };
         return resource;
     }
 
-    private static RespondentExportResource exporter(Function<Integer, String> behaviour) {
+    private static RespondentExportResource exporter(Function<Integer, String> behavior) {
         RespondentExportResource resource = new RespondentExportResource();
         resource.respondentExportService = new RespondentExportService() {
             @Override
             public String exportRespondent(Integer respondentId) {
-                return behaviour.apply(respondentId);
+                return behavior.apply(respondentId);
             }
 
             @Override

@@ -22,7 +22,7 @@
 3. The system confirms no subject with that external ID already exists in the department.
 4. The system generates a unique access code and creates a respondent (UC-015).
 5. The system stores the subject and generates the department's default messages for it.
-6. The system returns a per-record outcome: newly registered, already existing, or excluded.
+6. The system returns a per-record outcome: newly registered (`New Subject`), already existing (`Existing Subject`), or excluded (`Excluded Subject`).
 
 ## Alternative Flows
 

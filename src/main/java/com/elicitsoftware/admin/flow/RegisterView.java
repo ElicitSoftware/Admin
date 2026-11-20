@@ -107,11 +107,9 @@ import java.util.Optional;
  * </ul>
  *
  * @author Elicit Software
- * @version 1.0
  * @see Subject
  * @see CsvImportService
  * @see AccessCodeService
- * @since 1.0
  */
 @Route(value = "register/:id?", layout = MainLayout.class)
 @RolesAllowed({"elicit_admin", "elicit_user"})
@@ -468,7 +466,6 @@ public class RegisterView extends HorizontalLayout implements HasDynamicTitle, B
         if (user == null) {
             return; // no console record: init() already showed the explanation (UC-001 A1)
         }
-        // Authorization is now handled by @RolesAllowed annotation
         refreshMissingSurveyNotice();
 
         Optional<String> idOpt = event.getRouteParameters().get(ID_PARAMETER);
@@ -588,8 +585,8 @@ public class RegisterView extends HorizontalLayout implements HasDynamicTitle, B
                 return;
             }
 
-            boolean isExluded = ExcludedXid.isExcluded(this.subject.getXid(), (int) this.subject.getDepartmentId());
-            if (isExluded) {
+            boolean isExcluded = ExcludedXid.isExcluded(this.subject.getXid(), (int) this.subject.getDepartmentId());
+            if (isExcluded) {
                 // Find the department name from the user's departments by ID
                 String departmentName = user.getDepartments().stream()
                     .filter(dept -> dept.id == this.subject.getDepartmentId())
@@ -692,51 +689,6 @@ public class RegisterView extends HorizontalLayout implements HasDynamicTitle, B
     }
 
     /**
-     * Registers a new user account in the system.
-     *
-     * <p>This method performs comprehensive user registration including:</p>
-     * <ol>
-     *   <li>Form validation using the configured binder</li>
-     *   <li>Password encryption using BCrypt</li>
-     *   <li>User entity creation and persistence</li>
-     *   <li>Success notification display</li>
-     *   <li>Navigation to login page</li>
-     * </ol>
-     *
-     * <p>If validation fails, appropriate error messages are displayed
-     * and the registration process is halted.</p>
-     */
-    @Transactional
-    public void register() {
-        // ...existing code...
-    }
-
-    /**
-     * Creates and configures the department selection combo box.
-     *
-     * <p>This method builds a department selector that is filtered based on the
-     * current user's department permissions. Only departments that the user
-     * has access to are available for selection.</p>
-     *
-     * <p>The combo box is configured with:</p>
-     * <ul>
-     *   <li>Department names as display labels</li>
-     *   <li>Filtered list based on user permissions</li>
-     *   <li>Proper binding to the subject's department ID</li>
-     * </ul>
-     *
-     * @return a configured ComboBox for department selection
-     */
-    /**
-     * Creates the survey selection combo box (UC-003): the survey the new subject's access code
-     * is generated for. Lists every installed survey in display order; when only one survey is
-     * installed the caller pre-selects it so the form behaves as it did before this selector
-     * existed.
-     *
-     * @param surveys the installed surveys, in display order
-     * @return a configured ComboBox for survey selection
-     */
-    /**
      * Narrows the survey choice to the department's surveys (UC-003 BR-174), keeping the current
      * survey when it is still offered and choosing the only one when there is one. A read-only
      * choice, an existing subject's, offers every survey, so it shows the subject's as it is.
@@ -766,6 +718,13 @@ public class RegisterView extends HorizontalLayout implements HasDynamicTitle, B
         }
     }
 
+    /**
+     * Creates the survey selection combo box (UC-003): the survey the new subject's access code is
+     * generated for, labelled by survey name.
+     *
+     * @param surveys the surveys to offer, in display order
+     * @return a configured ComboBox for survey selection
+     */
     private ComboBox<Survey> getSurveyComboBox(List<Survey> surveys) {
         ComboBox<Survey> surveyComboBox = new ComboBox<>(getTranslation("registerView.survey"));
         surveyComboBox.setItems(surveys);
@@ -774,6 +733,12 @@ public class RegisterView extends HorizontalLayout implements HasDynamicTitle, B
         return surveyComboBox;
     }
 
+    /**
+     * Creates the department selection combo box, offering only the departments the signed-in user is
+     * assigned to (NFR-021), labelled by department name.
+     *
+     * @return a configured ComboBox for department selection
+     */
     private ComboBox<Department> getDepartmentComboBox() {
         ComboBox<Department> departmentComboBox = new ComboBox<>(getTranslation("registerView.department"));
         departmentComboBox.setItems(user.getDepartments());
@@ -1159,7 +1124,7 @@ public class RegisterView extends HorizontalLayout implements HasDynamicTitle, B
     /**
      * The confirmation of UC-003 A6 step 2: how many subjects the upload will register on each
      * survey and in each department, and each row it will refuse. Confirming imports the
-     * accepted rows (step 4); cancelling imports nothing (step 3).
+     * accepted rows (step 4); canceling imports nothing (step 3).
      */
     private void confirmCsvImport(CsvImportService importService, CsvImportService.CsvImportPlan plan) {
         ConfirmDialog dialog = new ConfirmDialog();
@@ -1265,6 +1230,19 @@ public class RegisterView extends HorizontalLayout implements HasDynamicTitle, B
         return sections;
     }
 
+    /** The import service's outcome word in the administrator's language; an unknown one is shown as sent. */
+    private String outcomeLabel(String importStatus) {
+        if (importStatus == null) {
+            return "";
+        }
+        return switch (importStatus) {
+            case "New Subject" -> getTranslation("registerView.csvImport.outcome.new"); // i18n:ignore
+            case "Existing Subject" -> getTranslation("registerView.csvImport.outcome.existing"); // i18n:ignore
+            case "Excluded Subject" -> getTranslation("registerView.csvImport.outcome.excluded"); // i18n:ignore
+            default -> importStatus;
+        };
+    }
+
     /**
      * Describes one imported row: what became of it, and enough of the subject to recognize.
      *
@@ -1276,19 +1254,6 @@ public class RegisterView extends HorizontalLayout implements HasDynamicTitle, B
      * @param subject one row's outcome
      * @return a single line of text
      */
-    /** The import service's outcome word in the administrator's language; an unknown one is shown as sent. */
-    private String outcomeLabel(String importStatus) {
-        if (importStatus == null) {
-            return "";
-        }
-        return switch (importStatus) {
-            case "New Subject" -> getTranslation("registerView.csvImport.outcome.new"); // i18n:ignore
-            case "Existing Subject" -> getTranslation("registerView.csvImport.outcome.existing"); // i18n:ignore
-            case "Exluded Subject" -> getTranslation("registerView.csvImport.outcome.excluded"); // i18n:ignore
-            default -> importStatus;
-        };
-    }
-
     private String describe(AddResponseStatus subject) {
         String outcome = outcomeLabel(subject.getImportStatus());
         Status status = subject.getStatus();

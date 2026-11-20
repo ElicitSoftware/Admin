@@ -118,7 +118,13 @@ public class ReportingSchemaRenameClient {
         return null;
     }
 
-    /** The address a rename of one survey's schema goes to. */
+    /**
+     * The address a rename of one survey's schema goes to.
+     *
+     * @param surveyKey the survey's portable key
+     * @param newName   the name the schema should carry, URL-encoded into the query
+     * @return Survey's rename endpoint for that survey and name
+     */
     public String endpoint(UUID surveyKey, String newName) {
         return ReportingSchemaRebuildClient.baseUrl(surveyUrl) + "/api/etl/schema/" + surveyKey + "/rename?name="
                 + URLEncoder.encode(newName, StandardCharsets.UTF_8);

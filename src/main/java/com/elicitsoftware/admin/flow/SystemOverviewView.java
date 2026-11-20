@@ -84,6 +84,7 @@ public class SystemOverviewView extends VerticalLayout implements HasDynamicTitl
     @Inject
     SetupWarnings setupWarnings;
 
+    /** Sizes the view to its content and styles it as a System view; the content is built after injection. */
     public SystemOverviewView() {
         // Size to the content, not the viewport, so the bottom padding follows the last grid.
         // The padding itself lives in components/system-views.css.

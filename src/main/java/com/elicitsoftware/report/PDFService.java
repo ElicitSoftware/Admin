@@ -81,7 +81,6 @@ import jakarta.enterprise.context.RequestScoped;
  *
  * @see ReportResponse
  * @see Content
- * @since 1.0.0
  */
 @RequestScoped
 public class PDFService {
@@ -162,35 +161,6 @@ public class PDFService {
      * Orientation of the current page; a page started to continue a report keeps it.
      */
     boolean landscape;
-
-    /**
-     * Generates a PDF document from a list of report responses and returns it as a StreamResource.
-     * <p>
-     * This method processes each report response sequentially, handling page breaks, titles,
-     * and various content types (text, SVG, tables). It automatically manages page layout,
-     * font settings, and content positioning throughout the document generation process.
-     * <p>
-     * The generated PDF includes:
-     * - Proper page margins and formatting
-     * - Automatic page breaks when content overflows
-     * - Headers and footers on all pages
-     * - Consistent font and styling throughout
-     * <p>
-     * Process flow:
-     * 1. Initialize new PDF document with standard page size
-     * 2. Process each report response in sequence
-     * 3. Handle page breaks as specified in report data
-     * 4. Add title blocks, text content, SVG graphics, and tables
-     * 5. Add headers and footers to all pages
-     * 6. Save document to stream and return as downloadable resource
-     *
-     * @param reportResponses List of report responses containing the content to be rendered
-* @return DownloadHandler containing the generated PDF, named "family_history_report.pdf"
- * @throws RuntimeException if an IOException occurs during PDF generation
- * @see ReportResponse
- * @see Content
- * @see DownloadHandler
-     */
 
     /**
      * Default constructor for PDFService.
@@ -609,7 +579,7 @@ public class PDFService {
     /**
      * Draws a full-page SVG (the pedigree) on the current page, below what is already there:
      * scaled to fit between the cursor and the room kept for the report's text that follows it,
-     * centred across the page and aligned to the top, and the cursor is moved to just below it.
+     * centered across the page and aligned to the top, and the cursor is moved to just below it.
      * When too little of the page is left for a legible drawing it starts a page of the same
      * orientation first. The drawing is added to the open content stream, so the report's title
      * above it and its legend below it stay on the page (UC-005, #132).
@@ -667,7 +637,7 @@ public class PDFService {
         double scale = Math.min(boxWidth / expandedBounds.getWidth(), boxHeight / expandedBounds.getHeight());
         graphics2D.scale(scale, scale);
 
-        // Centre across the box and align to its top (Graphics2D's y runs down from the top)
+        // Center across the box and align to its top (Graphics2D's y runs down from the top)
         double translateX = (boxWidth / scale - expandedBounds.getWidth()) / 2.0;
         graphics2D.translate(translateX - expandedBounds.getX(), -expandedBounds.getY());
 

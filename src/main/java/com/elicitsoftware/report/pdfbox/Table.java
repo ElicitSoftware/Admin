@@ -52,7 +52,6 @@ import java.util.List;
  * @see TableBuilder
  * @see PDFTableGenerator
  * @see Column
- * @since 1.0.0
  */
 public class Table {
 

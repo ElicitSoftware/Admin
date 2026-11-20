@@ -109,7 +109,7 @@ public class ElicitI18NProvider implements I18NProvider {
     private volatile List<Locale> providedLocales;
 
     /**
-     * A provider built outside CDI that still honours the deployment's settings: the injected
+     * A provider built outside CDI that still honors the deployment's settings: the injected
      * fields are only set on the container's bean, so a bare {@code new} would read the default
      * mount whatever the site configured. A setting that cannot be read keeps its default.
      */
@@ -186,7 +186,12 @@ public class ElicitI18NProvider implements I18NProvider {
         reportedMissing.clear();
     }
 
-    /** True when this site offers the locale, or its language. */
+    /**
+     * True when this site offers exactly this locale.
+     *
+     * @param locale the locale to look for
+     * @return true when the locale is among {@link #getProvidedLocales()}
+     */
     public boolean isProvided(Locale locale) {
         return getProvidedLocales().contains(locale);
     }
