@@ -30,7 +30,7 @@
 
 ### A1: Validation errors
 
-**Trigger:** Required fields are missing or a value fails its format rule (step 5).
+**Trigger:** Required fields are missing, a value fails its format rule, or a value is longer than the subject stores (BR-189) (step 5).
 **Flow:**
 
 1. The system highlights the invalid fields and asks the user to correct them.
@@ -113,6 +113,10 @@ If provided, phone must match the pattern ###-###-#### .
 ### BR-011: Date of birth in the past
 
 If provided, date of birth must be a past date.
+
+### BR-189: Field lengths
+
+A first, middle or last name is at most 50 characters and an email address at most 255. The form refuses a longer value with an error on the field naming its limit, in the user's language, and saves nothing (A1). A CSV row, on this page or through the integration API, is refused in the same words (UC-010 BR-188).
 
 ### BR-012: External ID unique within a department
 
