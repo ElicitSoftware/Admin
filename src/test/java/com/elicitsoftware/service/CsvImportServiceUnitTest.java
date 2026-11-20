@@ -88,7 +88,7 @@ class CsvImportServiceUnitTest {
     @Test
     void given_validLines_when_imported_then_eachBecomesARegistrationRequest() throws Exception {
         AddResponse response = importCsv(service(r -> registeredAs("New Subject " + r.xid)),
-                "# surveyId,departmentId,xid,...,phone\n\n 7 , 1 , X1 , Jane , Doe ,, 1980-02-03 , j@x.org , 555 \n"
+                "# surveyId,departmentId,xid,...,phone\n\n 7 , 1 , X1 , Jane , Doe ,, 1980-02-03 , j@x.org , 555-010-0100 \n"
                         + "4,2,,\"Doe, Jr\",Smith,M,02/03/1981,a@x.org,\n");
 
         assertEquals(2, registered.size());
@@ -100,7 +100,7 @@ class CsvImportServiceUnitTest {
         assertEquals("", first.middleName);
         assertEquals(LocalDate.of(1980, 2, 3), first.dob);
         assertEquals("j@x.org", first.email);
-        assertEquals("555", first.phone);
+        assertEquals("555-010-0100", first.phone);
         assertEquals("X1", first.xid);
 
         AddRequest second = registered.get(1);

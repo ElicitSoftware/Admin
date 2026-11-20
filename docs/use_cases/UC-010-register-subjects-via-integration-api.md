@@ -45,7 +45,7 @@
 **Trigger:** Access code generation fails, or a record is otherwise invalid, during a batch or CSV import (step 4).
 **Flow:**
 
-1. The system records an error for that record only and continues processing the remaining records. An unexpected failure is reported as a fixed phrase with a reference (BR-139).
+1. The system records an error for that record only and continues processing the remaining records. A record that breaks a subject rule is refused naming the field at fault (BR-188); an unexpected failure is reported as a fixed phrase with a reference (BR-139).
 
 ### A4: No CSV file provided
 
@@ -56,7 +56,7 @@
 
 ### A5: Malformed CSV rows
 
-**Trigger:** One or more CSV rows are missing required fields or have an unparseable department ID or date.
+**Trigger:** One or more CSV rows are missing required fields, have an unparseable department ID or date, or break a subject rule (BR-188).
 **Flow:**
 
 1. The system collects the line-level errors and reports that the import completed with errors, identifying the failing lines.
@@ -123,6 +123,10 @@ Every data row of a CSV upload carries its survey ID as the first column. An upl
 ### BR-036: CSV required fields
 
 Each CSV row requires a parseable survey ID and department ID, first name, last name, and email; date of birth accepts `yyyy-MM-dd` or `MM/dd/yyyy`.
+
+### BR-188: A record must satisfy the subject rules
+
+A record is registered only if the subject it describes satisfies the rules of UC-003: a first and last name (BR-009), an email address in a valid format (BR-009), a phone number, when given, as `###-###-####` (BR-010), a date of birth, when given, in the past, and no field longer than the subject stores (50 characters for a name, 255 for the email address). The record is checked before an access code is generated, so a refused record creates nothing: no subject, respondent, access code or message. The refusal names each field at fault and why, and repeats nothing but the external ID the caller sent. It is the same for a single subject, a batch and a CSV import, the Register page's upload included (UC-003 A6); in a batch or an import, the other records go on (BR-037).
 
 ### BR-037: Independent per-record processing
 
