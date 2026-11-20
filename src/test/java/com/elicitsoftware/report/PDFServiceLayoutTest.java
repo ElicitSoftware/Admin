@@ -146,7 +146,7 @@ class PDFServiceLayoutTest {
             float width = PDFService.TEXT_FONT.getStringWidth("Page 1 of 1") / 1000 * 10;
             assertEquals(612f - 40f - width, footerPage.x(), 0.5f, "the page number is right-aligned");
             float urlWidth = PDFService.TEXT_FONT.getStringWidth(URL) / 1000 * 10;
-            assertEquals((612f - urlWidth) / 2, where.get(URL).x(), 0.5f, "the address is centred");
+            assertEquals((612f - urlWidth) / 2, where.get(URL).x(), 0.5f, "the address is centered");
             assertEquals(30f, header.yFromTop(), 0.5f, "the header sits in the top margin");
             String date = LocalDate.now().format(DateTimeFormatter.ofPattern("MM/dd/yyyy"));
             for (String footer : List.of(date, URL, "Page 1 of 1")) {

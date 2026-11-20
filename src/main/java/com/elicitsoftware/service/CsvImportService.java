@@ -369,13 +369,11 @@ public class CsvImportService {
      * </pre>
      *
      * @param fields The CSV line's fields, split by splitCsvLine
-     *                //     * @param user The user performing the import (used for department validation)
      * @return AddRequest object populated with validated participant data
      * @throws Exception If validation fails with descriptive error message indicating the specific problem
      * @see #splitCsvLine(String)
      * @see AddRequest
      */
-//    private AddRequest parseCsvLine(String csvLine, User user) throws Exception {
     private AddRequest parseCsvLine(String[] fields) throws Exception {
 
         if (fields.length <= EMAIL_COLUMN) {

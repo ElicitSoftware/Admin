@@ -61,6 +61,7 @@ import com.vaadin.flow.router.BeforeEnterObserver;
 import com.vaadin.flow.router.HasDynamicTitle;
 import com.vaadin.flow.router.Route;
 
+import io.quarkus.logging.Log;
 import io.quarkus.panache.common.Sort;
 import io.quarkus.security.identity.SecurityIdentity;
 import jakarta.annotation.PostConstruct;
@@ -275,12 +276,13 @@ public class SearchView extends VerticalLayout implements HasDynamicTitle, Befor
      */
 
     /**
-     * Checks user authentication and authorization before entering the view.
-     * Authorization is now handled by @RolesAllowed annotation.
+     * Shows or removes the notice that no survey is installed on every entry (UC-019 BR-076).
+     * Who may enter is decided by the class's {@code @RolesAllowed}.
+     *
+     * @param event the navigation event
      */
     @Override
     public void beforeEnter(BeforeEnterEvent event) {
-        // Authorization is now handled by @RolesAllowed annotation
         refreshMissingSurveyNotice();
     }
 
@@ -633,14 +635,14 @@ public class SearchView extends VerticalLayout implements HasDynamicTitle, Befor
                                 Notification.show(getTranslation("searchView.action.emailFailed"), 5000, Notification.Position.TOP_CENTER);
                             }
                         } catch (Exception ex) {
-                            Notification.show(getTranslation("searchView.action.emailError", ex.getMessage()), 5000, Notification.Position.TOP_CENTER);
+                            Notification.show(getTranslation("searchView.action.emailError", logged("Sending an email", ex)), 5000, Notification.Position.TOP_CENTER); // i18n:ignore (log text)
                         }
                     } else if (ACTION_PRINT_REPORTS.equals(selectedAction)) {
                         try {
                             reportingService.printReports(status);
                             Notification.show(getTranslation("searchView.action.reportsGenerated"), 3000, Notification.Position.TOP_CENTER);
                         } catch (Exception ex) {
-                            Notification.show(getTranslation("searchView.action.reportsError", ex.getMessage()), 5000, Notification.Position.TOP_CENTER);
+                            Notification.show(getTranslation("searchView.action.reportsError", logged("Printing reports", ex)), 5000, Notification.Position.TOP_CENTER); // i18n:ignore (log text)
                         }
                     } else if (ACTION_EXPORT.equals(selectedAction)) {
                         UI.getCurrent().getPage().executeJs("window.open($0, '_blank')", buildExportUrl(status));
@@ -920,6 +922,20 @@ public class SearchView extends VerticalLayout implements HasDynamicTitle, Befor
     @Override
     public String getPageTitle() {
         return getTranslation("searchView.pageTitle");
+    }
+
+    /**
+     * Logs an action's unexpected failure and returns the reference shown in its place (NFR-023):
+     * the reference is on the log line with the cause, and nothing of the cause reaches the page.
+     *
+     * @param action what failed, for the log line
+     * @param e      the failure
+     * @return {@code ref <8 hex digits>}
+     */
+    static String logged(String action, Exception e) {
+        String reference = java.util.UUID.randomUUID().toString().substring(0, 8);
+        Log.errorf(e, "%s failed (ref %s)", action, reference);
+        return "ref " + reference; // i18n:ignore (a log reference, the same in every language)
     }
 
     /**

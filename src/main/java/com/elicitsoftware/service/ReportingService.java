@@ -198,8 +198,6 @@ public class ReportingService {
      * @param status the Status object containing survey and respondent information
      */
     public void printReports(Status status) {
-        // Implement report generation logic here
-        // For example: generate PDF reports for finished surveys
         try {
             Survey survey = Survey.findById(status.getSurveyId());
             int respondent_id = (int) status.getRespondentId();
@@ -208,7 +206,7 @@ public class ReportingService {
                     (httpRequest.getServerPort() != 80 && httpRequest.getServerPort() != 443 ?
                             ":" + httpRequest.getServerPort() : "") + httpRequest.getContextPath();
             byte[] pdfContent = pdfService.generatePDF(reportResponses, baseUrl);
-            String pdfKey = PDFDownloadResource.cachePDF(pdfContent);
+            String pdfKey = PDFDownloadResource.cachePDF(pdfContent, survey.name);
             String pdfUrl = httpRequest.getContextPath() + "/api/pdf/download?key=" + pdfKey;
 
             UI ui = UI.getCurrent();

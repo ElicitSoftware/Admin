@@ -468,7 +468,6 @@ public class RegisterView extends HorizontalLayout implements HasDynamicTitle, B
         if (user == null) {
             return; // no console record: init() already showed the explanation (UC-001 A1)
         }
-        // Authorization is now handled by @RolesAllowed annotation
         refreshMissingSurveyNotice();
 
         Optional<String> idOpt = event.getRouteParameters().get(ID_PARAMETER);
@@ -1139,7 +1138,7 @@ public class RegisterView extends HorizontalLayout implements HasDynamicTitle, B
     /**
      * The confirmation of UC-003 A6 step 2: how many subjects the upload will register on each
      * survey and in each department, and each row it will refuse. Confirming imports the
-     * accepted rows (step 4); cancelling imports nothing (step 3).
+     * accepted rows (step 4); canceling imports nothing (step 3).
      */
     private void confirmCsvImport(CsvImportService importService, CsvImportService.CsvImportPlan plan) {
         ConfirmDialog dialog = new ConfirmDialog();
