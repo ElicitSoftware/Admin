@@ -42,6 +42,14 @@ public class LocaleLayout {
     @Inject
     LocaleConfig localeConfig;
 
+    /**
+     * Sets the UI's text direction, its {@code dir}, {@code lang} and font-scale attributes, and the
+     * document element's {@code lang}, {@code dir} and {@value #FONT_SCALE_PROPERTY} for the locale.
+     * Does nothing if either argument is {@code null}.
+     *
+     * @param ui     the UI to lay out
+     * @param locale the locale whose direction and font scale apply
+     */
     public void apply(UI ui, Locale locale) {
         if (ui == null || locale == null) {
             return;
@@ -58,10 +66,22 @@ public class LocaleLayout {
                 locale.toLanguageTag(), direction.getClientName(), FONT_SCALE_PROPERTY, fontScale);
     }
 
+    /**
+     * The Vaadin text direction for a locale.
+     *
+     * @param locale the locale; {@code null} is left to right
+     * @return {@link Direction#RIGHT_TO_LEFT} for a right-to-left locale, otherwise {@link Direction#LEFT_TO_RIGHT}
+     */
     public Direction directionFor(Locale locale) {
         return localeConfig.isRightToLeft(locale) ? Direction.RIGHT_TO_LEFT : Direction.LEFT_TO_RIGHT;
     }
 
+    /**
+     * The font scale for a locale, as {@link LocaleConfig#fontScale(Locale)} resolves it.
+     *
+     * @param locale the locale; {@code null} gets the default scale
+     * @return the multiplier for the root font size
+     */
     public double fontScaleFor(Locale locale) {
         return localeConfig.fontScale(locale);
     }

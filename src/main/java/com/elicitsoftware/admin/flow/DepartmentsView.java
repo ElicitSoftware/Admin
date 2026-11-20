@@ -36,8 +36,6 @@ import jakarta.inject.Inject;
  * with edit buttons for each row and includes a button to create new departments.</p>
  * 
  * @author Elicit Software
- * @version 1.0
- * @since 1.0
  */
 @Route(value = "departments", layout = MainLayout.class)
 @RolesAllowed("elicit_admin")

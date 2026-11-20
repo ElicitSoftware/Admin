@@ -40,8 +40,6 @@ import org.eclipse.microprofile.jwt.JsonWebToken;
  * </p>
  *
  * @author Elicit Software
- * @version 1.0
- * @since 1.0
  */
 @Route(value = "oidc", layout = MainLayout.class)
 @RolesAllowed("elicit_admin")

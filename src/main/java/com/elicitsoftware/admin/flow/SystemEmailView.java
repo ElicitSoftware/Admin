@@ -68,6 +68,7 @@ public class SystemEmailView extends VerticalLayout implements HasDynamicTitle {
 
     final EmailField recipient = new EmailField();
 
+    /** Creates the view's frame; the settings grid and the test send are built after injection. */
     public SystemEmailView() {
         // Size to the content, not the viewport, so the bottom padding follows the last grid.
         // The padding itself lives in components/system-views.css.

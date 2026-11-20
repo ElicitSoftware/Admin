@@ -57,7 +57,6 @@ import jakarta.persistence.*;
  * }</pre>
  *
  * @author Elicit Software
- * @version 1.0
  * @see Survey
  * @see PanacheEntityBase
  */

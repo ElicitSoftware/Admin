@@ -97,7 +97,6 @@ import java.util.List;
  * @see AddResponse
  * @see AccessCodeService
  * @see com.elicitsoftware.model.User
- * @since 1.0.0
  */
 @ApplicationScoped
 public class CsvImportService {
@@ -300,22 +299,38 @@ public class CsvImportService {
         final List<String> refused = new ArrayList<>();
         final List<Integer> withoutSurvey = new ArrayList<>();
 
-        /** @return the rows that would be registered */
+        /**
+         * Returns the rows that would be registered.
+         *
+         * @return the rows that would be registered, as an unmodifiable copy
+         */
         public List<CsvRow> accepted() {
             return List.copyOf(accepted);
         }
 
-        /** @return the rows that would be refused, each "Line n: reason" */
+        /**
+         * Returns the rows that would be refused.
+         *
+         * @return the rows that would be refused, each "Line n: reason", as an unmodifiable copy
+         */
         public List<String> refused() {
             return List.copyOf(refused);
         }
 
-        /** @return the line numbers of the rows that name no survey */
+        /**
+         * Returns the line numbers of the rows that name no survey.
+         *
+         * @return the line numbers of the rows that name no survey, as an unmodifiable copy
+         */
         public List<Integer> linesWithoutSurvey() {
             return List.copyOf(withoutSurvey);
         }
 
-        /** @return true when a row names no survey, which rejects the whole file (BR-175) */
+        /**
+         * Returns whether the whole file is rejected.
+         *
+         * @return true when a row names no survey, which rejects the whole file (BR-175)
+         */
         public boolean rejected() {
             return !withoutSurvey.isEmpty();
         }

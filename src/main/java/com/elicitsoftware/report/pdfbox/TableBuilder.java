@@ -55,7 +55,6 @@ import java.util.List;
  * 
  * @see Table
  * @see Column
- * @since 1.0.0
  */
 public class TableBuilder {
 
@@ -63,16 +62,6 @@ public class TableBuilder {
      * The Table instance being constructed by this builder.
      */
     private final Table table = new Table();
-
-    /**
-     * Sets the available height for table content.
-     * <p>
-     * This defines the vertical space available for the table on each page,
-     * which is used for pagination calculations.
-     *
-     * @param height The table height in PDF coordinate points
-     * @return This TableBuilder instance for method chaining
-     */
 
     /**
      * Default constructor for TableBuilder.

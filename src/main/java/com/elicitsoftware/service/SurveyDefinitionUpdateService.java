@@ -118,7 +118,13 @@ public class SurveyDefinitionUpdateService {
 
     /**
      * Per-table breakdown of how many rows were created, versioned (Type 2) or updated in place
-     * (Type 1), and left unchanged.
+     * (Type 1), left unchanged, and retired.
+     *
+     * @param created   rows the target did not have and that were inserted
+     * @param versioned rows that differed and were versioned (Type 2) or updated in place (Type 1)
+     * @param unchanged rows identical to the target's current row
+     * @param retired   current rows closed because the file marks them retired, or Type 1 rows
+     *                  deleted because the file no longer lists them (UC-017 BR-113)
      */
     public record TableUpdateCounts(int created, int versioned, int unchanged, int retired) {
     }
@@ -146,6 +152,9 @@ public class SurveyDefinitionUpdateService {
         /**
          * Creates a new UpdateResult naming the survey it updated.
          *
+         * @param success   whether the update succeeded
+         * @param errors    list of error messages
+         * @param counts    breakdown of created/versioned/unchanged records by table
          * @param surveyKey the updated survey's portable key
          */
         public UpdateResult(boolean success, List<String> errors, Map<String, TableUpdateCounts> counts, UUID surveyKey) {
@@ -155,13 +164,26 @@ public class SurveyDefinitionUpdateService {
             this.counts = counts;
         }
 
-        /** @return whether the update succeeded */
+        /**
+         * Whether the update succeeded.
+         *
+         * @return whether the update succeeded
+         */
         public boolean isSuccess() { return success; }
 
-        /** @return the list of error messages from the update attempt */
+        /**
+         * The error messages from the update attempt.
+         *
+         * @return the list of error messages from the update attempt
+         */
         public List<String> getErrors() { return errors; }
 
-        /** @return breakdown of created/versioned/unchanged records by table */
+        /**
+         * The per-table counts of the update, keyed by table name.
+         *
+         * @return breakdown of created/versioned/unchanged records by table, or null when the
+         *         update stopped before the file was applied
+         */
         public Map<String, TableUpdateCounts> getCounts() { return counts; }
 
         /**

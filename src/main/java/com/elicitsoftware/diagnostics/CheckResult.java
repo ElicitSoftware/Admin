@@ -31,18 +31,46 @@ public record CheckResult(String name, Status status, String detail, long durati
         UNKNOWN
     }
 
+    /**
+     * A result for a target that answered as expected.
+     *
+     * @param name       what was checked
+     * @param detail     what the probe found
+     * @param durationMs how long the probe took
+     * @return an {@link Status#UP} result
+     */
     public static CheckResult up(String name, String detail, long durationMs) {
         return new CheckResult(name, Status.UP, detail, durationMs);
     }
 
+    /**
+     * A result for a target that failed, refused, or timed out.
+     *
+     * @param name       what was checked
+     * @param detail     why the probe failed
+     * @param durationMs how long the probe took
+     * @return a {@link Status#DOWN} result
+     */
     public static CheckResult down(String name, String detail, long durationMs) {
         return new CheckResult(name, Status.DOWN, detail, durationMs);
     }
 
+    /**
+     * A result for a target that could not be checked; its duration is 0.
+     *
+     * @param name   what was checked
+     * @param detail why it could not be checked
+     * @return an {@link Status#UNKNOWN} result
+     */
     public static CheckResult unknown(String name, String detail) {
         return new CheckResult(name, Status.UNKNOWN, detail, 0);
     }
 
+    /**
+     * Whether the target answered as expected.
+     *
+     * @return true when the status is {@link Status#UP}
+     */
     public boolean isUp() {
         return status == Status.UP;
     }

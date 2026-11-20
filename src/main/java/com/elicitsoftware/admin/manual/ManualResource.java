@@ -42,6 +42,7 @@ public class ManualResource {
     @Inject
     AdminManual manual;
 
+    /** Creates the resource; CDI injects the manual. */
     public ManualResource() {
         // CDI managed bean
     }

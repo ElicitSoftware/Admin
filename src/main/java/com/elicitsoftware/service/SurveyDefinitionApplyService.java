@@ -94,7 +94,15 @@ public class SurveyDefinitionApplyService {
     public record ApplyResult(Action action, UUID surveyKey, boolean success, String message,
             Object detail, String reporting) {
 
-        /** A result with no reporting outcome: a rejection, a failure, or a rebuild that was skipped. */
+        /**
+         * A result with no reporting outcome: a rejection, a failure, or a rebuild that was skipped.
+         *
+         * @param action    the operation selected for the file
+         * @param surveyKey the file's stable survey key, or {@code null} if it was rejected before one was read
+         * @param success   whether the selected service applied the file
+         * @param message   the routing summary or the failure reason
+         * @param detail    the import or update service's own result, or {@code null}
+         */
         public ApplyResult(Action action, UUID surveyKey, boolean success, String message, Object detail) {
             this(action, surveyKey, success, message, detail, null);
         }

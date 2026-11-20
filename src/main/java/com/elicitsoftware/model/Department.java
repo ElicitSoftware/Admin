@@ -69,8 +69,6 @@ import jakarta.persistence.*;
  * </ul>
  *
  * @author Elicit Software
- * @version 1.0
- * @since 1.0
  * @see User
  * @see Subject
  * @see Survey

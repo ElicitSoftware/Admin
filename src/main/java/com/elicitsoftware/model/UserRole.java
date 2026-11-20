@@ -40,17 +40,30 @@ public class UserRole extends PanacheEntityBase {
     public UserRole() {
     }
 
-    /** Creates a role grant for the given user and role name. */
+    /**
+     * Creates a role grant for the given user and role name.
+     *
+     * @param userId   the user's id
+     * @param roleName the role granted
+     */
     public UserRole(long userId, String roleName) {
         this.id = new UserRoleId(userId, roleName);
     }
 
-    /** Returns the composite key. */
+    /**
+     * Returns the composite key.
+     *
+     * @return the (userId, roleName) key
+     */
     public UserRoleId getId() {
         return id;
     }
 
-    /** Sets the composite key. */
+    /**
+     * Sets the composite key.
+     *
+     * @param id the (userId, roleName) key
+     */
     public void setId(UserRoleId id) {
         this.id = id;
     }
@@ -97,28 +110,49 @@ public class UserRole extends PanacheEntityBase {
         public UserRoleId() {
         }
 
-        /** Creates a key for the given user and role name. */
+        /**
+         * Creates a key for the given user and role name.
+         *
+         * @param userId   the user's id
+         * @param roleName the role granted
+         */
         public UserRoleId(long userId, String roleName) {
             this.userId = userId;
             this.roleName = roleName;
         }
 
-        /** Returns the user's id. */
+        /**
+         * Returns the user's id.
+         *
+         * @return the user's id
+         */
         public long getUserId() {
             return userId;
         }
 
-        /** Sets the user's id. */
+        /**
+         * Sets the user's id.
+         *
+         * @param userId the user's id
+         */
         public void setUserId(long userId) {
             this.userId = userId;
         }
 
-        /** Returns the role name. */
+        /**
+         * Returns the role name.
+         *
+         * @return the role granted
+         */
         public String getRoleName() {
             return roleName;
         }
 
-        /** Sets the role name. */
+        /**
+         * Sets the role name.
+         *
+         * @param roleName the role granted
+         */
         public void setRoleName(String roleName) {
             this.roleName = roleName;
         }

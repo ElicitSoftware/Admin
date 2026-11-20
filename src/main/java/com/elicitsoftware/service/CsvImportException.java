@@ -32,6 +32,9 @@ public class CsvImportException extends Exception {
     private final List<String> lineErrors;
 
     /**
+     * Creates the exception from the per-line failures; the message is {@link #HEADLINE} followed by
+     * one line per failure.
+     *
      * @param lineErrors one message per rejected line, each already naming its line number
      */
     public CsvImportException(List<String> lineErrors) {

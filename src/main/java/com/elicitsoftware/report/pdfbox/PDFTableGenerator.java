@@ -56,7 +56,6 @@ import java.util.Arrays;
  * @see Table
  * @see TableBuilder
  * @see PDDocument
- * @since 1.0.0
  */
 @RequestScoped
 public class PDFTableGenerator {

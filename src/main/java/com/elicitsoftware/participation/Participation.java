@@ -42,25 +42,42 @@ public record Participation(Counts overall, List<DepartmentCounts> departments, 
      */
     public record Counts(long registered, long notStarted, long inProgress, long finished, long stalled) {
 
-        /** Started is in progress plus finished. */
+        /**
+         * Started is in progress plus finished.
+         *
+         * @return the number of respondents who have accessed the survey, finished or not
+         */
         public long started() {
             return inProgress + finished;
         }
     }
 
-    /** The counts of one department. */
+    /**
+     * The counts of one department.
+     *
+     * @param department the department's name
+     * @param counts     its respondents by state
+     */
     public record DepartmentCounts(String department, Counts counts) {
     }
 
     /**
      * One ISO week (BR-128): how many of the population were registered, started and finished in it.
      *
-     * @param monday the first day of the week
+     * @param monday     the first day of the week
+     * @param registered respondents created in the week
+     * @param started    respondents whose first access fell in the week
+     * @param finished   respondents finalized in the week
      */
     public record Week(LocalDate monday, long registered, long started, long finished) {
     }
 
-    /** One administrator mark and the questions it covers (BR-123). */
+    /**
+     * One administrator mark and the questions it covers (BR-123).
+     *
+     * @param title     the mark's label, or else the marked question's text or section's title; empty if none
+     * @param questions the statistics of each question the mark covers
+     */
     public record Card(String title, List<QuestionStats> questions) {
     }
 
@@ -95,11 +112,27 @@ public record Participation(Counts overall, List<DepartmentCounts> departments, 
     public record OptionCount(String label, long count, boolean listed) {
     }
 
-    /** n, minimum, quartiles (linear interpolation) and maximum of a number question's answers. */
+    /**
+     * n, minimum, quartiles (linear interpolation) and maximum of a number question's answers.
+     *
+     * @param n      the number of numeric answers; answers that are not numbers are not counted (BR-125)
+     * @param min    the smallest answer
+     * @param q1     the first quartile
+     * @param median the median
+     * @param q3     the third quartile
+     * @param max    the largest answer
+     */
     public record NumberSummary(long n, BigDecimal min, BigDecimal q1, BigDecimal median, BigDecimal q3, BigDecimal max) {
     }
 
-    /** The earliest and latest answer of a date question and the count per month. */
+    /**
+     * The earliest and latest answer of a date question and the count per month.
+     *
+     * @param n        the number of date answers; answers that are not dates are not counted (BR-125)
+     * @param earliest the earliest answer
+     * @param latest   the latest answer
+     * @param perMonth the number of answers in each month that has one, in month order
+     */
     public record DateSummary(long n, LocalDate earliest, LocalDate latest, SortedMap<YearMonth, Long> perMonth) {
     }
 
@@ -131,6 +164,11 @@ public record Participation(Counts overall, List<DepartmentCounts> departments, 
     /**
      * Durations measured on {@code n} respondents, in seconds; the statistics are {@code null}
      * when {@code n} is zero.
+     *
+     * @param n      the number of respondents measured
+     * @param q1     the first quartile, rounded to the second
+     * @param median the median, rounded to the second
+     * @param q3     the third quartile, rounded to the second
      */
     public record Durations(long n, Long q1, Long median, Long q3) {
 

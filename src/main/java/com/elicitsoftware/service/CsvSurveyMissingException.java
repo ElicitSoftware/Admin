@@ -29,6 +29,8 @@ public class CsvSurveyMissingException extends Exception {
     private final List<Integer> lines;
 
     /**
+     * Creates the exception with the uploader's warning naming the given lines.
+     *
      * @param lines the line numbers of the rows that name no survey
      */
     public CsvSurveyMissingException(List<Integer> lines) {
@@ -37,7 +39,11 @@ public class CsvSurveyMissingException extends Exception {
         this.lines = List.copyOf(lines);
     }
 
-    /** @return the line numbers of the rows that name no survey */
+    /**
+     * Returns the line numbers of the rows that name no survey.
+     *
+     * @return the line numbers of the rows that name no survey
+     */
     public List<Integer> getLines() {
         return lines;
     }

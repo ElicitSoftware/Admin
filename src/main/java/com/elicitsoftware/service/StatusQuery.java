@@ -34,8 +34,6 @@ import java.util.Map;
  *                    {@code null} (use an empty map for parameter-free queries)
  * @param sort        the ordering to apply, or {@code null} for the persistence default
  * @author Elicit Software
- * @version 1.0
- * @since 1.0
  * @see StatusDataSource
  */
 public record StatusQuery(String whereClause, Map<String, Object> params, Sort sort) {

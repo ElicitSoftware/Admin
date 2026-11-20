@@ -41,13 +41,6 @@ public class SurveyDefinitionPresenceCheck {
     }
 
     /**
-     * Counts installed survey definitions and warns when there are none.
-     * <p>
-     * {@code @Startup} sits on the method rather than the class so it runs through the
-     * {@code @Transactional} interceptor -- the Panache count needs an active transaction,
-     * and interceptors do not apply to CDI lifecycle callbacks.
-     */
-    /**
      * Whether this deployment has at least one survey installed.
      * <p>
      * Queried per navigation by the console (UC-019 BR-076) rather than answered from a
@@ -62,6 +55,13 @@ public class SurveyDefinitionPresenceCheck {
         return Survey.count() > 0;
     }
 
+    /**
+     * Counts installed survey definitions and warns when there are none.
+     * <p>
+     * {@code @Startup} sits on the method rather than the class so it runs through the
+     * {@code @Transactional} interceptor -- the Panache count needs an active transaction,
+     * and interceptors do not apply to CDI lifecycle callbacks.
+     */
     @Startup
     @Transactional
     void warnWhenNoSurveyDefined() {

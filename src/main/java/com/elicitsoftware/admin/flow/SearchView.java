@@ -110,8 +110,6 @@ import jakarta.inject.Inject;
  * </ul>
  *
  * @author Elicit Software
- * @version 1.0
- * @since 1.0
  * @see Status
  * @see StatusDataSource
  * @see com.elicitsoftware.service.EmailService
@@ -253,27 +251,6 @@ public class SearchView extends VerticalLayout implements HasDynamicTitle, Befor
         }
         return sort;
     }
-
-    /**
-     * Initializes the search view components and layout after dependency injection.
-     *
-     * <p>This method performs the following initialization steps:</p>
-     *
-     * <ol>
-     *   <li><strong>UI Context Setup:</strong> Captures current UI instance for background operations</li>
-     *   <li><strong>User Authentication:</strong> Retrieves and validates current user session</li>
-     *   <li><strong>Error Handling:</strong> Displays appropriate error message for invalid users</li>
-     *   <li><strong>Locale Configuration:</strong> Sets up RTL layout for Arabic locales</li>
-     *   <li><strong>Component Creation:</strong> Builds search interface and data grid</li>
-     * </ol>
-     *
-     * <p>If the user is not found or inactive, an error message is displayed explaining
-     * the authentication issue and directing them to contact an administrator.</p>
-     *
-     * <p>For valid users, the method sets up the complete search interface including
-     * the search bar with multiple filter options and the sortable data grid with
-     * pagination controls.</p>
-     */
 
     /**
      * Shows or removes the notice that no survey is installed on every entry (UC-019 BR-076).
@@ -722,17 +699,6 @@ public class SearchView extends VerticalLayout implements HasDynamicTitle, Befor
     }
 
     /**
-     * Creates a vertical layout container for the grid and pagination components.
-     *
-     * <p>This utility method wraps the provided components in a properly configured
-     * vertical layout with optimized spacing and padding settings for the data
-     * display area.</p>
-     *
-     * @param component1 the first component (typically the data grid)
-     * @param component2 the second component (typically pagination controls)
-     * @return a configured VerticalLayout containing both components
-     */
-    /**
      * The respondent status in the administrator's language. The {@code survey.status} view reports
      * it in English, and the code compares against that value, so it is translated only where it is
      * shown; an unknown value is shown as the view sent it.
@@ -749,6 +715,14 @@ public class SearchView extends VerticalLayout implements HasDynamicTitle, Befor
         };
     }
 
+    /**
+     * Wraps the grid and its pagination controls in one vertical layout, without padding and with
+     * extra-small spacing.
+     *
+     * @param component1 the first component (the data grid)
+     * @param component2 the second component (the pagination controls)
+     * @return a VerticalLayout containing both components
+     */
     private VerticalLayout wrapWithVerticalLayout(Component component1, Component component2) {
         var gridWithPaginationLayout = new VerticalLayout(component1, component2);
         gridWithPaginationLayout.setPadding(false);

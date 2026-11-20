@@ -41,10 +41,21 @@ public class MailerDiagnostics {
     public record MailerReport(String from, String host, int port, boolean tls, String startTls, String authMethods,
                                boolean usernamePresent, boolean passwordPresent, boolean mock) {
 
+        /**
+         * Whether mail can be sent: a sender address is configured (UC-024 A2).
+         *
+         * @return true when {@code from} is set and not blank
+         */
         public boolean canSend() {
             return from != null && !from.isBlank();
         }
 
+        /**
+         * A one-line summary of the sender, relay and TLS setting.
+         *
+         * @return the summary in the administrator's language, marked as mocked when the mailer is
+         *         mocked, or a no-sender message when {@link #canSend()} is false
+         */
         public String summary() {
             if (!canSend()) {
                 return Translations.get("systemEmailView.summary.noSender");
@@ -55,10 +66,17 @@ public class MailerDiagnostics {
         }
     }
 
+    /** Creates the bean; CDI manages its lifecycle. */
     public MailerDiagnostics() {
         // CDI managed bean
     }
 
+    /**
+     * Reads the effective {@code quarkus.mailer.*} settings, applying Quarkus's defaults to the
+     * unset ones; a blank or unreadable setting counts as unset.
+     *
+     * @return the mail settings, with the username and password reported as present or absent only
+     */
     public MailerReport report() {
         Config config = ConfigProvider.getConfig();
         return new MailerReport(

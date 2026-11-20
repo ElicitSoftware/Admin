@@ -66,10 +66,18 @@ public class RequiredConfigCheck {
     private static final List<LegacySetting> LEGACY = List.of(
             new LegacySetting("token.autoRegister", "accessCode.autoRegister"));
 
+    /** Creates the bean; CDI manages its lifecycle. */
     public RequiredConfigCheck() {
         // CDI managed bean
     }
 
+    /**
+     * Every setting the deployment must supply, each with whether it is configured. A blank value,
+     * or one that cannot be expanded, counts as absent.
+     *
+     * @return the database, owner, OIDC client secret, mail sender and service token settings, in
+     *         that order, each with its purpose in the administrator's language
+     */
     public List<RequiredSetting> requiredSettings() {
         Config config = ConfigProvider.getConfig();
         return REQUIRED.stream()
@@ -78,6 +86,11 @@ public class RequiredConfigCheck {
                 .toList();
     }
 
+    /**
+     * The retired settings that are still configured (UC-020 step 5).
+     *
+     * @return each retired setting with a non-blank value, and the property that replaced it
+     */
     public List<LegacySetting> legacySettingsInUse() {
         Config config = ConfigProvider.getConfig();
         return LEGACY.stream().filter(l -> isPresent(config, l.property())).toList();

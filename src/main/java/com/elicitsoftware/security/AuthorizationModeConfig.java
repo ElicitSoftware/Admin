@@ -40,12 +40,20 @@ public class AuthorizationModeConfig {
     public AuthorizationModeConfig() {
     }
 
-    /** Returns the configured authorization mode. */
+    /**
+     * Returns the configured authorization mode.
+     *
+     * @return {@code elicit.authorization.mode}, {@link AuthorizationMode#OIDC} by default
+     */
     public AuthorizationMode getMode() {
         return mode;
     }
 
-    /** Returns {@code true} when the configured mode is {@link AuthorizationMode#DATABASE}. */
+    /**
+     * Returns {@code true} when the configured mode is {@link AuthorizationMode#DATABASE}.
+     *
+     * @return whether the database role fallback is on
+     */
     public boolean isDatabaseMode() {
         return mode == AuthorizationMode.DATABASE;
     }
