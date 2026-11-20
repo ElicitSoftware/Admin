@@ -38,10 +38,9 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  *
  * <p><strong>2026-09 audit finding #6:</strong> this test previously exercised the augmentor
  * indirectly through the (formerly public) {@code GET /api/secured/roles} diagnostic endpoint.
- * That endpoint is now restricted to {@code elicit_admin}; a plain {@code elicit_user} grant
- * (as in {@link #userGrantExpandsToUserAndImporterOnly()}) correctly gets 403 at the HTTP layer
- * before the augmented-roles check the original assertions relied on. The augmentor is invoked
- * directly here instead - a cleaner test that doesn't couple identity augmentation to an
+ * That endpoint was first restricted to {@code elicit_admin} and has since been removed; the
+ * OIDC diagnostics view (UC-009) shows the same identity to an administrator. The augmentor is
+ * invoked directly here instead - a cleaner test that doesn't couple identity augmentation to an
  * unrelated REST resource's authorization policy.</p>
  */
 @QuarkusTest

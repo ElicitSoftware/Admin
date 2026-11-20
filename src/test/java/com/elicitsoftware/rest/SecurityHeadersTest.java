@@ -45,13 +45,13 @@ class SecurityHeadersTest {
 
     @Test
     void given_aPublicApiPath_when_requested_then_theHeadersAreSent() {
-        assertHeaders(given().when().get("/api/secured/test").then().statusCode(200));
+        assertHeaders(given().when().get("/api/brand/theme.css").then().statusCode(200));
     }
 
     @Test
     void given_noSession_when_aProtectedPathIsRequested_then_theRefusalCarriesTheHeaders() {
         assertHeaders(given().redirects().follow(false)
-                .when().get("/api/secured/roles")
+                .when().get("/api/secured/add/subjects")
                 .then().statusCode(anyOf(is(401), is(302))));
     }
 }
