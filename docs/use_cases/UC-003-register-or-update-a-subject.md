@@ -104,7 +104,7 @@
 
 ### BR-009: Required subject fields
 
-A subject requires a department, first name, last name, and a valid email address.
+A subject requires a department, first name, last name, and an email address in a valid format. The email address is the subject's one required contact: a phone number is optional (BR-010).
 
 ### BR-010: Phone format
 
