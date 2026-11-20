@@ -880,7 +880,7 @@ async function captureTransfers() {
   await shot('20-export-survey-definition');
 
   // UC-030: the Rename dialog over the survey's row, with a shorter name typed in so the
-  // figure shows the field accepting one. Cancelled afterwards: the figure must not rename
+  // figure shows the field accepting one. Canceled afterwards: the figure must not rename
   // the schema the rest of the walk names.
   const rename = page.locator('#survey-export-grid vaadin-button')
     .filter({ hasText: 'Rename' }).first();
