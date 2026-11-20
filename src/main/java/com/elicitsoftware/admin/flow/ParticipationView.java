@@ -115,6 +115,7 @@ public class ParticipationView extends VerticalLayout implements HasDynamicTitle
     MultiSelectComboBox<Department> departmentPicker;
     DatePicker fromPicker;
     DatePicker toPicker;
+    /** Holds the rendered sections, replaced on every redraw. */
     final Div results = new Div();
     private Department allDepartments;
 

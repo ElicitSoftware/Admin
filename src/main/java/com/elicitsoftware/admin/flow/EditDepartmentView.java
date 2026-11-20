@@ -54,8 +54,6 @@ import java.util.stream.Collectors;
  * </ul>
  *
  * @author Elicit Software
- * @version 1.0
- * @since 1.0
  */
 @Route(value = "edit-department/:id?", layout = MainLayout.class)
 @RolesAllowed("elicit_admin")

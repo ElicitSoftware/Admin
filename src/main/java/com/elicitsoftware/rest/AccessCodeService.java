@@ -53,7 +53,6 @@ import java.util.UUID;
  * The access code is the credential the respondent enters to reach the survey.
  *
  * @author Elicit Software
- * @since 1.0.0
  */
 @Path("/secured")
 @ApplicationScoped

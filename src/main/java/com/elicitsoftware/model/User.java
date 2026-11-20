@@ -83,8 +83,6 @@ import java.util.Set;
  * </ul>
  * 
  * @author Elicit Software
- * @version 1.0
- * @since 1.0
  * @see Department
  * @see Survey
  * @see PanacheEntityBase
@@ -188,12 +186,6 @@ public class User extends PanacheEntityBase {
     })
     @OrderBy(value = "name")
     private Set<Department> departments;
-
-    /**
-     * Gets the unique identifier for this user.
-     * 
-     * @return the user ID
-     */
 
     /**
      * Default constructor for User.

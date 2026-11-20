@@ -54,8 +54,6 @@ import java.io.InputStream;
  * </ul>
  *
  * @author Elicit Software
- * @version 1.0
- * @since 1.0
  * @see jakarta.ws.rs.FormParam
  * @see org.jboss.resteasy.reactive.PartType
  */

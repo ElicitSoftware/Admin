@@ -51,7 +51,6 @@ import java.util.Date;
  * </ul>
  *
  * @author Elicit Software
- * @version 1.0
  * @see Subject
  * @see MessageType
  * @see MessageTemplate

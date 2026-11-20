@@ -34,6 +34,7 @@ public class DefaultAccountCheck {
     /** The usernames the migrations seed. */
     public static final List<String> SEEDED_USERNAMES = List.of("admin", "user");
 
+    /** Creates the check; a CDI managed bean. */
     public DefaultAccountCheck() {
         // CDI managed bean
     }

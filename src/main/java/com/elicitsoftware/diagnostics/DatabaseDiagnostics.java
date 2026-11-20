@@ -93,14 +93,25 @@ public class DatabaseDiagnostics {
     @ConfigProperty(name = "quarkus.datasource.owner.username", defaultValue = "")
     String ownerUser;
 
+    /** Creates the diagnostics bean; CDI injects the data sources and usernames. */
     public DatabaseDiagnostics() {
         // CDI managed bean
     }
 
+    /**
+     * Probes the application connection with {@code SELECT current_user, version()}.
+     *
+     * @return the report, down with the error message when the connection or query fails
+     */
     public ConnectionReport checkApplicationConnection() {
         return probe("application", applicationUser, dataSource);
     }
 
+    /**
+     * Probes the owner connection, the one Flyway uses, with {@code SELECT current_user, version()}.
+     *
+     * @return the report, down with the error message when the connection or query fails
+     */
     public ConnectionReport checkOwnerConnection() {
         return probe("owner", ownerUser, ownerDataSource);
     }
@@ -126,6 +137,9 @@ public class DatabaseDiagnostics {
     /**
      * The latest migration of each module, read through the owner connection because the
      * application user is not granted the history tables.
+     *
+     * @return one report per module, in the order Survey, Admin, FHHS; when the owner connection
+     *         fails, each report carries the error message in place of the installation time
      */
     public List<MigrationReport> migrationHistory() {
         List<MigrationReport> reports = new ArrayList<>();
@@ -172,7 +186,12 @@ public class DatabaseDiagnostics {
         }
     }
 
-    /** Whether the Kimball durable-key sequences exist (UC-022 step 4). */
+    /**
+     * Whether the Kimball durable-key sequences exist (UC-022 step 4), judged by the presence of
+     * {@code survey.questions_durable_seq}, read through the owner connection.
+     *
+     * @return up when the sequence exists; down when it is missing or the check fails
+     */
     public CheckResult checkDurableSequences() {
         long start = System.nanoTime();
         try (Connection connection = ownerDataSource.getConnection();
@@ -193,11 +212,21 @@ public class DatabaseDiagnostics {
         }
     }
 
+    /**
+     * Counts the surveys in the database.
+     *
+     * @return the number of surveys
+     */
     @Transactional
     public long surveyCount() {
         return Survey.count();
     }
 
+    /**
+     * Counts the console's users.
+     *
+     * @return the number of users
+     */
     @Transactional
     public long userCount() {
         return User.count();

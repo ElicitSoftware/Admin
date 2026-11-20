@@ -80,52 +80,92 @@ public class ImportClient extends PanacheEntityBase {
         return find("name = ?1", name).firstResult(); // i18n:ignore (JPQL)
     }
 
-    /** @return the unique identifier, 0 for a record not yet stored */
+    /**
+     * Returns the unique identifier.
+     *
+     * @return the unique identifier, 0 for a record not yet stored
+     */
     public long getId() {
         return id;
     }
 
-    /** @param id the unique identifier */
+    /**
+     * Sets the unique identifier.
+     *
+     * @param id the unique identifier
+     */
     public void setId(long id) {
         this.id = id;
     }
 
-    /** @return the principal name the client's tokens carry */
+    /**
+     * Returns the principal name the client's tokens carry.
+     *
+     * @return the principal name the client's tokens carry
+     */
     public String getName() {
         return name;
     }
 
-    /** @param name the principal name the client's tokens carry */
+    /**
+     * Sets the principal name the client's tokens carry.
+     *
+     * @param name the principal name the client's tokens carry
+     */
     public void setName(String name) {
         this.name = name;
     }
 
-    /** @return the description, or null */
+    /**
+     * Returns the description.
+     *
+     * @return the description, or null
+     */
     public String getDescription() {
         return description;
     }
 
-    /** @param description the description, or null */
+    /**
+     * Sets the description.
+     *
+     * @param description the description, or null
+     */
     public void setDescription(String description) {
         this.description = description;
     }
 
-    /** @return whether the client may register (BR-167) */
+    /**
+     * Returns whether the client may register (BR-167).
+     *
+     * @return whether the client may register (BR-167)
+     */
     public boolean isActive() {
         return active;
     }
 
-    /** @param active whether the client may register */
+    /**
+     * Sets whether the client may register.
+     *
+     * @param active whether the client may register
+     */
     public void setActive(boolean active) {
         this.active = active;
     }
 
-    /** @return the departments the client may register into */
+    /**
+     * Returns the departments the client may register into.
+     *
+     * @return the departments the client may register into
+     */
     public Set<Department> getDepartments() {
         return departments;
     }
 
-    /** @param departments the departments the client may register into */
+    /**
+     * Sets the departments the client may register into.
+     *
+     * @param departments the departments the client may register into
+     */
     public void setDepartments(Set<Department> departments) {
         this.departments = departments;
     }

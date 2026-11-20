@@ -28,7 +28,6 @@ import java.util.List;
  * performed in memory.</p>
  *
  * @author Elicit Software
- * @version 1.0
  * @see Status
  * @see StatusQuery
  */

@@ -36,7 +36,6 @@ import java.util.ArrayList;
  *
  * @see com.elicitsoftware.request.AddRequest
  * @see com.elicitsoftware.model.Respondent
- * @since 1.0.0
  */
 public class AddResponse {
     @JsonProperty("subjects")

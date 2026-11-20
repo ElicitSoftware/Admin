@@ -31,7 +31,6 @@ import org.eclipse.microprofile.config.inject.ConfigProperty;
  * Utility class for managing brand information across the application.
  * Detects brand based on what's mounted at the configured brand directory.
  *
- * @since 1.0
  * @author Elicit Software
  */
 @ApplicationScoped
@@ -78,7 +77,11 @@ public class BrandUtil {
             this.defaultFile = defaultFile;
         }
 
-        /** The configuration key, as the documentation writes it. */
+        /**
+         * The configuration key, as the documentation writes it.
+         *
+         * @return {@code logos.horizontal}, {@code logos.icon} or {@code favicon}
+         */
         public String configKey() {
             return logosField == null ? "favicon" : "logos." + logosField;
         }
@@ -133,6 +136,10 @@ public class BrandUtil {
         /**
          * Constructs a BrandInfo with per-language display names (UC-026 BR-087).
          *
+         * @param brandKey the unique key identifying the brand
+         * @param displayName the display name of the brand
+         * @param logoPath the path to the brand logo
+         * @param cssClass the CSS class for brand styling
          * @param localizedNames display name per lower-case language tag; may be null
          */
         public BrandInfo(String brandKey, String displayName, String logoPath, String cssClass,
@@ -172,7 +179,11 @@ public class BrandUtil {
          */
         public String getCssClass() { return cssClass; }
 
-        /** True for the embedded default brand. */
+        /**
+         * True for the embedded default brand.
+         *
+         * @return whether the brand key is {@link #DEFAULT_BRAND_KEY}
+         */
         public boolean isDefaultBrand() { return DEFAULT_BRAND_KEY.equals(brandKey); }
 
         /**

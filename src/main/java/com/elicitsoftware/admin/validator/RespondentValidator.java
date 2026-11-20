@@ -37,12 +37,8 @@ import jakarta.validation.ConstraintValidatorContext;
  *   <li>Only checks for presence and non-blank status</li>
  * </ul>
  *
- * <p><strong>Future Considerations:</strong></p>
- * <ul>
- *   <li>TODO: Consider requiring email address only (as SMS is no longer used)</li>
- *   <li>TODO: May be replaced with standard JPA validation annotations</li>
- *   <li>TODO: This entire validator package may be removed in future versions</li>
- * </ul>
+ * <p>Whether a subject should need an email address instead, now that SMS is not used, and whether
+ * standard validation annotations should replace this class, is #220.</p>
  *
  * <p><strong>Usage Example:</strong></p>
  * <pre>{@code
@@ -55,8 +51,6 @@ import jakarta.validation.ConstraintValidatorContext;
  * }</pre>
  *
  * @author Elicit Software
- * @version 1.0
- * @since 1.0
  * @see ValidRespondent
  * @see Subject
  * @see ConstraintValidator
@@ -97,13 +91,6 @@ public class RespondentValidator implements ConstraintValidator<ValidRespondent,
      *   <li>Parameter name "pat" is legacy - represents a Subject/Patient/Respondent</li>
      * </ul>
      *
-     * <p><strong>Future Enhancement Notes:</strong></p>
-     * <ul>
-     *   <li>TODO: Consider requiring only email (SMS no longer used)</li>
-     *   <li>TODO: May be replaced with standard JPA validation</li>
-     *   <li>TODO: Could add format validation for email addresses</li>
-     * </ul>
-     *
      * @param pat the Subject (respondent) to validate - parameter name is legacy
      * @param context the constraint validator context for adding custom error messages
      * @return {@code true} if the subject has at least one valid contact method (email or phone),
@@ -114,9 +101,6 @@ public class RespondentValidator implements ConstraintValidator<ValidRespondent,
      */
     @Override
     public boolean isValid(Subject pat, ConstraintValidatorContext context) {
-        //TODO no that we only have Respondents and email no SMS we can require email address and use JPA validation.
-        //This should remove this entire package.
-
         // They need to provide a contact method. Either mobile, email or both.
         return (pat.getEmail() != null && !pat.getEmail().isBlank()) || (pat.getPhone() != null && !pat.getPhone().isBlank());
     }

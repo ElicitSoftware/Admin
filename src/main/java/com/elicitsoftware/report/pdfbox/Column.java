@@ -39,7 +39,6 @@ package com.elicitsoftware.report.pdfbox;
  * 
  * @see Table
  * @see TableBuilder
- * @since 1.0.0
  */
 public class Column {
 

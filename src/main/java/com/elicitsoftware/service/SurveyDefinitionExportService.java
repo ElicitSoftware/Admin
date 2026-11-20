@@ -573,12 +573,6 @@ public class SurveyDefinitionExportService {
     }
 
     /**
-     * Loads questions for the survey.
-     *
-     * @param surveyId source survey ID
-     * @return ordered rows from {@code survey.questions}
-     */
-    /**
      * Loads the survey's content translations (Survey V019).
      * <p>
      * Same "current, or the last version when none is current" predicate as the structural tables,
@@ -601,6 +595,12 @@ public class SurveyDefinitionExportService {
         return toObjectArrayRows(query.getResultList(), "translations");
     }
 
+    /**
+     * Loads questions for the survey.
+     *
+     * @param surveyId source survey ID
+     * @return ordered rows from {@code survey.questions}
+     */
     private List<Object[]> getQuestions(Integer surveyId) {
         Query query = em.createNativeQuery(
                 "SELECT question_id, question_key, type_id, text, short_text, tool_tip, required, min_value, max_value, " +
@@ -760,12 +760,6 @@ public class SurveyDefinitionExportService {
     }
 
     /**
-     * Escapes one export field value for pipe-delimited output.
-     *
-     * @param value field value (nullable)
-     * @return escaped string safe for export format
-     */
-    /**
      * A header comment's value: as it is, but on one line (BR-182). A line break is written as the
      * escape a field would use, like the Author tool's export, so every line after the header is a
      * record this export wrote as one.
@@ -774,6 +768,12 @@ public class SurveyDefinitionExportService {
         return value == null ? "" : value.toString().replace("\n", "\\n").replace("\r", "\\r");
     }
 
+    /**
+     * Escapes one export field value for pipe-delimited output.
+     *
+     * @param value field value (nullable)
+     * @return escaped string safe for export format
+     */
     private String escapeField(Object value) {
         if (value == null) {
             return "";

@@ -42,6 +42,7 @@ public class RespondentImportView extends VerticalLayout {
     @Inject
     RespondentImportService respondentImportService;
 
+    /** Builds the view: a title, an introduction and an upload that accepts one {@code .elicit} file of up to 5 MB. */
     public RespondentImportView() {
         setSizeFull();
 

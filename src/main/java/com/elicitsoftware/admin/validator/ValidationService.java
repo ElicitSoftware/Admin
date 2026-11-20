@@ -72,8 +72,6 @@ import jakarta.validation.Valid;
  * result in infinite recursion and stack overflow.</p>
  *
  * @author Elicit Software
- * @version 1.0
- * @since 1.0
  * @see Subject
  * @see ValidRespondent
  * @see jakarta.validation.ConstraintViolation

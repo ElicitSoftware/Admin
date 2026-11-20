@@ -23,8 +23,6 @@ import jakarta.transaction.Transactional;
  * create/update behavior.</p>
  *
  * @author Elicit Software
- * @version 1.0
- * @since 1.0
  * @see User
  */
 @ApplicationScoped

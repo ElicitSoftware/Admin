@@ -51,7 +51,13 @@ public final class SvgCharts {
     public record Bar(String label, long count, String text) {
     }
 
-    /** One group of columns, such as a week: its label and one value per series. */
+    /**
+     * One group of columns, such as a week: its label and one value per series.
+     *
+     * @param label  the group's label, such as the week's first day
+     * @param counts the raw count of each series, in series order
+     * @param texts  each count as shown, from {@link SmallCell#count(long)}, in series order
+     */
     public record Group(String label, long[] counts, String[] texts) {
     }
 

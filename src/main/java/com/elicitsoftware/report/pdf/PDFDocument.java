@@ -40,8 +40,6 @@ import java.util.Map;
  * </ol>
  *
  * @author Elicit Software
- * @version 1.0
- * @since 1.0
  * @see Content
  * @see Style
  * @see com.elicitsoftware.report.PDFService

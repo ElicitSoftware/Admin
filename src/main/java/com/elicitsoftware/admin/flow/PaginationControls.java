@@ -47,8 +47,6 @@ import com.vaadin.flow.component.select.SelectVariant;
  * }</pre>
  * 
  * @author Elicit Software
- * @version 1.0
- * @since 1.0
  * @see HorizontalLayout
  */
 public class PaginationControls extends HorizontalLayout {

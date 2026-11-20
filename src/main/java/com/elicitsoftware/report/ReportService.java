@@ -71,7 +71,6 @@ import org.eclipse.microprofile.rest.client.inject.RegisterRestClient;
  * @see ReportRequest
  * @see ReportResponse
  * @see RegisterRestClient
- * @since 1.0.0
  */
 @Path("/")
 @RegisterRestClient

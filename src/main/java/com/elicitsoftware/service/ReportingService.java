@@ -98,7 +98,6 @@ import jakarta.servlet.http.HttpServletRequest;
  * @see Survey
  * @see PDFService
  * @see ReportService
- * @since 1.0.0
  */
 @ApplicationScoped
 public class ReportingService {
@@ -132,55 +131,6 @@ public class ReportingService {
      */
     @Inject
     ServiceToken serviceToken;
-
-    /**
-     * Generates and displays comprehensive reports for a completed survey participant.
-     * <p>
-     * This method orchestrates the complete report generation workflow, from calling
-     * external report services to delivering the final PDF to the user's browser.
-     * It handles multiple report definitions per survey and provides seamless
-     * integration with the Vaadin UI framework.
-     * <p>
-     * Process workflow:
-     * 1. **Survey retrieval**: Load survey data using status.getSurveyId()
-     * 2. **Response collection**: Clear previous responses and prepare for new data
-     * 3. **Service iteration**: Call external report service for each report definition
-     * 4. **Response aggregation**: Collect all report responses into unified list
-     * 5. **PDF generation**: Convert responses to downloadable PDF document
-     * 6. **Resource registration**: Register PDF with Vaadin resource system
-     * 7. **Browser delivery**: Open PDF in new browser tab for immediate access
-     * <p>
-     * External service integration:
-     * - Iterates through all report definitions associated with the survey
-     * - Calls each external report service with participant's respondent ID
-     * - Aggregates responses regardless of individual service success/failure
-     * - Continues processing even if some services fail
-     * <p>
-     * User experience features:
-     * - **Immediate access**: PDF opens automatically in new browser tab
-     * - **Error notifications**: User-friendly error messages via Vaadin notifications
-     * - **Non-blocking operation**: UI remains responsive during generation
-     * - **Resource cleanup**: Automatic resource management through Vaadin
-     * <p>
-     * Error handling:
-     * - **Survey not found**: Logged and reported to user
-     * - **Service call failures**: Individual errors captured in responses
-     * - **PDF generation failures**: User notification with error details
-     * - **Browser integration issues**: Fallback error notifications
-     * - **Resource registration failures**: Logged and reported
-     * <p>
-     * Security considerations:
-     * - Participant data is passed to external services via respondent ID
-     * - Report URLs are validated through ReportDefinition model
-     * - PDF resources are session-scoped for security
-     * - External service calls use configured authentication if available
-     *
-     * @param status The completion status containing survey and participant information
-     * @throws RuntimeException implicitly through PDF generation or service calls
-     * @see #callReport(ReportDefinition, int)
-     * @see PDFService#generatePDF(ArrayList, String)
-     * @see Survey#reports
-     */
 
     /**
      * Default constructor for ReportingService.
@@ -218,58 +168,6 @@ public class ReportingService {
     }
 
     /**
-     * Calls an external report service to generate a report for a specific participant.
-     * <p>
-     * This private method handles the communication with individual external report
-     * services, building REST clients dynamically based on report definition URLs
-     * and managing the request/response cycle with comprehensive error handling.
-     * <p>
-     * Service integration process:
-     * 1. **Request preparation**: Create ReportRequest with participant's respondent ID
-     * 2. **Client construction**: Build REST client using MicroProfile REST Client builder
-     * 3. **Service call**: Execute remote service call with request payload
-     * 4. **Response handling**: Return successful response or error response as fallback
-     * <p>
-     * REST client configuration:
-     * - **Dynamic base URI**: Uses report definition URL for service endpoint
-     * - **Automatic proxy generation**: MicroProfile generates implementation
-     * - **Type-safe communication**: Strongly-typed request/response objects
-     * - **JSON serialization**: Automatic JSON handling for payloads
-     * <p>
-     * Error handling strategy:
-     * - **Network failures**: Connection timeouts, DNS resolution issues
-     * - **Service errors**: HTTP error responses, invalid response formats
-     * - **URI parsing**: Malformed URLs in report definitions
-     * - **Serialization errors**: JSON parsing or generation failures
-     * - **Service unavailable**: External service downtime or overload
-     * <p>
-     * Fallback response creation:
-     * - Creates ReportResponse object for failed service calls
-     * - Sets innerHTML field to a fixed error text (UC-005 BR-140)
-     * - Allows report generation to continue with partial data
-     * - Error information is preserved in final PDF output
-     * <p>
-     * Performance considerations:
-     * - **Blocking calls**: Each service call blocks until completion
-     * - **No timeout configuration**: Relies on default client timeouts
-     * - **Sequential processing**: Services called one at a time
-     * - **Memory efficiency**: Minimal object creation and reuse
-     * <p>
-     * Security considerations:
-     * - **Participant data**: Only respondent ID is shared with external services
-     * - **URL validation**: Report definition URLs should be pre-validated
-     * - **Authentication**: External services may require additional authentication
-     * - **Error information**: Exception messages and response bodies are logged, never shown
-     *
-     * @param rpt The report definition containing the external service URL and configuration
-     * @param respondent_id The unique identifier for the participant whose report is being generated
-     * @return ReportResponse containing the generated report data, or error information if the call failed
-     * @see ReportDefinition#url
-     * @see ReportRequest
-     * @see ReportResponse
-     * @see RestClientBuilder
-     */
-    /**
      * The language the respondent answered in (UC-005 BR-022): the tag Survey stamped on their
      * answer rows, or null when every row was rendered in the survey's base language.
      */
@@ -285,6 +183,11 @@ public class ReportingService {
      * path is resolved under Survey's base address, keeping any path prefix the site runs Survey
      * under, so {@code /api/reports/respondent} on a Survey at {@code https://host/survey} becomes
      * {@code https://host/survey/api/reports/respondent}.
+     *
+     * @param surveyBaseUrl Survey's base address, with or without a trailing slash
+     * @param reportUrl     the report's address as the definition writes it, absolute or relative
+     * @return the address the report is requested from
+     * @throws URISyntaxException when either address is not a valid URI
      */
     public static URI resolveReportUri(String surveyBaseUrl, String reportUrl) throws URISyntaxException {
         URI url = new URI(reportUrl);
@@ -313,6 +216,18 @@ public class ReportingService {
         return reportResponses;
     }
 
+    /**
+     * Asks one report service for a respondent's report, with the language they answered in. The
+     * service token goes with the request only when the report's address is at a trusted origin
+     * (UC-018 BR-160), and a redirect is never followed. The call has no timeout of its own; the REST
+     * client's defaults apply.
+     *
+     * @param rpt           the report definition naming the service's address
+     * @param respondent_id the respondent whose report is wanted
+     * @return the service's report; otherwise a report carrying a fixed error text (UC-005 BR-140) when
+     *         the token is missing (UC-018 BR-161), the service refuses or fails, or its answer cannot
+     *         be read. The cause is logged, never shown.
+     */
     ReportResponse callReport(ReportDefinition rpt, int respondent_id) {
         boolean tokenSent = false;
         try {

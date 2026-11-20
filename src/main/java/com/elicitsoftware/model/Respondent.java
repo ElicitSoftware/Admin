@@ -85,8 +85,6 @@ import java.util.concurrent.TimeUnit;
  * }</pre>
  *
  * @author Elicit Software
- * @version 1.0
- * @since 1.0
  * @see Subject
  * @see Survey
  * @see PanacheEntityBase

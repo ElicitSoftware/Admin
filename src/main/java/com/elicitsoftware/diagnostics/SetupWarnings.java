@@ -62,10 +62,16 @@ public class SetupWarnings {
     @Inject
     BrandDiagnostics brand;
 
+    /** Creates the bean; CDI injects its checks. */
     public SetupWarnings() {
         // CDI managed bean
     }
 
+    /**
+     * Runs every setup check against the current database and configuration (BR-083).
+     *
+     * @return the outstanding items, in the order the checks run; empty when setup is complete
+     */
     @Transactional
     public List<Warning> warnings() {
         List<Warning> warnings = new ArrayList<>();
@@ -126,6 +132,9 @@ public class SetupWarnings {
     /**
      * The seeded-account instruction in the current language; the English wording the startup
      * log uses stays in {@link DefaultAccountCheck#instruction(List)}.
+     *
+     * @param accounts the usernames of the seeded accounts still present
+     * @return the instruction naming those accounts
      */
     public static String instruction(List<String> accounts) {
         String names = accounts.stream().map(a -> "'" + a + "'")

@@ -42,11 +42,16 @@ public class AdminManual {
     @ConfigProperty(name = "admin.manual.resource", defaultValue = DEFAULT_RESOURCE)
     String resource;
 
+    /** Creates the bean; CDI injects the resource path. */
     public AdminManual() {
         // CDI managed bean
     }
 
-    /** Whether this build carries the manual. */
+    /**
+     * Whether this build carries the manual.
+     *
+     * @return {@code true} if the manual's resource is on the classpath
+     */
     public boolean isAvailable() {
         return loader().getResource(resource) != null;
     }
