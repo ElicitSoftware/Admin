@@ -110,7 +110,6 @@ public class EditDepartmentView extends VerticalLayout implements BeforeEnterObs
      *   <li>Department code text field (optional, max 100 characters)</li>
      *   <li>Default message ID text field (required, max 100 characters)</li>
      *   <li>From email field (required, max 50 characters)</li>
-     *   <li>Notification emails text area (optional, max 2000 characters)</li>
      *   <li>Save and Cancel buttons with appropriate event handlers</li>
      * </ul>
      */
@@ -183,7 +182,6 @@ public class EditDepartmentView extends VerticalLayout implements BeforeEnterObs
      *   <li>Code: Optional, max 100 characters</li>
      *   <li>Default Message ID: Required, 1-100 characters</li>
      *   <li>From Email: Required, valid email, max 50 characters</li>
-     *   <li>Notification Emails: Optional, max 2000 characters</li>
      * </ul>
      */
     private void setupValidation() {
@@ -215,7 +213,6 @@ public class EditDepartmentView extends VerticalLayout implements BeforeEnterObs
                         getTranslation("editDepartmentView.error.fromEmailLength"), 1, 50))
                 .bind("fromEmail");
         
-        // Notification Emails validation (optional, max 2000 chars)
         // Enable/disable save button based on validation
         binder.addStatusChangeListener(event -> 
                 saveBtn.setEnabled(binder.isValid()));
