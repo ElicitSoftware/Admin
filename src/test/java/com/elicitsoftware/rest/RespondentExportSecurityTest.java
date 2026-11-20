@@ -11,14 +11,24 @@ package com.elicitsoftware.rest;
  * ***LICENSE_END***
  */
 
+import com.elicitsoftware.model.Department;
+import com.elicitsoftware.model.Respondent;
+import com.elicitsoftware.model.Subject;
+import com.elicitsoftware.model.Survey;
+import com.elicitsoftware.test.DepartmentFixtures;
 import com.elicitsoftware.test.PostgresTestResource;
+import io.quarkus.narayana.jta.QuarkusTransaction;
 import io.quarkus.test.common.QuarkusTestResource;
 import io.quarkus.test.junit.QuarkusTest;
 import io.quarkus.test.security.TestSecurity;
 import org.junit.jupiter.api.Test;
 
 import static io.restassured.RestAssured.given;
+import java.time.LocalDate;
+
 import static org.hamcrest.Matchers.anyOf;
+import static org.hamcrest.Matchers.containsString;
+import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.is;
 
 /**
@@ -77,5 +87,94 @@ class RespondentExportSecurityTest {
             .when().get(EXPORT_PATH)
             .then()
             .statusCode(anyOf(is(401), is(302)));
+    }
+
+    // ---- UC-011 BR-185, A4: only within the administrator's departments ----------------------
+
+    private static final String SCOPED_ADMIN = "export.scope.admin";
+
+    /** A respondent of the seeded survey, with a subject in the department when one is given. */
+    private static int respondent(String accessCode, Department department) {
+        return QuarkusTransaction.requiringNew().call(() -> {
+            Respondent respondent = new Respondent();
+            respondent.survey = Survey.findById(1L);
+            respondent.accessCode = accessCode;
+            respondent.active = true;
+            respondent.persist();
+            if (department != null) {
+                Subject subject = new Subject("XID-" + accessCode, 1L, department.id, "Pat", "Tester", null,
+                        LocalDate.of(1990, 1, 15), "pat." + accessCode.toLowerCase() + "@example.org", null);
+                subject.setRespondent(respondent);
+                subject.persistAndFlush();
+            }
+            return respondent.id;
+        });
+    }
+
+    private static String token() {
+        return Long.toString(System.nanoTime(), 36).toUpperCase();
+    }
+
+    /** BR-185: a respondent whose subject is in the administrator's department is exported. */
+    @Test
+    @TestSecurity(user = SCOPED_ADMIN, roles = {"elicit_admin"})
+    void aRespondentInTheAdministratorsDepartmentIsExported() {
+        String token = token();
+        Department own = DepartmentFixtures.department(token + "O");
+        DepartmentFixtures.consoleRecord(SCOPED_ADMIN, true, own);
+        int id = respondent("EXO" + token, own);
+
+        given().queryParam("id", id)
+            .when().get(EXPORT_PATH)
+            .then()
+            .statusCode(200)
+            .body(containsString("XID-EXO" + token));
+    }
+
+    /** A4: one outside the administrator's departments reads exactly as one that does not exist. */
+    @Test
+    @TestSecurity(user = SCOPED_ADMIN, roles = {"elicit_admin"})
+    void aRespondentInAnotherDepartmentIsNotFound() {
+        String token = token();
+        Department own = DepartmentFixtures.department(token + "O");
+        Department other = DepartmentFixtures.department(token + "X");
+        DepartmentFixtures.consoleRecord(SCOPED_ADMIN, true, own);
+        int id = respondent("EXX" + token, other);
+
+        given().queryParam("id", id)
+            .when().get(EXPORT_PATH)
+            .then()
+            .statusCode(404)
+            .body(equalTo("Respondent not found: " + id));
+    }
+
+    /** BR-185 with UC-002 BR-181: an auto-registered respondent has no department and is exported. */
+    @Test
+    @TestSecurity(user = SCOPED_ADMIN, roles = {"elicit_admin"})
+    void anAutoRegisteredRespondentIsExported() {
+        String token = token();
+        Department own = DepartmentFixtures.department(token + "O");
+        DepartmentFixtures.consoleRecord(SCOPED_ADMIN, true, own);
+        int id = respondent("EXA" + token, null);
+
+        given().queryParam("id", id)
+            .when().get(EXPORT_PATH)
+            .then()
+            .statusCode(200)
+            .body(containsString("access_code: EXA" + token));
+    }
+
+    /** BR-185: an administrator with no console record exports no respondent with a subject. */
+    @Test
+    @TestSecurity(user = "export.scope.norecord", roles = {"elicit_admin"})
+    void anAdministratorWithNoDepartmentExportsNoSubject() {
+        String token = token();
+        DepartmentFixtures.noConsoleRecord("export.scope.norecord");
+        int id = respondent("EXN" + token, DepartmentFixtures.department(token + "N"));
+
+        given().queryParam("id", id)
+            .when().get(EXPORT_PATH)
+            .then()
+            .statusCode(404);
     }
 }

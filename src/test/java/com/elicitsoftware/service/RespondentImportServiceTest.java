@@ -11,6 +11,8 @@ package com.elicitsoftware.service;
  * ***LICENSE_END***
  */
 
+import io.quarkus.test.security.TestSecurity;
+import com.elicitsoftware.test.DepartmentFixtures;
 import com.elicitsoftware.model.Department;
 import com.elicitsoftware.model.Message;
 import com.elicitsoftware.model.MessageType;
@@ -58,7 +60,11 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  */
 @QuarkusTest
 @QuarkusTestResource(PostgresTestResource.class)
+// UC-012 BR-186: the importing administrator is assigned to the departments the fixtures create.
+@TestSecurity(user = RespondentImportServiceTest.ADMIN, roles = {"elicit_admin"})
 class RespondentImportServiceTest {
+
+    static final String ADMIN = "rx.import.admin";
 
     @Inject
     RespondentExportService respondentExportService;
@@ -318,6 +324,7 @@ class RespondentImportServiceTest {
         department.defaultMessageId = "1";
         department.fromEmail = "rx-import@example.org";
         department.persist();
+        DepartmentFixtures.assign(ADMIN, department);
 
         Respondent respondent = new Respondent();
         respondent.survey = survey;

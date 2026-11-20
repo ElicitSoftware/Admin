@@ -12,6 +12,7 @@ package com.elicitsoftware.test;
  * ***LICENSE_END***
  */
 
+import com.elicitsoftware.security.DepartmentScope;
 import com.elicitsoftware.model.Department;
 import com.elicitsoftware.model.ImportClient;
 import com.elicitsoftware.model.User;
@@ -29,6 +30,21 @@ import java.util.Set;
 public final class DepartmentFixtures {
 
     private DepartmentFixtures() {
+    }
+
+    /** A department rule that permits every department, for a service built by hand outside CDI. */
+    public static DepartmentScope everyDepartment() {
+        return permitting(id -> true);
+    }
+
+    /** A department rule that permits exactly the departments the predicate accepts. */
+    public static DepartmentScope permitting(java.util.function.LongPredicate permitted) {
+        return new DepartmentScope() {
+            @Override
+            public boolean permits(long departmentId) {
+                return permitted.test(departmentId);
+            }
+        };
     }
 
     /** Persists a department under a name and code made unique by the token. */

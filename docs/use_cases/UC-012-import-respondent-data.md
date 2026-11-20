@@ -12,6 +12,7 @@
 
 - The administrator presents a valid bearer token and holds the `elicit_admin` role (UC-001).
 - The file is a valid respondent export produced by UC-011.
+- Every subject in the file names a department the administrator is assigned to (BR-186).
 
 ## Main Success Scenario
 
@@ -82,6 +83,14 @@
 
 1. The system reports that the file carries identifiers specific to the instance that produced it and cannot be imported, instructs the administrator to re-export the respondent from the source instance, and imports nothing.
 
+### A9: Department outside the administrator's departments
+
+**Trigger:** A subject's department code matches a department the administrator is not assigned to (step 3).
+**Flow:**
+
+1. The system aborts the import and rolls back everything inserted so far, reporting it exactly as A5 reports a code with no match, so the answer does not reveal which departments exist beyond the administrator's own (BR-186).
+2. Nothing is imported. Use case ends.
+
 ## Postconditions
 
 ### Success Postconditions
@@ -113,6 +122,10 @@ The survey a respondent's data is attached to is resolved by matching the export
 ### BR-102: Department resolved by code, never created
 
 A subject's department is resolved by matching the file's department code against the departments of this instance. An import never creates a department; a code with no match aborts the import.
+
+### BR-186: Import only within the administrator's departments
+
+An administrator imports a respondent only when every subject in the file names a department the administrator's console user record is assigned to (NFR-021); one subject outside them refuses the whole import, as any unresolved reference does (BR-042). The refusal reads as a department code with no match (A9, A5). The rule is the export's (UC-011 BR-185) and is checked on the server for the Import page and the REST endpoint alike. A file with no subject, from an auto-registered respondent, names no department and is imported as before.
 
 ### BR-103: Element references resolved by key and exact version
 

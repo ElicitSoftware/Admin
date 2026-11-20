@@ -12,6 +12,7 @@ package com.elicitsoftware.service;
  */
 
 import com.elicitsoftware.admin.i18n.Translations;
+import com.elicitsoftware.security.DepartmentScope;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStream;
@@ -72,6 +73,9 @@ public class RespondentImportService {
 
     @Inject
     EntityManager em;
+
+    @Inject
+    DepartmentScope departmentScope;
 
     /**
      * Raised when a value in the file cannot be resolved against this instance: an unknown
@@ -599,7 +603,11 @@ public class RespondentImportService {
         }
     }
 
-    /** BR-102: a subject's department is matched by code and never created. */
+    /**
+     * BR-102: a subject's department is matched by code and never created. BR-186: it must be one
+     * of the administrator's departments; one that is not is reported as a code with no match
+     * (A9), so the answer does not reveal which departments exist beyond the caller's own.
+     */
     private Long resolveDepartment(String codeField, ImportContext context) {
         String code = nullIfEmpty(codeField);
         if (code == null) {
@@ -612,7 +620,7 @@ public class RespondentImportService {
         Query query = em.createNativeQuery("SELECT id FROM survey.departments WHERE code = ?1");
         query.setParameter(1, code);
         Long id = getLongResult(query);
-        if (id == null) {
+        if (id == null || !departmentScope.permits(id)) {
             throw new ImportValidationException(Translations.get("respondentImport.noDepartment", code));
         }
         context.departmentIds.put(code, id);

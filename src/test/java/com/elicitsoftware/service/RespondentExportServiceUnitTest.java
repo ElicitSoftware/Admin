@@ -11,6 +11,7 @@ package com.elicitsoftware.service;
  * ***LICENSE_END***
  */
 
+import com.elicitsoftware.test.DepartmentFixtures;
 import com.elicitsoftware.test.ScriptedEntityManager;
 import com.elicitsoftware.test.ScriptedEntityManager.Call;
 import org.junit.jupiter.api.Test;
@@ -164,6 +165,7 @@ class RespondentExportServiceUnitTest {
         });
         RespondentImportService importer = new RespondentImportService();
         importer.em = target.entityManager();
+        importer.departmentScope = DepartmentFixtures.everyDepartment();
         RespondentImportService.ImportResult result = importer.importFromFile(
                 new ByteArrayInputStream(text.getBytes(StandardCharsets.UTF_8)));
 
