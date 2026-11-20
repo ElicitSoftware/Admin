@@ -635,14 +635,14 @@ public class SearchView extends VerticalLayout implements HasDynamicTitle, Befor
                                 Notification.show(getTranslation("searchView.action.emailFailed"), 5000, Notification.Position.TOP_CENTER);
                             }
                         } catch (Exception ex) {
-                            Notification.show(getTranslation("searchView.action.emailError", logged("Sending an email", ex)), 5000, Notification.Position.TOP_CENTER);
+                            Notification.show(getTranslation("searchView.action.emailError", logged("Sending an email", ex)), 5000, Notification.Position.TOP_CENTER); // i18n:ignore (log text)
                         }
                     } else if (ACTION_PRINT_REPORTS.equals(selectedAction)) {
                         try {
                             reportingService.printReports(status);
                             Notification.show(getTranslation("searchView.action.reportsGenerated"), 3000, Notification.Position.TOP_CENTER);
                         } catch (Exception ex) {
-                            Notification.show(getTranslation("searchView.action.reportsError", logged("Printing reports", ex)), 5000, Notification.Position.TOP_CENTER);
+                            Notification.show(getTranslation("searchView.action.reportsError", logged("Printing reports", ex)), 5000, Notification.Position.TOP_CENTER); // i18n:ignore (log text)
                         }
                     } else if (ACTION_EXPORT.equals(selectedAction)) {
                         UI.getCurrent().getPage().executeJs("window.open($0, '_blank')", buildExportUrl(status));
@@ -935,7 +935,7 @@ public class SearchView extends VerticalLayout implements HasDynamicTitle, Befor
     static String logged(String action, Exception e) {
         String reference = java.util.UUID.randomUUID().toString().substring(0, 8);
         Log.errorf(e, "%s failed (ref %s)", action, reference);
-        return "ref " + reference;
+        return "ref " + reference; // i18n:ignore (a log reference, the same in every language)
     }
 
     /**
