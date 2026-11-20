@@ -161,6 +161,27 @@ class AccessCodeServiceDepartmentScopeTest {
         assertEquals(0, subjectsWith(xid));
     }
 
+    /** UC-010 step 6, A1: an excluded subject is answered "Excluded Subject" and nothing is stored. */
+    @Test
+    @TestSecurity(user = CLIENT, roles = {"elicit_importer"})
+    void given_anExcludedXid_when_oneSubjectIsPosted_then_theOutcomeIsExcludedSubject() {
+        String xid = "SCOPE-" + token + "-x";
+        // An id of the test's own: the console's role may not draw from the table's sequence.
+        int id = 1_000_000_000 + (int) (System.nanoTime() % 1_000_000_000);
+        QuarkusTransaction.requiringNew().run(() -> Department.getEntityManager()
+                .createNativeQuery("INSERT INTO survey.excluded_xids (id, xid, department, reason, created_dt, created_by) "
+                        + "VALUES (?1, ?2, ?3, 'Test data', CURRENT_TIMESTAMP, 'tester')")
+                .setParameter(1, id).setParameter(2, xid).setParameter(3, (int) own.id)
+                .executeUpdate());
+
+        given().contentType(ContentType.JSON).body(subjectJson(own.id, xid))
+                .when().post("/api/secured/add/subject")
+                .then().statusCode(200)
+                .body("subjects[0].importStatus", equalTo("Excluded Subject"));
+
+        assertEquals(0, subjectsWith(xid));
+    }
+
     @Test
     @TestSecurity(user = CLIENT, roles = {"elicit_importer"})
     void given_theClientsOwnDepartment_when_oneSubjectIsPosted_then_itIsRegisteredWithItsAccessCode() {
