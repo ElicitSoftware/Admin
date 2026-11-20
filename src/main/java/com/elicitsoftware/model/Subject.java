@@ -103,6 +103,12 @@ import java.util.TimeZone;
 })
 public class Subject extends PanacheEntityBase {
 
+    /** The most characters a first, middle or last name holds (UC-003 BR-189). */
+    public static final int NAME_MAX_LENGTH = 50;
+
+    /** The most characters an email address holds (UC-003 BR-189). */
+    public static final int EMAIL_MAX_LENGTH = 255;
+
     @Transient
     private final SimpleDateFormat sdf = new SimpleDateFormat("MM/dd/yyyy");
     /**
@@ -139,18 +145,18 @@ public class Subject extends PanacheEntityBase {
     @Column(name = "firstName")
     @NotNull(message = "First name cannot be blank")
     @NotBlank
-    @Size(max = 50,
+    @Size(max = NAME_MAX_LENGTH,
             message = "First name max length 50 characters")
     private String firstName;
 
     @Column(name = "lastName")
     @NotNull(message = "Last name cannot be blank")
     @NotBlank
-    @Size(max = 50,
+    @Size(max = NAME_MAX_LENGTH,
             message = "Last name max length 50 characters")
     private String lastName;
     @Column(name = "middleName")
-    @Size(max = 50,
+    @Size(max = NAME_MAX_LENGTH,
             message = "Middle name max length 50 characters")
     private String middleName;
 
@@ -159,7 +165,7 @@ public class Subject extends PanacheEntityBase {
     private LocalDate dob;
 
     @Column(name = "email")
-    @Size(max = 255, message = "Email max length 255 characters")
+    @Size(max = EMAIL_MAX_LENGTH, message = "Email max length 255 characters")
     @Email(message = "The email is invalid")
     @NotBlank
     private String email;

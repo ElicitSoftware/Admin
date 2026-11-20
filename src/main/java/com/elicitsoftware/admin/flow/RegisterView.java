@@ -48,6 +48,7 @@ import com.vaadin.flow.server.streams.UploadHandler;
 import com.vaadin.flow.data.binder.Binder;
 import com.vaadin.flow.data.binder.ValidationException;
 import com.vaadin.flow.data.validator.EmailValidator;
+import com.vaadin.flow.data.validator.StringLengthValidator;
 import com.vaadin.flow.router.BeforeEnterEvent;
 import com.vaadin.flow.router.BeforeEnterObserver;
 import com.vaadin.flow.router.HasDynamicTitle;
@@ -345,15 +346,22 @@ public class RegisterView extends HorizontalLayout implements HasDynamicTitle, B
                 )
                 .bind("xid");
 
+        // UC-003 BR-189: no value longer than the subject stores, named by its limit.
         binder.forField(firstName)
                 .asRequired(getTranslation("registerView.error.firstNameRequired"))
+                .withValidator(new StringLengthValidator(
+                        getTranslation("registerView.error.firstNameTooLong", Subject.NAME_MAX_LENGTH), null, Subject.NAME_MAX_LENGTH))
                 .bind("firstName");
 
         binder.forField(lastName)
                 .asRequired(getTranslation("registerView.error.lastNameRequired"))
+                .withValidator(new StringLengthValidator(
+                        getTranslation("registerView.error.lastNameTooLong", Subject.NAME_MAX_LENGTH), null, Subject.NAME_MAX_LENGTH))
                 .bind("lastName");
 
         binder.forField(middleName)
+                .withValidator(new StringLengthValidator(
+                        getTranslation("registerView.error.middleNameTooLong", Subject.NAME_MAX_LENGTH), null, Subject.NAME_MAX_LENGTH))
                 .bind("middleName");
 
         binder.forField(dob)
@@ -365,6 +373,8 @@ public class RegisterView extends HorizontalLayout implements HasDynamicTitle, B
 
         binder.forField(email)
                 .withValidator(new EmailValidator(getTranslation("registerView.error.emailInvalid")))
+                .withValidator(new StringLengthValidator(
+                        getTranslation("registerView.error.emailTooLong", Subject.EMAIL_MAX_LENGTH), null, Subject.EMAIL_MAX_LENGTH))
                 .bind("email");
 
         binder.forField(phone)

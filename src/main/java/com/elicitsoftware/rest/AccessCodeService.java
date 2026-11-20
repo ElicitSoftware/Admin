@@ -549,12 +549,19 @@ public class AccessCodeService {
     private static String fault(String field, ConstraintViolation<?> violation) {
         Class<?> rule = violation.getConstraintDescriptor().getAnnotation().annotationType();
         boolean missing = rule == NotNull.class || rule == NotBlank.class;
+        // UC-003 BR-189: a value too long is named by its field and limit, as the form names it.
+        Object limit = violation.getConstraintDescriptor().getAttributes().get("max");
+        boolean tooLong = rule == Size.class;
         return switch (field) {
-            case "firstName" -> missing ? Translations.get("registerView.error.firstNameRequired") : violation.getMessage();
-            case "lastName" -> missing ? Translations.get("registerView.error.lastNameRequired") : violation.getMessage();
+            case "firstName" -> missing ? Translations.get("registerView.error.firstNameRequired")
+                    : tooLong ? Translations.get("registerView.error.firstNameTooLong", limit) : violation.getMessage();
+            case "lastName" -> missing ? Translations.get("registerView.error.lastNameRequired")
+                    : tooLong ? Translations.get("registerView.error.lastNameTooLong", limit) : violation.getMessage();
+            case "middleName" -> tooLong ? Translations.get("registerView.error.middleNameTooLong", limit) : violation.getMessage();
             case "dob" -> Translations.get("registerView.error.dobPast");
             case "email" -> missing ? Translations.get("csvImport.emailRequired")
-                    : rule == Email.class ? Translations.get("registerView.error.emailInvalid") : violation.getMessage();
+                    : rule == Email.class ? Translations.get("registerView.error.emailInvalid")
+                    : tooLong ? Translations.get("registerView.error.emailTooLong", limit) : violation.getMessage();
             case "phone" -> rule == Pattern.class ? Translations.get("registerView.error.phoneFormat") : violation.getMessage();
             default -> violation.getMessage();
         };

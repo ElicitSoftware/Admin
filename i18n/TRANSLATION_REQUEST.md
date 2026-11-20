@@ -103,8 +103,12 @@ Every row is one key in `translations.properties`. Return a file `translations_<
 | `registerView.error.surveyRequired` | Survey is required | Register subjects page · field error | 60 |  |
 | `registerView.error.firstNameRequired` | First name is required | Register subjects page · field error | 60 |  |
 | `registerView.error.lastNameRequired` | Last name is required | Register subjects page · field error | 60 |  |
+| `registerView.error.firstNameTooLong` | First name can be at most {0} characters | Register subjects page and CSV import · field error; also in a refused CSV row or API record | 60 | params: {0} = the most characters allowed |
+| `registerView.error.lastNameTooLong` | Last name can be at most {0} characters | Register subjects page and CSV import · field error; also in a refused CSV row or API record | 60 | params: {0} = the most characters allowed |
+| `registerView.error.middleNameTooLong` | Middle name can be at most {0} characters | Register subjects page and CSV import · field error; also in a refused CSV row or API record | 60 | params: {0} = the most characters allowed |
 | `registerView.error.dobPast` | Date of birth must be in the past | Register subjects page · field error | 60 |  |
 | `registerView.error.emailInvalid` | Enter a valid email address | Register subjects page · field error | 60 |  |
+| `registerView.error.emailTooLong` | Email address can be at most {0} characters | Register subjects page and CSV import · field error; also in a refused CSV row or API record | 60 | params: {0} = the most characters allowed |
 | `registerView.error.phoneFormat` | Phone must be ###-###-#### | Register subjects page · field error; keep ###-###-#### | 60 |  |
 | `registerView.error.duplicateXid` | Duplicate entry: a subject with the external ID {0} already exists for this department. | Register subjects page · notification | 120 | params: {0} = external ID |
 | `registerView.error.databaseTitle` | Database error | Register subjects page · error dialog title | 30 |  |
@@ -827,8 +831,12 @@ registerView.error.departmentRequired=Department is required
 registerView.error.surveyRequired=Survey is required
 registerView.error.firstNameRequired=First name is required
 registerView.error.lastNameRequired=Last name is required
+registerView.error.firstNameTooLong=First name can be at most {0} characters
+registerView.error.lastNameTooLong=Last name can be at most {0} characters
+registerView.error.middleNameTooLong=Middle name can be at most {0} characters
 registerView.error.dobPast=Date of birth must be in the past
 registerView.error.emailInvalid=Enter a valid email address
+registerView.error.emailTooLong=Email address can be at most {0} characters
 registerView.error.phoneFormat=Phone must be ###-###-####
 registerView.error.duplicateXid=Duplicate entry: a subject with the external ID {0} already exists for this department.
 registerView.error.databaseTitle=Database error

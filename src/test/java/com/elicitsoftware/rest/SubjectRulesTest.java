@@ -85,11 +85,40 @@ class SubjectRulesTest {
         assertEquals(List.of("Date of birth must be in the past"), service.subjectRuleViolations(request));
     }
 
+    /** UC-003 BR-189: the limit is named in the Register page's words, not the constraint's. */
     @Test
     void given_anOverlongName_when_checked_then_itsLengthIsNamed() {
         AddRequest request = record();
         request.lastName = "L".repeat(51);
-        assertEquals(List.of("Last name max length 50 characters"), service.subjectRuleViolations(request));
+        assertEquals(List.of("Last name can be at most 50 characters"), service.subjectRuleViolations(request));
+    }
+
+    @Test
+    void given_aNameOfExactlyTheLimit_when_checked_then_itHasNoFault() {
+        AddRequest request = record();
+        request.firstName = "F".repeat(50);
+        request.middleName = "M".repeat(50);
+        assertEquals(List.of(), service.subjectRuleViolations(request));
+    }
+
+    @Test
+    void given_anOverlongMiddleName_when_checked_then_itsLengthIsNamed() {
+        AddRequest request = record();
+        request.middleName = "M".repeat(51);
+        assertEquals(List.of("Middle name can be at most 50 characters"), service.subjectRuleViolations(request));
+    }
+
+    @Test
+    void given_anOverlongEmail_when_checked_then_itsLengthIsNamed() {
+        AddRequest request = record();
+        request.email = overlongEmail();
+        assertEquals(List.of("Email address can be at most 255 characters"), service.subjectRuleViolations(request));
+    }
+
+    /** A well-formed address of 256 characters: a 60-character local part and three 63-character labels. */
+    static String overlongEmail() {
+        String label = "d".repeat(63);
+        return "a".repeat(60) + "@" + label + "." + label + "." + label + ".org";
     }
 
     @Test
