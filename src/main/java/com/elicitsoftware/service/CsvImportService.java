@@ -229,6 +229,12 @@ public class CsvImportService {
                         throw new Exception(Translations.get("csvImport.surveyNotOffered",
                                 String.valueOf(request.departmentId), String.valueOf(request.surveyId)));
                     }
+                    // UC-010 BR-188: a line whose subject breaks a rule is refused here, before
+                    // anyone is registered, so it cannot fail the import's transaction later.
+                    List<String> faults = accessCodeService.subjectRuleViolations(request);
+                    if (!faults.isEmpty()) {
+                        throw new Exception(String.join("; ", faults));
+                    }
                     plan.accepted.add(new CsvRow(lineNumber, request));
                 } catch (Exception e) {
                     plan.refused.add(Translations.get("definition.line", String.valueOf(lineNumber), e.getMessage()));

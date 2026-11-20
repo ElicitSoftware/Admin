@@ -93,7 +93,6 @@ import java.util.TimeZone;
  * @see Respondent
  * @see Survey
  * @see Department
- * @see com.elicitsoftware.admin.validator.ValidRespondent
  * @see PanacheEntityBase
  */
 @Entity
@@ -160,7 +159,7 @@ public class Subject extends PanacheEntityBase {
     private LocalDate dob;
 
     @Column(name = "email")
-    @Size(max = 255, message = "Max Email length 50 characters")
+    @Size(max = 255, message = "Email max length 255 characters")
     @Email(message = "The email is invalid")
     @NotBlank
     private String email;
@@ -222,7 +221,7 @@ public class Subject extends PanacheEntityBase {
         this.middleName = middleName;
         this.dob = dob;
         this.email = email;
-        this.phone = phone;
+        this.phone = phoneOrNone(phone);
     }
 
     /**
@@ -446,12 +445,20 @@ public class Subject extends PanacheEntityBase {
     }
 
     /**
-     * Sets the phone number.
+     * Sets the phone number; a blank one is no phone.
      *
      * @param phone the phone number to set
      */
     public void setPhone(String phone) {
-        this.phone = phone;
+        this.phone = phoneOrNone(phone);
+    }
+
+    /**
+     * The phone is optional (UC-003 BR-010): a blank value, such as an empty CSV column, is no
+     * phone and not a malformed one, as the Register page already treats it.
+     */
+    private static String phoneOrNone(String phone) {
+        return phone == null || phone.isBlank() ? null : phone;
     }
 
     /**

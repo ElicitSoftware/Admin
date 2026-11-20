@@ -32,6 +32,14 @@ import jakarta.annotation.security.RolesAllowed;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import jakarta.transaction.Transactional;
+import jakarta.validation.ConstraintViolation;
+import jakarta.validation.Validation;
+import jakarta.validation.Validator;
+import jakarta.validation.constraints.Email;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Pattern;
+import jakarta.validation.constraints.Size;
 import jakarta.ws.rs.*;
 import jakarta.ws.rs.core.Context;
 import jakarta.ws.rs.core.MediaType;
@@ -39,7 +47,10 @@ import jakarta.ws.rs.core.UriInfo;
 
 import java.security.SecureRandom;
 import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 /**
@@ -67,6 +78,14 @@ public class AccessCodeService {
     /** The surveys each department registers onto (UC-006 BR-172, UC-010 BR-177). */
     @Inject
     DepartmentService departmentService;
+
+    /** Checks a record against the subject rules before anything is created (UC-010 BR-188). */
+    @Inject
+    Validator validator;
+
+    /** The fields of a subject a record supplies, in the order a refusal names them (BR-188). */
+    private static final List<String> SUBJECT_FIELDS =
+            List.of("firstName", "lastName", "middleName", "dob", "email", "phone");
 
     /** Decides which departments the caller may register subjects in (UC-010 BR-137). */
     @Inject
@@ -141,6 +160,13 @@ public class AccessCodeService {
             throw new ForbiddenException();
         }
         AddResponse response = new AddResponse();
+        // UC-010 BR-188: a record that breaks a subject rule creates nothing, not even an
+        // access code, and is refused naming the fields at fault.
+        List<String> faults = subjectRuleViolations(request);
+        if (!faults.isEmpty()) {
+            response.setError(refusal(request, faults));
+            return response;
+        }
         AddResponseStatus addStatus;
         try {
             // Check if this xid and department should be excluded.
@@ -271,6 +297,11 @@ public class AccessCodeService {
         // UC-010 BR-177, A8: nor onto a survey the department does not register onto.
         if (!offersSurvey(request.departmentId, request.surveyId)) {
             return new AddResponseStatus(new Status(), "Not permitted: " + request.xid);
+        }
+        // UC-010 BR-188: as for a single subject; the batch goes on (BR-037).
+        List<String> faults = subjectRuleViolations(request);
+        if (!faults.isEmpty()) {
+            return new AddResponseStatus(new Status(), refusal(request, faults));
         }
         try {
             // Check if this xid and department should be excluded
@@ -469,6 +500,69 @@ public class AccessCodeService {
      */
     public boolean offersSurvey(long departmentId, long surveyId) {
         return departmentService.offersSurvey(departmentId, surveyId);
+    }
+
+    /**
+     * What is wrong with the subject a record describes (UC-010 BR-188): one message per field
+     * at fault, in the order of the record's fields, empty when it may be registered. The rules
+     * are {@link Subject}'s own constraints (UC-003 BR-009, BR-010), so the console, the API and
+     * the CSV import refuse the same records; a field's messages are the Register page's where it
+     * has one. The CSV import asks it for each line, as it asks {@link #permitsDepartment(long)}.
+     *
+     * @param request the record as the caller sent it
+     * @return the faults, or an empty list
+     */
+    public List<String> subjectRuleViolations(AddRequest request) {
+        Subject subject = new Subject(request.xid, request.surveyId, request.departmentId, request.firstName,
+                request.lastName, request.middleName, request.dob, request.email, request.phone);
+        Validator rules = validator != null ? validator : PlainRules.VALIDATOR;
+        Map<String, List<ConstraintViolation<Subject>>> byField = new HashMap<>();
+        for (ConstraintViolation<Subject> violation : rules.validate(subject)) {
+            byField.computeIfAbsent(violation.getPropertyPath().toString(), field -> new ArrayList<>()).add(violation);
+        }
+        List<String> faults = new ArrayList<>();
+        for (String field : SUBJECT_FIELDS) {
+            // One message per field: a missing value before a malformed one, and either before a
+            // length, so an empty email reads "required" and not also "invalid".
+            byField.getOrDefault(field, List.of()).stream()
+                    .min(Comparator.comparingInt(AccessCodeService::precedence))
+                    .ifPresent(violation -> faults.add(fault(field, violation)));
+        }
+        return faults;
+    }
+
+    /** The validator of an instance built without CDI, as the unit tests build it; loaded on first use. */
+    private static final class PlainRules {
+        static final Validator VALIDATOR = Validation.buildDefaultValidatorFactory().getValidator();
+    }
+
+    /** The order in which a field's broken rules are reported: missing, then malformed, then too long. */
+    private static int precedence(ConstraintViolation<?> violation) {
+        Class<?> rule = violation.getConstraintDescriptor().getAnnotation().annotationType();
+        if (rule == NotNull.class || rule == NotBlank.class) {
+            return 0;
+        }
+        return rule == Size.class ? 2 : 1;
+    }
+
+    /** A field's fault in the Register page's words where it has them, else the constraint's own. */
+    private static String fault(String field, ConstraintViolation<?> violation) {
+        Class<?> rule = violation.getConstraintDescriptor().getAnnotation().annotationType();
+        boolean missing = rule == NotNull.class || rule == NotBlank.class;
+        return switch (field) {
+            case "firstName" -> missing ? Translations.get("registerView.error.firstNameRequired") : violation.getMessage();
+            case "lastName" -> missing ? Translations.get("registerView.error.lastNameRequired") : violation.getMessage();
+            case "dob" -> Translations.get("registerView.error.dobPast");
+            case "email" -> missing ? Translations.get("csvImport.emailRequired")
+                    : rule == Email.class ? Translations.get("registerView.error.emailInvalid") : violation.getMessage();
+            case "phone" -> rule == Pattern.class ? Translations.get("registerView.error.phoneFormat") : violation.getMessage();
+            default -> violation.getMessage();
+        };
+    }
+
+    /** The answer for a refused record (BR-188): the external ID the caller sent and the faults. */
+    private static String refusal(AddRequest request, List<String> faults) {
+        return "Invalid record " + request.xid + ": " + String.join("; ", faults);
     }
 
     /**

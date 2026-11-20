@@ -560,8 +560,6 @@
                         <param>com.elicitsoftware.admin.i18n.TranslationsTest</param>
                         <param>com.elicitsoftware.admin.util.BrandUtilDetectionTest</param>
                         <param>com.elicitsoftware.admin.util.BrandUtilTest</param>
-                        <param>com.elicitsoftware.admin.validator.RespondentValidatorTest</param>
-                        <param>com.elicitsoftware.admin.validator.ResultTest</param>
                         <param>com.elicitsoftware.common.health.DatabaseHealthCheckUnitTest</param>
                         <param>com.elicitsoftware.diagnostics.BrandDiagnosticsReportTest</param>
                         <param>com.elicitsoftware.diagnostics.BuildInfoValuesTest</param>
