@@ -12,7 +12,6 @@ package com.elicitsoftware.model;
  */
 
 import io.quarkus.hibernate.orm.panache.PanacheEntityBase;
-import io.quarkus.panache.common.Parameters;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.*;
 
@@ -20,6 +19,7 @@ import java.text.SimpleDateFormat;
 import java.time.LocalDate;
 import java.util.Date;
 import java.util.List;
+import java.util.Map;
 import java.util.TimeZone;
 
 /**
@@ -74,10 +74,10 @@ import java.util.TimeZone;
  * // Find subjects by department and date range
  * List<Subject> subjects = Subject.find(
  *     "AppointmentView.findByDateDeptAndXidList",
- *     Parameters.with("departmentId", 456L)
- *               .and("startDate", startDate)
- *               .and("endDate", endDate)
- *               .and("xids", xidList)
+ *     Map.of("departmentId", 456L,
+ *            "startDate", startDate,
+ *            "endDate", endDate,
+ *            "xids", xidList)
  * ).list();
  * }</pre>
  *
@@ -90,12 +90,9 @@ import java.util.TimeZone;
  * </ul>
  *
  * @author Elicit Software
- * @version 1.0
- * @since 1.0
  * @see Respondent
  * @see Survey
  * @see Department
- * @see com.elicitsoftware.admin.validator.ValidRespondent
  * @see PanacheEntityBase
  */
 @Entity
@@ -105,6 +102,12 @@ import java.util.TimeZone;
         @NamedQuery(name = "AppointmentView.mainViewSearch", query = "SELECT S FROM Subject S where S.departmentId in(:departmentIds) and S.createdDt between :startDate and :endDate and S.xid IN : xids"),
 })
 public class Subject extends PanacheEntityBase {
+
+    /** The most characters a first, middle or last name holds (UC-003 BR-189). */
+    public static final int NAME_MAX_LENGTH = 50;
+
+    /** The most characters an email address holds (UC-003 BR-189). */
+    public static final int EMAIL_MAX_LENGTH = 255;
 
     @Transient
     private final SimpleDateFormat sdf = new SimpleDateFormat("MM/dd/yyyy");
@@ -142,18 +145,18 @@ public class Subject extends PanacheEntityBase {
     @Column(name = "firstName")
     @NotNull(message = "First name cannot be blank")
     @NotBlank
-    @Size(max = 50,
+    @Size(max = NAME_MAX_LENGTH,
             message = "First name max length 50 characters")
     private String firstName;
 
     @Column(name = "lastName")
     @NotNull(message = "Last name cannot be blank")
     @NotBlank
-    @Size(max = 50,
+    @Size(max = NAME_MAX_LENGTH,
             message = "Last name max length 50 characters")
     private String lastName;
     @Column(name = "middleName")
-    @Size(max = 50,
+    @Size(max = NAME_MAX_LENGTH,
             message = "Middle name max length 50 characters")
     private String middleName;
 
@@ -162,7 +165,7 @@ public class Subject extends PanacheEntityBase {
     private LocalDate dob;
 
     @Column(name = "email")
-    @Size(max = 255, message = "Max Email length 50 characters")
+    @Size(max = EMAIL_MAX_LENGTH, message = "Email max length 255 characters")
     @Email(message = "The email is invalid")
     @NotBlank
     private String email;
@@ -224,7 +227,7 @@ public class Subject extends PanacheEntityBase {
         this.middleName = middleName;
         this.dob = dob;
         this.email = email;
-        this.phone = phone;
+        this.phone = phoneOrNone(phone);
     }
 
     /**
@@ -253,7 +256,9 @@ public class Subject extends PanacheEntityBase {
      */
     @Transient
     public static List<Subject> findByDepartmentXidDates(long department_id, List<String> xids, Date startDate, Date endDate) {
-        return find("#AppointmentView.findByDateDeptAndXidList", Parameters.with("departmentId", department_id).and("startDate", startDate).and("endDate", endDate).and("xid", "(" + String.join("','", xids) + ")")).list();
+        return find("#AppointmentView.findByDateDeptAndXidList",
+                Map.of("departmentId", department_id, "startDate", startDate, "endDate", endDate,
+                        "xid", "(" + String.join("','", xids) + ")")).list();
     }
 
     /**
@@ -446,12 +451,20 @@ public class Subject extends PanacheEntityBase {
     }
 
     /**
-     * Sets the phone number.
+     * Sets the phone number; a blank one is no phone.
      *
      * @param phone the phone number to set
      */
     public void setPhone(String phone) {
-        this.phone = phone;
+        this.phone = phoneOrNone(phone);
+    }
+
+    /**
+     * The phone is optional (UC-003 BR-010): a blank value, such as an empty CSV column, is no
+     * phone and not a malformed one, as the Register page already treats it.
+     */
+    private static String phoneOrNone(String phone) {
+        return phone == null || phone.isBlank() ? null : phone;
     }
 
     /**
@@ -470,21 +483,6 @@ public class Subject extends PanacheEntityBase {
      */
     public void setCreatedDt(Date createdDt) {
         this.createdDt = createdDt;
-    }
-
-    /**
-     * Finds a subject by their authentication token.
-     * <p>
-     * Searches for a subject whose associated respondent has the specified
-     * authentication token. This method is used for token-based authentication
-     * and survey access.
-     *
-     * @param token the authentication token to search for
-     * @return the Subject associated with the token, or null if not found
-     */
-    public static Subject findSubjectByToken(String token) {
-        // Implement DB lookup here, e.g. using JPA or Panache
-        return Subject.find("respondent.token", token).firstResult();
     }
 
     /**

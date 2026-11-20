@@ -97,6 +97,12 @@
           <td>❌</td>
         </tr>
         <tr>
+          <td>View a survey's participation and export it (CSV, PDF)</td>
+          <td>✅</td>
+          <td>✅</td>
+          <td>❌</td>
+        </tr>
+        <tr>
           <td>Add and edit departments</td>
           <td>❌</td>
           <td>✅</td>
@@ -150,7 +156,7 @@ This project was built with <a href="http://docker.com" target="_blank">Docker</
 <!-- USAGE EXAMPLES -->
 ## Usage
 The Admin tool doesn't define a survey. The Author tool will be used for that. If you would like to see the Admin tool in practice, you can use the <a href="https://github.com/ElicitSoftware/FHHS" target="_blank">FHHS</a> survey.<br/> 
-After running the `docker-compose` command, open [http://localhost:8080](http://localhost:8080) in your browser. Enter any token (the demo accepts any value), complete the questionnaire, and review your data. Once you finalize the survey, a report similar to the one below will be generated.
+After running the `docker-compose` command, open [http://localhost:8080](http://localhost:8080) in your browser. Enter any access code (the demo accepts any value), complete the questionnaire, and review your data. Once you finalize the survey, a report similar to the one below will be generated.
 <div align="center"><image src="images/samplePedigree.png" height=600></div>
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 
@@ -161,7 +167,7 @@ cases in `docs/use_cases` (each test references its `UC-XXX` ID).
 Two tiers of tests exist:
 
 - **Unit tests** — fast, no external services. They cover pure logic such as
-  the token generator (UC-015), respondent contact validation (UC-003), the
+  the access code generator (UC-015), respondent contact validation (UC-003), the
   validation `Result` wrapper (UC-006/UC-007), the integration-API response DTO
   (UC-010), and brand presentation helpers (UC-001).
 - **Booted tests** (`@QuarkusTest`) — start the full application against a
@@ -213,7 +219,17 @@ Run tests and generate a JaCoCo coverage report
 ./mvnw test jacoco:report -Dquarkus.container-image.build=false
 ```
 
-Also run the opt-in `TokenServiceEndpointIT` smoke test:
+Run Pitest mutation testing over the plain unit tests
+(`target/pit-reports/index.html`; about a minute, no Docker):
+
+```shell
+./mvnw test-compile pitest:mutationCoverage -Dquarkus.container-image.build=false
+```
+
+Booted `@QuarkusTest` classes are left out because they cannot see Pitest's mutants. The
+plugin's `targetTests` in `pom.xml` lists the plain tests by name, so add a new one there.
+
+Also run the opt-in `AccessCodeServiceEndpointIT` smoke test:
 
 ```shell
 ./mvnw test -Dit.integration=true -Dquarkus.container-image.build=false
@@ -230,6 +246,14 @@ The OIDC server can be congifured with enviromental properties.
 Please visit <a href="https://quarkus.io/guides/security-oidc-configuration-properties-reference" target="_blank">Quarkus.io</a> for a list of configuration properties. 
 
 For email configuration including examples for GMail, AWS SES, Mailjet & SendMail visit <a href="https://quarkus.io/guides/mailer-reference" target="_blank">Quarkus.io</a>
+
+After a survey definition is installed or updated (`/api/secured/survey/apply`, `/import`, `/update`, or the Apply Survey Definition page), Admin asks the Survey application to rebuild its reporting star schema by calling `POST {ELICIT_SURVEY_URL}/api/etl/build` (default `http://survey:8080`, the compose service name; `http://localhost:8080` in dev). The outcome is appended to the result ("Reporting schema rebuilt." / "Reporting schema not rebuilt: ...") and never fails the apply; set `ELICIT_SURVEY_ETL_BUILD_ENABLED=false` to skip the call. The Survey application also appears on System > Connections.
+
+Calls to Survey's `/api` paths, and report requests to a trusted origin, carry the deployment's service token as `Authorization: Bearer`. Set `ELICIT_SERVICE_TOKEN` (at least 32 characters; `openssl rand -hex 32`) to the same value on every Elicit service. Without it Admin starts but reports not ready (`service-token` check on `/q/health/ready`) and does not make those calls. A report address from a survey definition receives the token only when its origin is `ELICIT_SURVEY_URL`'s or is listed in `ELICIT_SERVICE_TRUSTED_ORIGINS` (comma-separated `scheme://host[:port]`, empty by default). Dev mode uses the development value the compose stack supplies.
+
+A subject is registered, opened for editing or changed only in a department the signed-in account's console user record is assigned to (NFR-021). A machine client of the registration API is not a user: it is entered on the Import Clients page (UC-032) under its principal name (for a Keycloak service account, `service-account-<client id>`) with the departments it registers into, and a principal with neither record registers in none. The registration API is for import clients only: its three endpoints accept the `elicit_importer` role and no other, no user holds that role by implication or by assignment, and a token that carries it without an active import client record, or beside `elicit_user` or `elicit_admin`, is answered 403 (UC-010 BR-034, BR-170). People register subjects on the Register page, whose CSV upload runs under their own role and departments. For a subject that already exists the API answers with the outcome, the external ID and the department only; the access code is returned for a subject the call created (UC-010 BR-164). The rule is applied on the server for the registration form, the CSV upload and the registration API (`/api/secured/add/subject`, `/add/subjects`, `/add/csv`): a single request for another department is answered 403, and a batch or CSV record for one is reported as not permitted while the other records proceed (UC-010 BR-137). The edit screen is addressed by the subject's record id, `/register/<id>`; no console address carries an access code (NFR-022).
+
+The Participation page (`/participation`, UC-031) counts one survey's respondents in the user's departments and summarizes the questions the survey's author marked for the administrator report. Any count from 1 to one below `ELICIT_PARTICIPATION_SMALL_CELL` (`elicit.participation.small-cell`, default `5`) is shown as "< k" on the page and in its CSV and PDF; `1` turns suppression off. A respondent in progress with no activity for `ELICIT_PARTICIPATION_STALLED_DAYS` days (`elicit.participation.stalled-days`, default `14`) is counted as stalled. The page's charts are SVG drawn by Admin itself, with no charting dependency.
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 
 <!-- ROADMAP
@@ -270,7 +294,7 @@ Don't forget to give the project a star! Thank you!
 <!-- LICENSE -->
 ## License
 
-Distributed under the PolyForm Noncommercial License 1.0.0. See `LICENSE.txt` for more information.
+Distributed under the PolyForm Noncommercial License 1.0.0. See [`LICENSE.MD`](LICENSE.MD) for more information.
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 
@@ -309,7 +333,7 @@ Project link: [https://github.com/ElicitSoftware/admin](https://github.com/Elici
 [issues-shield]: https://img.shields.io/github/issues/ElicitSoftware/admin.svg?style=for-the-badge
 [issues-url]: https://github.com/ElicitSoftware/admin/issues
 [license-shield]: https://img.shields.io/github/license/ElicitSoftware/admin.svg?style=for-the-badge
-[license-url]: https://github.com/ElicitSoftware/admin/blob/master/LICENSE.txt
+[license-url]: LICENSE.MD
 [linkedin-shield]: https://img.shields.io/badge/-LinkedIn-black.svg?style=for-the-badge&logo=linkedin&colorB=555
 [linkedin-url]: https://linkedin.com/in/linkedin_username
 [product-screenshot]: images/screenshot.png

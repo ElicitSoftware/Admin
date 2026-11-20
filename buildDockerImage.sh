@@ -1,6 +1,34 @@
 echo "Set java to 25"
 jenv local 25
+export JAVA_HOME="$(jenv javahome)"
 echo "build Admin"
 
-./mvnw clean package -Dquarkus.profile=docker -Dquarkus.container-image.build=true
-# ./mvnw clean package -Dmaven.test.skip=true -Dnative -Dquarkus.native.container-build=true -Dquarkus.container-image.build=true -Dquarkus.profile=docker
+# The administrator's manual (UC-029) ships inside the image (BR-004), stamped with the version
+# and build date of the build that typeset it (BR-003, NFR-017). Typesetting means a TeX Live
+# container and the slowest minute of a development build, so this script reuses the PDF a
+# previous run left at src/main/resources/manual/ and typesets only when there is none; a
+# reused manual then carries that earlier build's stamp, which an unpublished image can live
+# with. BUILD_MANUAL=1 typesets a fresh one; SKIP_MANUAL=1 builds without one, and the
+# application then simply does not offer the entry (UC-029 A1). Published images never take
+# the shortcut: the release workflow (.github/workflows/maven.yml) typesets the manual for
+# every tagged build, pre-release or final.
+MANUAL_PDF="src/main/resources/manual/elicit-admin-manual.pdf"
+if [ "${BUILD_MANUAL:-0}" != 1 ] && [ "${SKIP_MANUAL:-0}" != 1 ] && [ -s "${MANUAL_PDF}" ]; then
+    echo "[manual] reusing ${MANUAL_PDF} from $(date -r "${MANUAL_PDF}" '+%Y-%m-%d %H:%M'); BUILD_MANUAL=1 typesets a fresh one"
+else
+    VERSION="$(sed -n '1,20p' pom.xml | grep -m1 -o '<version>[^<]*</version>' | sed 's/<[^>]*>//g')"
+    BUILD_DATE="$(date -u '+%Y-%m-%d %H:%M:%S UTC')"
+    ./docs/manual/build-manual.sh "${VERSION}" "${BUILD_DATE}"
+fi
+
+./mvnw clean package -Dquarkus.profile=docker -Dquarkus.container-image.build=true || exit $?
+# ./mvnw clean package -Dnative -Dquarkus.native.container-build=true -Dquarkus.container-image.build=true -Dquarkus.profile=docker
+
+# An image carries no Vaadin development tooling: the vaadin-dev-tools profile in pom.xml is
+# keyed on -Dquarkus.profile being absent, so the command above leaves vaadin-dev out. Check what
+# was packaged rather than trust the flag, and fail the build if the libraries say otherwise (C-005).
+LIB_DIR="${LIB_DIR:-target/quarkus-app/lib/main}"
+if ls "${LIB_DIR}" 2>/dev/null | grep -qi '^com\.vaadin\.vaadin-dev'; then
+    echo "Aborting: vaadin-dev is among the packaged libraries in ${LIB_DIR}; the image was built without -Dquarkus.profile=docker." >&2
+    exit 1
+fi

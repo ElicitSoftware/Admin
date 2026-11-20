@@ -1,0 +1,152 @@
+# Use Case: Apply Survey Definition
+
+## Overview
+
+**Use Case ID:** UC-018
+**Use Case Name:** Apply Survey Definition
+**Primary Actor:** Survey Administrator
+**Goal:** Install an authored survey definition into this deployment without the administrator having to determine first whether that survey already exists here, so one distributed file can be applied unchanged at every deployment in a multi-site rollout.
+**Status:** Implemented
+
+## Preconditions
+
+- The administrator presents a valid bearer token and holds the `elicit_admin` role (UC-001).
+- The file is a survey definition produced by UC-013 and carries a stable survey key.
+
+## Main Success Scenario
+
+1. The administrator uploads a survey definition file, without nominating a target survey.
+2. The system reads the stable survey key from the file's survey record.
+3. The system looks for a survey already installed in this deployment under that key.
+4. If none exists, the system installs the file as a new survey (UC-014). A new survey is in no department, so nobody can be registered onto it until an administrator adds it to a department (UC-006 BR-173); the result says so.
+5. If one exists, the system applies the file to it in place (UC-017), including that use case's revision-regression check, which routing neither relaxes nor overrides.
+6. The system reports which of the two it performed, along with that use case's own result.
+7. The system asks the Survey application to rebuild the reporting schema of the survey just installed or updated, naming it by its key (Survey UC-008, `POST /api/etl/build?survey=<survey_key>`), so that survey has its own schema, dimensions, fact columns and views without a restart of Survey and no other survey's schema is touched, and adds the outcome to its report: "Reporting schema rebuilt." or "Reporting schema not rebuilt: reason". The request carries the deployment's service token (BR-159).
+
+## Alternative Flows
+
+### A1: No file provided
+
+**Trigger:** The request carries no file (step 1).
+**Flow:**
+
+1. The system rejects the request as a bad request.
+
+### A2: File has no stable survey key
+
+**Trigger:** The file predates stable-key assignment (step 2).
+**Flow:**
+
+1. The system rejects the file, since it cannot be matched against the surveys installed here.
+2. The administrator may still install it explicitly as a new survey (UC-014) if that is the intent.
+
+### A3: File is not a survey definition
+
+**Trigger:** The file contains no survey record at all, or its survey record is malformed (step 2).
+**Flow:**
+
+1. The system rejects the file and attempts nothing.
+
+### A4: Destination use case fails
+
+**Trigger:** The selected use case (UC-014 or UC-017) rejects or fails on the file (steps 4–5).
+**Flow:**
+
+1. The system reports which use case was selected and that use case's own failure, unchanged. Routing adds no recovery of its own.
+2. The reporting schema is not rebuilt: nothing was applied.
+
+### A5: Reporting schema rebuild fails
+
+**Trigger:** In step 7 the Survey application cannot be reached, does not answer within 60 seconds, answers that its reporting ETL is disabled (`elicit.etl.enabled=false`, HTTP 409), or reports that the build failed (HTTP 500 -- the known case being two surveys that share a step or section dimension name, which breaks Survey's site-wide `dim_step_un`/`dim_section_un` constraints).
+**Flow:**
+
+1. The system reports the apply as successful, with "Reporting schema not rebuilt:" and Survey's own reason as the last line of the result, and logs the reason at WARN.
+2. The administrator fixes the cause (starts Survey, renames the colliding dimension, ...) and either re-applies the same file -- an equal revision is not a regression (UC-017 BR-070) and every record reconciles as unchanged -- or restarts Survey, whose startup build covers the same ground.
+
+### A6: Reporting schema rebuild is switched off
+
+**Trigger:** `elicit.survey.etl-build.enabled=false` (step 7).
+**Flow:**
+
+1. The system asks Survey nothing and adds no reporting line to the result.
+
+### A7: No service token is configured
+
+**Trigger:** `ELICIT_SERVICE_TOKEN` is not set at this console (step 7).
+**Flow:**
+
+1. The system sends Survey nothing (BR-161).
+2. The system reports the apply as successful, with "Reporting schema not rebuilt: service token not configured (ELICIT_SERVICE_TOKEN is not set)" as the last line of the result, and logs the same at WARN.
+3. The operator sets the variable and restarts the console; the administrator re-applies the same file, as in A5.
+
+### A8: Survey refuses the service token
+
+**Trigger:** Survey answers HTTP 401 (step 7): its token differs from this console's.
+**Flow:**
+
+1. The system reports the apply as successful, with "Reporting schema not rebuilt:" and a line saying that Survey refused the service token and that `ELICIT_SERVICE_TOKEN` must have the same value on both, and logs it at WARN.
+2. The operator gives both services the same value; the administrator re-applies the same file.
+
+## Postconditions
+
+### Success Postconditions
+
+- The survey exists in this deployment under the file's stable survey key, either newly installed or updated in place.
+- The audit record written by the destination use case records which operation occurred and the revision applied.
+- The Survey application has been asked to rebuild its reporting schema, and the result says whether it did.
+
+### Failure Postconditions
+
+- No changes are applied. Routing itself writes nothing; the destination use case's own all-or-nothing guarantee governs.
+
+## Business Rules
+
+### BR-073: The stable survey key decides create versus update
+
+Whether a definition file is an installation or an update is a property of the receiving deployment, not of the file — the same file is a create at a deployment seeing the survey for the first time and an update at one that already has it. The system resolves this by looking up the file's stable survey key locally, so no per-deployment instruction has to accompany a distributed file.
+
+### BR-074: Routing performs no work of its own
+
+This use case only selects between UC-014 and UC-017 and returns the selected use case's result unchanged. It applies no records, relaxes none of that use case's validation, and adds no transaction of its own.
+
+### BR-075: An unmatched file is refused, not guessed
+
+A file with no stable survey key cannot be matched against what is installed. The system refuses it rather than defaulting to installing a new survey, because a duplicate survey created by a wrong guess is materially harder to undo than a rejected upload.
+
+### BR-107: The reporting schema is rebuilt after every successful apply
+
+Survey builds each survey's reporting star schema from the survey definitions present when it starts and nothing else rebuilds it, so a survey applied afterwards has no schema until Survey restarts. After a successful install or update -- through this use case, or through UC-014 or UC-017 directly -- the system asks Survey to rebuild that one survey, by its key, once, after the apply's transaction has committed so Survey sees the new rows. Every survey has a reporting schema of its own (Survey UC-008 BR-006), so the request names the survey and leaves the others alone; the first build of a survey also assigns its schema name, which UC-030 shows and can change. The call goes to `elicit.survey.url` (default `http://survey:8080`) and can be switched off with `elicit.survey.etl-build.enabled=false` for a deployment that restarts Survey after every apply or runs it without reporting.
+
+### BR-108: A failed rebuild does not undo the apply
+
+The definition is committed before Survey is asked, and a reporting schema that is behind is recoverable (repeat the apply, or restart Survey) where a rolled-back apply is not. So the rebuild's outcome is reported -- on the result and in the log -- and never fails the apply, changes its title, or is written into the apply's audit record, which was committed with the apply itself.
+
+### BR-159: Calls to Survey carry the service token
+
+Survey answers its `/api` paths only to a caller that presents the deployment's service token. Every request this console sends there -- the rebuild of this use case and the rename of UC-030 -- carries it as `Authorization: Bearer <token>`, read from `elicit.service.token` (environment `ELICIT_SERVICE_TOKEN`). The token is never placed in an address, and neither request follows a redirect. It appears in no log line, no result line, no trace and on no screen (NFR-024); the System pages say only whether it is set.
+
+### BR-160: The service token goes only to origins the configuration names
+
+A report address arrives in a survey definition, so the token is not sent to an address because a definition names it. Before a report is requested (UC-005) the final address, after it has been resolved (UC-005 BR-023), is reduced to its origin: scheme and host in lower case, and the port, 80 or 443 when none is written. The token is attached only when that origin equals a trusted one. The trusted origins are the origin of `elicit.survey.url` and each entry of `elicit.service.trusted-origins` (environment `ELICIT_SERVICE_TRUSTED_ORIGINS`, comma-separated, empty by default). The comparison is equality on the parsed parts: no wildcard, no prefix or suffix match, no name lookup. An address with user information, without a host, or with a scheme other than `http` or `https` never receives the token. An address whose origin is not trusted is called as before, without an `Authorization` header. Each entry is checked when the console starts: one that is not `http` or `https`, has no host, or carries user information, a path, a query or a fragment stops the start with a message naming the variable and the entry's position.
+
+### BR-161: Without a service token the call is not made
+
+When no token is configured the console sends no request that would have carried one: the rebuild and the rename report "service token not configured" where their failure already shows (the apply result, the rename dialog), and a report at a trusted origin shows it in its error block (UC-005 A2). A request is never sent without the token to see whether it would be answered.
+
+### BR-162: The service token is checked at start
+
+A token that is set but shorter than 32 characters stops the start, with a message that names `ELICIT_SERVICE_TOKEN` and the length required and gives neither the value nor its length. A token that is not set, or blank, does not stop the start: the console logs one WARN naming the variable and reports not ready on `/q/health/ready` through a check named `service-token`, with the reason "ELICIT_SERVICE_TOKEN is not set". A token equal to the development value the compose stack supplies (`elicit-dev-service-token-not-for-a-real-site`) is logged at WARN at start and listed as outstanding setup work (UC-020 BR-163).
+
+### BR-134: A post-survey action carries its method and whether it sends the External ID
+
+A `post_survey_actions` record may carry two fields after its `execution_order`: the action's `method` (`POST`, `GET` or `PUT`) and `sends_external_id` (`true` or `false`), which Survey uses to call it (Survey UC-015 BR-001). A record without them, written before Elicit#95, reads as `POST` and `false`; a method other than the three is refused like any malformed record. The install (UC-014), the update (UC-017) and the export (UC-013) carry both, and an update compares and writes them like the action's other fields.
+
+### BR-135: An action that sends the External ID must use https
+
+The subject's External ID usually identifies a person in another system, so an action that sends it must be called at an `https` address (Survey UC-015 BR-002). A definition carrying such an action at any other address is refused as a whole, before anything is written, naming the action; the authoring tool refuses it too (Author UC-052), so only a hand-edited file meets this rule.
+
+---
+
+## Reference
+
+Implemented by `SurveyDefinitionApplyResource` / `SurveyDefinitionApplyService`, which delegate to `SurveyDefinitionImportService` (UC-014) and `SurveyDefinitionUpdateService` (UC-017), and by `ReportingSchemaRebuildClient` for step 7 (Survey's `ETLBuildResource`, its UC-008). The Connections screen (UC-025) lists the Survey application so its address can be checked before an apply. For Survey UC-015 BR-001, migration V0.0.24 appends `department_code` to the `survey.status` view, beside the External ID it already carries, so that Survey can send both for an action that sends the External ID. The service token (BR-159 to BR-162) is `ServiceToken`, with `ServiceTokenHealthCheck` for readiness; verified by `ServiceTokenTest`, `ServiceTokenHealthCheckTest`, `ServiceTokenCallsTest`, `ReportingServiceServiceTokenTest`, `SetupWarningsServiceTokenTest` and `ConnectionChecksTest`. Verified by `SurveyDefinitionApplyServiceTest`, `SurveyDefinitionApplyViewTest`, `ReportingSchemaRebuildClientTest` and `SurveyDefinitionApplyReportingRebuildTest`. The explicit UC-013/UC-014/UC-017 endpoints remain available for an administrator who wants to assert which operation should occur and have the request fail if that assertion is wrong.

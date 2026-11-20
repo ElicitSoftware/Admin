@@ -23,7 +23,6 @@ import com.vaadin.flow.component.icon.VaadinIcon;
 import com.vaadin.flow.component.orderedlayout.HorizontalLayout;
 import com.vaadin.flow.component.orderedlayout.VerticalLayout;
 import com.vaadin.flow.router.Route;
-import com.vaadin.flow.theme.lumo.LumoUtility;
 import jakarta.annotation.PostConstruct;
 import jakarta.annotation.security.RolesAllowed;
 import jakarta.inject.Inject;
@@ -65,8 +64,6 @@ import java.util.List;
  * the Edit User screen (see {@link EditUserView}, UC-016).</p>
  *
  * @author Elicit Software
- * @version 1.0
- * @since 1.0
  * @see User
  * @see EditUserView
  */
@@ -121,8 +118,8 @@ public class UsersView extends VerticalLayout {
      * clarify that:</p>
      * <ul>
      *   <li>User authentication is handled by the OIDC system</li>
-     *   <li>Roles (Admin/User/Importer) must be configured in OIDC, or through the Edit User
-     *       screen when {@code elicit.authorization.mode=DATABASE}</li>
+     *   <li>In {@code OIDC} mode roles are assigned in the identity provider; in {@code DATABASE}
+     *       mode on the Edit User screen, unless the identity provider supplies one (UC-008 BR-183)</li>
      *   <li>Department assignments are managed through this interface</li>
      * </ul>
      *
@@ -133,10 +130,10 @@ public class UsersView extends VerticalLayout {
      */
     private Paragraph createInfoText() {
         String text = authorizationModeConfig.isDatabaseMode()
-                ? "Departments are assigned through this interface. Roles (Admin/User/Importer) are also assigned through this interface, on the Edit User screen."
-                : "Users must be configured in the OpenID Connect (OIDC) authentication system with the roles \"Admin\" or \"User\". Departments are assigned through this interface.";
+                ? getTranslation("usersView.info.databaseMode")
+                : getTranslation("usersView.info.oidcMode");
         Paragraph info = new Paragraph(text);
-        info.addClassNames(LumoUtility.Margin.Bottom.MEDIUM, LumoUtility.TextColor.SECONDARY);
+        info.addClassName("view-intro");
         return info;
     }
 
@@ -172,12 +169,12 @@ public class UsersView extends VerticalLayout {
                     editUser(user.getId())
             );
             return editBtn;
-        }).setHeader("Edit").setAutoWidth(true);
+        }).setHeader(getTranslation("common.edit")).setAutoWidth(true);
 
-        userGrid.addColumn(User::getUsername).setHeader("Username").setAutoWidth(true).setSortable(true);
-        userGrid.addColumn(User::getFirstName).setHeader("First Name").setAutoWidth(true).setSortable(true);
-        userGrid.addColumn(User::getLastName).setHeader("Last Name").setAutoWidth(true).setSortable(true);
-        userGrid.addColumn(user -> user.isActive() ? "Yes" : "No").setHeader("Active").setAutoWidth(true).setSortable(true);
+        userGrid.addColumn(User::getUsername).setHeader(getTranslation("usersView.grid.username")).setAutoWidth(true).setSortable(true);
+        userGrid.addColumn(User::getFirstName).setHeader(getTranslation("usersView.grid.firstName")).setAutoWidth(true).setSortable(true);
+        userGrid.addColumn(User::getLastName).setHeader(getTranslation("usersView.grid.lastName")).setAutoWidth(true).setSortable(true);
+        userGrid.addColumn(user -> user.isActive() ? getTranslation("common.yes") : getTranslation("common.no")).setHeader(getTranslation("usersView.grid.active")).setAutoWidth(true).setSortable(true);
         userGrid.addColumn(user -> {
             if (user.getDepartments() != null && !user.getDepartments().isEmpty()) {
                 return user.getDepartments().stream()
@@ -185,7 +182,7 @@ public class UsersView extends VerticalLayout {
                         .collect(java.util.stream.Collectors.joining(", "));
             }
             return "";
-        }).setHeader("Department").setAutoWidth(true).setSortable(true);
+        }).setHeader(getTranslation("usersView.grid.department")).setAutoWidth(true).setSortable(true);
 
         userGrid.setMultiSort(true);
         userGrid.setWidthFull();
@@ -264,7 +261,7 @@ public class UsersView extends VerticalLayout {
      * @see #addUser()
      */
     private HorizontalLayout createFooter() {
-        Button addUserBtn = new Button("Add User", e -> addUser());
+        Button addUserBtn = new Button(getTranslation("usersView.addUser"), e -> addUser());
         addUserBtn.addThemeVariants(ButtonVariant.LUMO_PRIMARY);
         return new HorizontalLayout(addUserBtn);
     }

@@ -14,8 +14,8 @@
 
 ## Main Success Scenario
 
-1. The user opens the diagnostics view.
-2. The system displays the current identity's details: principal name, whether the identity is anonymous, the full set of roles, whether roles came from the identity provider or the database, the checks for the admin and user roles, and the raw identity and access tokens.
+1. The user opens the diagnostics view, either from the OIDC entry of the System section (administrators, FR-026) or by its address.
+2. The system displays the current identity's details: principal name, whether the identity is anonymous, the full set of roles, whether roles came from the identity provider or the database, the checks for the admin and user roles, and the identity and access tokens, masked to their last four characters (BR-142).
 3. The user reads the information to diagnose an access issue.
 
 ## Alternative Flows
@@ -43,8 +43,13 @@
 
 The diagnostics view reports whether the effective roles were supplied by the OIDC provider or the local database fallback (see UC-001).
 
+### BR-142: Raw tokens are shown in development mode only
+
+The identity and access tokens are shown masked to their last four characters. The setting `elicit.debug.reveal-tokens` shows them in full only when the application runs in development mode; in a deployed image the tokens stay masked whatever the setting says, and the System overview lists the ignored setting among its outstanding items (UC-020).
+
 ---
 
 ## Reference
 
-Derived from `DebugView` and `RoleSecurityIdentityAugmentor`.
+Derived from `DebugView` and `RoleSecurityIdentityAugmentor`. The navigation entry (FR-026) is the OIDC
+item of the System section built by `MainLayout`; the view itself is unchanged by it.

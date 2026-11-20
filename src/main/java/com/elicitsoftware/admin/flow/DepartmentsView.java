@@ -14,6 +14,7 @@ package com.elicitsoftware.admin.flow;
 import java.util.List;
 
 import com.elicitsoftware.model.Department;
+import com.elicitsoftware.service.DepartmentService;
 import com.vaadin.flow.component.button.Button;
 import com.vaadin.flow.component.button.ButtonVariant;
 import com.vaadin.flow.component.grid.Grid;
@@ -24,6 +25,7 @@ import com.vaadin.flow.component.orderedlayout.HorizontalLayout;
 import com.vaadin.flow.component.orderedlayout.VerticalLayout;
 import com.vaadin.flow.router.Route;
 import jakarta.annotation.security.RolesAllowed;
+import jakarta.inject.Inject;
 
 /**
  * A Vaadin Flow view that displays a list of departments in a grid format.
@@ -34,12 +36,25 @@ import jakarta.annotation.security.RolesAllowed;
  * with edit buttons for each row and includes a button to create new departments.</p>
  * 
  * @author Elicit Software
- * @version 1.0
- * @since 1.0
  */
 @Route(value = "departments", layout = MainLayout.class)
 @RolesAllowed("elicit_admin")
 public class DepartmentsView extends VerticalLayout {
+
+    /**
+     * Reads each department's surveys for the grid (UC-006 BR-172). Injected after the
+     * constructor runs, which is before the grid first renders a row.
+     */
+    @Inject
+    DepartmentService departmentService;
+
+    /** The injected service, or CDI's, for a view a test built with {@code new}. */
+    private DepartmentService departmentService() {
+        if (departmentService == null) {
+            departmentService = jakarta.enterprise.inject.spi.CDI.current().select(DepartmentService.class).get();
+        }
+        return departmentService;
+    }
     /**
      * Constructs a new DepartmentsView.
      * 
@@ -65,28 +80,22 @@ public class DepartmentsView extends VerticalLayout {
                 editDepartment(department.id)
             );
             return editBtn;
-        }).setHeader("Edit").setWidth("80px").setFlexGrow(0);
+        }).setHeader(getTranslation("common.edit")).setWidth("80px").setFlexGrow(0);
 
-        grid.addColumn(Department::getName).setHeader("Department Name").setSortable(true).setAutoWidth(true);
-        grid.addColumn(Department::getCode).setHeader("Code").setSortable(true).setAutoWidth(true);
-        grid.addColumn(Department::getDefaultMessageId).setHeader("Default Message ID").setSortable(true).setAutoWidth(true);
-        grid.addColumn(Department::getFromEmail).setHeader("From Email").setSortable(true).setAutoWidth(true);
-        //To be uncommented after notification email system is in place.
-//        grid.addColumn(department -> {
-//            String emails = department.getNotificationEmails();
-//            if (emails == null || emails.trim().isEmpty()) {
-//                return "(none)";
-//            }
-//            // Truncate long email lists for display
-//            return emails.length() > 50 ? emails.substring(0, 47) + "..." : emails;
-//        }).setHeader("Notification Emails").setSortable(true).setAutoWidth(true);
-
+        grid.addColumn(Department::getName).setHeader(getTranslation("departmentsView.grid.name")).setSortable(true).setAutoWidth(true);
+        grid.addColumn(Department::getCode).setHeader(getTranslation("departmentsView.grid.code")).setSortable(true).setAutoWidth(true);
+        grid.addColumn(Department::getDefaultMessageId).setHeader(getTranslation("departmentsView.grid.defaultMessageId")).setSortable(true).setAutoWidth(true);
+        grid.addColumn(Department::getFromEmail).setHeader(getTranslation("departmentsView.grid.fromEmail")).setSortable(true).setAutoWidth(true);
+        // UC-006 step 1, BR-172: the surveys each department registers onto.
+        grid.addColumn(department -> departmentService().surveysOf(department.id).stream()
+                .map(survey -> survey.name).collect(java.util.stream.Collectors.joining(", ")))
+                .setHeader(getTranslation("departmentsView.grid.surveys")).setAutoWidth(true);
         // Eager load: acceptable for the small departments table. If the department count grows
         // past ~1000 rows, switch to a lazy CallbackDataProvider (see the data-providers skill).
         List<Department> departments = Department.findAll().list();
         grid.setItems(departments);
         grid.addThemeVariants(GridVariant.LUMO_ROW_STRIPES, GridVariant.LUMO_COMPACT);
-        Button newDepartmentButton = new Button("New Department", event ->
+        Button newDepartmentButton = new Button(getTranslation("departmentsView.newDepartment"), event ->
             getUI().ifPresent(ui -> ui.navigate("edit-department/0"))
         );
         newDepartmentButton.addThemeVariants(ButtonVariant.LUMO_PRIMARY);

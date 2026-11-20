@@ -14,7 +14,7 @@
 
 ## Main Success Scenario
 
-1. The administrator opens the users view and sees the list of users with username, first and last name, active flag, and assigned departments.
+1. The administrator opens the users view and sees an introduction stating where roles are assigned (BR-183) and the list of users with username, first and last name, active flag, and assigned departments.
 2. The administrator chooses to add a new user or edit an existing one.
 3. The administrator enters or changes the username, first name, last name, active flag, and the set of assigned departments.
 4. The administrator saves.
@@ -28,6 +28,13 @@
 **Flow:**
 
 1. The system reports the user was not found and returns to the list.
+
+### A2: The username is taken
+
+**Trigger:** The administrator saves a username that another user holds, or that an import client holds (step 4).
+**Flow:**
+
+1. The system says which of the two holds the name, stores nothing and leaves the form open (BR-166).
 
 ## Postconditions
 
@@ -56,6 +63,14 @@ An inactive user is not granted database-sourced roles and cannot operate on dat
 ### BR-032: Department affiliation governs visibility
 
 The departments assigned to a user determine which subjects, message-template departments, and registration departments that user can see and use.
+
+### BR-166: A name is a user or an import client, never both
+
+A username that an import client (UC-032) holds is refused here, as a user's name is refused there. A machine client of the registration API is not entered on this screen.
+
+### BR-183: The introduction says where roles come from
+
+The users view opens with one sentence on roles, chosen by `elicit.authorization.mode`, which decides whether the database is ever consulted (UC-016). In `OIDC` mode, roles are assigned in the identity provider. In `DATABASE` mode, a user's role is assigned on the Edit User screen unless the identity provider supplies an Elicit role, which then takes precedence (UC-001). Both name every Elicit role: `elicit_admin`, `elicit_user` and `elicit_importer`. The introduction never sends an administrator to configure a role where this site does not read it. Departments are always assigned here.
 
 ---
 

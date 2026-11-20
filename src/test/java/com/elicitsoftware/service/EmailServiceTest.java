@@ -63,7 +63,7 @@ class EmailServiceTest {
         template.department = department;
         template.messageType = messageType;
         template.subject = "UC004 subject";
-        template.message = "Hello <TOKEN>";
+        template.message = "Hello <ACCESS_CODE>";
         template.mimeType = "text/plain";
         template.persist();
 
@@ -73,7 +73,7 @@ class EmailServiceTest {
         Status status = new Status();
         status.setDepartmentId(department.id);
         status.setEmail("uc004-recipient@example.org");
-        status.setToken("uc004-token");
+        status.setAccessCode("uc004-code");
 
         assertFalse(emailService.sendEmail(status),
                 "sendEmail must return false when the mail server rejects the connection");

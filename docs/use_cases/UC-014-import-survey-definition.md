@@ -5,7 +5,7 @@
 **Use Case ID:** UC-014
 **Use Case Name:** Import Survey Definition
 **Primary Actor:** Survey Administrator
-**Goal:** Import a survey definition file into this system as a brand-new survey with fresh identifiers.
+**Goal:** Import a survey definition file into this system as a brand-new survey with fresh identifiers. To alter an existing survey in place instead, see UC-017.
 **Status:** Implemented
 
 ## Preconditions
@@ -17,8 +17,9 @@
 
 1. The administrator uploads a survey definition file.
 2. The system validates the file's format header.
-3. The system inserts the survey with a fresh identifier and a recomputed display order, then each dependent record, rewriting all references from source identifiers to the newly assigned ones.
+3. The system inserts the survey with a fresh identifier and a recomputed display order, then each dependent record, rewriting all references from source identifiers to the newly assigned ones. The survey's stable, cross-instance key is carried over from the file if present, or freshly assigned if the file predates key assignment.
 4. The system reports success with per-table counts of the records imported.
+5. The system asks the Survey application to rebuild its reporting schema (Survey UC-008, `POST /api/etl/build`) so the new survey is reportable without a restart, and adds the outcome to its report: "Reporting schema rebuilt." or "Reporting schema not rebuilt: reason".
 
 ## Alternative Flows
 
@@ -43,11 +44,27 @@
 
 1. The system aborts the import, rolls back everything, and reports the failure.
 
+### A4: Stable key already present in this instance
+
+**Trigger:** A survey with the file's stable key already exists in this instance (step 3).
+**Flow:**
+
+1. The system rejects the import as a duplicate deployment and directs the administrator to UC-017 to update that survey instead.
+
+### A5: Reporting schema rebuild fails
+
+**Trigger:** In step 5 the Survey application cannot be reached, does not answer within 60 seconds, has its reporting ETL disabled, or reports that the build failed (see UC-018 A5 for the known cause).
+**Flow:**
+
+1. The system reports the import as successful, with "Reporting schema not rebuilt:" and the reason as the last line of the result, and logs the reason at WARN (UC-018 BR-108).
+2. The administrator fixes the cause and re-applies the file through UC-018 (every record reconciles as unchanged) or restarts Survey.
+
 ## Postconditions
 
 ### Success Postconditions
 
 - A new survey and all its definition records exist with newly allocated identifiers.
+- The Survey application has been asked to rebuild its reporting schema, and the result says whether it did.
 
 ### Failure Postconditions
 
@@ -67,8 +84,36 @@ Dimensions and ontology entries that already exist (matched by name, and by name
 
 The entire survey import runs as a single transaction; any failure rolls back the whole survey.
 
+### BR-061: Preserve or assign a stable key on create
+
+A created survey retains the stable key from the source file if present, establishing it as another deployment of the same authored survey; if the file predates key assignment, the system assigns a fresh key at import time.
+
+### BR-062: No duplicate deployments
+
+A create-import is rejected if a survey with the file's stable key already exists in the destination instance; altering that survey requires UC-017.
+
+### BR-107 / BR-108 (UC-018): The reporting schema is rebuilt after a successful import; a failed rebuild does not undo it
+
+After the import has committed, the Survey application is asked once to rebuild its reporting schema; the outcome is reported and never fails the import. The rules are stated in UC-018, which shares this step, and the call is switched off with `elicit.survey.etl-build.enabled=false`.
+
+### Post-survey action fields (Elicit#95)
+
+A post-survey action is installed with its method and whether it sends the External ID, and a definition with an External-ID action at a non-`https` address is refused (UC-018 BR-134, BR-135).
+
 ---
 
 ## Reference
 
-Derived from `SurveyDefinitionImportResource` and `SurveyDefinitionImportService` (`ELICIT_SURVEY_EXPORT_V1` format). Writes the shared survey-definition tables.
+Derived from `SurveyDefinitionImportResource` and `SurveyDefinitionImportService` (`ELICIT_SURVEY_EXPORT_V1` format). Writes the shared survey-definition tables. Step 5 is `ReportingSchemaRebuildClient`, called by the resource after the service's transaction has committed.
+
+### BR-076: Retired records are not installed
+
+A versioned record whose validity window is closed in the file describes an element removed before this site ever had it; it is skipped and counted separately in the import summary rather than installed. The number of records installed counts only the records actually installed, never a skipped one.
+
+### BR-110: Content translations install with the survey they belong to
+
+The file carries a `translations` record: one row per translated field of one element in one language, naming the element by its element key and the field by the name of the base column. They install like any other versioned record — under the new survey id, with the translation key preserved verbatim, retired rows skipped (BR-076) — and the survey's own record carries the base language and the published set of content languages with it. The console neither renders nor validates a translation; what a site's respondents are offered is decided at the site by what its chrome mount carries (Survey UC-009 BR-009). A row whose element type and field are not a translatable pair, or that names no element type at all, is malformed and refused as not translatable.
+
+### BR-112: Report marks install with the survey they belong to
+
+The file carries a `report_items` record (Survey UC-013): one row per element the survey's respondent or administrator report shows, naming the element by durable id exactly as a `metadata` row does, with the report type, an optional label and the order. It installs under the new survey id with its `report_item_key` preserved verbatim (BR-061), its element references resolved through the same maps as metadata's, and the database holding each row to exactly one element and a known report type, so a malformed mark fails the import as a whole (BR-049). A file from before the table existed carries none and installs a survey with no marks.

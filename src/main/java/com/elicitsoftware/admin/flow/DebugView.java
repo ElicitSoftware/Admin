@@ -17,6 +17,7 @@ import com.vaadin.flow.component.html.Pre;
 import com.vaadin.flow.component.orderedlayout.VerticalLayout;
 import com.vaadin.flow.router.HasDynamicTitle;
 import com.vaadin.flow.router.Route;
+import io.quarkus.runtime.LaunchMode;
 import io.quarkus.oidc.AccessTokenCredential;
 import io.quarkus.oidc.IdToken;
 import io.quarkus.security.identity.SecurityIdentity;
@@ -24,6 +25,8 @@ import jakarta.annotation.PostConstruct;
 import jakarta.annotation.security.RolesAllowed;
 import jakarta.enterprise.inject.Instance;
 import jakarta.inject.Inject;
+import java.util.function.BooleanSupplier;
+
 import org.eclipse.microprofile.config.inject.ConfigProperty;
 import org.eclipse.microprofile.jwt.JsonWebToken;
 
@@ -33,14 +36,12 @@ import org.eclipse.microprofile.jwt.JsonWebToken;
  * This view provides detailed information about the current user's authentication
  * status, roles, and tokens for debugging purposes. Restricted to {@code elicit_admin}
  * since it can reveal token material; raw tokens are masked unless
- * {@code elicit.debug.reveal-tokens} is explicitly enabled (e.g. in {@code %dev}).
+ * {@code elicit.debug.reveal-tokens} is enabled and the application runs in development mode.
  * </p>
  *
  * @author Elicit Software
- * @version 1.0
- * @since 1.0
  */
-@Route(value = "debug", layout = MainLayout.class)
+@Route(value = "oidc", layout = MainLayout.class)
 @RolesAllowed("elicit_admin")
 public class DebugView extends VerticalLayout implements HasDynamicTitle {
 
@@ -75,54 +76,62 @@ public class DebugView extends VerticalLayout implements HasDynamicTitle {
     Instance<AccessTokenCredential> accessTokenInstance;
 
     /**
-     * Whether raw token values should be rendered in full. Defaults to {@code false}
-     * so tokens are masked everywhere except environments (e.g. {@code %dev}) that
-     * explicitly opt in via {@code ELICIT_DEBUG_REVEAL_TOKENS}.
+     * Whether raw token values were asked for. Defaults to {@code false}; honored only in
+     * development mode (UC-009 BR-142), so a deployed image masks tokens whatever this says.
      */
     @ConfigProperty(name = "elicit.debug.reveal-tokens", defaultValue = "false")
     boolean revealTokens;
+
+    /**
+     * Whether the application runs in development mode. A field, not an overridable method, so
+     * that a test can set it without subclassing the view: {@code @Route} is inherited, and a
+     * subclass on the test classpath would claim this view's path.
+     */
+    BooleanSupplier developmentMode = () -> LaunchMode.current() == LaunchMode.DEVELOPMENT;
 
     /**
      * Initializes the debug view with authentication information.
      */
     @PostConstruct
     public void init() {
-        add(new H1("Debug Information"));
+        add(new H1(getTranslation("debugView.title")));
 
         StringBuilder sb = new StringBuilder();
+        // UC-009 BR-142: raw tokens only when asked for and only in development mode
+        boolean reveal = revealTokens && developmentMode.getAsBoolean();
 
         // Basic identity information
-        sb.append("User: ").append(identity.getPrincipal().getName()).append("\n");
-        sb.append("Is Anonymous: ").append(identity.isAnonymous()).append("\n");
-        sb.append("Roles: ").append(identity.getRoles()).append("\n");
+        sb.append(getTranslation("debugView.user", identity.getPrincipal().getName())).append("\n");
+        sb.append(getTranslation("debugView.isAnonymous", identity.isAnonymous())).append("\n");
+        sb.append(getTranslation("debugView.roles", identity.getRoles())).append("\n");
         String roleSource = identity.getAttribute(RoleSecurityIdentityAugmentor.ROLE_SOURCE_ATTRIBUTE);
-        sb.append("Role Source: ").append(roleSource).append("\n");
-        sb.append("Has elicit_admin: ").append(identity.hasRole("elicit_admin")).append("\n");
-        sb.append("Has elicit_user: ").append(identity.hasRole("elicit_user")).append("\n");
+        sb.append(getTranslation("debugView.roleSource", roleSource)).append("\n");
+        sb.append(getTranslation("debugView.hasAdminRole", identity.hasRole("elicit_admin"))).append("\n");
+        sb.append(getTranslation("debugView.hasUserRole", identity.hasRole("elicit_user"))).append("\n");
         sb.append("\n");
 
         // ID Token information
         try {
             if (idTokenInstance.isResolvable()) {
                 JsonWebToken idToken = idTokenInstance.get();
-                sb.append("ID Token: ").append(maskToken(idToken.getRawToken(), revealTokens)).append("\n\n");
+                sb.append(getTranslation("debugView.idToken", maskToken(idToken.getRawToken(), reveal))).append("\n\n");
             } else {
-                sb.append("ID Token: Not available or resolvable\n\n");
+                sb.append(getTranslation("debugView.idTokenUnavailable")).append("\n\n");
             }
         } catch (Exception e) {
-            sb.append("ID Token Error: ").append(e.getMessage()).append("\n\n");
+            sb.append(getTranslation("debugView.idTokenError", e.getMessage())).append("\n\n");
         }
 
         // Access Token information
         try {
             if (accessTokenInstance.isResolvable()) {
                 AccessTokenCredential accessToken = accessTokenInstance.get();
-                sb.append("Access Token: ").append(maskToken(accessToken.getToken(), revealTokens)).append("\n\n");
+                sb.append(getTranslation("debugView.accessToken", maskToken(accessToken.getToken(), reveal))).append("\n\n");
             } else {
-                sb.append("Access Token: Not available or resolvable\n\n");
+                sb.append(getTranslation("debugView.accessTokenUnavailable")).append("\n\n");
             }
         } catch (Exception e) {
-            sb.append("Access Token Error: ").append(e.getMessage()).append("\n\n");
+            sb.append(getTranslation("debugView.accessTokenError", e.getMessage())).append("\n\n");
         }
 
         Pre debugInfo = new Pre(sb.toString());
@@ -148,6 +157,6 @@ public class DebugView extends VerticalLayout implements HasDynamicTitle {
 
     @Override
     public String getPageTitle() {
-        return "Debug - Elicit Admin";
+        return getTranslation("debugView.pageTitle");
     }
 }

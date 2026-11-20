@@ -59,8 +59,8 @@ class SurveyDefinitionImportServiceTest {
     EntityManager em;
 
     /** Holds the seeded values a round trip needs to assert against post-import. */
-    private record SurveyDefinitionFixture(int sourceSurveyId, String surveyName, String stepName,
-                                            String sectionName, String displayKey, String questionText,
+    private record SurveyDefinitionFixture(int sourceSurveyId, java.util.UUID surveyKey, String surveyName,
+                                            String stepName, String sectionName, String displayKey, String questionText,
                                             String reportName, String psaName, String ontologyName,
                                             String ontologyTag, String metadataValue) {
     }
@@ -87,12 +87,12 @@ class SurveyDefinitionImportServiceTest {
                         + "VALUES (?1, ?2, ?3, 'seeded', 'Text')")
                 .setParameter(1, id).setParameter(2, surveyId).setParameter(3, name)
                 .executeUpdate();
-        return id;
+        return queryLong("SELECT select_group_id FROM survey.select_groups WHERE id = ?1", id);
     }
 
     private void insertSelectItem(int surveyId, long groupId, String displayText, int displayOrder) {
         long id = nextVal("survey.select_items_seq");
-        em.createNativeQuery("INSERT INTO survey.select_items (id, survey_id, group_id, display_text, display_order, coded_value) "
+        em.createNativeQuery("INSERT INTO survey.select_items (id, survey_id, select_group_id, display_text, display_order, coded_value) "
                         + "VALUES (?1, ?2, ?3, ?4, ?5, 'CODE')")
                 .setParameter(1, id).setParameter(2, surveyId).setParameter(3, groupId)
                 .setParameter(4, displayText).setParameter(5, displayOrder)
@@ -105,7 +105,7 @@ class SurveyDefinitionImportServiceTest {
                         + "VALUES (?1, ?2, ?3, ?4, 'D')")
                 .setParameter(1, id).setParameter(2, surveyId).setParameter(3, displayOrder).setParameter(4, name)
                 .executeUpdate();
-        return id;
+        return queryLong("SELECT step_id FROM survey.steps WHERE id = ?1", id);
     }
 
     private long insertSection(int surveyId, int displayOrder, String name) {
@@ -114,7 +114,7 @@ class SurveyDefinitionImportServiceTest {
                         + "VALUES (?1, ?2, ?3, ?4, 'D')")
                 .setParameter(1, id).setParameter(2, surveyId).setParameter(3, displayOrder).setParameter(4, name)
                 .executeUpdate();
-        return id;
+        return queryLong("SELECT section_id FROM survey.sections WHERE id = ?1", id);
     }
 
     private long insertStepsSection(int surveyId, long stepId, long sectionId, String displayKey) {
@@ -125,7 +125,7 @@ class SurveyDefinitionImportServiceTest {
                 .setParameter(1, id).setParameter(2, surveyId).setParameter(3, stepId)
                 .setParameter(4, sectionId).setParameter(5, displayKey)
                 .executeUpdate();
-        return id;
+        return queryLong("SELECT steps_sections_id FROM survey.steps_sections WHERE id = ?1", id);
     }
 
     private long insertQuestion(int surveyId, long selectGroupId, String text) {
@@ -134,7 +134,7 @@ class SurveyDefinitionImportServiceTest {
                         + "VALUES (?1, ?2, 1, ?3, ?4)")
                 .setParameter(1, id).setParameter(2, surveyId).setParameter(3, text).setParameter(4, selectGroupId)
                 .executeUpdate();
-        return id;
+        return queryLong("SELECT question_id FROM survey.questions WHERE id = ?1", id);
     }
 
     private long insertSectionsQuestion(int surveyId, long questionId, long sectionId) {
@@ -143,7 +143,7 @@ class SurveyDefinitionImportServiceTest {
                         + "VALUES (?1, ?2, ?3, ?4, 1)")
                 .setParameter(1, id).setParameter(2, surveyId).setParameter(3, questionId).setParameter(4, sectionId)
                 .executeUpdate();
-        return id;
+        return queryLong("SELECT sections_question_id FROM survey.sections_questions WHERE id = ?1", id);
     }
 
     /** Minimal relationship: only the required upstream_sq_id/operator/action - downstream_* left
@@ -176,7 +176,7 @@ class SurveyDefinitionImportServiceTest {
 
     private void insertMetadata(int surveyId, long stepsSectionId, long ontologyId, String value) {
         long id = nextVal("survey.metadata_seq");
-        em.createNativeQuery("INSERT INTO survey.metadata (id, survey_id, step_section_id, ontology_id, value) "
+        em.createNativeQuery("INSERT INTO survey.metadata (id, survey_id, steps_sections_id, ontology_id, value) "
                         + "VALUES (?1, ?2, ?3, ?4, ?5)")
                 .setParameter(1, id).setParameter(2, surveyId).setParameter(3, stepsSectionId)
                 .setParameter(4, ontologyId).setParameter(5, value)
@@ -202,7 +202,9 @@ class SurveyDefinitionImportServiceTest {
         String sectionName = "Section " + token;
         long stepId = insertStep(surveyId, 1, stepName);
         long sectionId = insertSection(surveyId, 1, sectionName);
-        String displayKey = "SK-" + token;
+        // A realistically shaped display key carrying the SOURCE survey's id in its leading
+        // component, so the round-trip below exercises the rebase the importer performs.
+        String displayKey = String.format("%04d", surveyId) + "-0001-0000-0001-0000-0000-0000";
         long stepsSectionId = insertStepsSection(surveyId, stepId, sectionId, displayKey);
 
         String questionText = "Question " + token + "?";
@@ -230,8 +232,11 @@ class SurveyDefinitionImportServiceTest {
 
         String metadataValue = "Meta-" + token;
         insertMetadata(surveyId, stepsSectionId, ontologyId, metadataValue);
+        em.createNativeQuery("INSERT INTO survey.report_items (id, survey_id, report_type, steps_sections_id, label, display_order) "
+                        + "VALUES (nextval('survey.report_items_seq'), ?1, 'ADMINISTRATOR', ?2, ?3, 2)")
+                .setParameter(1, surveyId).setParameter(2, stepsSectionId).setParameter(3, "Mark-" + token).executeUpdate();
 
-        return new SurveyDefinitionFixture(surveyId, survey.name, stepName, sectionName, displayKey,
+        return new SurveyDefinitionFixture(surveyId, survey.surveyKey, survey.name, stepName, sectionName, displayKey,
                 questionText, "Report " + token, "PSA " + token, ontologyName, ontologyTag, metadataValue);
     }
 
@@ -250,7 +255,20 @@ class SurveyDefinitionImportServiceTest {
         String exported = surveyDefinitionExportService.exportSurvey(fixture.sourceSurveyId());
         assertTrue(exported.contains("# ELICIT_SURVEY_EXPORT_V1"));
 
-        SurveyDefinitionImportService.ImportResult result = surveyDefinitionImportService.importFromFile(toStream(exported));
+        // BR-062 correctly refuses to re-import a survey_key that already exists in this
+        // instance — which the source survey's own key always does, since we never delete it.
+        // Blanking the key here simulates importing into a genuinely different instance that
+        // has never seen this survey before (the file-predates-key-assignment path, BR-061);
+        // the duplicate-key rejection itself is covered by importingDuplicateSurveyKeyIsRejected.
+        // The report mark's key is unique per instance (Survey V023), as the other element keys
+        // are in Survey's schema; blanking it here is the same simulation one level down (BR-061).
+        Object markKey = em.createNativeQuery("SELECT report_item_key FROM survey.report_items WHERE survey_id = ?1")
+                .setParameter(1, fixture.sourceSurveyId()).getSingleResult();
+        String simulatedFreshInstanceExport = exported.replace(fixture.surveyKey().toString(), "")
+                .replace(markKey.toString(), "");
+
+        SurveyDefinitionImportService.ImportResult result =
+                surveyDefinitionImportService.importFromFile(toStream(simulatedFreshInstanceExport), "test.elicit");
 
         assertTrue(result.isSuccess(), () -> "import errors: " + result.getErrors());
         assertEquals(1, result.getCounts().get("surveys"));
@@ -267,6 +285,7 @@ class SurveyDefinitionImportServiceTest {
         assertEquals(1, result.getCounts().get("dimensions"));
         assertEquals(1, result.getCounts().get("ontology"));
         assertEquals(1, result.getCounts().get("metadata"));
+        assertEquals(1, result.getCounts().get("report_items"), "UC-014 BR-112: the report mark installs with the survey");
 
         long newSurveyId = queryLong(
                 "SELECT id FROM survey.surveys WHERE name = ?1 ORDER BY id DESC LIMIT 1", fixture.surveyName());
@@ -277,9 +296,23 @@ class SurveyDefinitionImportServiceTest {
                 "SELECT count(*) FROM survey.steps WHERE survey_id = ?1 AND name = ?2", newSurveyId, fixture.stepName()));
         assertEquals(1L, queryLong(
                 "SELECT count(*) FROM survey.sections WHERE survey_id = ?1 AND name = ?2", newSurveyId, fixture.sectionName()));
+        // The display key must be rebased onto the id THIS deployment allocated, not carried over
+        // verbatim: the Survey engine parses the leading component back out and binds it as the
+        // surveyId when resolving navigation, so a stale prefix would point at another survey.
+        String rebasedDisplayKey = String.format("%04d", newSurveyId) + "-0001-0000-0001-0000-0000-0000";
         assertEquals(1L, queryLong(
                 "SELECT count(*) FROM survey.steps_sections WHERE survey_id = ?1 AND display_key = ?2",
-                newSurveyId, fixture.displayKey()));
+                newSurveyId, rebasedDisplayKey),
+                "steps_sections.display_key must be rebased onto the newly allocated survey id");
+        assertEquals(1L, queryLong(
+                "SELECT count(*) FROM survey.report_items ri JOIN survey.steps_sections ss ON ss.steps_sections_id = ri.steps_sections_id "
+                        + "WHERE ri.survey_id = ?1 AND ss.survey_id = ?1 AND ri.report_type = 'ADMINISTRATOR' AND ri.label = ?2",
+                newSurveyId, "Mark-SDT1"),
+                "the mark re-resolves its placement to the new survey's own row");
+        assertEquals(0L, queryLong(
+                "SELECT count(*) FROM survey.steps_sections WHERE survey_id = ?1 AND display_key = ?2",
+                newSurveyId, fixture.displayKey()),
+                "the source deployment's display_key must not survive the import");
         assertEquals(1L, queryLong(
                 "SELECT count(*) FROM survey.questions WHERE survey_id = ?1 AND text = ?2", newSurveyId, fixture.questionText()));
 
@@ -315,13 +348,32 @@ class SurveyDefinitionImportServiceTest {
         assertThrows(IllegalArgumentException.class, () -> surveyDefinitionExportService.exportSurvey(999999));
     }
 
+    /**
+     * BR-062/A4: importing a file whose survey_key already exists in this instance is rejected
+     * as a duplicate deployment, directing the administrator to UC-017 (Update) instead. No rows
+     * from the file are inserted.
+     */
+    @Test
+    @TestTransaction
+    void importingDuplicateSurveyKeyIsRejected() {
+        SurveyDefinitionFixture fixture = persistSurveyDefinitionTree("SDT2");
+        String exported = surveyDefinitionExportService.exportSurvey(fixture.sourceSurveyId());
+
+        RuntimeException ex = assertThrows(RuntimeException.class,
+                () -> surveyDefinitionImportService.importFromFile(toStream(exported), "duplicate.elicit"));
+
+        assertTrue(ex.getMessage().contains("use Update instead"), ex.getMessage());
+        assertEquals(1L, queryLong("SELECT count(*) FROM survey.surveys WHERE survey_key = ?1", fixture.surveyKey()),
+                "the duplicate-key import must not create a second survey row");
+    }
+
     /** UC-014: a file missing the format-version header returns a failed result, not an exception. */
     @Test
     @TestTransaction
     void malformedHeaderReturnsFailedResultWithoutThrowing() {
-        String content = "surveys: 1|Name|1|Title|||\n";
+        String content = "surveys: 1|Name|1|Title|||||\n";
 
-        SurveyDefinitionImportService.ImportResult result = surveyDefinitionImportService.importFromFile(toStream(content));
+        SurveyDefinitionImportService.ImportResult result = surveyDefinitionImportService.importFromFile(toStream(content), "test.elicit");
 
         assertFalse(result.isSuccess());
         assertTrue(result.getErrors().get(0).contains("valid format header"), result.getErrors().toString());
@@ -333,7 +385,7 @@ class SurveyDefinitionImportServiceTest {
     void unknownTableNameIsCollectedAsErrorWithoutThrowing() {
         String content = "# ELICIT_SURVEY_EXPORT_V1\n\nfoobar: 1|2\n";
 
-        SurveyDefinitionImportService.ImportResult result = surveyDefinitionImportService.importFromFile(toStream(content));
+        SurveyDefinitionImportService.ImportResult result = surveyDefinitionImportService.importFromFile(toStream(content), "test.elicit");
 
         assertFalse(result.isSuccess());
         assertTrue(result.getErrors().get(0).contains("Unknown table: foobar"), result.getErrors().toString());
@@ -347,12 +399,33 @@ class SurveyDefinitionImportServiceTest {
     @TestTransaction
     void danglingForeignKeyReferenceThrowsRuntimeException() {
         String content = "# ELICIT_SURVEY_EXPORT_V1\n\n"
-                + "surveys: 1|Name|1|Title|||\n\n"
-                + "select_items: 1|999|Text|1|CODE\n";
+                + "surveys: 1|11111111-1111-1111-1111-111111111111|Name|1|Title|||||\n\n"
+                + "select_items: 1|22222222-2222-2222-2222-222222222222|999|Text|1|CODE||||||\n";
 
         RuntimeException ex = assertThrows(RuntimeException.class,
-                () -> surveyDefinitionImportService.importFromFile(toStream(content)));
+                () -> surveyDefinitionImportService.importFromFile(toStream(content), "test.elicit"));
 
         assertTrue(ex.getMessage().contains("No ID mapping found"), ex.getMessage());
+    }
+
+    /** A record the file marks as retired is not installed; the summary counts it as skipped. */
+    @Test
+    @TestTransaction
+    void retiredRecordsAreSkippedOnInstall() {
+        java.util.UUID surveyKey = java.util.UUID.randomUUID();
+        String content = "# ELICIT_SURVEY_EXPORT_V1\n\n"
+                + "surveys: 1|" + surveyKey + "|ImpRetire|1|Import Retire|||||\n"
+                + "steps: 1|" + java.util.UUID.randomUUID() + "|1|Live Step|D||0|||||\n"
+                + "steps: 2|" + java.util.UUID.randomUUID() + "|2|Retired Step|D||0|1970-01-01 00:00:00+00|2026-09-17 12:00:00+00||\n";
+
+        SurveyDefinitionImportService.ImportResult result =
+                surveyDefinitionImportService.importFromFile(toStream(content), "retire.elicit");
+
+        assertTrue(result.isSuccess(), () -> "import errors: " + result.getErrors());
+        assertEquals(1, result.getCounts().get("steps"));
+        assertEquals(1, result.getCounts().get("skipped_retired"));
+        long surveyId = queryLong("SELECT id FROM survey.surveys WHERE survey_key = ?1", surveyKey);
+        assertEquals(1L, queryLong("SELECT count(*) FROM survey.steps WHERE survey_id = ?1", surveyId));
+        assertEquals(0L, queryLong("SELECT count(*) FROM survey.steps WHERE survey_id = ?1 AND name = 'Retired Step'", surveyId));
     }
 }

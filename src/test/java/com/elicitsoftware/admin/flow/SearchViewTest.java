@@ -18,6 +18,7 @@ import com.elicitsoftware.test.PostgresTestResource;
 import com.vaadin.browserless.quarkus.QuarkusBrowserlessTest;
 import com.vaadin.flow.component.UI;
 import com.vaadin.flow.component.grid.Grid;
+import com.vaadin.flow.component.html.Span;
 import com.vaadin.flow.data.provider.SortDirection;
 import com.vaadin.flow.server.VaadinSession;
 import io.quarkus.test.common.QuarkusTestResource;
@@ -34,6 +35,7 @@ import java.util.stream.Collectors;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
@@ -100,7 +102,7 @@ class SearchViewTest extends QuarkusBrowserlessTest {
     @TestSecurity(user = "search.tester", roles = {"elicit_user"})
     void sortableColumnsUseEntityPropertyConstants() {
         Set<String> allowed = Set.of(
-                Status.PROP_TOKEN, Status.PROP_DEPARTMENT_NAME, Status.PROP_FIRST_NAME,
+                Status.PROP_ACCESS_CODE, Status.PROP_DEPARTMENT_NAME, Status.PROP_FIRST_NAME,
                 Status.PROP_MIDDLE_NAME, Status.PROP_LAST_NAME, Status.PROP_EMAIL,
                 Status.PROP_PHONE, Status.PROP_STATUS, Status.PROP_CREATED_DT);
 
@@ -118,17 +120,17 @@ class SearchViewTest extends QuarkusBrowserlessTest {
         }
     }
 
-    /** UC-002 (#12): the token column specifically maps to the PROP_TOKEN constant. */
+    /** UC-002 (#12): the access code column specifically maps to the PROP_ACCESS_CODE constant. */
     @Test
     @TestSecurity(user = "search.tester", roles = {"elicit_user"})
-    void tokenColumnMapsToTokenProperty() {
-        long tokenMappings = grid().getColumns().stream()
+    void accessCodeColumnMapsToAccessCodeProperty() {
+        long accessCodeMappings = grid().getColumns().stream()
                 .filter(Grid.Column::isSortable)
                 .flatMap(c -> c.getSortOrder(SortDirection.ASCENDING))
                 .map(order -> order.getSorted())
-                .filter(Status.PROP_TOKEN::equals)
+                .filter(Status.PROP_ACCESS_CODE::equals)
                 .count();
-        assertEquals(1, tokenMappings, "exactly one column should sort by the token property");
+        assertEquals(1, accessCodeMappings, "exactly one column should sort by the access code property");
     }
 
     /** UC-011 (Export Respondent Data): elicit_admin is offered "Export" alongside the other actions. */
@@ -138,7 +140,7 @@ class SearchViewTest extends QuarkusBrowserlessTest {
         Status finished = new Status();
         finished.setStatus("Finished");
 
-        assertEquals(List.of("Send Email", "Print Reports", "Export"), view.buildActionOptions(finished));
+        assertEquals(List.of(SearchView.ACTION_SEND_EMAIL, SearchView.ACTION_PRINT_REPORTS, SearchView.ACTION_EXPORT), view.buildActionOptions(finished));
     }
 
     /** UC-011: a non-admin never sees the Export action, regardless of survey status. */
@@ -148,7 +150,7 @@ class SearchViewTest extends QuarkusBrowserlessTest {
         Status finished = new Status();
         finished.setStatus("Finished");
 
-        assertFalse(view.buildActionOptions(finished).contains("Export"),
+        assertFalse(view.buildActionOptions(finished).contains(SearchView.ACTION_EXPORT),
                 "a non-admin must not be offered Export");
     }
 
@@ -159,7 +161,7 @@ class SearchViewTest extends QuarkusBrowserlessTest {
         Status inProgress = new Status();
         inProgress.setStatus("In Progress");
 
-        assertEquals(List.of("Send Email"), view.buildActionOptions(inProgress));
+        assertEquals(List.of(SearchView.ACTION_SEND_EMAIL), view.buildActionOptions(inProgress));
     }
 
     /** UC-011: the export URL is keyed by the respondent id that RespondentExportResource expects. */
@@ -170,5 +172,40 @@ class SearchViewTest extends QuarkusBrowserlessTest {
         status.setRespondentId(42L);
 
         assertEquals("/api/secured/respondent/export?id=42", view.buildExportUrl(status));
+    }
+
+    /**
+     * UC-002 (#85): when the signed-in principal has no Elicit account, the notice emphasizes the
+     * principal's name through {@code components/view-text.css}. It used to ask for
+     * {@code LumoUtility.FontWeight.BOLD}, which is inert in Admin, so the name it tells an
+     * administrator to look up read exactly like the sentence around it.
+     */
+    @Test
+    @TestSecurity(user = "search.tester", roles = {"elicit_user"})
+    void noUserNoticeEmphasizesThePrincipal() {
+        // No "user" in the session is what the view treats as "no Elicit account for this login".
+        VaadinSession.getCurrent().setAttribute("user", null);
+        SearchView noUserView = CDI.current().select(SearchView.class).get();
+        UI.getCurrent().add(noUserView);
+
+        Span principal = find(Span.class, noUserView).withClassName("inline-name").single();
+        assertEquals("search.tester", principal.getText());
+    }
+
+    /**
+     * UC-002 (#26): the grid is sized to its rows, not to the viewport, so a large page size
+     * shows every row instead of hiding them in a scrolling box inside the grid. A defined
+     * height would silently disable that -- Vaadin ignores {@code setAllRowsVisible} on a grid
+     * that also has one -- so the height must stay undefined too.
+     */
+    @Test
+    @TestSecurity(user = "search.tester", roles = {"elicit_user"})
+    void gridShowsAllRowsOfThePageWithoutAnInnerScrollbar() {
+        Grid<Status> grid = grid();
+        assertTrue(grid.isAllRowsVisible(),
+                "the subject grid should size itself to the rows of the current page");
+        assertNull(grid.getHeight(),
+                "a defined height would make Vaadin ignore setAllRowsVisible and restore the "
+                        + "grid's own scrollbar");
     }
 }

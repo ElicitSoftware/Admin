@@ -17,7 +17,6 @@ import io.quarkus.test.common.QuarkusTestResource;
 import io.quarkus.test.junit.QuarkusTest;
 import org.junit.jupiter.api.Test;
 
-import java.time.OffsetDateTime;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -35,21 +34,26 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 @QuarkusTestResource(PostgresTestResource.class)
 class ExcludedXidQueryTest {
 
-    /** {@code created_dt} has no application-side default, so tests must set it explicitly. */
-    private static ExcludedXid persisted(String xid, int departmentId) {
-        ExcludedXid exclusion = new ExcludedXid(xid, departmentId);
-        exclusion.setCreatedDt(OffsetDateTime.now());
-        exclusion.persist();
-        return exclusion;
+    /** Ids well above anything the table's own sequence hands out. */
+    private static int nextId = 930_000;
+
+    /**
+     * Inserts an exclusion with an id of the fixture's own. The console only ever reads this
+     * table, so its role may not draw from the table's sequence, which {@code persist()} would do.
+     */
+    private static void excluded(String xid, int departmentId) {
+        ExcludedXid.getEntityManager()
+                .createNativeQuery("INSERT INTO survey.excluded_xids (id, xid, department, reason, created_dt, created_by) "
+                        + "VALUES (?1, ?2, ?3, 'Test data', CURRENT_TIMESTAMP, 'tester')")
+                .setParameter(1, ++nextId).setParameter(2, xid).setParameter(3, departmentId)
+                .executeUpdate();
     }
 
     /** UC-003/UC-010: an XID excluded for a department is reported as excluded for that department only. */
     @Test
     @TestTransaction
     void isExcludedMatchesXidAndDepartment() {
-        ExcludedXid exclusion = persisted("EXC-1", 101);
-        exclusion.setReason("Test data");
-        exclusion.setCreatedBy("tester");
+        excluded("EXC-1", 101);
 
         assertTrue(ExcludedXid.isExcluded("EXC-1", 101));
         assertFalse(ExcludedXid.isExcluded("EXC-1", 202), "same xid, different department is not excluded");
@@ -60,9 +64,9 @@ class ExcludedXidQueryTest {
     @Test
     @TestTransaction
     void findByDepartmentIdReturnsOnlyThatDepartmentsExclusions() {
-        persisted("EXC-2", 303);
-        persisted("EXC-3", 303);
-        persisted("EXC-4", 404);
+        excluded("EXC-2", 303);
+        excluded("EXC-3", 303);
+        excluded("EXC-4", 404);
 
         List<ExcludedXid> found = ExcludedXid.findByDepartmentId(303);
 
@@ -74,9 +78,9 @@ class ExcludedXidQueryTest {
     @Test
     @TestTransaction
     void findByXidReturnsAllDepartmentsForThatXid() {
-        persisted("SHARED-XID", 1);
-        persisted("SHARED-XID", 2);
-        persisted("OTHER-XID", 1);
+        excluded("SHARED-XID", 1);
+        excluded("SHARED-XID", 2);
+        excluded("OTHER-XID", 1);
 
         List<ExcludedXid> found = ExcludedXid.findByXid("SHARED-XID");
 

@@ -11,6 +11,7 @@ package com.elicitsoftware.rest;
  * ***LICENSE_END***
  */
 
+import com.elicitsoftware.security.DepartmentScope;
 import com.elicitsoftware.service.RespondentExportService;
 import jakarta.annotation.security.RolesAllowed;
 import jakarta.enterprise.context.ApplicationScoped;
@@ -39,12 +40,17 @@ public class RespondentExportResource {
     @Inject
     RespondentExportService respondentExportService;
 
+    @Inject
+    DepartmentScope departmentScope;
+
     /**
      * Export respondent data as a custom format file. Preferred query parameter is "id".
      *
      * @param id respondent id
      * @param respondentIdAlias optional alias query parameter: respondent_id
-     * @return Export file as a downloadable text file
+     * @return Export file as a downloadable text file; 404 when the respondent does not exist or
+     *         a subject of it is outside the caller's departments (UC-011 A4, BR-185), 409 when the
+     *         export is refused because a subject's department has no code (UC-011 A3)
      */
     @GET
     @RolesAllowed("elicit_admin")
@@ -59,6 +65,15 @@ public class RespondentExportResource {
                     .build();
         }
 
+        // UC-011 BR-185, A4: every subject in one of the caller's departments, refused as "not
+        // found" so the answer does not tell a respondent outside them from one that is absent.
+        if (!respondentExportService.subjectDepartmentIds(respondentId).stream().allMatch(departmentScope::permits)) {
+            return Response.status(Response.Status.NOT_FOUND)
+                    .entity("Respondent not found: " + respondentId)
+                    .type(MediaType.TEXT_PLAIN)
+                    .build();
+        }
+
         try {
             String exportData = respondentExportService.exportRespondent(respondentId);
             return Response.ok(exportData.getBytes(java.nio.charset.StandardCharsets.UTF_8))
@@ -67,6 +82,13 @@ public class RespondentExportResource {
                     .build();
         } catch (IllegalArgumentException e) {
             return Response.status(Response.Status.NOT_FOUND)
+                    .entity(e.getMessage())
+                    .type(MediaType.TEXT_PLAIN)
+                    .build();
+        } catch (IllegalStateException e) {
+            // The respondent exists but cannot be exported portably (e.g. a department without a
+            // code, BR-100); the message tells the administrator what to fix.
+            return Response.status(Response.Status.CONFLICT)
                     .entity(e.getMessage())
                     .type(MediaType.TEXT_PLAIN)
                     .build();

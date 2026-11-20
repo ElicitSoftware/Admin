@@ -11,12 +11,21 @@ package com.elicitsoftware.admin.flow;
  * ***LICENSE_END***
  */
 
-import com.elicitsoftware.exception.TokenGenerationError;
+import com.elicitsoftware.exception.AccessCodeGenerationError;
 import com.elicitsoftware.model.*;
+import io.quarkus.panache.common.Sort;
 import com.elicitsoftware.response.AddResponse;
+import com.elicitsoftware.response.AddResponseStatus;
+import com.elicitsoftware.service.CsvImportException;
 import com.elicitsoftware.service.CsvImportService;
-import com.elicitsoftware.rest.TokenService;
+import com.elicitsoftware.service.CsvSurveyMissingException;
+import com.elicitsoftware.service.DepartmentService;
+import com.elicitsoftware.rest.AccessCodeService;
+import com.elicitsoftware.security.DepartmentScope;
+import com.elicitsoftware.service.SurveyDefinitionPresenceCheck;
+import com.vaadin.flow.component.Component;
 import com.vaadin.flow.component.button.Button;
+import com.vaadin.flow.component.confirmdialog.ConfirmDialog;
 import com.vaadin.flow.component.button.ButtonVariant;
 import com.vaadin.flow.component.combobox.ComboBox;
 import com.vaadin.flow.component.combobox.ComboBoxVariant;
@@ -34,15 +43,17 @@ import com.vaadin.flow.component.textfield.EmailField;
 import com.vaadin.flow.component.textfield.TextField;
 import com.vaadin.flow.component.textfield.TextFieldVariant;
 import com.vaadin.flow.component.upload.Upload;
+import com.vaadin.flow.component.upload.UploadI18N;
 import com.vaadin.flow.server.streams.UploadHandler;
 import com.vaadin.flow.data.binder.Binder;
 import com.vaadin.flow.data.binder.ValidationException;
 import com.vaadin.flow.data.validator.EmailValidator;
+import com.vaadin.flow.data.validator.StringLengthValidator;
 import com.vaadin.flow.router.BeforeEnterEvent;
 import com.vaadin.flow.router.BeforeEnterObserver;
 import com.vaadin.flow.router.HasDynamicTitle;
 import com.vaadin.flow.router.Route;
-import com.vaadin.flow.theme.lumo.LumoUtility;
+import io.quarkus.logging.Log;
 import io.quarkus.security.identity.SecurityIdentity;
 import jakarta.annotation.PostConstruct;
 import jakarta.annotation.security.RolesAllowed;
@@ -50,10 +61,14 @@ import jakarta.inject.Inject;
 import jakarta.persistence.PersistenceException;
 import jakarta.transaction.Transactional;
 import java.io.InputStream;
+import java.text.DateFormatSymbols;
+import java.util.Arrays;
 
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
 import java.util.Optional;
 
 /**
@@ -71,16 +86,16 @@ import java.util.Optional;
  * <ul>
  *   <li><strong>Individual Registration:</strong> Complete form with validation for all subject fields</li>
  *   <li><strong>Bulk CSV Import:</strong> Upload CSV files with multiple subjects for batch processing</li>
- *   <li><strong>Subject Updates:</strong> Edit existing subjects using URL tokens</li>
+ *   <li><strong>Subject Updates:</strong> Edit existing subjects, addressed by record id ({@code register/<id>})</li>
  *   <li><strong>Department Integration:</strong> Automatic department filtering based on user permissions</li>
- *   <li><strong>Token Generation:</strong> Automatic creation of unique tokens for survey access</li>
+ *   <li><strong>Access Code Generation:</strong> Automatic creation of unique access codes for survey access</li>
  *   <li><strong>Message Creation:</strong> Automatic generation of communication messages for new subjects</li>
  * </ul>
  *
  * <p>The view supports two operational modes:</p>
  * <ul>
  *   <li><strong>Registration Mode:</strong> Default mode for creating new subjects</li>
- *   <li><strong>Update Mode:</strong> Activated when accessing with a valid subject token parameter</li>
+ *   <li><strong>Update Mode:</strong> Activated when accessing with a valid subject access code parameter</li>
  * </ul>
  *
  * <p>Form validation includes:</p>
@@ -93,13 +108,11 @@ import java.util.Optional;
  * </ul>
  *
  * @author Elicit Software
- * @version 1.0
  * @see Subject
  * @see CsvImportService
- * @see TokenService
- * @since 1.0
+ * @see AccessCodeService
  */
-@Route(value = "register", layout = MainLayout.class)
+@Route(value = "register/:id?", layout = MainLayout.class)
 @RolesAllowed({"elicit_admin", "elicit_user"})
 public class RegisterView extends HorizontalLayout implements HasDynamicTitle, BeforeEnterObserver {
 
@@ -109,11 +122,32 @@ public class RegisterView extends HorizontalLayout implements HasDynamicTitle, B
     @Inject
     UiSessionLogin uiSessionLogin;
 
+    /** Reports whether this deployment has a survey installed (UC-019). */
+    @Inject
+    SurveyDefinitionPresenceCheck surveyPresence;
+
+    /** The missing-survey explanation currently shown, if any (UC-019). */
+    private Component missingSurveyNotice;
+
     /**
-     * Injected service for generating and managing survey tokens.
+     * Injected service for generating and managing survey access codes.
      */
     @Inject
-    TokenService tokenService;
+    AccessCodeService accessCodeService;
+
+    /** Where the view reads a stored subject and writes an edited one. */
+    SubjectStore subjects = new SubjectStore();
+
+    /** The optional route parameter that names the subject to edit by its record id (UC-003 A5). */
+    static final String ID_PARAMETER = "id";
+
+    /** Decides whether a subject's department is one of the user's (UC-003 BR-138). */
+    @Inject
+    DepartmentScope departmentScope;
+
+    /** The surveys each department registers onto (UC-006 BR-172, UC-003 BR-174). */
+    @Inject
+    DepartmentService departmentService;
 
     /**
      * Security identity for user authentication and role checking.
@@ -135,6 +169,12 @@ public class RegisterView extends HorizontalLayout implements HasDynamicTitle, B
      * Data binder for form validation and data binding.
      */
     private Binder<Subject> binder;
+
+    /**
+     * Survey selector: the survey a new subject's access code is generated for. Read-only when
+     * editing an existing subject, whose respondent already belongs to a survey.
+     */
+    private ComboBox<Survey> surveyComboBox;
 
     /**
      * Button for saving new subjects.
@@ -175,6 +215,7 @@ public class RegisterView extends HorizontalLayout implements HasDynamicTitle, B
      * <h4>Form Configuration:</h4>
      * <ul>
      *   <li>Responsive single-column form layout</li>
+     *   <li>Survey selection (auto-populated if exactly one survey is installed)</li>
      *   <li>Department selection (auto-populated if user has single department)</li>
      *   <li>Personal information fields (name, date of birth, contact info)</li>
      *   <li>External ID field for integration purposes</li>
@@ -212,6 +253,12 @@ public class RegisterView extends HorizontalLayout implements HasDynamicTitle, B
     public void init() {
 
         user = uiSessionLogin.getUser();
+        if (user == null) {
+            // UC-001 A1: no console record for this principal. SearchView explains the same
+            // condition; without this guard the view fails on the first user access below.
+            add(noUserNotice());
+            return;
+        }
 
         FormLayout formLayout = new FormLayout();
         formLayout.setResponsiveSteps(
@@ -225,35 +272,48 @@ public class RegisterView extends HorizontalLayout implements HasDynamicTitle, B
             subject.setDepartmentId(user.getDepartments().iterator().next().id);
         }
 
-        TextField firstName = new TextField("First Name");
+        List<Survey> surveys = Survey.findAll(Sort.by("displayOrder")).list();
+        surveyComboBox = getSurveyComboBox(surveys);
+        surveyComboBox.setId("register-survey");
+        if (surveys.size() == 1) {
+            surveyComboBox.setValue(surveys.get(0));
+            subject.setSurveyId(surveys.get(0).id);
+        }
+        // UC-003 BR-174: the survey choice offers the chosen department's surveys only.
+        departmentComboBox.addValueChangeListener(e -> offerSurveysOf(e.getValue(), surveys));
+        offerSurveysOf(departmentComboBox.getValue(), surveys);
+
+        TextField firstName = new TextField(getTranslation("registerView.firstName"));
         firstName.setId("register-first-name");
         firstName.addThemeVariants(TextFieldVariant.LUMO_SMALL);
-        TextField lastName = new TextField("Last Name");
+        TextField lastName = new TextField(getTranslation("registerView.lastName"));
         lastName.setId("register-last-name");
         lastName.addThemeVariants(TextFieldVariant.LUMO_SMALL);
-        TextField middleName = new TextField("Middle Name");
+        TextField middleName = new TextField(getTranslation("registerView.middleName"));
         middleName.setId("register-middle-name");
         middleName.addThemeVariants(TextFieldVariant.LUMO_SMALL);
-        DatePicker dob = new DatePicker("Date of Birth");
+        DatePicker dob = new DatePicker(getTranslation("registerView.dob"));
         dob.setId("register-dob");
+        dob.setLocale(getLocale());
+        dob.setI18n(datePickerI18n());
         dob.addThemeVariants(DatePickerVariant.LUMO_SMALL);
-        EmailField email = new EmailField("Email");
+        EmailField email = new EmailField(getTranslation("registerView.email"));
         email.setId("register-email");
-        TextField phone = new TextField("Phone");
+        TextField phone = new TextField(getTranslation("registerView.phone"));
         phone.setId("register-phone");
         phone.setPlaceholder("123-456-7890");
         phone.addThemeVariants(TextFieldVariant.LUMO_SMALL);
-        TextField xid = new TextField("external ID");
+        TextField xid = new TextField(getTranslation("registerView.xid"));
         xid.setId("register-xid");
         xid.addThemeVariants(TextFieldVariant.LUMO_SMALL);
 
-        formLayout.add(departmentComboBox, firstName, lastName, middleName, dob, email, phone, xid);
+        formLayout.add(surveyComboBox, departmentComboBox, firstName, lastName, middleName, dob, email, phone, xid);
 
         binder = new Binder<>(Subject.class);
 
         // Add this binder for departmentComboBox
         binder.forField(departmentComboBox)
-                .asRequired("Department is required")
+                .asRequired(getTranslation("registerView.error.departmentRequired"))
                 .bind(
                         s -> {
                             // Find the Department object by id
@@ -266,6 +326,19 @@ public class RegisterView extends HorizontalLayout implements HasDynamicTitle, B
                         (s, dept) -> s.setDepartmentId(dept == null ? null : dept.id)
                 );
 
+        binder.forField(surveyComboBox)
+                .asRequired(getTranslation("registerView.error.surveyRequired"))
+                .bind(
+                        s -> {
+                            if (s.getSurveyId() == 0) return null;
+                            return surveys.stream()
+                                    .filter(survey -> survey.id == s.getSurveyId())
+                                    .findFirst()
+                                    .orElse(null);
+                        },
+                        (s, survey) -> s.setSurveyId(survey == null ? 0 : survey.id)
+                );
+
         binder.forField(xid)
                 .withConverter(
                         str -> str == null || str.trim().isEmpty() ? null : str,
@@ -273,26 +346,35 @@ public class RegisterView extends HorizontalLayout implements HasDynamicTitle, B
                 )
                 .bind("xid");
 
+        // UC-003 BR-189: no value longer than the subject stores, named by its limit.
         binder.forField(firstName)
-                .asRequired("First name is required")
+                .asRequired(getTranslation("registerView.error.firstNameRequired"))
+                .withValidator(new StringLengthValidator(
+                        getTranslation("registerView.error.firstNameTooLong", Subject.NAME_MAX_LENGTH), null, Subject.NAME_MAX_LENGTH))
                 .bind("firstName");
 
         binder.forField(lastName)
-                .asRequired("Last name is required")
+                .asRequired(getTranslation("registerView.error.lastNameRequired"))
+                .withValidator(new StringLengthValidator(
+                        getTranslation("registerView.error.lastNameTooLong", Subject.NAME_MAX_LENGTH), null, Subject.NAME_MAX_LENGTH))
                 .bind("lastName");
 
         binder.forField(middleName)
+                .withValidator(new StringLengthValidator(
+                        getTranslation("registerView.error.middleNameTooLong", Subject.NAME_MAX_LENGTH), null, Subject.NAME_MAX_LENGTH))
                 .bind("middleName");
 
         binder.forField(dob)
-                .withValidator(date -> date == null || date.isBefore(LocalDate.now()), "DOB must be in the past")
+                .withValidator(date -> date == null || date.isBefore(LocalDate.now()), getTranslation("registerView.error.dobPast"))
                 .bind(
                         s -> s.getDob() == null ? null : s.getDob(),
                         (s, value) -> s.setDob(value == null ? null : LocalDate.from(value))
                 );
 
         binder.forField(email)
-                .withValidator(new EmailValidator("Enter a valid email address"))
+                .withValidator(new EmailValidator(getTranslation("registerView.error.emailInvalid")))
+                .withValidator(new StringLengthValidator(
+                        getTranslation("registerView.error.emailTooLong", Subject.EMAIL_MAX_LENGTH), null, Subject.EMAIL_MAX_LENGTH))
                 .bind("email");
 
         binder.forField(phone)
@@ -302,31 +384,33 @@ public class RegisterView extends HorizontalLayout implements HasDynamicTitle, B
                 )
                 .withValidator(
                         phoneVal -> phoneVal == null || phoneVal.matches("^\\d{3}-\\d{3}-\\d{4}$"),
-                        "Phone must be ###-###-####"
+                        getTranslation("registerView.error.phoneFormat")
                 )
                 .bind("phone");
 
-        saveButton = new Button("Save", event -> {
+        saveButton = new Button(getTranslation("common.save"), event -> {
             try {
                 saveSubject(binder);
             } catch (PersistenceException e) {
-                Notification.show("Duplicate entry: A subject with this External ID " + subject.getXid() + " already exists for this department.", 5000, Notification.Position.MIDDLE);
+                Notification.show(getTranslation("registerView.error.duplicateXid", subject.getXid()), 5000, Notification.Position.MIDDLE);
                 subject = new Subject();
             } catch (Exception e) {
-                showErrorDialog("Database Error", "Database error: " + e.getMessage());
+                new ResultDialog(getTranslation("registerView.error.databaseTitle"),
+                        getTranslation("registerView.error.database", e.getMessage()), true).open();
                 subject = new Subject();
             }
         });
         saveButton.setId("register-save-button");
         saveButton.addThemeVariants(ButtonVariant.LUMO_PRIMARY);
 
-        updateButton = new Button("Update Subject", event -> {
+        updateButton = new Button(getTranslation("registerView.btnUpdate"), event -> {
             try {
                 updateSubject(binder);
                 // Navigate back to the search view after update
                 getUI().ifPresent(ui -> ui.navigate(""));
             } catch (Exception e) {
-                showErrorDialog("Database Error", "Database error: " + e.getMessage());
+                new ResultDialog(getTranslation("registerView.error.databaseTitle"),
+                        getTranslation("registerView.error.database", e.getMessage()), true).open();
             }
         });
         updateButton.setId("register-update-button");
@@ -345,28 +429,20 @@ public class RegisterView extends HorizontalLayout implements HasDynamicTitle, B
         // Create CSV upload button using modern UploadHandler API
         Upload csvUpload = new Upload();
         csvUpload.setId("register-csv-upload");
-        csvUpload.setAcceptedFileTypes(".csv");
+        csvUpload.setAcceptedFileExtensions(".csv");
         csvUpload.setMaxFiles(1);
         csvUpload.setMaxFileSize(5 * 1024 * 1024); // 5MB limit
+        csvUpload.setI18n(uploadI18n());
 
-        Button uploadButton = new Button("Upload CSV");
+        Button uploadButton = new Button(getTranslation("registerView.btnUploadCsv"));
         uploadButton.addThemeVariants(ButtonVariant.LUMO_PRIMARY);
         csvUpload.setUploadButton(uploadButton);
 
         // Use modern InMemoryUploadHandler instead of deprecated MemoryBuffer
-        csvUpload.setUploadHandler(UploadHandler.inMemory((metadata, data) -> {
-            try {
-                CsvImportService importService = new CsvImportService(tokenService);
-                InputStream inputStream = new java.io.ByteArrayInputStream(data);
-                AddResponse response = importService.importSubjects(inputStream);
-                showSuccessDialog("CSV Import Success", "Successfully imported subjects:\n\n" + response.toString());
-            } catch (Exception e) {
-                showErrorDialog("CSV Import Error", e.getMessage());
-            }
-        }));
+        csvUpload.setUploadHandler(UploadHandler.inMemory((metadata, data) -> handleCsvUpload(data)));
 
         // Create REST API instructions accordion
-        Details restApiDetails = new Details("REST API Instructions", createRestApiContent());
+        Details restApiDetails = new Details(getTranslation("registerView.apiDoc.title"), createRestApiContent());
         restApiDetails.setOpened(false);
 
         rightLayout.add(getRestfulInstructionsDiv(), csvUpload, restApiDetails);
@@ -383,53 +459,48 @@ public class RegisterView extends HorizontalLayout implements HasDynamicTitle, B
     }
 
     /**
-     * Handles navigation events and determines the view mode based on URL parameters.
+     * Decides between registration mode and update mode from the route (UC-003 A5, A7).
      *
-     * <p>This method processes the "token" query parameter to determine whether the view
-     * should operate in registration mode (new subject) or update mode (existing subject):</p>
+     * <p>{@code register} registers a new subject: Save is shown, Update hidden.
+     * {@code register/<id>} edits the subject with that record id: the form is filled, Update is
+     * shown and the survey is fixed. An id that is not a number, names no subject, or names a
+     * subject in a department the user is not assigned to (BR-138) is answered alike, with the
+     * not-found notice and the form left in registration mode. The address never carries an
+     * access code (NFR-022).</p>
      *
-     * <h4>Token Parameter Processing:</h4>
-     * <ul>
-     *   <li><strong>Token Present:</strong> Attempts to find and load the subject associated with the token</li>
-     *   <li><strong>Subject Found:</strong> Switches to update mode, populates form, shows Update button</li>
-     *   <li><strong>Subject Not Found:</strong> Shows error notification, remains in registration mode</li>
-     *   <li><strong>No Token:</strong> Operates in registration mode with Save button visible</li>
-     * </ul>
-     *
-     * <h4>UI State Management:</h4>
-     * <ul>
-     *   <li><strong>Registration Mode:</strong> Save button visible, Update button hidden</li>
-     *   <li><strong>Update Mode:</strong> Update button visible, Save button hidden</li>
-     * </ul>
-     *
-     * <p>The method ensures proper form population and button visibility based on the
-     * operational mode, providing a seamless experience for both new registrations
-     * and subject updates.</p>
-     *
-     * @param event the BeforeEnterEvent containing navigation information and query parameters
+     * @param event the BeforeEnterEvent carrying the route parameters
      * @see BeforeEnterObserver#beforeEnter(BeforeEnterEvent)
      */
     @Override
     public void beforeEnter(BeforeEnterEvent event) {
-        // Authorization is now handled by @RolesAllowed annotation
+        if (user == null) {
+            return; // no console record: init() already showed the explanation (UC-001 A1)
+        }
+        refreshMissingSurveyNotice();
 
-        Optional<String> tokenOpt = event.getLocation().getQueryParameters().getParameters().getOrDefault("token", List.of()).stream().findFirst();
-        if (tokenOpt.isPresent()) {
-            String token = tokenOpt.get();
-            // Fetch the subject by token (implement this in your StatusDataSource or Subject repository)
-            Subject found = Subject.findSubjectByToken(token);
+        Optional<String> idOpt = event.getRouteParameters().get(ID_PARAMETER);
+        if (idOpt.isPresent()) {
+            Subject found = editableSubject(idOpt.get());
             if (found != null) {
                 this.subject = found;
+                // Read-only before the bean is read: an existing subject's survey is shown as it
+                // is, whatever the department lists now (UC-003 BR-174 governs new subjects).
+                if (surveyComboBox != null) {
+                    surveyComboBox.setReadOnly(true);
+                }
                 if (binder != null) {
                     binder.readBean(subject);
                 }
-                // Editing: show update, hide save
+                // Editing: show update, hide save; the survey is fixed by the existing respondent
                 if (updateButton != null && saveButton != null) {
                     updateButton.setVisible(true);
                     saveButton.setVisible(false);
                 }
+                if (surveyComboBox != null) {
+                    surveyComboBox.setReadOnly(true);
+                }
             } else {
-                Notification.show("Subject not found for token: " + token, 3000, Notification.Position.MIDDLE);
+                Notification.show(getTranslation("registerView.error.subjectNotFound"), 3000, Notification.Position.MIDDLE);
                 // New: show save, hide update
                 if (updateButton != null && saveButton != null) {
                     updateButton.setVisible(false);
@@ -446,14 +517,46 @@ public class RegisterView extends HorizontalLayout implements HasDynamicTitle, B
     }
 
     /**
+     * The subject a route id names, when the user may edit it (UC-003 A5, BR-138).
+     *
+     * @param idParameter the {@code id} route parameter as written in the address
+     * @return the subject, or null when the id is not a number, names no subject, or names one
+     *         in a department the user is not assigned to
+     */
+    private Subject editableSubject(String idParameter) {
+        long id;
+        try {
+            id = Long.parseLong(idParameter);
+        } catch (NumberFormatException e) {
+            return null;
+        }
+        Subject found = findSubject(id);
+        if (found != null && !departmentScope.permits(found.getDepartmentId())) {
+            Log.infof("Subject %d is not in a department of %s; not opened for editing", id, identity.getPrincipal().getName());
+            return null;
+        }
+        return found;
+    }
+
+    /** The subject the form currently registers or edits. */
+    Subject currentSubject() {
+        return subject;
+    }
+
+    /** The stored subject with this record id, or null. */
+    private Subject findSubject(long id) {
+        return subjects.find(id);
+    }
+
+    /**
      * Saves a new subject to the database with complete workflow processing.
      *
      * <p>This method performs a comprehensive save operation that includes:</p>
      *
      * <ol>
      *   <li><strong>Form Validation:</strong> Validates all form fields using the data binder</li>
-     *   <li><strong>Token Generation:</strong> Creates a unique survey respondent token</li>
-     *   <li><strong>Data Population:</strong> Sets respondent and survey ID from token service</li>
+     *   <li><strong>Access Code Generation:</strong> Creates a unique survey respondent access code</li>
+     *   <li><strong>Data Population:</strong> Sets respondent and survey ID from access code service</li>
      *   <li><strong>Database Persistence:</strong> Saves the subject with immediate flush for constraint checking</li>
      *   <li><strong>Message Creation:</strong> Generates communication messages for the new subject</li>
      *   <li><strong>Form Reset:</strong> Clears the form for next entry</li>
@@ -463,7 +566,7 @@ public class RegisterView extends HorizontalLayout implements HasDynamicTitle, B
      * <ul>
      *   <li><strong>Validation Errors:</strong> Shows field-specific error messages</li>
      *   <li><strong>Duplicate External ID:</strong> Handles constraint violations with specific messaging</li>
-     *   <li><strong>Token Generation Errors:</strong> Manages token service failures</li>
+     *   <li><strong>Access Code Generation Errors:</strong> Manages access code service failures</li>
      *   <li><strong>Database Errors:</strong> Catches and reports persistence exceptions</li>
      * </ul>
      *
@@ -472,29 +575,40 @@ public class RegisterView extends HorizontalLayout implements HasDynamicTitle, B
      *
      * @param binder the data binder containing form validation and data mapping
      * @throws ValidationException  if form validation fails
-     * @throws TokenGenerationError if token creation fails
+     * @throws AccessCodeGenerationError if access code creation fails
      * @throws PersistenceException if database constraints are violated
      */
     @Transactional
-    public void saveSubject(Binder<Subject> binder) throws ValidationException, TokenGenerationError, PersistenceException {
+    public void saveSubject(Binder<Subject> binder) throws ValidationException, AccessCodeGenerationError, PersistenceException {
         try {
             // Write form values to subject first to get current values
             binder.writeBean(subject);
 
-            boolean isExluded = ExcludedXid.isExcluded(this.subject.getXid(), (int) this.subject.getDepartmentId());
-            if (isExluded) {
+            // UC-003 BR-138: the department is checked here, not left to what the selector offers.
+            if (!departmentScope.permits(subject.getDepartmentId())) {
+                Notification.show(getTranslation("registerView.error.notYourDepartment"), 5000, Notification.Position.MIDDLE);
+                return;
+            }
+            // UC-003 BR-174: and so is the department's survey.
+            if (!departmentService.offersSurvey(subject.getDepartmentId(), subject.getSurveyId())) {
+                Notification.show(getTranslation("registerView.error.surveyNotOffered"), 5000, Notification.Position.MIDDLE);
+                return;
+            }
+
+            boolean isExcluded = ExcludedXid.isExcluded(this.subject.getXid(), (int) this.subject.getDepartmentId());
+            if (isExcluded) {
                 // Find the department name from the user's departments by ID
                 String departmentName = user.getDepartments().stream()
                     .filter(dept -> dept.id == this.subject.getDepartmentId())
                     .map(Department::getName)
                     .findFirst()
-                    .orElse("Unknown");
+                    .orElse(getTranslation("registerView.unknownDepartment"));
 
-                Notification.show("External id " + this.subject.getXid() + " is in the exclude list for department " + departmentName, 3000, Notification.Position.MIDDLE);
+                Notification.show(getTranslation("registerView.error.excludedXid", this.subject.getXid(), departmentName), 3000, Notification.Position.MIDDLE);
                 return; // Exit early if excluded
             }
 
-            Respondent respondent = tokenService.getToken(1);
+            Respondent respondent = accessCodeService.generateAccessCode((int) subject.getSurveyId());
             subject.setRespondent(respondent);
             subject.setSurveyId(respondent.survey.id);
             // Optionally, flush to force exception now:
@@ -503,13 +617,13 @@ public class RegisterView extends HorizontalLayout implements HasDynamicTitle, B
             for (Message message : messages) {
                 message.persistAndFlush();
             }
-            Notification.show("Subject saved", 3000, Notification.Position.MIDDLE);
+            Notification.show(getTranslation("registerView.subjectSaved"), 3000, Notification.Position.MIDDLE);
             subject = new Subject();
             binder.readBean(subject); // reset form
         } catch (ValidationException e) {
-            Notification.show("Please fix validation errors", 3000, Notification.Position.MIDDLE);
-        } catch (TokenGenerationError e) {
-            Notification.show("Error generating new token. Please try again", 3000, Notification.Position.MIDDLE);
+            Notification.show(getTranslation("registerView.error.fixValidation"), 3000, Notification.Position.MIDDLE);
+        } catch (AccessCodeGenerationError e) {
+            Notification.show(getTranslation("registerView.error.accessCode"), 3000, Notification.Position.MIDDLE);
         }
     }
 
@@ -532,7 +646,7 @@ public class RegisterView extends HorizontalLayout implements HasDynamicTitle, B
      *   <li><strong>Database Errors:</strong> Catches and reports persistence exceptions</li>
      * </ul>
      *
-     * <p>Unlike the save operation, updates don't require token generation or message creation
+     * <p>Unlike the save operation, updates don't require access code generation or message creation
      * since these are only needed for new subjects entering the system.</p>
      *
      * @param binder the data binder containing form validation and data mapping
@@ -541,53 +655,102 @@ public class RegisterView extends HorizontalLayout implements HasDynamicTitle, B
     @Transactional
     public void updateSubject(Binder<Subject> binder) throws ValidationException {
         try {
+            // UC-003 BR-138: the subject as it is stored, and the department now chosen for it,
+            // must both be the user's; the stored row is re-read rather than trusted from the form.
+            Subject stored = findSubject(subject.getId());
+            if (stored == null || !departmentScope.permits(stored.getDepartmentId())) {
+                Notification.show(getTranslation("registerView.error.notYourDepartment"), 5000, Notification.Position.MIDDLE);
+                return;
+            }
             binder.writeBean(subject);
-            subject = Subject.getEntityManager().merge(subject);
-            Subject.getEntityManager().flush();
-            Notification.show("Subject updated", 3000, Notification.Position.MIDDLE);
+            if (!departmentScope.permits(subject.getDepartmentId())) {
+                Notification.show(getTranslation("registerView.error.notYourDepartment"), 5000, Notification.Position.MIDDLE);
+                return;
+            }
+            mergeSubject();
+            Notification.show(getTranslation("registerView.subjectUpdated"), 3000, Notification.Position.MIDDLE);
         } catch (ValidationException e) {
-            Notification.show("Please fix validation errors", 3000, Notification.Position.MIDDLE);
+            Notification.show(getTranslation("registerView.error.fixValidation"), 3000, Notification.Position.MIDDLE);
+        }
+    }
+
+    /** Writes the edited subject over its stored row. */
+    private void mergeSubject() {
+        subject = subjects.merge(subject);
+    }
+
+    /**
+     * Reads a stored subject and writes an edited one back. Kept apart from the view so that the
+     * view's handling of a subject can be tested without a database.
+     */
+    static class SubjectStore {
+
+        /** The stored subject with this record id, or null. */
+        Subject find(long id) {
+            return Subject.findById(id);
+        }
+
+        /** Writes the edited subject over its stored row and returns the managed instance. */
+        Subject merge(Subject edited) {
+            Subject managed = Subject.getEntityManager().merge(edited);
+            Subject.getEntityManager().flush();
+            return managed;
         }
     }
 
     /**
-     * Registers a new user account in the system.
+     * Narrows the survey choice to the department's surveys (UC-003 BR-174), keeping the current
+     * survey when it is still offered and choosing the only one when there is one. A read-only
+     * choice, an existing subject's, offers every survey, so it shows the subject's as it is.
      *
-     * <p>This method performs comprehensive user registration including:</p>
-     * <ol>
-     *   <li>Form validation using the configured binder</li>
-     *   <li>Password encryption using BCrypt</li>
-     *   <li>User entity creation and persistence</li>
-     *   <li>Success notification display</li>
-     *   <li>Navigation to login page</li>
-     * </ol>
-     *
-     * <p>If validation fails, appropriate error messages are displayed
-     * and the registration process is halted.</p>
+     * @param department the department chosen in the form, or null
+     * @param surveys    every installed survey, in display order
      */
-    @Transactional
-    public void register() {
-        // ...existing code...
+    void offerSurveysOf(Department department, List<Survey> surveys) {
+        if (surveyComboBox.isReadOnly()) {
+            surveyComboBox.setItems(surveys);
+            return;
+        }
+        Set<Integer> offered = department == null ? Set.of() : departmentService.surveyIdsOf(department.id);
+        Survey current = surveyComboBox.getValue();
+        List<Survey> items = surveys.stream()
+                .filter(survey -> offered.contains(survey.id))
+                .toList();
+        surveyComboBox.setItems(items);
+        Survey keep = current == null ? null
+                : items.stream().filter(survey -> survey.id.equals(current.id)).findFirst().orElse(null);
+        if (keep != null) {
+            surveyComboBox.setValue(keep);
+        } else if (items.size() == 1) {
+            surveyComboBox.setValue(items.get(0));
+        } else {
+            surveyComboBox.clear();
+        }
     }
 
     /**
-     * Creates and configures the department selection combo box.
+     * Creates the survey selection combo box (UC-003): the survey the new subject's access code is
+     * generated for, labelled by survey name.
      *
-     * <p>This method builds a department selector that is filtered based on the
-     * current user's department permissions. Only departments that the user
-     * has access to are available for selection.</p>
-     *
-     * <p>The combo box is configured with:</p>
-     * <ul>
-     *   <li>Department names as display labels</li>
-     *   <li>Filtered list based on user permissions</li>
-     *   <li>Proper binding to the subject's department ID</li>
-     * </ul>
+     * @param surveys the surveys to offer, in display order
+     * @return a configured ComboBox for survey selection
+     */
+    private ComboBox<Survey> getSurveyComboBox(List<Survey> surveys) {
+        ComboBox<Survey> surveyComboBox = new ComboBox<>(getTranslation("registerView.survey"));
+        surveyComboBox.setItems(surveys);
+        surveyComboBox.setItemLabelGenerator(survey -> survey.name);
+        surveyComboBox.addThemeVariants(ComboBoxVariant.LUMO_SMALL);
+        return surveyComboBox;
+    }
+
+    /**
+     * Creates the department selection combo box, offering only the departments the signed-in user is
+     * assigned to (NFR-021), labelled by department name.
      *
      * @return a configured ComboBox for department selection
      */
     private ComboBox<Department> getDepartmentComboBox() {
-        ComboBox<Department> departmentComboBox = new ComboBox<>("Deparments");
+        ComboBox<Department> departmentComboBox = new ComboBox<>(getTranslation("registerView.department"));
         departmentComboBox.setItems(user.getDepartments());
         departmentComboBox.setItemLabelGenerator(Department::getName);
         departmentComboBox.addThemeVariants(ComboBoxVariant.LUMO_SMALL);
@@ -614,12 +777,12 @@ public class RegisterView extends HorizontalLayout implements HasDynamicTitle, B
         Div div = new Div();
 
         // Create CSV Structure Accordion
-        Details csvDetails = new Details("CSV File Structure", createCsvStructureContent());
+        Details csvDetails = new Details(getTranslation("registerView.csvDoc.title"), createCsvStructureContent());
         csvDetails.setOpened(false); // Open by default so users can see the format
 
         div.add(
-                new Paragraph("You can register subjects individually using the form, a rest API, or upload a CSV file with multiple subjects."),
-                new Paragraph("Click below to see the required CSV file format and examples:"),
+                new Paragraph(getTranslation("registerView.intro.methods")),
+                new Paragraph(getTranslation("registerView.intro.clickBelow")),
                 csvDetails
         );
 
@@ -657,18 +820,20 @@ public class RegisterView extends HorizontalLayout implements HasDynamicTitle, B
         Div content = new Div();
 
         content.add(
-                new Paragraph("The CSV file should contain the following columns in order:"),
-                new Paragraph("#departmentId, firstName, lastName, middleName, dob, email, phone, xid"),
-                new Paragraph("All rows starting with a '#' character are considered comments and will be ignored."),
+                new Paragraph(getTranslation("registerView.csvDoc.columnsIntro")),
+                new Paragraph("#surveyId, departmentId, xid, firstName, lastName, middleName, dob, email, phone"), // i18n:ignore CSV header line
+                new Paragraph(getTranslation("registerView.csvDoc.comments")),
 
-                new H4("Column Descriptions:"),
+                new H4(getTranslation("registerView.csvDoc.columnDescriptions")),
                 columnDescriptionsList(),
 
-                new H4("Example CSV data:"),
-                new Pre("#departmentId,firstName,lastName,middleName,dob,email,phone,xid\n" +
-                        "1,John,Doe,Michael,1990-01-15,john.doe@email.com,123-456-7890,EXT001\n" +
-                        "2,Jane,Smith,,1985-03-22,jane.smith@email.com,555-123-4567,EXT002\n" +
-                        "1,Bob,Johnson,Robert,12/10/1992,bob.johnson@email.com,999-888-7777,EXT003")
+                new H4(getTranslation("registerView.csvDoc.example")),
+                // i18n:ignore-start (sample CSV data)
+                new Pre("#surveyId,departmentId,xid,firstName,lastName,middleName,dob,email,phone\n" +
+                        "1,1,EXT001,John,Doe,Michael,1990-01-15,john.doe@email.com,123-456-7890\n" +
+                        "1,2,,Jane,Smith,,1985-03-22,jane.smith@email.com\n" +
+                        "2,1,EXT003,Bob,Johnson,Robert,12/10/1992,bob.johnson@email.com,999-888-7777")
+                // i18n:ignore-end
         );
 
         return content;
@@ -685,28 +850,60 @@ public class RegisterView extends HorizontalLayout implements HasDynamicTitle, B
      */
     private UnorderedList columnDescriptionsList() {
         UnorderedList list = new UnorderedList();
-        list.add(columnDescription("departmentId:", " Integer (required) - Must be a valid department ID for the user"));
-        list.add(columnDescription("firstName:", " String (required) - Subject's first name"));
-        list.add(columnDescription("lastName:", " String (required) - Subject's last name"));
-        list.add(columnDescription("middleName:", " String (optional) - Subject's middle name"));
-        list.add(columnDescription("dob:", " Date (optional) - Date of birth in yyyy-MM-dd or MM/dd/yyyy format"));
-        list.add(columnDescription("email:", " String (required) - Valid email address"));
-        list.add(columnDescription("phone:", " String (optional) - Phone number in ###-###-#### format"));
-        list.add(columnDescription("xid:", " String (optional) - External ID for the subject"));
+        list.add(columnDescription("surveyId", getTranslation("registerView.csvDoc.col.surveyId")));
+        list.add(columnDescription("departmentId", getTranslation("registerView.csvDoc.col.departmentId")));
+        list.add(columnDescription("xid", getTranslation("registerView.csvDoc.col.xid")));
+        list.add(columnDescription("firstName", getTranslation("registerView.csvDoc.col.firstName")));
+        list.add(columnDescription("lastName", getTranslation("registerView.csvDoc.col.lastName")));
+        list.add(columnDescription("middleName", getTranslation("registerView.csvDoc.col.middleName")));
+        list.add(columnDescription("dob", getTranslation("registerView.csvDoc.col.dob")));
+        list.add(columnDescription("email", getTranslation("registerView.csvDoc.col.email")));
+        list.add(columnDescription("phone", getTranslation("registerView.csvDoc.col.phone")));
         return list;
     }
 
     /**
      * Creates a single CSV column-description list item with a bold field name.
      *
-     * @param label       the column name, rendered in bold
-     * @param description the human-readable description text
+     * @param column      the technical CSV column name, rendered in bold (never translated)
+     * @param description the translated, human-readable description text
      * @return a {@link ListItem} for the column
      */
-    private ListItem columnDescription(String label, String description) {
-        Span name = new Span(label);
-        name.addClassName(LumoUtility.FontWeight.BOLD);
-        return new ListItem(name, new Span(description));
+    private ListItem columnDescription(String column, String description) {
+        Span name = new Span(column + ":");
+        name.addClassName("inline-name");
+        return new ListItem(name, new Span(" " + description));
+    }
+
+    /**
+     * Month and weekday names for the date picker in the current locale (UC-026), with the
+     * button labels from the translation bundle.
+     */
+    private DatePicker.DatePickerI18n datePickerI18n() {
+        DateFormatSymbols symbols = DateFormatSymbols.getInstance(getLocale());
+        DatePicker.DatePickerI18n i18n = new DatePicker.DatePickerI18n();
+        i18n.setMonthNames(Arrays.asList(symbols.getMonths()).subList(0, 12));
+        i18n.setWeekdays(Arrays.asList(symbols.getWeekdays()).subList(1, 8));
+        i18n.setWeekdaysShort(Arrays.asList(symbols.getShortWeekdays()).subList(1, 8));
+        i18n.setToday(getTranslation("registerView.datePicker.today"));
+        i18n.setCancel(getTranslation("common.cancel"));
+        return i18n;
+    }
+
+    /** Upload component texts in the current locale (UC-026). */
+    private UploadI18N uploadI18n() {
+        UploadI18N i18n = new UploadI18N();
+        i18n.setAddFiles(new UploadI18N.AddFiles()
+                .setOne(getTranslation("registerView.btnUploadCsv"))
+                .setMany(getTranslation("registerView.btnUploadCsv")));
+        i18n.setDropFiles(new UploadI18N.DropFiles()
+                .setOne(getTranslation("registerView.upload.dropFile"))
+                .setMany(getTranslation("registerView.upload.dropFile")));
+        i18n.setError(new UploadI18N.Error()
+                .setFileIsTooBig(getTranslation("registerView.upload.error.tooBig"))
+                .setIncorrectFileType(getTranslation("registerView.upload.error.wrongType"))
+                .setTooManyFiles(getTranslation("registerView.upload.error.tooMany")));
+        return i18n;
     }
 
     /**
@@ -732,7 +929,7 @@ public class RegisterView extends HorizontalLayout implements HasDynamicTitle, B
      * <ul>
      *   <li>Successful response structure with generated IDs</li>
      *   <li>Error handling and response codes</li>
-     *   <li>Token generation information</li>
+     *   <li>Access code generation information</li>
      * </ul>
      *
      * <p>The documentation provides developers with everything needed to integrate
@@ -744,19 +941,20 @@ public class RegisterView extends HorizontalLayout implements HasDynamicTitle, B
         Div content = new Div();
 
         content.add(
-                new Paragraph("You can also add subjects programmatically using the REST API endpoints"),
+                new Paragraph(getTranslation("registerView.apiDoc.intro")),
 
-                new H3("1. Single Subject Registration"),
-                new H4("Endpoint:"),
-                new Pre("POST /api/secured/add/subject"),
+                new H3(getTranslation("registerView.apiDoc.single.h")),
+                new H4(getTranslation("registerView.apiDoc.endpoint")),
+                new Pre("POST /api/secured/add/subject"), // i18n:ignore
 
-                new H4("Authentication:"),
-                new Paragraph("Requires a Bearer token with elicit_admin, elicit_user, or elicit_importer role"),
+                new H4(getTranslation("registerView.apiDoc.authentication")),
+                new Paragraph(getTranslation("registerView.apiDoc.auth.importerRole")),
 
-                new H4("Content-Type:"),
+                new H4(getTranslation("registerView.apiDoc.contentType")),
                 new Pre("application/json"),
 
-                new H4("Request Body Example:"),
+                new H4(getTranslation("registerView.apiDoc.requestBodyExample")),
+                // i18n:ignore-start (sample request body)
                 new Pre("{\n" +
                         "  \"surveyId\": 1,\n" +
                         "  \"departmentId\": 1,\n" +
@@ -768,18 +966,20 @@ public class RegisterView extends HorizontalLayout implements HasDynamicTitle, B
                         "  \"phone\": \"123-456-7890\",\n" +
                         "  \"xid\": \"EXT001\"\n" +
                         "}"),
+                // i18n:ignore-end
 
-                new H3("2. Bulk Subject Registration"),
-                new H4("Endpoint:"),
-                new Pre("POST /api/secured/add/subjects"),
+                new H3(getTranslation("registerView.apiDoc.bulk.h")),
+                new H4(getTranslation("registerView.apiDoc.endpoint")),
+                new Pre("POST /api/secured/add/subjects"), // i18n:ignore
 
-                new H4("Authentication:"),
-                new Paragraph("Requires a Bearer token with elicit_admin, elicit_user, or elicit_importer role"),
+                new H4(getTranslation("registerView.apiDoc.authentication")),
+                new Paragraph(getTranslation("registerView.apiDoc.auth.importerRole")),
 
-                new H4("Content-Type:"),
+                new H4(getTranslation("registerView.apiDoc.contentType")),
                 new Pre("application/json"),
 
-                new H4("Request Body Example (Array of Subjects):"),
+                new H4(getTranslation("registerView.apiDoc.requestBodyArray")),
+                // i18n:ignore-start (sample request body)
                 new Pre("[\n" +
                         "  {\n" +
                         "    \"surveyId\": 1,\n" +
@@ -801,45 +1001,42 @@ public class RegisterView extends HorizontalLayout implements HasDynamicTitle, B
                         "    \"xid\": \"EXT002\"\n" +
                         "  }\n" +
                         "]"),
+                // i18n:ignore-end
 
-                new H3("3. CSV File Upload (REST API)"),
-                new H4("Endpoint:"),
-                new Pre("POST /api/secured/add/csv"),
+                new H3(getTranslation("registerView.apiDoc.csvUpload.h")),
+                new H4(getTranslation("registerView.apiDoc.endpoint")),
+                new Pre("POST /api/secured/add/csv"), // i18n:ignore
 
-                new H4("Authentication:"),
-                new Paragraph("Requires a Bearer token with elicit_importer role"),
+                new H4(getTranslation("registerView.apiDoc.authentication")),
+                new Paragraph(getTranslation("registerView.apiDoc.auth.importerRole")),
 
-                new H4("Content-Type:"),
+                new H4(getTranslation("registerView.apiDoc.contentType")),
                 new Pre("multipart/form-data"),
 
-                new H4("Request Body:"),
-                new Paragraph("Form field 'file' containing CSV file with subject data"),
+                new H4(getTranslation("registerView.apiDoc.requestBody")),
+                new Paragraph(getTranslation("registerView.apiDoc.requestBodyFile")),
 
-                new H4("CSV File Format:"),
-                new Paragraph("The CSV file should contain the following columns in order:"),
-                new Pre("departmentId,firstName,lastName,middleName,dob,email,phone,xid"),
+                new H4(getTranslation("registerView.apiDoc.csvFormat")),
+                new Paragraph(getTranslation("registerView.csvDoc.columnsIntro")),
+                new Pre("surveyId,departmentId,xid,firstName,lastName,middleName,dob,email,phone"),
 
-                new Paragraph("Column Requirements:"),
-                new Pre("• departmentId: Integer (required) - Valid department ID\n" +
-                        "• firstName: String (required) - Subject's first name\n" +
-                        "• lastName: String (required) - Subject's last name\n" +
-                        "• middleName: String (optional) - Subject's middle name\n" +
-                        "• dob: Date (optional) - Format: yyyy-MM-dd or MM/dd/yyyy\n" +
-                        "• email: String (required) - Valid email address\n" +
-                        "• phone: String (optional) - Format: ###-###-####\n" +
-                        "• xid: String (optional) - External ID for the subject"),
+                new Paragraph(getTranslation("registerView.apiDoc.columnRequirements")),
+                new Pre(getTranslation("registerView.apiDoc.columnRequirementsList")),
 
-                new H4("CSV Example:"),
-                new Pre("departmentId,firstName,lastName,middleName,dob,email,phone,xid\n" +
-                        "1,John,Doe,Michael,1990-01-15,john.doe@email.com,123-456-7890,EXT001\n" +
-                        "2,Jane,Smith,,1985-03-22,jane.smith@email.com,555-123-4567,EXT002"),
+                new H4(getTranslation("registerView.apiDoc.csvExample")),
+                // i18n:ignore-start (sample CSV data and API responses)
+                new Pre("surveyId,departmentId,xid,firstName,lastName,middleName,dob,email,phone\n" +
+                        "1,1,EXT001,John,Doe,Michael,1990-01-15,john.doe@email.com,123-456-7890\n" +
+                        "2,2,EXT002,Jane,Smith,,1985-03-22,jane.smith@email.com,555-123-4567"),
+                // i18n:ignore-end
 
-                new H3("4. CSV File Upload (Web Interface)"),
-                new Paragraph("You can also upload a CSV file using the upload component above in the web interface."),
+                new H3(getTranslation("registerView.apiDoc.webUpload.h")),
+                new Paragraph(getTranslation("registerView.apiDoc.webUpload.p")),
 
-                new H3("Response Format (All Endpoints)"),
+                new H3(getTranslation("registerView.apiDoc.response.h")),
 
-                new H4("Response Example (Single Subject):"),
+                new H4(getTranslation("registerView.apiDoc.response.single")),
+                // i18n:ignore-start (sample API response, message values are literal API output)
                 new Pre("""
                         {
                             "statuses": [
@@ -852,7 +1049,7 @@ public class RegisterView extends HorizontalLayout implements HasDynamicTitle, B
                                         "firstName": "John",
                                         "lastName": "Doe",
                                         "email": "john.doe@email.com",
-                                        "token": "ABC123DEF",
+                                        "accessCode": "ABC123DEF",
                                         "created": "2025-10-13"
                                     },
                                     "message": "New Subject"
@@ -860,8 +1057,10 @@ public class RegisterView extends HorizontalLayout implements HasDynamicTitle, B
                             ]
                         }
                         """),
+                // i18n:ignore-end
 
-                new H4("Response Example (Bulk Subjects):"),
+                new H4(getTranslation("registerView.apiDoc.response.bulk")),
+                // i18n:ignore-start (sample API response, message values are literal API output)
                 new Pre("""
                         {
                             "statuses": [
@@ -880,85 +1079,229 @@ public class RegisterView extends HorizontalLayout implements HasDynamicTitle, B
                             ]
                         }
                         """),
+                // i18n:ignore-end
 
-                new H4("Important Notes:"),
-                new Paragraph("• XID Exclusion: Subjects with XIDs in the exclusion list will not be created"),
-                new Paragraph("• Duplicate Detection: Existing subjects (same XID + department) will be identified"),
-                new Paragraph("• Individual Processing: In bulk requests, each subject is processed independently"),
-                new Paragraph("• Authentication: All endpoints require valid Bearer token authentication")
+                new H4(getTranslation("registerView.apiDoc.notes.h")),
+                new Paragraph(getTranslation("registerView.apiDoc.notes.exclusion")),
+                new Paragraph(getTranslation("registerView.apiDoc.notes.duplicates")),
+                new Paragraph(getTranslation("registerView.apiDoc.notes.individual")),
+                new Paragraph(getTranslation("registerView.apiDoc.notes.auth")),
+                new Paragraph(getTranslation("registerView.apiDoc.notes.departments"))
         );
 
         return content;
     }
 
     /**
-     * Displays an error dialog with proper formatting for line breaks and detailed error messages.
+     * Reads an uploaded CSV and asks the user to confirm what it will do before anyone is
+     * registered (UC-003 A6, BR-176). A file with a row that names no survey is rejected with a
+     * warning and nothing is imported (BR-175); the survey chosen in the form plays no part.
+     * Package-private so tests can drive it directly without simulating a real file upload,
+     * the same way {@code RespondentImportView.handleUpload} is.
      *
-     * <p>This method creates a modal dialog that can properly display multi-line error messages,
-     * including formatted toString() output from response objects. The dialog uses pre-wrap
-     * white-space styling to preserve line breaks and formatting.</p>
-     *
-     * @param title   the title to display in the dialog header
-     * @param message the error message to display, which may contain line breaks
+     * @param data the raw bytes of the uploaded file
      */
-    private void showErrorDialog(String title, String message) {
-        Dialog errorDialog = new Dialog();
-        errorDialog.setHeaderTitle(title);
-
-        Span errorMessage = new Span(message);
-        errorMessage.addClassName(LumoUtility.Whitespace.PRE_WRAP);
-
-        Button closeButton = new Button("Close", evt -> errorDialog.close());
-        closeButton.addThemeVariants(ButtonVariant.LUMO_PRIMARY);
-        closeButton.addClassName(LumoUtility.Margin.Top.MEDIUM);
-
-        VerticalLayout dialogLayout = new VerticalLayout(errorMessage, closeButton);
-        dialogLayout.setAlignItems(Alignment.CENTER);
-        dialogLayout.setSpacing(true);
-
-        errorDialog.add(dialogLayout);
-        errorDialog.setModality(ModalityMode.STRICT);
-        errorDialog.setDraggable(false);
-        errorDialog.setResizable(true);
-        errorDialog.setWidth("600px");
-        errorDialog.setMaxWidth("90vw");
-
-        errorDialog.open();
+    void handleCsvUpload(byte[] data) {
+        try {
+            CsvImportService importService = new CsvImportService(accessCodeService);
+            CsvImportService.CsvImportPlan plan = importService.plan(new java.io.ByteArrayInputStream(data));
+            if (plan.rejected()) {
+                new ResultDialog(getTranslation("registerView.csvImport.errorTitle"),
+                        new CsvSurveyMissingException(plan.linesWithoutSurvey()).getMessage(), true).open();
+                return;
+            }
+            if (plan.accepted().isEmpty()) {
+                // Nothing to confirm: the file holds no rows, or every row would be refused.
+                if (plan.refused().isEmpty()) {
+                    new ResultDialog(getTranslation("registerView.csvImport.successTitle"),
+                            importSummary(new AddResponse()), false).open();
+                } else {
+                    new ResultDialog(getTranslation("registerView.csvImport.errorTitle"),
+                            rejectedLines(new CsvImportException(plan.refused())), true).open();
+                }
+                return;
+            }
+            confirmCsvImport(importService, plan);
+        } catch (Exception e) {
+            // The file could not be read: the cause goes to the log, the dialog says only that
+            // it failed (UC-010 BR-139).
+            Log.error("CSV import failed", e);
+            new ResultDialog(getTranslation("registerView.csvImport.errorTitle"),
+                    getTranslation("registerView.csvImport.failed"), true).open();
+        }
     }
 
     /**
-     * Displays a success dialog with proper formatting for line breaks and detailed success messages.
-     *
-     * <p>This method creates a modal dialog that can properly display multi-line success messages,
-     * including formatted toString() output from response objects. The dialog uses pre-wrap
-     * white-space styling to preserve line breaks and formatting.</p>
-     *
-     * @param title   the title to display in the dialog header
-     * @param message the success message to display, which may contain line breaks
+     * The confirmation of UC-003 A6 step 2: how many subjects the upload will register on each
+     * survey and in each department, and each row it will refuse. Confirming imports the
+     * accepted rows (step 4); canceling imports nothing (step 3).
      */
-    private void showSuccessDialog(String title, String message) {
-        Dialog successDialog = new Dialog();
-        successDialog.setHeaderTitle(title);
+    private void confirmCsvImport(CsvImportService importService, CsvImportService.CsvImportPlan plan) {
+        ConfirmDialog dialog = new ConfirmDialog();
+        csvConfirmation = dialog;
+        dialog.setId("register-csv-confirm");
+        dialog.setHeader(getTranslation("registerView.csvConfirm.title"));
+        dialog.setText(csvPlanSummary(plan));
+        dialog.setCancelable(true);
+        dialog.setCancelText(getTranslation("common.cancel"));
+        dialog.setConfirmText(getTranslation("registerView.csvConfirm.import"));
+        dialog.addConfirmListener(e -> runCsvImport(importService, plan));
+        dialog.open();
+    }
 
-        Span successMessage = new Span(message);
-        successMessage.addClassNames(LumoUtility.Whitespace.PRE_WRAP, LumoUtility.TextColor.SUCCESS);
+    /**
+     * The last upload's confirmation. Package-private so tests can confirm or cancel it: an
+     * opened ConfirmDialog joins the UI only when the response is written.
+     */
+    ConfirmDialog csvConfirmation;
 
-        Button closeButton = new Button("Close", evt -> successDialog.close());
-        closeButton.addThemeVariants(ButtonVariant.LUMO_PRIMARY);
-        closeButton.addClassName(LumoUtility.Margin.Top.MEDIUM);
+    /** The confirmation's body: one line per survey and department, then the refused rows. */
+    Div csvPlanSummary(CsvImportService.CsvImportPlan plan) {
+        Map<Integer, Map<Long, Long>> counts = new java.util.TreeMap<>();
+        for (CsvImportService.CsvRow row : plan.accepted()) {
+            counts.computeIfAbsent(row.request().surveyId, k -> new java.util.TreeMap<>())
+                    .merge((long) row.request().departmentId, 1L, Long::sum);
+        }
+        Div body = new Div();
+        body.add(new Paragraph(getTranslation("registerView.csvConfirm.intro", plan.accepted().size())));
+        // Accepted rows name installed surveys and the user's own departments only (BR-137, BR-172).
+        Map<Integer, String> surveyNames = new java.util.HashMap<>();
+        departmentService.installedSurveys().forEach(survey -> surveyNames.put(survey.id, survey.name));
+        Map<Long, String> departmentNames = new java.util.HashMap<>();
+        user.getDepartments().forEach(department -> departmentNames.put(department.id, department.getName()));
+        UnorderedList groups = new UnorderedList();
+        counts.forEach((surveyId, byDepartment) -> byDepartment.forEach((departmentId, count) ->
+                groups.add(new ListItem(getTranslation("registerView.csvConfirm.group",
+                        surveyNames.getOrDefault(surveyId, String.valueOf(surveyId)),
+                        departmentNames.getOrDefault(departmentId, String.valueOf(departmentId)),
+                        count)))));
+        body.add(groups);
+        if (!plan.refused().isEmpty()) {
+            body.add(new Paragraph(getTranslation("registerView.csvConfirm.refused", plan.refused().size())));
+            UnorderedList refused = new UnorderedList();
+            plan.refused().forEach(line -> refused.add(new ListItem(line)));
+            body.add(refused);
+        }
+        return body;
+    }
 
-        VerticalLayout dialogLayout = new VerticalLayout(successMessage, closeButton);
-        dialogLayout.setAlignItems(Alignment.CENTER);
-        dialogLayout.setSpacing(true);
+    /** Imports the rows the user confirmed and shows the outcome (UC-003 A6 step 4). */
+    private void runCsvImport(CsvImportService importService, CsvImportService.CsvImportPlan plan) {
+        try {
+            AddResponse response = importService.importAccepted(plan);
+            new ResultDialog(getTranslation("registerView.csvImport.successTitle"),
+                    importSummary(response), false).open();
+        } catch (CsvImportException e) {
+            new ResultDialog(getTranslation("registerView.csvImport.errorTitle"),
+                    rejectedLines(e), true).open();
+        } catch (Exception e) {
+            Log.error("CSV import failed", e);
+            new ResultDialog(getTranslation("registerView.csvImport.errorTitle"),
+                    getTranslation("registerView.csvImport.failed"), true).open();
+        }
+    }
 
-        successDialog.add(dialogLayout);
-        successDialog.setModality(ModalityMode.STRICT);
-        successDialog.setDraggable(false);
-        successDialog.setResizable(true);
-        successDialog.setWidth("600px");
-        successDialog.setMaxWidth("90vw");
+    /**
+     * Lays a finished CSV import out as the {@link ResultDialog} sections an administrator reads
+     * (UC-003 A6): a heading, then one line per row saying what became of it.
+     *
+     * <p>This used to hand {@code AddResponse.toString()} — a Java debug dump — to a single
+     * {@code Span} that relied on {@code LumoUtility.Whitespace.PRE_WRAP} to break its lines.
+     * Admin's Lumo utility classes are inert (issue #85), so the whole summary collapsed into one
+     * run-on paragraph. Structure survives a missing stylesheet; a pre-formatted string does
+     * not.</p>
+     *
+     * @param response the import's outcome
+     * @return the summary, in the order it should read
+     */
+    private List<ResultDialog.Section> importSummary(AddResponse response) {
+        List<AddResponseStatus> subjects = response.getSubjects() != null
+                ? response.getSubjects()
+                : List.of();
 
-        successDialog.open();
+        List<ResultDialog.Line> lines = new ArrayList<>();
+        lines.add(ResultDialog.Line.heading(subjects.size() == 1
+                ? getTranslation("registerView.csvImport.summary.headingOne")
+                : getTranslation("registerView.csvImport.summary.heading", subjects.size())));
+        for (AddResponseStatus subject : subjects) {
+            lines.add(ResultDialog.Line.detail(describe(subject)));
+        }
+
+        List<ResultDialog.Section> sections = new ArrayList<>();
+        sections.add(new ResultDialog.Section(lines));
+
+        List<String> errors = response.getErrors() != null ? response.getErrors() : List.of();
+        if (!errors.isEmpty()) {
+            List<ResultDialog.Line> errorLines = new ArrayList<>();
+            errorLines.add(ResultDialog.Line.heading(getTranslation("registerView.csvImport.errorsHeading")));
+            errors.forEach(error -> errorLines.add(ResultDialog.Line.error(error)));
+            sections.add(new ResultDialog.Section(errorLines));
+        }
+        return sections;
+    }
+
+    /** The import service's outcome word in the administrator's language; an unknown one is shown as sent. */
+    private String outcomeLabel(String importStatus) {
+        if (importStatus == null) {
+            return "";
+        }
+        return switch (importStatus) {
+            case "New Subject" -> getTranslation("registerView.csvImport.outcome.new"); // i18n:ignore
+            case "Existing Subject" -> getTranslation("registerView.csvImport.outcome.existing"); // i18n:ignore
+            case "Excluded Subject" -> getTranslation("registerView.csvImport.outcome.excluded"); // i18n:ignore
+            default -> importStatus;
+        };
+    }
+
+    /**
+     * Describes one imported row: what became of it, and enough of the subject to recognize.
+     *
+     * <p>The outcome itself ({@code New Subject}, {@code Existing Subject}, ...) is the import
+     * service's own wording and travels in its REST payload, which stays as it is; it is put into
+     * the administrator's language here, where it is shown. An excluded row carries an empty
+     * {@code Status}, so every field is optional and the line falls back to the outcome on its own.</p>
+     *
+     * @param subject one row's outcome
+     * @return a single line of text
+     */
+    private String describe(AddResponseStatus subject) {
+        String outcome = outcomeLabel(subject.getImportStatus());
+        Status status = subject.getStatus();
+        if (status == null) {
+            return outcome;
+        }
+
+        StringBuilder who = new StringBuilder();
+        String name = ((status.getFirstName() != null ? status.getFirstName() : "") + " "
+                + (status.getLastName() != null ? status.getLastName() : "")).trim();
+        if (!name.isEmpty()) {
+            who.append(name);
+        }
+        if (status.getXid() != null && !status.getXid().isBlank()) {
+            who.append(who.isEmpty() ? "" : " ").append("(")
+                    .append(getTranslation("registerView.csvImport.summary.xid", status.getXid())).append(")");
+        }
+        if (status.getAccessCode() != null && !status.getAccessCode().isBlank()) {
+            who.append(who.isEmpty() ? "" : ", ")
+                    .append(getTranslation("registerView.csvImport.summary.accessCode", status.getAccessCode()));
+        }
+        if (who.isEmpty()) {
+            return outcome;
+        }
+        return getTranslation("registerView.csvImport.summary.subject", outcome, who.toString());
+    }
+
+    /**
+     * Lays the rows a CSV import rejected out as one list item each (UC-003 A6).
+     *
+     * @param failure the import failure, which carries one message per rejected line
+     * @return the summary, in the order it should read
+     */
+    private List<ResultDialog.Section> rejectedLines(CsvImportException failure) {
+        List<ResultDialog.Line> lines = new ArrayList<>();
+        lines.add(ResultDialog.Line.heading(getTranslation("registerView.csvImport.lineErrorsHeading")));
+        failure.getLineErrors().forEach(error -> lines.add(ResultDialog.Line.error(error)));
+        return List.of(new ResultDialog.Section(lines));
     }
 
     /**
@@ -969,6 +1312,41 @@ public class RegisterView extends HorizontalLayout implements HasDynamicTitle, B
      */
     @Override
     public String getPageTitle() {
-        return "Elicit Register";
+        return getTranslation("registerView.pageTitle");
+    }
+
+    /**
+     * Shows or clears this view's missing-survey explanation (UC-019).
+     * <p>
+     * Re-evaluated on every entry rather than once at construction, so the explanation
+     * disappears as soon as a definition is applied (BR-076). The view stays usable
+     * either way -- the explanation is added to it, not put in front of it (BR-077).
+     * <p>
+     * Package-private so same-package tests can drive it directly: under
+     * {@code @QuarkusTest} there is no route navigation to deliver a real enter event.
+     */
+    void refreshMissingSurveyNotice() {
+        if (missingSurveyNotice != null) {
+            remove(missingSurveyNotice);
+            missingSurveyNotice = null;
+        }
+        if (!surveyPresence.isSurveyInstalled()) {
+            missingSurveyNotice = MissingSurveyNotice.emptyState(identity.hasRole("elicit_admin"));
+            addComponentAsFirst(missingSurveyNotice);
+        }
+    }
+    /**
+     * The explanation shown instead of the form when the signed-in principal has no console
+     * record (UC-001 A1), worded exactly as SearchView words it.
+     */
+    private Div noUserNotice() {
+        Div errorDiv = new Div();
+        errorDiv.add(new Paragraph(getTranslation("searchView.noUser.loggedIn")));
+        Span principal = new Span(identity.getPrincipal().getName());
+        principal.addClassName("inline-name");
+        errorDiv.add(new Paragraph(new Span(getTranslation("searchView.noUser.before")), principal,
+                new Span(getTranslation("searchView.noUser.after"))));
+        errorDiv.add(new Paragraph(getTranslation("searchView.noUser.help")));
+        return errorDiv;
     }
 }

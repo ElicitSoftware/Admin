@@ -22,6 +22,7 @@ import com.vaadin.flow.component.combobox.ComboBoxVariant;
 import com.vaadin.flow.component.formlayout.FormLayout;
 import com.vaadin.flow.component.html.Div;
 import com.vaadin.flow.component.html.H3;
+import com.vaadin.flow.component.html.IFrame;
 import com.vaadin.flow.component.notification.Notification;
 import com.vaadin.flow.component.orderedlayout.HorizontalLayout;
 import com.vaadin.flow.component.orderedlayout.VerticalLayout;
@@ -61,8 +62,6 @@ import jakarta.transaction.Transactional;
  * </ul>
  *
  * @author Elicit Software
- * @version 1.0
- * @since 1.0
  */
 @Route(value = "edit-message-template/:id?", layout = MainLayout.class)
 @RolesAllowed("elicit_admin")
@@ -79,25 +78,39 @@ public class EditMessageTemplatesView extends VerticalLayout implements BeforeEn
     private MessageTemplate template;
 
     /** Text field for the message subject. */
-    private final TextField subjectField = new TextField("Subject");
+    private final TextField subjectField = new TextField();
 
     /** Text area for the message body content. */
-    private final TextArea messageField = new TextArea("Body");
+    private final TextArea messageField = new TextArea();
 
     /** Combo box for selecting MIME type (HTML or plain text). */
-    private final ComboBox<String> mimeTypeField = new ComboBox<>("MIME Type");
+    private final ComboBox<String> mimeTypeField = new ComboBox<>();
 
     /** Combo box for selecting the department. */
-    private final ComboBox<Department> departmentField = new ComboBox<>("Department");
+    private final ComboBox<Department> departmentField = new ComboBox<>();
 
     /** Button for saving new message templates. */
-    private final Button saveBtn = new Button("Save");
+    private final Button saveBtn = new Button();
 
     /** Button for updating existing message templates. */
-    private final Button updateBtn = new Button("Update");
+    private final Button updateBtn = new Button();
 
-    /** Container div for displaying the message preview. */
+    /** Shows a plain-text body literally. */
     private Div content = new Div();
+
+    /** Shows an HTML body, isolated from the console (UC-007 BR-141). */
+    private final IFrame htmlPreview = new IFrame();
+
+    /**
+     * What the preview frame's document starts with: nothing but images and inline styles may be
+     * loaded by a template body (UC-007 BR-141).
+     */
+    static final String PREVIEW_DOCUMENT_HEAD = "<!DOCTYPE html><html><head><meta charset=\"utf-8\">" // i18n:ignore
+            + "<meta http-equiv=\"Content-Security-Policy\" " // i18n:ignore
+            + "content=\"default-src 'none'; img-src data: https:; style-src 'unsafe-inline'\"></head><body>"; // i18n:ignore
+
+    /** Closes the preview frame's document. */
+    static final String PREVIEW_DOCUMENT_TAIL = "</body></html>"; // i18n:ignore
 
     /** Data binder for form validation and data binding. */
     private final Binder<MessageTemplate> binder = new Binder<>(MessageTemplate.class);
@@ -120,6 +133,13 @@ public class EditMessageTemplatesView extends VerticalLayout implements BeforeEn
     @PostConstruct
     public void init() {
         user = uiSessionLogin.getUser();
+
+        subjectField.setLabel(getTranslation("editMessageTemplatesView.subject"));
+        messageField.setLabel(getTranslation("editMessageTemplatesView.body"));
+        mimeTypeField.setLabel(getTranslation("editMessageTemplatesView.mimeType"));
+        departmentField.setLabel(getTranslation("editMessageTemplatesView.department"));
+        saveBtn.setText(getTranslation("common.save"));
+        updateBtn.setText(getTranslation("editMessageTemplatesView.btnUpdate"));
 
         // Configure form field styling
         subjectField.addThemeVariants(TextFieldVariant.LUMO_SMALL);
@@ -154,14 +174,22 @@ public class EditMessageTemplatesView extends VerticalLayout implements BeforeEn
         VerticalLayout preview = new VerticalLayout();
         preview.setWidthFull();
         preview.addClassName("template-column");
-        H3 title = new H3("Message Preview");
+        H3 title = new H3(getTranslation("editMessageTemplatesView.preview"));
         content = new Div();
+        // The preview renders the stored template body, not chrome (UC-026 BR-086)
+        content.getElement().setAttribute("data-i18n-content", "");
         content.setWidth("100%");
         content.setHeight("100%");
+        // UC-007 BR-141: an empty sandbox attribute switches off scripts, forms, navigation and
+        // plugins in the frame and gives it an origin of its own.
+        htmlPreview.getElement().setAttribute("sandbox", "");
+        htmlPreview.getElement().setAttribute("data-i18n-content", "");
+        htmlPreview.setTitle(getTranslation("editMessageTemplatesView.preview"));
+        htmlPreview.addClassName("template-preview-frame");
         // Update content
         updatePreview(messageField.getValue());
 
-        preview.add(title, content);
+        preview.add(title, content, htmlPreview);
 
         // Set value change mode and debounce for messageField
         messageField.setValueChangeMode(com.vaadin.flow.data.value.ValueChangeMode.TIMEOUT);
@@ -181,24 +209,24 @@ public class EditMessageTemplatesView extends VerticalLayout implements BeforeEn
 
         // --- Binder and Validation ---
         binder.forField(subjectField)
-                .asRequired("Subject is required")
+                .asRequired(getTranslation("editMessageTemplatesView.error.subjectRequired"))
                 .withValidator(new StringLengthValidator(
-                        "Subject must be 3-100 characters", 1, 255))
+                        getTranslation("editMessageTemplatesView.error.subjectLength"), 1, 255))
                 .bind("subject");
 
         binder.forField(messageField)
-                .asRequired("Body is required")
+                .asRequired(getTranslation("editMessageTemplatesView.error.bodyRequired"))
                 .withValidator(new StringLengthValidator(
-                        "Body must be at least 5 characters", 1, 6000))
+                        getTranslation("editMessageTemplatesView.error.bodyLength"), 1, 6000))
                 .bind("message");
 
 
         binder.forField(mimeTypeField)
-                .asRequired("MIME Type is required")
+                .asRequired(getTranslation("editMessageTemplatesView.error.mimeTypeRequired"))
                 .bind("mimeType");
 
         binder.forField(departmentField)
-                .asRequired("Department is required")
+                .asRequired(getTranslation("editMessageTemplatesView.error.departmentRequired"))
                 .bind("department");
 
         // Enable/disable buttons based on validation
@@ -260,27 +288,28 @@ public class EditMessageTemplatesView extends VerticalLayout implements BeforeEn
     }
 
     /**
-     * Updates the message preview content based on the provided body text and current MIME type.
+     * Updates the message preview from the body text and the current MIME type (UC-007 BR-141).
      *
-     * <p>The preview rendering depends on the selected MIME type:</p>
      * <ul>
-     *   <li>text/plain: Displays content as plain text</li>
-     *   <li>text/html: Renders content as HTML</li>
+     *   <li>text/plain: the body is shown literally</li>
+     *   <li>anything else: the body is rendered as HTML inside the isolated preview frame</li>
      * </ul>
      *
-     * <p>This method is called automatically when the message body or MIME type
-     * fields change, providing real-time feedback to the user.</p>
+     * <p>Called when the message body or the MIME type changes.</p>
      *
      * @param body the message body content to preview
      */
     private void updatePreview(String body) {
-        if (mimeTypeField.getValue() != null && mimeTypeField.getValue().equals("text/plain")) {
-            content.getElement().setProperty("innerHTML", "");
-            content.getElement().setText(body);
+        boolean plain = "text/plain".equals(mimeTypeField.getValue()); // i18n:ignore
+        if (plain) {
+            content.setText(body);
+            htmlPreview.setSrcdoc(PREVIEW_DOCUMENT_HEAD + PREVIEW_DOCUMENT_TAIL);
         } else {
-            content.getElement().setText("");
-            content.getElement().setProperty("innerHTML", body);
+            content.setText("");
+            htmlPreview.setSrcdoc(PREVIEW_DOCUMENT_HEAD + (body == null ? "" : body) + PREVIEW_DOCUMENT_TAIL);
         }
+        content.setVisible(plain);
+        htmlPreview.setVisible(!plain);
     }
 
     /**
@@ -304,12 +333,12 @@ public class EditMessageTemplatesView extends VerticalLayout implements BeforeEn
         try {
             binder.writeBean(template);
             template.persistAndFlush();
-            Notification.show("Message Template saved", 1000, Notification.Position.MIDDLE);
+            Notification.show(getTranslation("editMessageTemplatesView.saved"), 1000, Notification.Position.MIDDLE);
             getUI().ifPresent(ui ->
                     ui.navigate("/message-templates")
             );
         } catch (ValidationException e) {
-            Notification.show("Please fix validation errors", 2000, Notification.Position.MIDDLE);
+            Notification.show(getTranslation("editMessageTemplatesView.error.fixValidation"), 2000, Notification.Position.MIDDLE);
         }
     }
 
@@ -326,12 +355,12 @@ public class EditMessageTemplatesView extends VerticalLayout implements BeforeEn
             binder.writeBean(template);
             MessageTemplate.getEntityManager().merge(template);
             MessageTemplate.getEntityManager().flush();
-            Notification.show("Message Template updated", 1000, Notification.Position.MIDDLE);
+            Notification.show(getTranslation("editMessageTemplatesView.updated"), 1000, Notification.Position.MIDDLE);
             getUI().ifPresent(ui ->
                     ui.navigate("/message-templates")
             );
         } catch (ValidationException e) {
-            Notification.show("Please fix validation errors", 2000, Notification.Position.MIDDLE);
+            Notification.show(getTranslation("editMessageTemplatesView.error.fixValidation"), 2000, Notification.Position.MIDDLE);
         }
     }
 

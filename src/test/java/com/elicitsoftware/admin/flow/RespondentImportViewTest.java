@@ -69,11 +69,11 @@ class RespondentImportViewTest extends QuarkusBrowserlessTest {
     @Test
     @TestSecurity(user = "import.admin", roles = {"elicit_admin"})
     void rendersUploadControl() {
-        assertTrue(find(H3.class, view).all().stream().anyMatch(h -> "Import Respondent".equals(h.getText())));
+        assertTrue(find(H3.class, view).all().stream().anyMatch(h -> view.getTranslation("respondentImportView.title").equals(h.getText())));
 
         Upload upload = find(Upload.class, view).single();
         assertEquals("respondent-import-upload", upload.getId().orElse(null));
-        assertEquals(List.of(".elicit"), upload.getAcceptedFileTypes());
+        assertEquals(List.of(".elicit"), upload.getAcceptedFileExtensions());
         assertEquals(1, upload.getMaxFiles());
     }
 
@@ -82,13 +82,13 @@ class RespondentImportViewTest extends QuarkusBrowserlessTest {
     @TestSecurity(user = "import.admin", roles = {"elicit_admin"})
     @TestTransaction
     void wellFormedFileShowsSuccessDialog() {
-        String content = "# ELICIT_EXPORT_V1\n\n"
-                + "respondents: 1|import-view-test-token|0|2026-01-01T00:00:00-05:00|\n";
+        String content = "# ELICIT_EXPORT_V2\n\n"
+                + "respondents: 00000000-0000-0000-0000-000000000001|import-view-test-code|true|0|2026-01-01T00:00:00-05:00||\n";
 
         view.handleUpload(content.getBytes(StandardCharsets.UTF_8));
 
         Dialog dialog = find(Dialog.class).single();
-        assertTrue(dialog.getHeaderTitle().contains("Import Successful"));
+        assertTrue(dialog.getHeaderTitle().contains(view.getTranslation("respondentImportView.importSuccessful")));
     }
 
     /** UC-012: a file missing the format-version header fails without throwing, and shows an error dialog. */
@@ -96,11 +96,11 @@ class RespondentImportViewTest extends QuarkusBrowserlessTest {
     @TestSecurity(user = "import.admin", roles = {"elicit_admin"})
     @TestTransaction
     void malformedFileShowsErrorDialog() {
-        String content = "respondents: 1|tok|0|2026-01-01T00:00:00-05:00|\n";
+        String content = "respondents: 00000000-0000-0000-0000-000000000001|tok|true|0|2026-01-01T00:00:00-05:00||\n";
 
         view.handleUpload(content.getBytes(StandardCharsets.UTF_8));
 
         Dialog dialog = find(Dialog.class).single();
-        assertTrue(dialog.getHeaderTitle().contains("Import Failed"));
+        assertTrue(dialog.getHeaderTitle().contains(view.getTranslation("respondentImportView.importFailed")));
     }
 }

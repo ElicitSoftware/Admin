@@ -4,57 +4,59 @@
     <modelVersion>4.0.0</modelVersion>
 <groupId>com.elicitsoftware</groupId>
     <artifactId>Admin</artifactId>
-    <version>2.2.0</version>
+    <version>3.0.0-rc.2</version>
+    <packaging>quarkus</packaging>
 
     <properties>
         <compiler-plugin.version>3.15.0</compiler-plugin.version>
-        <maven.compiler.release>21</maven.compiler.release>
+        <maven.compiler.release>25</maven.compiler.release>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
         <quarkus.platform.artifact-id>quarkus-bom</quarkus.platform.artifact-id>
         <quarkus.platform.group-id>io.quarkus.platform</quarkus.platform.group-id>
-        <quarkus.platform.version>3.39.2</quarkus.platform.version>
+        <quarkus.platform.version>3.40.1.2</quarkus.platform.version>
         <skipITs>true</skipITs>
-        <surefire-plugin.version>3.5.2</surefire-plugin.version>
-        <vaadin.version>25.2.7</vaadin.version>
-        <browserless-test.version>1.1.1</browserless-test.version>
+        <surefire-plugin.version>3.5.6</surefire-plugin.version>
+        <vaadin.version>25.3.5</vaadin.version>
         <javadoc-plugin.version>3.12.0</javadoc-plugin.version>
         <site-plugin.version>3.21.0</site-plugin.version>
+        <timestamp>${maven.build.timestamp}</timestamp>
+        <maven.build.timestamp.format>yyyy-MM-dd HH:mm:ss z</maven.build.timestamp.format>
         <!-- license-maven-plugin properties -->
         <license.thirdPartyFilename>Notice.txt</license.thirdPartyFilename>
         <license.includeTransitiveDependencies>false</license.includeTransitiveDependencies>
         <license.excludedScopes>test,provided</license.excludedScopes>
+        <!--
+            vaadin-dev is a dev-mode tool and is not distributed, so the notice must not list it.
+            The vaadin-dev-tools profile adds the dependency whenever quarkus.profile is unset and
+            add-third-party runs in the default lifecycle, so without this a plain `mvn test`
+            regenerates Notice.txt naming a jar that never ships, while the image build (which sets
+            quarkus.profile=docker) regenerates it without. Excluded outright so the file is the
+            same either way.
+
+            The plugin does not match this pattern on its own: it wraps it as
+            `[^:]+:[^:]*(PATTERN)[^:]*` and matches that against groupId:artifactId, so a leading
+            `^` can never match and `^vaadin-dev$` excluded nothing. The lookbehind anchors the
+            artifactId's start at the colon instead, keeping the match exact (not vaadin-dev-server
+            or any other artifactId that merely contains vaadin-dev).
+        -->
+        <license.excludedArtifacts>(?&lt;=:)vaadin-dev$</license.excludedArtifacts>
         <license.outputDirectory>${project.basedir}</license.outputDirectory>
+        <!--
+            add-third-party registers its output directory as a project resource with **/*.txt
+            whenever it runs. With the root as that directory every .txt in the tree was packaged:
+            the license-header templates under src/license and the i18n test allowlists (#152).
+            Switched off here; the root resource declared under <build> packages Notice.txt alone.
+        -->
+        <license.addOutputDirectoryAsResourceDir>false</license.addOutputDirectoryAsResourceDir>
     </properties>
 
     <dependencyManagement>
         <dependencies>
-            <!--
-                Align all JUnit 5 artifacts. Quarkus 3.37's internal test modules
-                pull a skewed mix (junit-jupiter-api 6.0.3 vs platform/engine 6.1.1),
-                which makes the Surefire JUnit Platform provider fail with a
-                NoClassDefFoundError. Importing the JUnit BOM first forces a single
-                consistent version across api/params/engine/platform.
-            -->
-            <dependency>
-                <groupId>org.junit</groupId>
-                <artifactId>junit-bom</artifactId>
-                <version>6.1.1</version>
-                <type>pom</type>
-                <scope>import</scope>
-            </dependency>
             <dependency>
                 <groupId>com.vaadin</groupId>
                 <artifactId>vaadin-bom</artifactId>
                 <version>${vaadin.version}</version>
-                <type>pom</type>
-                <scope>import</scope>
-            </dependency>
-            <!-- Vaadin browserless (UI unit) testing — not managed by vaadin-bom. -->
-            <dependency>
-                <groupId>com.vaadin</groupId>
-                <artifactId>browserless-test-bom</artifactId>
-                <version>${browserless-test.version}</version>
                 <type>pom</type>
                 <scope>import</scope>
             </dependency>
@@ -64,12 +66,6 @@
                 <version>${quarkus.platform.version}</version>
                 <type>pom</type>
                 <scope>import</scope>
-            </dependency>
-            <!-- Fix jackson-annotations version mismatch between Vaadin BOM and Flyway -->
-            <dependency>
-                <groupId>com.fasterxml.jackson.core</groupId>
-                <artifactId>jackson-annotations</artifactId>
-                <version>2.21</version>
             </dependency>
         </dependencies>
     </dependencyManagement>
@@ -105,11 +101,6 @@
                     <artifactId>jackson-databind</artifactId>
                 </exclusion>
             </exclusions>
-        </dependency>
-        <dependency>
-            <groupId>com.vaadin</groupId>
-            <artifactId>vaadin-dev</artifactId>
-            <optional>true</optional>
         </dependency>
         <!-- Container Images -->
         <dependency>
@@ -147,7 +138,7 @@
         <dependency>
             <groupId>org.apache.xmlgraphics</groupId>
             <artifactId>batik-all</artifactId>
-            <version>1.16</version>
+            <version>1.20</version>
         </dependency>
         <dependency>
             <groupId>xerces</groupId>
@@ -215,10 +206,6 @@
         </dependency>
         <dependency>
             <groupId>io.quarkus</groupId>
-            <artifactId>quarkus-keycloak-authorization</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>io.quarkus</groupId>
             <artifactId>quarkus-oidc-token-propagation-common</artifactId>
         </dependency>
         <!-- Testing -->
@@ -248,6 +235,13 @@
         <dependency>
             <groupId>org.testcontainers</groupId>
             <artifactId>testcontainers-postgresql</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <!-- In-memory span exporter: the test that no span of a call carrying the service token
+             holds the token (NFR-024). Version is managed by the Quarkus BOM. -->
+        <dependency>
+            <groupId>io.opentelemetry</groupId>
+            <artifactId>opentelemetry-sdk-testing</artifactId>
             <scope>test</scope>
         </dependency>
         <!-- Vaadin browserless UI testing (Quarkus base class QuarkusBrowserlessTest) -->
@@ -304,22 +298,44 @@
         </pluginRepository>
     </pluginRepositories>
     <build>
+        <!-- Filter application.properties only, so @project.version@ and @timestamp@ reach the
+             System overview (UC-020); every other resource is copied verbatim. -->
+        <resources>
+            <resource>
+                <directory>src/main/resources</directory>
+                <filtering>true</filtering>
+                <includes>
+                    <include>application.properties</include>
+                </includes>
+            </resource>
+            <resource>
+                <directory>src/main/resources</directory>
+                <filtering>false</filtering>
+                <excludes>
+                    <exclude>application.properties</exclude>
+                </excludes>
+            </resource>
+            <!-- The third-party notice, generated at the project root so the committed copy is
+                 the reviewed one, ships in the jar: this is the only root-level resource, now that
+                 license.addOutputDirectoryAsResourceDir no longer sweeps in every .txt (#152). -->
+            <resource>
+                <directory>${project.basedir}</directory>
+                <filtering>false</filtering>
+                <includes>
+                    <include>Notice.txt</include>
+                </includes>
+            </resource>
+        </resources>
         <plugins>
             <plugin>
                 <groupId>${quarkus.platform.group-id}</groupId>
                 <artifactId>quarkus-maven-plugin</artifactId>
                 <version>${quarkus.platform.version}</version>
+                <!-- <packaging>quarkus</packaging> plus extensions=true already binds generate-code,
+                     generate-code-tests, build and native-image-agent through the plugin's lifecycle
+                     mapping. Do not add an <executions> block: it binds them a second time, so every
+                     augmentation and the container-image build run twice per `mvn package`. -->
                 <extensions>true</extensions>
-                <executions>
-                    <execution>
-                        <goals>
-                            <goal>build</goal>
-                            <goal>generate-code</goal>
-                            <goal>generate-code-tests</goal>
-                            <goal>native-image-agent</goal>
-                        </goals>
-                    </execution>
-                </executions>
             </plugin>
             <plugin>
                 <artifactId>maven-compiler-plugin</artifactId>
@@ -335,6 +351,13 @@
                     <systemPropertyVariables>
                         <java.util.logging.manager>org.jboss.logmanager.LogManager</java.util.logging.manager>
                         <maven.home>${maven.home}</maven.home>
+                        <!--
+                          The browserless tests' mock Vaadin service would otherwise use Vaadin's own
+                          provider, which reads the classpath only, where the image carries English
+                          alone, so every other language would render in English (UC-026). Set for
+                          the whole run: Vaadin reads it once, at the first mock service.
+                        -->
+                        <vaadin.i18n.provider>com.elicitsoftware.admin.i18n.ConfiguredI18NProvider</vaadin.i18n.provider>
                     </systemPropertyVariables>
                     <argLine>@{argLine}</argLine>
                 </configuration>
@@ -465,6 +488,149 @@
                 </executions>
             </plugin>
             <plugin>
+                <!--
+                    Pitest mutation testing (https://pitest.org). Not bound to any phase: it is slow
+                    and on demand only, run as `./mvnw test-compile pitest:mutationCoverage`, with the
+                    report at target/pit-reports/index.html.
+
+                    targetTests names the plain unit tests one by one, on purpose. A @QuarkusTest (or
+                    QuarkusBrowserlessTest) loads the application through QuarkusClassLoader, which
+                    reads the original bytes from target/classes and never sees Pitest's mutant, so
+                    every mutant it covers would be reported as surviving; it would also boot the
+                    application and a PostgreSQL container once per mutant. There is no glob that
+                    separates the two kinds, so a new plain unit test is added here by hand; leaving
+                    one out only lowers the score, where wrongly including a booted test would
+                    falsify it.
+                -->
+                <groupId>org.pitest</groupId>
+                <artifactId>pitest-maven</artifactId>
+                <version>1.30.1</version>
+                <dependencies>
+                    <dependency>
+                        <groupId>org.pitest</groupId>
+                        <artifactId>pitest-junit5-plugin</artifactId>
+                        <version>1.2.3</version>
+                    </dependency>
+                </dependencies>
+                <configuration>
+                    <!-- Same reason as surefire's vaadin.i18n.provider above. -->
+                    <jvmArgs>
+                        <value>-Dvaadin.i18n.provider=com.elicitsoftware.admin.i18n.ConfiguredI18NProvider</value>
+                    </jvmArgs>
+                    <targetClasses>
+                        <param>com.elicitsoftware.*</param>
+                    </targetClasses>
+                    <targetTests>
+                        <param>com.elicitsoftware.admin.flow.AppConfigShellTest</param>
+                        <param>com.elicitsoftware.admin.flow.BrandResourceHandlerUnitTest</param>
+                        <param>com.elicitsoftware.admin.flow.ConsoleNoticesUnitTest</param>
+                        <param>com.elicitsoftware.admin.flow.DebugViewInitUnitTest</param>
+                        <param>com.elicitsoftware.admin.flow.DebugViewTest</param>
+                        <param>com.elicitsoftware.admin.flow.EditDepartmentViewUnitTest</param>
+                        <param>com.elicitsoftware.admin.flow.EditMessageTemplatesViewUnitTest</param>
+                        <param>com.elicitsoftware.admin.flow.MainLayoutUnitTest</param>
+                        <param>com.elicitsoftware.admin.flow.MissingDepartmentDialogUnitTest</param>
+                        <param>com.elicitsoftware.admin.flow.PaginationControlsNavigationUnitTest</param>
+                        <param>com.elicitsoftware.admin.flow.PaginationControlsTest</param>
+                        <param>com.elicitsoftware.admin.flow.ParticipationViewUnitTest</param>
+                        <param>com.elicitsoftware.admin.flow.RegisterViewUnitTest</param>
+                        <param>com.elicitsoftware.admin.flow.RenameReportingSchemaDialogUnitTest</param>
+                        <param>com.elicitsoftware.admin.flow.RespondentImportViewUnitTest</param>
+                        <param>com.elicitsoftware.admin.flow.ResultDialogUnitTest</param>
+                        <param>com.elicitsoftware.admin.flow.SearchViewUnitTest</param>
+                        <param>com.elicitsoftware.admin.flow.SignInPagesUnitTest</param>
+                        <param>com.elicitsoftware.admin.flow.StylesheetTokenConsistencyTest</param>
+                        <param>com.elicitsoftware.admin.flow.SurveyDefinitionApplyViewUnitTest</param>
+                        <param>com.elicitsoftware.admin.flow.SurveyDefinitionExportViewUnitTest</param>
+                        <param>com.elicitsoftware.admin.flow.SystemBrandingViewUnitTest</param>
+                        <param>com.elicitsoftware.admin.flow.SystemConnectionsViewUnitTest</param>
+                        <param>com.elicitsoftware.admin.flow.SystemDatabaseViewUnitTest</param>
+                        <param>com.elicitsoftware.admin.flow.SystemEmailViewUnitTest</param>
+                        <param>com.elicitsoftware.admin.flow.SystemOverviewViewUnitTest</param>
+                        <param>com.elicitsoftware.admin.i18n.DisplayedStringsCoverageTest</param>
+                        <param>com.elicitsoftware.admin.i18n.ElicitI18NProviderLocalesTest</param>
+                        <param>com.elicitsoftware.admin.i18n.ElicitI18NProviderTest</param>
+                        <param>com.elicitsoftware.admin.i18n.LanguageSwitcherTest</param>
+                        <param>com.elicitsoftware.admin.i18n.LocaleConfigTest</param>
+                        <param>com.elicitsoftware.admin.i18n.LocaleInitializerTest</param>
+                        <param>com.elicitsoftware.admin.i18n.LocaleLayoutUnitTest</param>
+                        <param>com.elicitsoftware.admin.i18n.LocaleSelectionTest</param>
+                        <param>com.elicitsoftware.admin.i18n.TranslationBundleConsistencyTest</param>
+                        <param>com.elicitsoftware.admin.i18n.TranslationRequestGeneratorTest</param>
+                        <param>com.elicitsoftware.admin.i18n.TranslationsTest</param>
+                        <param>com.elicitsoftware.admin.util.BrandUtilDetectionTest</param>
+                        <param>com.elicitsoftware.admin.util.BrandUtilTest</param>
+                        <param>com.elicitsoftware.common.health.DatabaseHealthCheckUnitTest</param>
+                        <param>com.elicitsoftware.diagnostics.BrandDiagnosticsReportTest</param>
+                        <param>com.elicitsoftware.diagnostics.BuildInfoValuesTest</param>
+                        <param>com.elicitsoftware.diagnostics.ConnectionChecksProbeTest</param>
+                        <param>com.elicitsoftware.diagnostics.DatabaseDiagnosticsProbeTest</param>
+                        <param>com.elicitsoftware.diagnostics.MailerDiagnosticsReportTest</param>
+                        <param>com.elicitsoftware.diagnostics.RequiredConfigCheckPresenceTest</param>
+                        <param>com.elicitsoftware.diagnostics.SetupWarningsInstructionTest</param>
+                        <param>com.elicitsoftware.exception.AccessCodeGenerationErrorTest</param>
+                        <param>com.elicitsoftware.model.EntityIdentityTest</param>
+                        <param>com.elicitsoftware.model.ExcludedXidTest</param>
+                        <param>com.elicitsoftware.model.MessageTest</param>
+                        <param>com.elicitsoftware.model.MessageTypeTest</param>
+                        <param>com.elicitsoftware.model.RespondentTest</param>
+                        <param>com.elicitsoftware.model.StatusTest</param>
+                        <param>com.elicitsoftware.model.SubjectTest</param>
+                        <param>com.elicitsoftware.model.UserRoleTest</param>
+                        <param>com.elicitsoftware.model.UserTest</param>
+                        <param>com.elicitsoftware.participation.ParticipationExportTest</param>
+                        <param>com.elicitsoftware.participation.ParticipationServiceUnitTest</param>
+                        <param>com.elicitsoftware.participation.ParticipationTablesTest</param>
+                        <param>com.elicitsoftware.participation.SmallCellTest</param>
+                        <param>com.elicitsoftware.participation.SvgChartsTest</param>
+                        <param>com.elicitsoftware.report.PDFDownloadCacheTest</param>
+                        <param>com.elicitsoftware.report.PDFServiceLayoutTest</param>
+                        <param>com.elicitsoftware.report.PDFServiceWrapTextTest</param>
+                        <param>com.elicitsoftware.report.PDFServiceXxeTest</param>
+                        <param>com.elicitsoftware.report.pdfbox.PDFTableGeneratorTest</param>
+                        <param>com.elicitsoftware.response.AddResponseTest</param>
+                        <param>com.elicitsoftware.response.ListResponseTest</param>
+                        <param>com.elicitsoftware.response.RefreshTest</param>
+                        <param>com.elicitsoftware.rest.AccessCodeServiceUnitTest</param>
+                        <param>com.elicitsoftware.rest.RespondentTransferResourceUnitTest</param>
+                        <param>com.elicitsoftware.rest.SurveyDefinitionApplyResourceUnitTest</param>
+                        <param>com.elicitsoftware.rest.SurveyDefinitionExportResourceUnitTest</param>
+                        <param>com.elicitsoftware.rest.SurveyDefinitionImportResourceUnitTest</param>
+                        <param>com.elicitsoftware.rest.SurveyDefinitionUpdateResourceUnitTest</param>
+                        <param>com.elicitsoftware.security.ElicitRolesTest</param>
+                        <param>com.elicitsoftware.security.RoleSecurityIdentityAugmentorUnitTest</param>
+                        <param>com.elicitsoftware.service.CsvImportServiceUnitTest</param>
+                        <param>com.elicitsoftware.service.DefaultAccountInstructionTest</param>
+                        <param>com.elicitsoftware.service.EmailServiceUnitTest</param>
+                        <param>com.elicitsoftware.service.ReportUriResolutionTest</param>
+                        <param>com.elicitsoftware.service.ReportingSchemaClientsUnitTest</param>
+                        <param>com.elicitsoftware.service.ReportingServiceUnitTest</param>
+                        <param>com.elicitsoftware.service.RespondentExportServiceUnitTest</param>
+                        <param>com.elicitsoftware.service.RespondentImportServiceUnitTest</param>
+                        <param>com.elicitsoftware.service.StatusQueryTest</param>
+                        <param>com.elicitsoftware.service.SurveyDefinitionApplyServiceUnitTest</param>
+                        <param>com.elicitsoftware.service.SurveyDefinitionDisplayKeyRebaseTest</param>
+                        <param>com.elicitsoftware.service.SurveyDefinitionExportServiceUnitTest</param>
+                        <param>com.elicitsoftware.service.SurveyDefinitionFileFieldsUnitTest</param>
+                        <param>com.elicitsoftware.service.SurveyDefinitionImportServiceUnitTest</param>
+                        <param>com.elicitsoftware.service.SurveyDefinitionUpdateServiceUnitTest</param>
+                        <param>com.elicitsoftware.service.SurveyLogServiceUnitTest</param>
+                        <param>com.elicitsoftware.service.TranslatableFieldsParityTest</param>
+                        <param>com.elicitsoftware.util.LogMaskingTest</param>
+                        <param>com.elicitsoftware.util.RandomStringTest</param>
+                    </targetTests>
+                    <jvmArgs>
+                        <jvmArg>-Djava.util.logging.manager=org.jboss.logmanager.LogManager</jvmArg>
+                    </jvmArgs>
+                    <outputFormats>
+                        <format>HTML</format>
+                        <format>XML</format>
+                    </outputFormats>
+                    <timestampedReports>false</timestampedReports>
+                    <threads>4</threads>
+                </configuration>
+            </plugin>
+            <plugin>
                 <groupId>org.codehaus.mojo</groupId>
                 <artifactId>license-maven-plugin</artifactId>
                 <version>2.7.1</version>
@@ -476,7 +642,10 @@
                     <emptyLineAfterHeader>true</emptyLineAfterHeader>
                     <excludes>
                         <exclude>**/*.properties</exclude>
-                        <exclude>**/brand-config.json</exclude>
+                        <!-- JSON has no comment syntax: a header makes the file unparseable.
+                             This covers brand-config.json, brand-info.json, typography.json,
+                             i18n-config.json and anything added later. -->
+                        <exclude>**/*.json</exclude>
                     </excludes>
                     <licenseResolver>${project.baseUri}src/license</licenseResolver>
                     <processStartTag>***LICENSE_START***</processStartTag>
@@ -555,6 +724,27 @@
     </reporting>
 
     <profiles>
+        <profile>
+            <!-- Vaadin dev tools (dev server, Copilot, dev bundle) for dev mode and tests.
+                 Active only when no -Dquarkus.profile is passed on the Maven command line, so
+                 the image build (-Dquarkus.profile=docker) keeps them off the build classpath.
+                 Quarkus packages optional dependencies, and filtering them only at packaging
+                 time breaks startup because augmentation has already generated a bean for
+                 vaadin-dev's DevModeStartupListener. -->
+            <id>vaadin-dev-tools</id>
+            <activation>
+                <property>
+                    <name>!quarkus.profile</name>
+                </property>
+            </activation>
+            <dependencies>
+                <dependency>
+                    <groupId>com.vaadin</groupId>
+                    <artifactId>vaadin-dev</artifactId>
+                    <optional>true</optional>
+                </dependency>
+            </dependencies>
+        </profile>
         <profile>
             <id>native</id>
             <activation>

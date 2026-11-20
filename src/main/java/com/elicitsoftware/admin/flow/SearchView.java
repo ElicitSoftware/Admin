@@ -11,6 +11,7 @@ package com.elicitsoftware.admin.flow;
  * ***LICENSE_END***
  */
 
+import com.elicitsoftware.service.SurveyDefinitionPresenceCheck;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -31,7 +32,6 @@ import com.elicitsoftware.service.StatusDataSource;
 import com.elicitsoftware.service.StatusQuery;
 import com.vaadin.flow.component.Component;
 import com.vaadin.flow.component.DetachEvent;
-import com.vaadin.flow.component.Direction;
 import com.vaadin.flow.component.UI;
 import com.vaadin.flow.component.button.Button;
 import com.vaadin.flow.component.button.ButtonVariant;
@@ -59,10 +59,9 @@ import com.vaadin.flow.data.provider.QuerySortOrder;
 import com.vaadin.flow.router.BeforeEnterEvent;
 import com.vaadin.flow.router.BeforeEnterObserver;
 import com.vaadin.flow.router.HasDynamicTitle;
-import com.vaadin.flow.router.QueryParameters;
 import com.vaadin.flow.router.Route;
-import com.vaadin.flow.theme.lumo.LumoUtility;
 
+import io.quarkus.logging.Log;
 import io.quarkus.panache.common.Sort;
 import io.quarkus.security.identity.SecurityIdentity;
 import jakarta.annotation.PostConstruct;
@@ -77,7 +76,7 @@ import jakarta.inject.Inject;
  * <p>The view features a sophisticated search interface with multiple filter options:</p>
  * <ul>
  *   <li><strong>Department Filtering:</strong> Multi-select department filter with "All Departments" option</li>
- *   <li><strong>Token Search:</strong> Find subjects by their unique survey tokens</li>
+ *   <li><strong>Access Code Search:</strong> Find subjects by their unique survey access codes</li>
  *   <li><strong>Name Search:</strong> Filter by first name, middle name, or last name</li>
  *   <li><strong>Contact Information:</strong> Search by email address or phone number</li>
  * </ul>
@@ -111,8 +110,6 @@ import jakarta.inject.Inject;
  * </ul>
  *
  * @author Elicit Software
- * @version 1.0
- * @since 1.0
  * @see Status
  * @see StatusDataSource
  * @see com.elicitsoftware.service.EmailService
@@ -122,8 +119,15 @@ import jakarta.inject.Inject;
 @RolesAllowed({"elicit_user", "elicit_admin"})
 
 public class SearchView extends VerticalLayout implements HasDynamicTitle, BeforeEnterObserver {
-    /** Tracks the currently active action token (only one row can have a selection at a time). */
-    private String activeActionToken = null;
+
+    /** Row action keys; the labels are {@code searchView.action.<key>} (UC-026). */
+    static final String ACTION_SEND_EMAIL = "sendEmail";
+    static final String ACTION_PRINT_REPORTS = "printReports";
+    static final String ACTION_EXPORT = "export";
+    /** Id of the department filter's "Auto-registered" entry; "All Departments" is -1 (UC-002 BR-181). */
+    static final long AUTO_REGISTERED_ID = -2;
+    /** Tracks the currently active action access code (only one row can have a selection at a time). */
+    private String activeActionAccessCode = null;
     /** Tracks the current action value for the active row. */
     private String activeActionValue = null;
 
@@ -144,7 +148,7 @@ public class SearchView extends VerticalLayout implements HasDynamicTitle, Befor
     /** Scheduled executor for automatic data refresh functionality. */
     private final ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(1);
 
-    /** Handle to the scheduled refresh task so it can be cancelled on detach. */
+    /** Handle to the scheduled refresh task so it can be canceled on detach. */
     private ScheduledFuture<?> refreshTask;
 
     /** Security identity for user authentication and role checking. */
@@ -154,6 +158,13 @@ public class SearchView extends VerticalLayout implements HasDynamicTitle, Befor
     /** Injected service for handling user session and authentication. */
     @Inject
     UiSessionLogin uiSessionLogin;
+
+    /** Reports whether this deployment has a survey installed (UC-019). */
+    @Inject
+    SurveyDefinitionPresenceCheck surveyPresence;
+
+    /** The missing-survey explanation currently shown, if any (UC-019). */
+    private Component missingSurveyNotice;
 
     /** Injected service for sending emails to subjects. */
     @Inject
@@ -175,8 +186,8 @@ public class SearchView extends VerticalLayout implements HasDynamicTitle, Befor
     /** Multi-select combo box for department filtering. */
     private MultiSelectComboBox<Department> departmentComboBox;
 
-    /** Text field for token-based search filtering. */
-    private TextField tokenField;
+    /** Text field for access-code-based search filtering. */
+    private TextField accessCodeField;
 
     /** Text field for first name search filtering. */
     private TextField firstNameField;
@@ -242,33 +253,14 @@ public class SearchView extends VerticalLayout implements HasDynamicTitle, Befor
     }
 
     /**
-     * Initializes the search view components and layout after dependency injection.
+     * Shows or removes the notice that no survey is installed on every entry (UC-019 BR-076).
+     * Who may enter is decided by the class's {@code @RolesAllowed}.
      *
-     * <p>This method performs the following initialization steps:</p>
-     *
-     * <ol>
-     *   <li><strong>UI Context Setup:</strong> Captures current UI instance for background operations</li>
-     *   <li><strong>User Authentication:</strong> Retrieves and validates current user session</li>
-     *   <li><strong>Error Handling:</strong> Displays appropriate error message for invalid users</li>
-     *   <li><strong>Locale Configuration:</strong> Sets up RTL layout for Arabic locales</li>
-     *   <li><strong>Component Creation:</strong> Builds search interface and data grid</li>
-     * </ol>
-     *
-     * <p>If the user is not found or inactive, an error message is displayed explaining
-     * the authentication issue and directing them to contact an administrator.</p>
-     *
-     * <p>For valid users, the method sets up the complete search interface including
-     * the search bar with multiple filter options and the sortable data grid with
-     * pagination controls.</p>
-     */
-
-    /**
-     * Checks user authentication and authorization before entering the view.
-     * Authorization is now handled by @RolesAllowed annotation.
+     * @param event the navigation event
      */
     @Override
     public void beforeEnter(BeforeEnterEvent event) {
-        // Authorization is now handled by @RolesAllowed annotation
+        refreshMissingSurveyNotice();
     }
 
     /**
@@ -281,8 +273,11 @@ public class SearchView extends VerticalLayout implements HasDynamicTitle, Befor
         // Safe to call getCurrent here
         this.ui = UI.getCurrent();
 
-        // Make the root SearchView fill the available space
-        setSizeFull();
+        // The view is as tall as its contents: the grid shows every row of the current page
+        // (#26), so the scrolling belongs to the app layout's content area, not to a box inside
+        // the grid. The class pins flex-shrink; components/search-view.css says why.
+        setWidthFull();
+        addClassName("search-view");
 
         user = uiSessionLogin.getUser();
 
@@ -290,26 +285,19 @@ public class SearchView extends VerticalLayout implements HasDynamicTitle, Befor
             // Build the message from element components so the untrusted principal name is
             // treated as text, never markup (no innerHTML injection).
             Div errorDiv = new Div();
-            errorDiv.add(new Paragraph("You have successfully logged in to the Open ID connect system."));
+            errorDiv.add(new Paragraph(getTranslation("searchView.noUser.loggedIn")));
 
             Span principal = new Span(identity.getPrincipal().getName());
-            principal.addClassName(LumoUtility.FontWeight.BOLD);
-            Paragraph missingUser = new Paragraph(new Span("Unfortunately, there is no user named "),
+            principal.addClassName("inline-name");
+            Paragraph missingUser = new Paragraph(new Span(getTranslation("searchView.noUser.before")),
                     principal,
-                    new Span(" in the application or it is set to inactive."));
+                    new Span(getTranslation("searchView.noUser.after")));
             errorDiv.add(missingUser);
 
-            errorDiv.add(new Paragraph("Please ask an Elicit Admin for help."));
+            errorDiv.add(new Paragraph(getTranslation("searchView.noUser.help")));
             add(errorDiv);
         } else {
-            //Set up the I18n
-            final UI ui = UI.getCurrent();
-            if (ui.getLocale().getLanguage().equals("ar")) {
-                ui.setDirection(Direction.RIGHT_TO_LEFT);
-            } else {
-                ui.setDirection(Direction.LEFT_TO_RIGHT);
-            }
-            add(new H5("Subject search"));
+            add(new H5(getTranslation("searchView.heading")));
             createSearchBar();
             createSubjectsTable();
         }
@@ -322,7 +310,7 @@ public class SearchView extends VerticalLayout implements HasDynamicTitle, Befor
      *
      * <ul>
      *   <li><strong>Department Filter:</strong> Multi-select combo box with "All Departments" option</li>
-     *   <li><strong>Text Filters:</strong> Individual search fields for token, names, email, and phone</li>
+     *   <li><strong>Text Filters:</strong> Individual search fields for access code, names, email, and phone</li>
      *   <li><strong>Search Action:</strong> Button to trigger filtering with pagination reset</li>
      * </ul>
      *
@@ -348,32 +336,32 @@ public class SearchView extends VerticalLayout implements HasDynamicTitle, Befor
         departmentComboBox.setId("department-filter");
         searchBar.add(departmentComboBox);
 
-        tokenField = new TextField("Token");
-        tokenField.setId("token-filter");
-        tokenField.addThemeVariants(TextFieldVariant.LUMO_SMALL);
-        searchBar.add(tokenField);
+        accessCodeField = new TextField(getTranslation("searchView.filter.accessCode"));
+        accessCodeField.setId("access-code-filter");
+        accessCodeField.addThemeVariants(TextFieldVariant.LUMO_SMALL);
+        searchBar.add(accessCodeField);
 
-        firstNameField = new TextField("First name");
+        firstNameField = new TextField(getTranslation("searchView.filter.firstName"));
         firstNameField.setId("first-name-filter");
         firstNameField.addThemeVariants(TextFieldVariant.LUMO_SMALL);
         searchBar.add(firstNameField);
 
-        lastNameField = new TextField("Last name");
+        lastNameField = new TextField(getTranslation("searchView.filter.lastName"));
         lastNameField.setId("last-name-filter");
         lastNameField.addThemeVariants(TextFieldVariant.LUMO_SMALL);
         searchBar.add(lastNameField);
 
-        emailField = new TextField("Email");
+        emailField = new TextField(getTranslation("searchView.filter.email"));
         emailField.setId("email-filter");
         emailField.addThemeVariants(TextFieldVariant.LUMO_SMALL);
         searchBar.add(emailField);
 
-        phoneField = new TextField("Phone");
+        phoneField = new TextField(getTranslation("searchView.filter.phone"));
         phoneField.setId("phone-filter");
         phoneField.addThemeVariants(TextFieldVariant.LUMO_SMALL);
         searchBar.add(phoneField);
 
-        Button searchButton = new Button("Search");
+        Button searchButton = new Button(getTranslation("common.search"));
         searchButton.setId("search-button");
         searchButton.addThemeVariants(ButtonVariant.LUMO_PRIMARY);
         searchButton.addClickListener(e -> {
@@ -389,12 +377,12 @@ public class SearchView extends VerticalLayout implements HasDynamicTitle, Befor
      * Creates the main subjects table layout and initializes the grid component.
      *
      * <p>This method sets up the container layout for the subjects grid and
-     * calls the grid initialization method. The layout is configured to use
-     * the full available space for optimal data display.</p>
+     * calls the grid initialization method. The layout spans the full width and is as tall
+     * as the grid it holds, so the page scrolls rather than the grid (#26).</p>
      */
     private void createSubjectsTable() {
         VerticalLayout respondentsLayout = new VerticalLayout();
-        respondentsLayout.setSizeFull();
+        respondentsLayout.setWidthFull();
         respondentsLayout.setPadding(false);
         respondentsLayout.setSpacing(false);
         add(respondentsLayout);
@@ -424,17 +412,24 @@ public class SearchView extends VerticalLayout implements HasDynamicTitle, Befor
      */
     private MultiSelectComboBox<Department> getDepartmentComboBox() {
 
-        MultiSelectComboBox<Department> departmentComboBox = new MultiSelectComboBox<>("Deparment(s)");
+        MultiSelectComboBox<Department> departmentComboBox = new MultiSelectComboBox<>(getTranslation("searchView.filter.departments"));
         departmentComboBox.addThemeVariants(MultiSelectComboBoxVariant.LUMO_SMALL);
 
         // Create "All Departments" entry
         Department allDepartments = new Department();
-        allDepartments.name = "All Departments";
+        allDepartments.name = getTranslation("searchView.filter.allDepartments");
         allDepartments.id = -1; // Use a special ID or flag to identify this entry
 
-        // Combine "All Departments" with user's departments
+        // "Auto-registered" stands for the respondents with no department, which every user sees
+        // (UC-002 BR-181)
+        Department autoRegistered = new Department();
+        autoRegistered.name = getTranslation("searchView.filter.autoRegistered");
+        autoRegistered.id = AUTO_REGISTERED_ID;
+
+        // Combine "All Departments" and "Auto-registered" with user's departments
         List<Department> departmentsWithAll = new ArrayList<>();
         departmentsWithAll.add(allDepartments);
+        departmentsWithAll.add(autoRegistered);
         departmentsWithAll.addAll(user.getDepartments());
         departmentComboBox.setItems(departmentsWithAll);
 
@@ -476,7 +471,7 @@ public class SearchView extends VerticalLayout implements HasDynamicTitle, Befor
      *
      * <h4>Column Configuration:</h4>
      * <ul>
-     *   <li><strong>Token:</strong> Fixed-width column (150px) for survey tokens</li>
+     *   <li><strong>Access code:</strong> Fixed-width column (150px) for survey access codes</li>
      *   <li><strong>Department:</strong> Department name with sorting capability</li>
      *   <li><strong>Names:</strong> First, middle, and last name columns with sorting</li>
      *   <li><strong>Contact:</strong> Email and phone columns with sorting</li>
@@ -485,7 +480,7 @@ public class SearchView extends VerticalLayout implements HasDynamicTitle, Befor
      *
      * <h4>Interactive Features:</h4>
      * <ul>
-     *   <li><strong>Edit Column:</strong> Edit buttons that navigate to subject registration with token parameter</li>
+     *   <li><strong>Edit Column:</strong> Edit buttons that navigate to subject registration with access code parameter</li>
      *   <li><strong>Action Column:</strong> Dropdown menus for email sending and report generation</li>
      *   <li><strong>Multi-sort:</strong> Support for sorting by multiple columns simultaneously</li>
      * </ul>
@@ -510,31 +505,40 @@ public class SearchView extends VerticalLayout implements HasDynamicTitle, Befor
     private void getSubjectGrid(VerticalLayout respondentsLayout) {
         subjectGrid = new Grid<>(Status.class, false);
         subjectGrid.setId("subject-grid");
-        subjectGrid.setSizeFull();
-        subjectGrid.addColumn(Status::getToken).setHeader("Token").setSortable(true).setSortProperty(Status.PROP_TOKEN).setWidth("150px").setFlexGrow(0);
-        subjectGrid.addColumn(Status::getDepartmentName).setHeader("Department").setSortable(true).setSortProperty(Status.PROP_DEPARTMENT_NAME);
-        subjectGrid.addColumn(Status::getFirstName).setHeader("First name").setSortable(true).setSortProperty(Status.PROP_FIRST_NAME);
-        subjectGrid.addColumn(Status::getMiddleName).setHeader("Middle name").setSortable(true).setSortProperty(Status.PROP_MIDDLE_NAME);
-        subjectGrid.addColumn(Status::getLastName).setHeader("Last name").setSortable(true).setSortProperty(Status.PROP_LAST_NAME);
-        subjectGrid.addColumn(Status::getEmail).setHeader("Email").setSortable(true).setSortProperty(Status.PROP_EMAIL);
-        subjectGrid.addColumn(Status::getPhone).setHeader("Phone").setSortable(true).setSortProperty(Status.PROP_PHONE);
-        subjectGrid.addColumn(Status::getCreated).setHeader("Created").setSortable(true).setSortProperty(Status.PROP_CREATED_DT);
-        subjectGrid.addColumn(Status::getStatus).setHeader("Status").setSortable(true).setSortProperty(Status.PROP_STATUS);
+        subjectGrid.setWidthFull();
+        // Size to the rows rather than to the viewport, so a large page size does not bury the
+        // data in a scrolling box (#26). Bounded by the largest page size PaginationControls
+        // offers, so the grid never renders more than that many rows. No height may be set
+        // alongside this -- Vaadin ignores setAllRowsVisible when the grid also has one.
+        subjectGrid.setAllRowsVisible(true);
+        subjectGrid.addColumn(Status::getAccessCode).setHeader(getTranslation("searchView.grid.accessCode")).setSortable(true).setSortProperty(Status.PROP_ACCESS_CODE).setWidth("150px").setFlexGrow(0);
+        subjectGrid.addColumn(this::departmentLabel).setHeader(getTranslation("searchView.grid.department")).setSortable(true).setSortProperty(Status.PROP_DEPARTMENT_NAME);
+        subjectGrid.addColumn(Status::getFirstName).setHeader(getTranslation("searchView.grid.firstName")).setSortable(true).setSortProperty(Status.PROP_FIRST_NAME);
+        subjectGrid.addColumn(Status::getMiddleName).setHeader(getTranslation("searchView.grid.middleName")).setSortable(true).setSortProperty(Status.PROP_MIDDLE_NAME);
+        subjectGrid.addColumn(Status::getLastName).setHeader(getTranslation("searchView.grid.lastName")).setSortable(true).setSortProperty(Status.PROP_LAST_NAME);
+        subjectGrid.addColumn(Status::getEmail).setHeader(getTranslation("searchView.grid.email")).setSortable(true).setSortProperty(Status.PROP_EMAIL);
+        subjectGrid.addColumn(Status::getPhone).setHeader(getTranslation("searchView.grid.phone")).setSortable(true).setSortProperty(Status.PROP_PHONE);
+        subjectGrid.addColumn(Status::getCreated).setHeader(getTranslation("searchView.grid.created")).setSortable(true).setSortProperty(Status.PROP_CREATED_DT);
+        subjectGrid.addColumn(status -> statusLabel(status.getStatus())).setHeader(getTranslation("searchView.grid.status")).setSortable(true).setSortProperty(Status.PROP_STATUS);
         subjectGrid.setMultiSort(true, Grid.MultiSortPriority.APPEND);
         subjectGrid.addThemeVariants(GridVariant.LUMO_ROW_STRIPES, GridVariant.LUMO_COMPACT);
         HeaderRow headerRow = subjectGrid.appendHeaderRow();
 
         // --- Add edit icon column ---
         subjectGrid.addComponentColumn(status -> {
+            if (status.isAutoRegistered()) {
+                // No subject to edit (UC-002 BR-181)
+                return new Span();
+            }
             Button editButton = new Button(new Icon(VaadinIcon.EDIT));
             editButton.addThemeVariants(ButtonVariant.LUMO_ICON, ButtonVariant.LUMO_TERTIARY);
-            editButton.getElement().setProperty("title", "Edit");
+            editButton.getElement().setProperty("title", getTranslation("common.edit"));
             editButton.addClickListener(e -> {
-                // Pass the token as a query parameter (or use another unique identifier)
-                ui.navigate("register", QueryParameters.simple(Map.of("token", status.getToken())));
+                // UC-003 A5: the edit screen is addressed by the subject's record id (NFR-022)
+                ui.navigate("register/" + status.getId()); // i18n:ignore (route)
             });
             return editButton;
-        }).setHeader("Edit").setWidth("80px").setFlexGrow(0);
+        }).setHeader(getTranslation("common.edit")).setWidth("80px").setFlexGrow(0);
 
         // --- Add action column ---
         subjectGrid.addComponentColumn(status -> {
@@ -543,19 +547,25 @@ public class SearchView extends VerticalLayout implements HasDynamicTitle, Befor
             actionLayout.setAlignItems(Alignment.CENTER);
 
             ComboBox<String> actionComboBox = new ComboBox<>();
-            actionComboBox.setPlaceholder("Select action");
+            actionComboBox.setPlaceholder(getTranslation("searchView.action.placeholder"));
+            actionComboBox.setItemLabelGenerator(action -> getTranslation("searchView.action." + action));
             actionComboBox.setWidth("120px");
             actionComboBox.addThemeVariants(ComboBoxVariant.LUMO_SMALL);
 
-            actionComboBox.setItems(buildActionOptions(status));
+            List<String> actionOptions = buildActionOptions(status);
+            if (actionOptions.isEmpty()) {
+                // Nothing this user may do with the row, e.g. an unfinished auto-registered one
+                return actionLayout;
+            }
+            actionComboBox.setItems(actionOptions);
 
-            String token = status.getToken();
+            String accessCode = status.getAccessCode();
             // Set value only if this is the active row
-            if (activeActionToken != null && activeActionToken.equals(token)) {
+            if (activeActionAccessCode != null && activeActionAccessCode.equals(accessCode)) {
                 actionComboBox.setValue(activeActionValue);
             }
 
-            Button submitButton = new Button("Submit");
+            Button submitButton = new Button(getTranslation("searchView.action.btnSubmit"));
             submitButton.addThemeVariants(ButtonVariant.LUMO_PRIMARY, ButtonVariant.LUMO_SMALL);
 
             // Only add the submit button if a selection exists
@@ -570,20 +580,20 @@ public class SearchView extends VerticalLayout implements HasDynamicTitle, Befor
                 String value = event.getValue();
                 if (value != null) {
                     // If another row is active, clear its selection
-                    if (activeActionToken != null && !activeActionToken.equals(token)) {
-                        activeActionToken = null;
+                    if (activeActionAccessCode != null && !activeActionAccessCode.equals(accessCode)) {
+                        activeActionAccessCode = null;
                         activeActionValue = null;
                         // Refresh the grid to update the previous row's UI
                         subjectGrid.getDataProvider().refreshAll();
                     }
-                    activeActionToken = token;
+                    activeActionAccessCode = accessCode;
                     activeActionValue = value;
                     if (!actionLayout.getChildren().anyMatch(c -> c.equals(submitButton))) {
                         actionLayout.add(submitButton);
                     }
                 } else {
-                    if (activeActionToken != null && activeActionToken.equals(token)) {
-                        activeActionToken = null;
+                    if (activeActionAccessCode != null && activeActionAccessCode.equals(accessCode)) {
+                        activeActionAccessCode = null;
                         activeActionValue = null;
                     }
                     actionLayout.remove(submitButton);
@@ -593,32 +603,32 @@ public class SearchView extends VerticalLayout implements HasDynamicTitle, Befor
             submitButton.addClickListener(e -> {
                 String selectedAction = actionComboBox.getValue();
                 if (selectedAction != null) {
-                    if ("Send Email".equals(selectedAction)) {
+                    if (ACTION_SEND_EMAIL.equals(selectedAction)) {
                         try {
                             boolean sent = emailService.sendEmail(status);
                             if (sent) {
-                                Notification.show("Email sent successfully", 3000, Notification.Position.TOP_CENTER);
+                                Notification.show(getTranslation("searchView.action.emailSent"), 3000, Notification.Position.TOP_CENTER);
                             } else {
-                                Notification.show("Failed to send email. Check server logs for details.", 5000, Notification.Position.TOP_CENTER);
+                                Notification.show(getTranslation("searchView.action.emailFailed"), 5000, Notification.Position.TOP_CENTER);
                             }
                         } catch (Exception ex) {
-                            Notification.show("Failed to send email: " + ex.getMessage(), 5000, Notification.Position.TOP_CENTER);
+                            Notification.show(getTranslation("searchView.action.emailError", logged("Sending an email", ex)), 5000, Notification.Position.TOP_CENTER); // i18n:ignore (log text)
                         }
-                    } else if ("Print Reports".equals(selectedAction)) {
+                    } else if (ACTION_PRINT_REPORTS.equals(selectedAction)) {
                         try {
                             reportingService.printReports(status);
-                            Notification.show("Reports generated successfully", 3000, Notification.Position.TOP_CENTER);
+                            Notification.show(getTranslation("searchView.action.reportsGenerated"), 3000, Notification.Position.TOP_CENTER);
                         } catch (Exception ex) {
-                            Notification.show("Failed to generate reports: " + ex.getMessage(), 5000, Notification.Position.TOP_CENTER);
+                            Notification.show(getTranslation("searchView.action.reportsError", logged("Printing reports", ex)), 5000, Notification.Position.TOP_CENTER); // i18n:ignore (log text)
                         }
-                    } else if ("Export".equals(selectedAction)) {
+                    } else if (ACTION_EXPORT.equals(selectedAction)) {
                         UI.getCurrent().getPage().executeJs("window.open($0, '_blank')", buildExportUrl(status));
-                        Notification.show("Export downloading...", 3000, Notification.Position.TOP_CENTER);
+                        Notification.show(getTranslation("searchView.action.exportDownloading"), 3000, Notification.Position.TOP_CENTER);
                     }
                     // Clear selection and remove submit button after action
                     actionComboBox.clear();
-                    if (activeActionToken != null && activeActionToken.equals(token)) {
-                        activeActionToken = null;
+                    if (activeActionAccessCode != null && activeActionAccessCode.equals(accessCode)) {
+                        activeActionAccessCode = null;
                         activeActionValue = null;
                     }
                     actionLayout.remove(submitButton);
@@ -626,7 +636,7 @@ public class SearchView extends VerticalLayout implements HasDynamicTitle, Befor
             });
 
             return actionLayout;
-        }).setHeader("Action").setWidth("250px").setFlexGrow(0);
+        }).setHeader(getTranslation("searchView.grid.action")).setWidth("250px").setFlexGrow(0);
         // --- End action column ---
 
         // Set the data provider here
@@ -635,7 +645,7 @@ public class SearchView extends VerticalLayout implements HasDynamicTitle, Befor
         paginationControls.onPageChanged(() -> subjectGrid.getDataProvider().refreshAll());
 
         // Schedule data refresh every 10 seconds. The handle is retained so the task can be
-        // cancelled in onDetach, preventing a leaked thread pool that keeps calling
+        // canceled in onDetach, preventing a leaked thread pool that keeps calling
         // ui.access() on a detached UI after navigation.
         refreshTask = scheduler.scheduleAtFixedRate(() -> {
             if (ui != null) {
@@ -646,11 +656,10 @@ public class SearchView extends VerticalLayout implements HasDynamicTitle, Befor
             }
         }, 0, 10, TimeUnit.SECONDS);
 
-        // Add the grid and pagination controls to a layout that fills the parent
+        // Add the grid and pagination controls to a layout as tall as they are
         VerticalLayout gridWithPaginationLayout = wrapWithVerticalLayout(subjectGrid, paginationControls);
-        gridWithPaginationLayout.setSizeFull();
+        gridWithPaginationLayout.setWidthFull();
         respondentsLayout.add(gridWithPaginationLayout);
-        respondentsLayout.setFlexGrow(1, gridWithPaginationLayout);
     }
 
     /**
@@ -660,16 +669,20 @@ public class SearchView extends VerticalLayout implements HasDynamicTitle, Befor
      * appears for {@code elicit_admin}.
      *
      * @param status the row's status record
-     * @return the action names to offer, in display order
+     * @return the action keys to offer, in display order (labels come from
+     *         {@code searchView.action.<key>})
      */
     List<String> buildActionOptions(Status status) {
         List<String> actionOptions = new ArrayList<>();
-        actionOptions.add("Send Email");
+        if (!status.isAutoRegistered()) {
+            // An auto-registered respondent has no address to write to (UC-002 BR-181)
+            actionOptions.add(ACTION_SEND_EMAIL);
+        }
         if ("Finished".equals(status.getStatus())) {
-            actionOptions.add("Print Reports");
+            actionOptions.add(ACTION_PRINT_REPORTS);
         }
         if (identity.hasRole("elicit_admin")) {
-            actionOptions.add("Export");
+            actionOptions.add(ACTION_EXPORT);
         }
         return actionOptions;
     }
@@ -686,15 +699,29 @@ public class SearchView extends VerticalLayout implements HasDynamicTitle, Befor
     }
 
     /**
-     * Creates a vertical layout container for the grid and pagination components.
+     * The respondent status in the administrator's language. The {@code survey.status} view reports
+     * it in English, and the code compares against that value, so it is translated only where it is
+     * shown; an unknown value is shown as the view sent it.
+     */
+    private String statusLabel(String status) {
+        if (status == null) {
+            return "";
+        }
+        return switch (status) {
+            case "Not Started" -> getTranslation("searchView.status.notStarted"); // i18n:ignore
+            case "In Progress" -> getTranslation("searchView.status.inProgress"); // i18n:ignore
+            case "Finished" -> getTranslation("searchView.status.finished"); // i18n:ignore
+            default -> status;
+        };
+    }
+
+    /**
+     * Wraps the grid and its pagination controls in one vertical layout, without padding and with
+     * extra-small spacing.
      *
-     * <p>This utility method wraps the provided components in a properly configured
-     * vertical layout with optimized spacing and padding settings for the data
-     * display area.</p>
-     *
-     * @param component1 the first component (typically the data grid)
-     * @param component2 the second component (typically pagination controls)
-     * @return a configured VerticalLayout containing both components
+     * @param component1 the first component (the data grid)
+     * @param component2 the second component (the pagination controls)
+     * @return a VerticalLayout containing both components
      */
     private VerticalLayout wrapWithVerticalLayout(Component component1, Component component2) {
         var gridWithPaginationLayout = new VerticalLayout(component1, component2);
@@ -718,7 +745,7 @@ public class SearchView extends VerticalLayout implements HasDynamicTitle, Befor
      *
      * <h4>Optional Filters:</h4>
      * <ul>
-     *   <li><strong>Token Search:</strong> Case-insensitive partial matching</li>
+     *   <li><strong>Access Code Search:</strong> Case-insensitive partial matching</li>
      *   <li><strong>Name Filters:</strong> Case-insensitive partial matching for first and last names</li>
      *   <li><strong>Email Filter:</strong> Case-insensitive partial matching</li>
      *   <li><strong>Phone Filter:</strong> Partial matching without case conversion</li>
@@ -731,7 +758,7 @@ public class SearchView extends VerticalLayout implements HasDynamicTitle, Befor
      */
     private StatusQuery buildStatusQuery() {
         List<Long> departmentIds = getSelectedDepartmentIds(departmentComboBox);
-        String token = tokenField.getValue();
+        String accessCode = accessCodeField.getValue();
         String firstName = firstNameField.getValue();
         String lastName = lastNameField.getValue();
         String email = emailField.getValue();
@@ -741,29 +768,36 @@ public class SearchView extends VerticalLayout implements HasDynamicTitle, Befor
         Map<String, Object> params = new HashMap<>();
 
         // Department IDs (required). An empty selection yields an empty "in ()" that matches
-        // nothing, which is the intended behaviour when the user clears the required filter.
-        where.append(Status.PROP_DEPARTMENT_ID).append(" in :departments");
+        // nothing, which is the intended behavior when the user clears the required filter.
+        // "All Departments" and "Auto-registered" also take the respondents with no department
+        // (UC-002 BR-181).
+        if (includesAutoRegistered(departmentComboBox)) {
+            where.append("(").append(Status.PROP_DEPARTMENT_ID).append(" in :departments or ") // i18n:ignore (SQL)
+                    .append(Status.PROP_DEPARTMENT_ID).append(" is null)"); // i18n:ignore (SQL)
+        } else {
+            where.append(Status.PROP_DEPARTMENT_ID).append(" in :departments"); // i18n:ignore (SQL)
+        }
         params.put("departments", departmentIds);
 
         // Optional filters — values bound as parameters, wildcards added to the value only.
-        if (token != null && !token.isBlank()) {
-            where.append(" and lower(").append(Status.PROP_TOKEN).append(") like :token");
-            params.put("token", "%" + token.toLowerCase() + "%");
+        if (accessCode != null && !accessCode.isBlank()) {
+            where.append(" and lower(").append(Status.PROP_ACCESS_CODE).append(") like :accessCode"); // i18n:ignore (SQL)
+            params.put("accessCode", "%" + accessCode.toLowerCase() + "%");
         }
         if (firstName != null && !firstName.isBlank()) {
-            where.append(" and lower(").append(Status.PROP_FIRST_NAME).append(") like :firstName");
+            where.append(" and lower(").append(Status.PROP_FIRST_NAME).append(") like :firstName"); // i18n:ignore (SQL)
             params.put("firstName", "%" + firstName.toLowerCase() + "%");
         }
         if (lastName != null && !lastName.isBlank()) {
-            where.append(" and lower(").append(Status.PROP_LAST_NAME).append(") like :lastName");
+            where.append(" and lower(").append(Status.PROP_LAST_NAME).append(") like :lastName"); // i18n:ignore (SQL)
             params.put("lastName", "%" + lastName.toLowerCase() + "%");
         }
         if (email != null && !email.isBlank()) {
-            where.append(" and lower(").append(Status.PROP_EMAIL).append(") like :email");
+            where.append(" and lower(").append(Status.PROP_EMAIL).append(") like :email"); // i18n:ignore (SQL)
             params.put("email", "%" + email.toLowerCase() + "%");
         }
         if (phone != null && !phone.isBlank()) {
-            where.append(" and ").append(Status.PROP_PHONE).append(" like :phone");
+            where.append(" and ").append(Status.PROP_PHONE).append(" like :phone"); // i18n:ignore (SQL)
             params.put("phone", "%" + phone + "%");
         }
 
@@ -793,7 +827,7 @@ public class SearchView extends VerticalLayout implements HasDynamicTitle, Befor
         List<Long> ids = new ArrayList<>();
         Set<Department> selectedDepartments = departmentComboBox.getSelectedItems();
         if (selectedDepartments.isEmpty()) {
-            Notification.show("Please select one or more departments", 3000, Notification.Position.MIDDLE);
+            Notification.show(getTranslation("searchView.error.selectDepartments"), 3000, Notification.Position.MIDDLE);
         } else {
             for (Department department : selectedDepartments) {
                 if (department.id == -1) {
@@ -804,10 +838,35 @@ public class SearchView extends VerticalLayout implements HasDynamicTitle, Befor
                     }
                     break;
                 }
-                ids.add(department.id);
+                if (department.id != AUTO_REGISTERED_ID) {
+                    ids.add(department.id);
+                }
             }
         }
         return ids;
+    }
+
+    /**
+     * Whether the department selection takes the auto-registered respondents, which have no
+     * department: "All Departments" and "Auto-registered" both do (UC-002 BR-181).
+     *
+     * @param departmentComboBox the multi-select combo box containing department selections
+     * @return {@code true} when respondents with no department belong in the results
+     */
+    private static boolean includesAutoRegistered(MultiSelectComboBox<Department> departmentComboBox) {
+        return departmentComboBox.getSelectedItems().stream()
+                .anyMatch(d -> d.id == -1 || d.id == AUTO_REGISTERED_ID);
+    }
+
+    /**
+     * The department column's text: the department's name, or "Auto-registered" for a respondent
+     * with no subject (UC-002 BR-181).
+     *
+     * @param status the row
+     * @return the label to show
+     */
+    String departmentLabel(Status status) {
+        return status.isAutoRegistered() ? getTranslation("searchView.filter.autoRegistered") : status.getDepartmentName();
     }
 
     /**
@@ -834,7 +893,43 @@ public class SearchView extends VerticalLayout implements HasDynamicTitle, Befor
      * @return the page title string
      * @see HasDynamicTitle#getPageTitle()
      */
-    @Override    public String getPageTitle() {
-        return "Elicit Search";
+    @Override
+    public String getPageTitle() {
+        return getTranslation("searchView.pageTitle");
+    }
+
+    /**
+     * Logs an action's unexpected failure and returns the reference shown in its place (NFR-023):
+     * the reference is on the log line with the cause, and nothing of the cause reaches the page.
+     *
+     * @param action what failed, for the log line
+     * @param e      the failure
+     * @return {@code ref <8 hex digits>}
+     */
+    static String logged(String action, Exception e) {
+        String reference = java.util.UUID.randomUUID().toString().substring(0, 8);
+        Log.errorf(e, "%s failed (ref %s)", action, reference);
+        return "ref " + reference; // i18n:ignore (a log reference, the same in every language)
+    }
+
+    /**
+     * Shows or clears this view's missing-survey explanation (UC-019).
+     * <p>
+     * Re-evaluated on every entry rather than once at construction, so the explanation
+     * disappears as soon as a definition is applied (BR-076). The view stays usable
+     * either way -- the explanation is added to it, not put in front of it (BR-077).
+     * <p>
+     * Package-private so same-package tests can drive it directly: under
+     * {@code @QuarkusTest} there is no route navigation to deliver a real enter event.
+     */
+    void refreshMissingSurveyNotice() {
+        if (missingSurveyNotice != null) {
+            remove(missingSurveyNotice);
+            missingSurveyNotice = null;
+        }
+        if (!surveyPresence.isSurveyInstalled()) {
+            missingSurveyNotice = MissingSurveyNotice.emptyState(identity.hasRole("elicit_admin"));
+            addComponentAsFirst(missingSurveyNotice);
+        }
     }
 }

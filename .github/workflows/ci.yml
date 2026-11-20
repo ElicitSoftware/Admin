@@ -1,7 +1,12 @@
 # Runs the regression suite (unit + booted @QuarkusTest, JaCoCo coverage gate) on every
-# pull request and every push to main. This is the gate that actually enforces tests pass
-# before code merges — the release workflow (maven.yml) skips tests entirely and only runs
-# at tag-push time, so without this workflow nothing ever ran the suite in CI.
+# pull request into a long-lived branch and every push to one. This is the gate that actually
+# enforces tests pass before code merges — the release workflow (maven.yml) skips tests
+# entirely and only runs at tag-push time, so without this workflow nothing ever ran the suite
+# in CI.
+#
+# Both main and V3 are gated. main is the integration branch, where the current work merges;
+# V3 held that role until the 3.0.0 release and is frozen (umbrella #188), still gated so a fix
+# to it cannot merge untested. Drop it here when the branch is deleted after 3.0.0 ships.
 
 name: CI
 
@@ -9,9 +14,14 @@ on:
   push:
     branches:
       - main
+      - V3
+    tags:
+      - 'v*'
+      - 'V*'
   pull_request:
     branches:
       - main
+      - V3
 
 jobs:
   test:
@@ -29,6 +39,24 @@ jobs:
           distribution: 'temurin'
           architecture: x64
           cache: 'maven'
+
+      - name: Fetch the curated translations from the umbrella repository
+        # The image carries English only; the language tests read the other languages from
+        # ../elicit-i18n, exactly as the dev and test profiles do in a local umbrella checkout.
+        # Prefer the umbrella branch with the same name as this one, so a cross-repo change can be
+        # tested before merge, or the umbrella tag with the same name as the release tag;
+        # otherwise the umbrella's default branch.
+        run: |
+          UMBRELLA=https://github.com/ElicitSoftware/Elicit.git
+          BRANCH="${GITHUB_HEAD_REF:-$GITHUB_REF_NAME}"
+          REF=()
+          if git ls-remote --exit-code "$UMBRELLA" "refs/heads/$BRANCH" "refs/tags/$BRANCH" >/dev/null 2>&1; then
+            REF=(--branch "$BRANCH")
+          fi
+          git clone --depth 1 --filter=blob:none --sparse "${REF[@]}" "$UMBRELLA" "$RUNNER_TEMP/elicit"
+          git -C "$RUNNER_TEMP/elicit" sparse-checkout set elicit-i18n
+          ln -s "$RUNNER_TEMP/elicit/elicit-i18n" ../elicit-i18n
+          ls ../elicit-i18n/
 
       - name: Build and run tests
         run: mvn -B clean verify

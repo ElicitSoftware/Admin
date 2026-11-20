@@ -19,7 +19,6 @@ package com.elicitsoftware.response;
  * status tracking in the survey system.
  *
  * @author Elicit Software
- * @since 1.0.0
  */
 public class Refresh {
     /**

@@ -1,0 +1,927 @@
+%% The Elicit Admin manual — UC-029, "Consult the Administrator's Manual".
+%%
+%% Build it with docs/manual/build-manual.sh, which renders it through a TeX Live container
+%% and stamps it with the application version and build date (UC-029 BR-003). See README.md.
+%%
+%% Every procedure carries the screen it describes (BR-002). The figures come from
+%% docs/manual/capture/capture-screenshots.mjs, which walks a greenfield stack; a caption is
+%% part of the instruction, so re-read the captions whenever the figures are regenerated.
+
+\documentclass[11pt, a4paper]{article}
+
+\usepackage[a4paper, margin = 25mm, bottom = 28mm]{geometry}
+%% The footer's product name; the brand package is the umbrella's, shared by every Elicit manual.
+\newcommand{\elicitProduct}{Elicit Admin}
+\usepackage{elicit-brand}
+\usepackage{hyperref}
+\elicitAccent{elicitVerdigrisLight}
+
+\hypersetup{
+  pdftitle = {Elicit Admin — Running the Console},
+  pdfauthor = {Elicit Software},
+  pdfsubject = {Step-by-step instructions for running the Elicit admin console},
+  colorlinks = true,
+  linkcolor = elicitInkDark,
+  urlcolor = elicitInkDark,
+}
+
+\graphicspath{{./}}
+
+%% \adminonly — marks a procedure only the administrator role may carry out (UC-029 BR-006, A5).
+%% The margin is widened to hold the word: at the default width LaTeX hyphenates it.
+\setlength{\marginparwidth}{22mm}
+\setlength{\marginparsep}{2mm}
+\newcommand{\adminonly}{%
+  \marginpar{\raggedright\footnotesize\textcolor{elicitVerdigris}{\textsf{Administrator}}}%
+}
+
+\begin{document}
+
+%% ------------------------------------------------------------------ title page
+\elicitTitlePage{Running the Console}{The Elicit Admin manual}%
+  {Departments \textperiodcentered\ users \textperiodcentered\ subjects and access codes \textperiodcentered\ message templates \textperiodcentered\ survey definitions \textperiodcentered\ participation \textperiodcentered\ the System pages}%
+  {This manual was produced by the same build as the application it ships inside, and describes that version.\\[0.5em] Elicit Software \textperiodcentered\ PolyForm Noncommercial License 1.0.0}
+
+%% ------------------------------------------------------------------ contents
+\pagenumbering{roman}
+\setcounter{page}{1}
+\elicitContents
+
+\clearpage
+\pagenumbering{arabic}
+\setcounter{page}{1}
+
+\elicitpart{Getting started}{What the console is for, the words it uses, and how to sign in.
+Read this part first, whatever your role.}
+
+%% ------------------------------------------------------------------ 1
+\section{What the console manages}
+\label{sec:overview}
+
+This manual is for the two people who use the Elicit admin console: the \term{administrator},
+who sets the console up and keeps it running, and the \term{user}, who works in it day to day.
+Both read the same manual. Where a procedure is open only to the administrator it is marked in
+the margin, so that a user knows what to ask for rather than looking for a screen that is not
+there.
+
+It describes the console of an installed system. Installing Elicit — the database, the identity
+provider, and the Survey and Admin services — and provisioning it with a brand, or with the
+translations of the languages it offers, is the subject of the \emph{installation manual}. Building a
+survey is the subject of the \emph{author's manual}. This manual points at both rather than
+repeating them.
+
+\subsection{The vocabulary}
+
+The console names eight things, and this manual uses those names and no others.
+
+\begin{itemize}
+  \item A \term{department} is the group a subject belongs to. It carries a code, a sender
+        address, and the message template sent to its subjects. Every
+        console account is granted one or more departments, and sees only their subjects.
+  \item A \term{user} is a console account. A \term{role} is what that account may do:
+        \val{elicit_admin} or \val{elicit_user}.
+  \item A \term{subject} is a person you have registered — a name, an email address, a
+        department. A \term{respondent} is that same person as the survey sees them: their
+        progress, their answers, the moment they finished.
+  \item An \term{access code} is the credential a respondent enters to reach their survey. The
+        console issues one when you register the subject. It is never called a token.
+  \item A \term{message template} is the subject line and body of an invitation or a reminder.
+  \item A \term{survey definition} is the survey itself as a portable file, exported from the
+        Author tool and applied here.
+\end{itemize}
+
+\subsection{Finding your way around}
+
+The navigation on the left is the whole console. \ui{Search Subjects}, \ui{Register
+Subjects} and \ui{Participation} are the day's work and are open to both roles. \ui{Admin} and
+\ui{System} hold the administrator's screens and stay collapsed until opened. The header
+carries \ui{Manual}, which opens this document in a new tab, and the language selector when the
+deployment offers more than one language (Chapter~\ref{sec:language}); \ui{Logout} is at the
+foot of the navigation.
+
+\screenshot{01-navigation}{The console with both navigation sections open. Search Subjects,
+Register Subjects and Participation are open to every account; the Admin and System sections
+are the administrator's.}
+
+\begin{elicitnote}[Where a procedure lives]
+\ui{Admin} holds \ui{Departments}, \ui{Message Templates}, \ui{Users}, \ui{Import Clients},
+\ui{Import Respondent},
+\ui{Apply Survey Definition} and \ui{Export Survey Definition}. \ui{System} holds the six
+read-only screens of Chapter~\ref{sec:system}. \ui{Manual (PDF)} opens this document.
+\end{elicitnote}
+
+%% ------------------------------------------------------------------ 2
+\section{Signing in}
+\label{sec:signin}
+
+The console never asks you for a password. It hands you to the identity provider your
+deployment was installed with, and that is where you sign in.
+
+\begin{enumerate}
+  \item Open the console's address in a browser. It sends you straight on to the identity
+        provider.
+  \item Sign in with the username and password you were given.
+  \item The identity provider returns you to the console.
+\end{enumerate}
+
+\screenshot{02-sign-in}{The identity provider's sign-in page. The console itself never
+collects a password, so this page — not the console — is where a forgotten password is reset.}
+
+\subsection{When your account has no department}
+
+A console account that is not assigned to a department has nothing to show. Rather than open an
+empty console, Elicit holds it behind a notice.
+
+\screenshot{03-department-required}{The notice an account with no department is held
+behind. What it offers depends on your role.}
+
+\begin{itemize}
+  \item As an \textbf{administrator} it offers \ui{Add a department}, which takes you to
+        Chapter~\ref{sec:departments}. The department you create is assigned to you, and the console opens.
+  \item As a \textbf{user} it has no such action. Ask an administrator to assign you to a
+        department, then sign in again.
+\end{itemize}
+
+Both also offer \ui{Logout}, and \ui{Open the manual}, which opens this document.
+
+This is what a freshly installed deployment looks like to its first administrator: no
+department exists yet, and creating one is the first thing to do.
+
+\subsection{When the console does not let you in}
+
+Two other screens can meet you after the identity provider has accepted you:
+
+\begin{description}
+  \item[“there is no user named … in the application”] The identity provider knows your
+        account, but the console has no user record for it, or the record is not active. An
+        administrator adds or reactivates it on \ui{Users} (Chapter~\ref{sec:users}).
+  \item[\ui{Access Restricted}] Your account holds neither \val{elicit_user} nor
+        \val{elicit_admin}. Ask whoever administers the identity provider for the role.
+\end{description}
+
+\elicitpart{Setting up the console}{The groundwork an administrator lays before anyone can be
+registered: departments, console accounts and the messages subjects receive. Every chapter in
+this part is open to the administrator role only.}
+
+%% ------------------------------------------------------------------ 3
+\section{Departments}\adminonly
+\label{sec:departments}
+
+A department groups the subjects you register. It decides which surveys those subjects may be
+registered onto and which message templates they are sent.
+
+A new installation has no department at all, and until one exists nobody can be registered. The
+first department is assigned to whoever creates it.
+
+\begin{elicitnote}[The first department and the first template need each other]
+A department must name a message template, and a template must belong to a department. On a new
+installation, create the department with a placeholder \ui{Default message ID} such as
+\val{1}, write its template (Chapter~\ref{sec:templates}), then edit the department and put the
+template's real ID in. Use a number: an ID that is not a number makes every registration in
+that department fail with an access-code error.
+\end{elicitnote}
+
+\subsection{The list}
+
+\ui{Admin} $>$ \ui{Departments} lists every department with its code, the message templates it
+sends, its sender address and its surveys.
+
+\screenshot{04-departments}{The Departments screen. \ui{New Department} creates one; the
+pencil in the \ui{Edit} column opens an existing one.}
+
+\subsection{Creating one}
+
+\begin{enumerate}
+  \item Open \ui{Admin} $>$ \ui{Departments} and choose \ui{New Department}.
+  \item Fill in \ui{Department name} — what the department is called throughout the console.
+  \item Optionally fill in \ui{Department code}, a short abbreviation such as \val{CARD} or
+        \val{HR}. The code is what identifies this department to another Elicit deployment, so
+        moving a respondent between deployments (Chapter~\ref{sec:move}) depends on it.
+  \item Fill in \ui{Default message ID}: the ID of the message template sent to this
+        department's subjects when they are registered. Templates are written in
+        Chapter~\ref{sec:templates}; the ID is the \ui{ID} column of that screen, the one after
+        \ui{Edit}.
+  \item Fill in \ui{From email}, the department's sender address: every invitation and
+        reminder to this department's subjects is sent from it. Use an address the mail relay
+        is allowed to send for; ask whoever runs the relay if you are not sure, because a relay
+        may refuse an address it does not accept, and a recipient's server may file the mail as
+        spam.
+  \item Check \ui{Surveys}: the surveys this department's subjects may be registered onto. A new
+        department starts with every installed survey; remove the ones it does not run. Each
+        survey is shown with its ID, which a CSV upload names it by (Section~\ref{sec:csv}).
+  \item Choose \ui{Create department}.
+\end{enumerate}
+
+\screenshot{05-edit-department}{Creating a department. \ui{Create department} stays disabled
+until every required field is valid, so a greyed-out button means a field above it is still
+wrong.}
+
+\begin{elicitnote}[Which template, and how many]
+\ui{Default message ID} takes more than one ID, separated by commas. Every template listed is
+sent, which is how a deployment that must send both an invitation and a consent notice does it.
+\end{elicitnote}
+
+\begin{elicitcaution}
+The template the ID names has to exist. Nothing on this screen checks that it does, and a
+department pointing at a template that was never created sends nothing at all.
+\end{elicitcaution}
+
+To change a department later, open it from the pencil in the \ui{Edit} column. The form is the
+same one; the button reads \ui{Update department}.
+
+\begin{elicitcaution}[A department registers onto its surveys only]
+Nobody can register a subject in a department onto a survey the department does not list: not on
+\ui{Register Subjects}, not by CSV, not through the registration API. A survey applied after the
+department was created is in none, so add it here before anyone registers onto it
+(Chapter~\ref{sec:install}). A department may list no survey at all.
+\end{elicitcaution}
+
+%% ------------------------------------------------------------------ 4
+\section{Users and roles}\adminonly
+\label{sec:users}
+
+A console account is a \term{user}. What it may do is its \term{role}; which subjects it may see
+is its department assignment. Both are set here.
+
+\subsection{The list}
+
+\ui{Admin} $>$ \ui{Users} lists every console account, whether it is active, and the departments
+it reaches.
+
+\screenshot{06-users}{The Users screen. The note above the grid says which parts of an
+account this console controls, which depends on how the deployment authenticates.}
+
+\subsection{Adding or changing one}
+
+\begin{enumerate}
+  \item Open \ui{Admin} $>$ \ui{Users} and choose \ui{Add User}, or the pencil on an existing
+        row.
+  \item Fill in \ui{Username}. It has to match the account in the identity provider — that is
+        what ties the two together.
+  \item Fill in \ui{First name} and \ui{Last name}.
+  \item Leave \ui{Active} ticked. Clearing it keeps the account and its history but stops it
+        signing in.
+  \item Choose the departments this account may reach under \ui{Departments}. An account may
+        hold several.
+  \item Choose the \ui{Role}.
+  \item \ui{Save}.
+\end{enumerate}
+
+\screenshot{07-edit-user}{Editing a console account. \ui{Departments} decides which subjects
+the account sees; \ui{Role} decides what it may do with them.}
+
+\subsection{What each role reaches}
+
+\begin{itemize}
+  \item \val{elicit_admin} — the whole console: departments, users, message templates,
+        survey definitions, the System screens, and the export action of Chapter~\ref{sec:move}.
+  \item \val{elicit_user} — \ui{Search Subjects}, \ui{Register Subjects} and
+        \ui{Participation}, for the departments the account holds, and this manual.
+\end{itemize}
+
+Choose the account's \emph{highest} role: \val{elicit_admin} implies \val{elicit_user}.
+
+A third role, \val{elicit_importer}, is not a user's and is not offered here. It belongs to
+the systems that feed subjects in through the registration API, which are entered on a page of
+their own (Section~\ref{sec:import-clients}), so that such a system is not also an account that
+can read subjects.
+
+\begin{elicitnote}[Where the role is really decided]
+Which of these two places is authoritative depends on the deployment's
+\opt{elicit.authorization.mode}. Under \val{OIDC} the roles come from the identity
+provider and this screen assigns departments only; under \val{DATABASE} the role set here is
+the one that counts. The note above the grid tells you which case you are in.
+\end{elicitnote}
+
+\subsection{The two seeded accounts}
+
+The database migrations create \val{admin} and \val{user} so that a new installation can be
+signed into at all. Until they are renamed the console carries a warning on every screen
+(Chapter~\ref{sec:system}). Rename them here, and — under \val{DATABASE} authorization — rename the matching
+accounts in the identity provider to the same values.
+
+\subsection{Import clients}
+\label{sec:import-clients}
+
+A system that registers subjects through the registration API is an \term{import client}, not a
+user: it has no first or last name and never signs in to the console. \ui{Admin} $>$
+\ui{Import Clients} lists these systems, whether each is active, and the departments it may
+register into.
+
+\screenshot{31-import-clients}{The Import Clients page. Each row is a system that registers
+subjects through the registration API, not a person.}
+
+\begin{enumerate}
+  \item Open \ui{Admin} $>$ \ui{Import Clients} and choose \ui{Add Import Client}, or the pencil
+        on an existing row.
+  \item Fill in \ui{Name} with the name the client's tokens carry. For a Keycloak service
+        account that is \val{service-account-} followed by the client id.
+  \item Add a \ui{Description} if it helps to say what the system is.
+  \item Leave \ui{Active} ticked. Clearing it keeps the record and stops the client registering.
+  \item Choose under \ui{Departments} the departments the client may register subjects into.
+  \item \ui{Save}.
+\end{enumerate}
+
+\screenshot{32-edit-import-client}{Adding an import client. \ui{Name} is the name the
+client's tokens carry; \ui{Departments} decides where it may register subjects.}
+
+\ui{Delete}, on the form of an existing import client, removes the record after a confirmation.
+The subjects it registered are kept.
+
+\begin{elicitnote}[What the record does and does not do]
+The client holds \val{elicit_importer} in the identity provider, and no other Elicit role;
+this page says only into which departments it registers. The registration API refuses a client
+that has the role and no active record here, a client whose token also carries
+\val{elicit_admin} or \val{elicit_user}, and every caller without the role, users
+included: people register subjects on \ui{Register Subjects}. A name is a user or an import
+client, never both, so each of the two screens refuses a name the other holds, and an import
+client record gives no access to the console.
+\end{elicitnote}
+
+%% ------------------------------------------------------------------ 5
+\section{Message templates}\adminonly
+\label{sec:templates}
+
+A message template is what a subject receives: a subject line, a body, and the format the body is
+written in. Templates belong to a department, and a department sends the one its \ui{Default
+message ID} names.
+
+\subsection{The list}
+
+\ui{Admin} $>$ \ui{Message Templates} lists every template with its department, subject line
+and format.
+
+\screenshot{08-message-templates}{The Message Templates screen. The \ui{ID} column is what a
+department's \ui{Default message ID} refers to.}
+
+\subsection{Writing one}
+
+\begin{enumerate}
+  \item Open \ui{Admin} $>$ \ui{Message Templates} and choose \ui{New Message Template}.
+  \item Choose the \ui{Department} this template belongs to.
+  \item Choose the \ui{MIME type}: \val{text/plain} for a plain message,
+        \val{text/html} to write the body as HTML.
+  \item Write the \ui{Subject}.
+  \item Write the \ui{Body}, and put \val{<ACCESS_CODE>} where the recipient's access code
+        should appear.
+  \item \ui{Save} creates it. On an existing template the button reads \ui{Update}.
+\end{enumerate}
+
+\screenshot{09-edit-message-template}{A template with the access code placeholder in its
+body. \ui{Message preview} below the form shows the body as the recipient will receive it.}
+
+\begin{elicitnote}[The placeholder]
+\val{<ACCESS_CODE>} is replaced with that subject's own access code as the message is sent —
+it is not something you fill in. A template without it still sends, but the recipient has no way
+into their survey. When no template at all carries it, \ui{System} $>$ \ui{Overview} reports
+that as outstanding setup.
+\end{elicitnote}
+
+Give the recipient the survey's address as well as the code. The code alone is not a link.
+
+\elicitpart{Day-to-day work}{Registering subjects, inviting them, following their progress,
+printing their reports and watching how a survey is doing. Open to every console account.}
+
+%% ------------------------------------------------------------------ 6
+\section{Registering subjects}
+\label{sec:register}
+
+Registering a subject records who they are, issues the \term{access code} that reaches their
+survey, and queues the invitation: the message templates their department names
+(Chapter~\ref{sec:invite}).
+
+\begin{enumerate}
+  \item Open \ui{Register Subjects}.
+  \item Choose the \ui{Department}, then the \ui{Survey}. The survey list offers only the
+        department's surveys (Chapter~\ref{sec:departments}); either is chosen for you when there
+        is only one.
+  \item Fill in \ui{First name} and \ui{Last name}. \ui{Middle name}, \ui{Date of birth} and
+        \ui{Phone} are optional; a phone number is written \texttt{\small \#\#\#-\#\#\#-\#\#\#\#}.
+        A name can be up to 50 characters.
+  \item Fill in \ui{Email}, which is required, up to 255 characters. The invitation goes to this
+        address.
+  \item Fill in \ui{External ID} if this subject has an identifier in another system, such as a
+        medical record number. It must be unique within the department, and an External ID the
+        department has excluded is refused.
+  \item \ui{Save}.
+\end{enumerate}
+
+\screenshot{10-register-subject}{The registration form, filled in. The panel on the right
+documents the two other ways to register: a CSV upload and the REST API.}
+
+The console confirms with \ui{Subject saved} and clears the form for the next one.
+
+\screenshot{11-register-result}{What a successful registration looks like. The access code
+issued at this moment is not shown here — read it from \ui{Search Subjects}.}
+
+\subsection{Changing a subject}
+
+Find the subject on \ui{Search Subjects} and use the pencil in the \ui{Edit} column. The
+registration form reopens with their details and the button reads \ui{Update subject}. Their
+access code does not change.
+
+\subsection{Registering many at once}
+\label{sec:csv}
+
+\ui{Upload CSV} takes a file of subjects, one per row, with these columns in order:
+
+\begin{center}\small
+\val{surveyId, departmentId, xid, firstName, lastName, middleName, dob, email, phone}
+\end{center}
+
+Every row names its survey in the first column. A file in which any row lacks it is rejected
+with a warning naming those lines, and nothing is imported; the survey chosen in the form plays
+no part in an upload.
+
+\begin{enumerate}
+  \item Write the file. The first column is the survey's ID, shown beside each survey's name in
+        the department's \ui{Surveys}. The second is the department's numeric ID: open the
+        department on \ui{Departments} and read the number at the end of the page's address
+        (\val{edit-department/3}). The third, the External ID, may be left empty
+        (\val{2,3,,Ana,...}). First name, last name and email are required; a date of birth is
+        \val{yyyy-MM-dd} or \val{MM/dd/yyyy}. A row with no phone may end at the email. Rows
+        beginning with \texttt{\small\#} are ignored.
+  \item Open \ui{Register Subjects} and choose \ui{Upload CSV}.
+  \item Pick the file. Nothing is registered yet: a confirmation says how many subjects the file
+        will register on each survey and in each department, and lists each row it will refuse
+        with its line number and the reason — a department you are not assigned to, a department
+        that does not have the row's survey, or a value that fails its rule.
+  \item Choose \ui{Import} to register them, or \ui{Cancel} to register no one. The result lists
+        each subject with its access code and whether it was a \ui{New Subject}, an
+        \ui{Existing Subject} already registered, or an \ui{Excluded Subject}; the refused rows
+        are listed under \ui{Errors} with their line numbers.
+\end{enumerate}
+
+\screenshot{35-csv-confirm}{The confirmation an upload asks for: how many subjects it will
+register on each survey and in each department, and any row it will refuse. Nobody is
+registered until \ui{Import} is chosen.}
+
+\screenshot{34-csv-import}{The result of a CSV upload: each subject with its access code and
+outcome, and any row that could not be read, with its line number.}
+
+The \ui{CSV file structure} panel on the registration screen repeats the columns with an example.
+\ui{REST API instructions} documents the equivalent endpoints for a system that registers
+subjects programmatically; such a system is entered as an import client
+(Section~\ref{sec:import-clients}), and the endpoints are not open to a user's account.
+
+%% ------------------------------------------------------------------ 7
+\section{Inviting and reminding}
+\label{sec:invite}
+
+Registering a subject queues their invitation, and the console sends queued mail every five
+minutes, so a newly registered subject is invited without anyone doing anything more. A
+reminder, or an invitation sent again, goes from the subject's row on \ui{Search Subjects}, one
+subject at a time.
+
+\begin{enumerate}
+  \item Open \ui{Search Subjects} and find the subject (Chapter~\ref{sec:search}).
+  \item In their row's \ui{Action} column, choose \ui{Send email}.
+  \item A \ui{Submit} button appears beside it. Choose it.
+\end{enumerate}
+
+\screenshot{12-search-email-action}{Choosing \ui{Send email} on a subject's row. Nothing is
+sent until \ui{Submit} is chosen.}
+
+The console reports \ui{Email sent successfully}, or tells you it failed.
+
+What is sent is the template — or templates — that the subject's \emph{department} names in its
+\ui{Default message ID}, addressed to the subject's own email address, with
+\val{<ACCESS_CODE>} replaced by their access code. It is sent from the department's
+\ui{From email}; only when that is blank is the service's own sender address used, the one
+\ui{System} $>$ \ui{Email} shows.
+
+A reminder is the same action again: choose \ui{Send email} a second time and the same template
+goes out with the same code.
+
+\begin{elicitcaution}
+A department whose \ui{Default message ID} names no existing template queues nothing, so its
+subjects are never invited. \ui{System} $>$ \ui{Overview} reports a deployment with no template
+at all.
+\end{elicitcaution}
+
+%% ------------------------------------------------------------------ 8
+\section{Finding subjects and watching progress}
+\label{sec:search}
+
+\ui{Search Subjects} is both the directory and the progress board.
+
+\subsection{Searching}
+
+\ui{Department(s)} is required — it defaults to every department your account reaches. The other
+fields narrow the result: \ui{Access code}, \ui{First name}, \ui{Last name}, \ui{Email},
+\ui{Phone}. Leave them empty to list everyone. Choose \ui{Search}.
+
+\screenshot{13-search-filters}{The search filters. \ui{Department(s)} carries a required
+marker; the rest are optional and combine.}
+
+\subsection{Reading the results}
+
+\screenshot{14-search-results}{A result. \ui{Status} is the subject's progress through their
+survey; \ui{Access code} is the credential they enter to reach it.}
+
+Every column sorts. \ui{Page size} at the foot of the grid sets how many rows are shown at once.
+The grid refreshes itself every ten seconds, so a subject working through their survey moves
+without the page being reloaded.
+
+\ui{Status} has three values:
+
+\begin{itemize}
+  \item \textbf{Not Started} — the access code has been issued but never used.
+  \item \textbf{In Progress} — they have signed in to the survey and not yet finished it.
+  \item \textbf{Finished} — they have completed it. Only then is a report available.
+\end{itemize}
+
+\subsection{Auto-registered respondents}
+
+Where the survey site lets anyone start a survey by typing an access code of their own (the
+setting \opt{accessCode.autoRegister}), the people who do so were never registered here. They
+are listed with \ui{Auto-registered} where the department would be, and with no name or contact
+details: only the access code they chose and their status. Every console account sees them,
+whatever its departments, and \ui{Department(s)} offers \ui{Auto-registered} to show only them.
+Their row has no \ui{Edit} and no \ui{Send email}, because there is no subject to edit and no
+address to write to; reports and the export are offered as for anyone else.
+
+%% ------------------------------------------------------------------ 9
+\section{Reports}
+\label{sec:reports}
+
+A report is generated from a respondent's answers, and only once they have finished.
+
+\begin{enumerate}
+  \item Open \ui{Search Subjects} and find the subject. Their \ui{Status} must read
+        \textbf{Finished}.
+  \item In their row's \ui{Action} column, choose \ui{Print reports}.
+  \item Choose \ui{Submit}.
+\end{enumerate}
+
+\screenshot{15-report-download}{\ui{Print reports} is offered only on a respondent whose
+status is \textbf{Finished}; the other rows offer the actions their status allows.}
+
+The console assembles the report as a PDF and hands it to the browser, then reports \ui{Reports
+generated successfully}. Print or save it from the browser's own viewer.
+
+\begin{elicitnote}[Where reports come from]
+The reports belong to the survey, not to the console. Each is a \term{report service} the
+survey's author listed in the authoring tool, and they arrive with the survey definition: the
+built-in respondent report, or a small service the deployment runs, such as the three reports
+of the Family Health History Survey. A survey that lists none prints an empty document.
+\ui{System} $>$ \ui{Connections} lists the report services this deployment will call and checks
+that each one answers.
+\end{elicitnote}
+
+If one report fails, the PDF carries an error block in its place and the others print as
+usual. A report that the respondent sees on their own report page but that is missing from the
+printout is a fault in that report service, not in the console: tell whoever runs it. How a
+report service is built and installed is the subject of the installation manual's custom
+reports chapters.
+
+%% ------------------------------------------------------------------ 10
+\section{Monitoring a survey's participation}
+\label{sec:participation}
+
+\ui{Participation} shows how one survey is doing across your departments, as counts. It never
+shows a respondent: for one person, use \ui{Search Subjects}.
+
+\begin{enumerate}
+  \item Open \ui{Participation}.
+  \item Choose the \ui{Survey}. \ui{Departments} starts at \ui{All departments}, which is every
+        department your account reaches and the auto-registered respondents
+        (Section~\ref{sec:search}); choose one or more to narrow it. The auto-registered get a
+        row of their own in the department table when there are any.
+  \item Optionally set \ui{Registered from} and \ui{Registered to}. Both days are included.
+\end{enumerate}
+
+\screenshot{33-participation}{The Participation page for one survey: the counts and rates, the
+same by department and by week, where people stop, and the marked questions. A count from 1 to 4
+reads \textbf{< 5}.}
+
+The page recomputes as soon as a filter changes. It has five parts:
+
+\begin{plaintable}{tab:participation}{The five parts of the Participation page}{@{\hspace{4pt}}>{\raggedright\arraybackslash}p{0.2\linewidth} >{\raggedright\arraybackslash}p{0.72\linewidth}@{\hspace{4pt}}}{\thead{Part} & \thead{What it shows}}
+\textbf{Participation} & How many subjects were registered, and how many have not started, are
+in progress and have finished: the three states \ui{Search Subjects} shows. \ui{Start rate} is
+started over registered, \ui{Completion rate} finished over started, and \ui{Overall rate}
+finished over registered. \ui{Stalled} counts the subjects in progress who have not opened a page
+or saved an answer for some days (14 unless your site changed it): the ones to remind, from
+\ui{Search Subjects}. \\
+\textbf{By department} & The same, one row per department. \\
+\textbf{By week} & Per week, Monday to Sunday, how many were registered, started and finished in
+it. \\
+\textbf{Progress} & For subjects still in progress, the step of the last page they were shown, so
+you can see where people stop. For those who finished, how long each step took them (median and
+quartiles) and how long the whole survey took. A subject who started before the deployment
+recorded pages is counted as \ui{Not recorded}. \\
+\textbf{Marked questions} & One card for each question or section the survey's author marked for
+this report. Among finished respondents, \ui{Presented} counts each time a question was shown
+(once per repeat), \ui{Answered} how many of those were answered, \ui{Response rate} the share
+answered, and \ui{Reach} the share of finished respondents who were shown it at all. A choice
+question lists its options with a count and share each, a number question its minimum, quartiles
+and maximum, and a date question its range and a count per month. Free-text answers are counted,
+never shown. \\
+\end{plaintable}
+
+\begin{elicitnote}[Why some counts read “< 5”]
+A count from 1 to 4 is shown as \textbf{< 5}, and any rate built on it as \textbf{—}, so that a
+narrow filter cannot point at one person. A zero is shown, because it points at nobody. The
+threshold is a setting of the deployment; ask whoever runs it if your site uses another. The page
+does not hide a count that could be worked out from a total and its neighbors, so treat a
+small department or week with care when you pass the figures on.
+\end{elicitnote}
+
+The participation, the weeks, each choice question and the progress by step are also drawn as
+charts beside their tables. A count shown as \textbf{< 5} draws no bar.
+
+\ui{Download CSV} and \ui{Download PDF} save the tables the page is showing (the PDF with the
+charts too), with the filter at the
+top and the same suppressed counts. They hold no respondent's record; that is what the export of
+Chapter~\ref{sec:move} is for.
+
+\begin{elicitnote}[Where the marks come from]
+The marked questions are part of the survey definition: the author marks them in the authoring
+tool and they arrive when the survey is applied (Chapter~\ref{sec:install}). A survey with no marks shows the
+participation tables and says that nothing is marked.
+\end{elicitnote}
+
+\elicitpart{Surveys and the deployment}{Installing and updating surveys, moving respondents
+between deployments, and the screens that report on the deployment itself, for the
+administrator; then, for everyone, reading the console in your own language.}
+
+%% ------------------------------------------------------------------ 11
+\section{Moving a respondent between deployments}\adminonly
+\label{sec:move}
+
+A respondent can be moved from one Elicit deployment to another — a site sending its finished
+respondents to the study's master site, say. The respondent is exported to a file at one end and
+imported from it at the other. Both deployments must have the same survey installed.
+
+\subsection{Exporting}
+
+\begin{enumerate}
+  \item Open \ui{Search Subjects} and find the respondent.
+  \item In their row's \ui{Action} column, choose \ui{Export}, then \ui{Submit}.
+\end{enumerate}
+
+\screenshot{16-respondent-export}{The \ui{Export} action. It is offered to administrators
+only, which is why a user does not see it on the same row.}
+
+The browser downloads a \file{.elicit} file holding that one respondent: their answers, their
+subject record, the code of the department they belong to, their access code, and whether they
+have finished. It does not hold the survey definition.
+
+\subsection{Importing}
+
+\begin{enumerate}
+  \item Open \ui{Admin} $>$ \ui{Import Respondent} on the receiving deployment.
+  \item Choose \ui{Upload} and select the \file{.elicit} file.
+\end{enumerate}
+
+\screenshot{17-respondent-import}{The import screen. One respondent file at a time; the
+result says how many records were imported, or why it was refused.}
+
+Three things must be true on the receiving deployment, and the import is refused with a reason
+when they are not:
+
+\begin{itemize}
+  \item the same survey must be installed — the file carries the survey's key and is matched
+        against it;
+  \item a department with the same \emph{code} must already exist. The import never creates one,
+        so create it first (Chapter~\ref{sec:departments}) with the code the sending site used;
+  \item the access code in the file must not already be in use here. It is never quietly
+        reissued.
+\end{itemize}
+
+An imported respondent arrives as they left: a finished respondent is still finished, and their
+answers read as they answered them.
+
+%% ------------------------------------------------------------------ 12
+\section{Installing and updating a survey}\adminonly
+\label{sec:install}
+
+A survey is built in the Author tool and arrives here as a \file{.elicit} definition file. The
+same file installs it on a deployment that has never seen it and updates one that has — you do
+not have to say which.
+
+\subsection{Applying a definition}
+
+\begin{enumerate}
+  \item Open \ui{Admin} $>$ \ui{Apply Survey Definition}.
+  \item Choose \ui{Upload} and select the \file{.elicit} file.
+\end{enumerate}
+
+\screenshot{18-apply-survey-definition}{The apply screen. The file identifies itself, so
+this deployment works out whether it is a new survey or a revision of one already here.}
+
+\screenshot{19-apply-result}{The result of an apply. \ui{New Survey Installed} means this
+deployment had never seen this survey; a revision of one already here reports \ui{Survey
+Updated}.}
+
+The result names the survey key, the number of records installed and a breakdown by kind. A new
+survey is in no department yet, and the result says so: open \ui{Departments} and add it to each
+department that runs it before anyone registers onto it (Chapter~\ref{sec:departments}). When
+it ends with \emph{Reporting schema rebuilt}, the reporting tables were regenerated to match the
+new structure as part of the same apply — nothing needs restarting.
+
+\begin{elicitcaution}
+A revision older than the one already installed is refused. Going back to an earlier revision is
+a database restore, not an upload.
+\end{elicitcaution}
+
+Two other endings need someone's attention:
+
+\begin{description}
+  \item[\ui{Apply Failed}] Nothing was installed. The message says why, most often a file that
+        is not a survey definition or was exported by an older authoring tool.
+  \item[\emph{Reporting schema not rebuilt}] The survey is installed, but its reporting tables
+        were not brought up to date; the line gives the reason. Apply the same file again once
+        the cause is fixed, or ask whoever runs the deployment to restart Survey. When the
+        deployment builds reporting tables only at a restart, the result says nothing about
+        them at all.
+\end{description}
+
+\subsection{Exporting a definition}
+
+\ui{Admin} $>$ \ui{Export Survey Definition} downloads the definition of any survey installed
+here. The file carries the survey's structure only — never respondent data — and can be applied
+to another deployment or opened in the Author tool.
+
+\screenshot{20-export-survey-definition}{Every installed survey, with its key, the
+revision this deployment is running and the name of its reporting schema. \ui{Download} takes
+the definition as it stands now; \ui{Rename} is described below.}
+
+Each download is a fresh revision of the definition as it stands at that moment. To roll one
+revision out across several sites, download it once and distribute \emph{that} file, rather than
+exporting again at each site.
+
+\subsection{Renaming a survey's reporting schema}
+
+Every installed survey has a reporting schema of its own in the database, where its answers are
+laid out for analysts and reporting tools. The schema is named after the survey when the survey
+is first applied — \val{report_family_history_survey} for the Family Health History Survey —
+and the \ui{Export Survey Definition} list shows the name beside each survey. A site that wants a
+shorter name, or one that follows its own convention, renames it here. Nothing in the schema is
+lost or rebuilt: the tables, views and every row keep going under the new name, and the console,
+Survey and the report services pick the new name up at once.
+
+\begin{enumerate}
+  \item Open \ui{Admin} $>$ \ui{Export Survey Definition}.
+  \item Choose \ui{Rename} on the survey's row.
+  \item Type the new name: 1 to 63 lower-case letters, digits and underscores, not starting
+        with a digit. The field says so while the name is not acceptable.
+  \item Choose \ui{Rename} in the dialog. The list shows the new name.
+\end{enumerate}
+
+\screenshot{30-rename-reporting-schema}{The rename dialog: the survey, its current schema
+name, the caution about what is outside the console, and the new name. \ui{Rename} stays
+disabled until the name is acceptable.}
+
+\begin{elicitcaution}
+Queries, saved reports and BI connections \emph{outside} Elicit that name the current schema
+stop working after the rename; whoever maintains them needs the new name. Inside Elicit nothing
+is affected. A name another survey already uses is refused, and so is a name the database
+reserves.
+\end{elicitcaution}
+
+A survey whose row says \emph{Not built yet} has no reporting schema: its definition was
+installed but the reporting tables have not been built. Applying the definition again builds
+them and names the schema, after which \ui{Rename} is offered.
+
+\subsection{Before any survey is installed}
+
+A deployment with no survey says so on every screen, and nobody can be registered until one is
+applied.
+
+\screenshot{21-missing-survey-notice}{The notice a deployment carries until a survey
+definition is applied. An administrator is offered the remedy as a link; a user is told to ask
+for one.}
+
+%% ------------------------------------------------------------------ 13
+\section{The System screens}\adminonly
+\label{sec:system}
+
+The six \ui{System} screens report what this deployment is running and test that the things it
+depends on answer. None of them changes any configuration: the settings they show were fixed
+when the service started, and they are shown as present or absent rather than by value.
+
+\subsection{Overview}
+
+\screenshot{22-system-overview}{\ui{System} $>$ \ui{Overview}: what is running, whether it is
+healthy, and the setup work still outstanding.}
+
+\ui{Running} gives the application, its version, when it was built and how long it has been up.
+\ui{Health} gives each area's state with the detail behind it. \ui{Required settings} lists the
+five settings the deployment cannot run without (the two database passwords, the OIDC client
+secret, the mail sender address and the service token) and whether each was supplied.
+\ui{Setup still outstanding} is the one to read first on a new installation, and links each item
+to the screen that fixes it. It names:
+
+\begin{itemize}
+  \item no department, no message template, no template carrying the access code placeholder,
+        no department with a sender address, and no survey;
+  \item a service token still at its development value;
+  \item a setting that is configured but no longer read, with the one that replaced it;
+  \item a request to show identity tokens that the deployment ignores outside development.
+\end{itemize}
+
+\subsection{Database}
+
+\screenshot{23-system-database}{\ui{System} $>$ \ui{Database}: both connections, the
+migrations each module has applied, and what the database holds.}
+
+The application connection serves the console; the owner connection runs the migrations. The
+readiness probe only tests the first, so a wrong owner password shows up here and nowhere else.
+
+\subsection{Branding}
+
+\screenshot{24-system-branding}{\ui{System} $>$ \ui{Branding}: where each brand asset was
+resolved from.}
+
+A brand resolves from the mounted directory first, then the local directory, then the default
+packaged with the application. Each asset is listed separately because a partial mount renders
+with the wrong fonts and raises no error. \ui{Reload brand} discards the cache and resolves
+again.
+
+\subsection{Email}
+
+\screenshot{25-system-email}{\ui{System} $>$ \ui{Email}: the mail settings the service
+started with, and a test message.}
+
+\ui{Send test email}, under \ui{Send a test message}, sends through the same service, relay and timeout that invitations use,
+so a test that passes means the relay accepts mail. The test is sent from the service's own sender
+address, not from a department's \ui{From email}, so it does not prove that the relay accepts each
+department's address. Sending is disabled when no sender address is configured.
+
+\subsection{Connections}
+
+\screenshot{26-system-connections}{\ui{System} $>$ \ui{Connections}: every outbound
+dependency, checked one at a time or all at once.}
+
+Each check sends one read-only request and gives up after a few seconds. Post-survey actions are
+never invoked and no report is generated, so checking is safe at any time.
+
+\subsection{OIDC}
+
+\screenshot{27-system-oidc}{\ui{System} $>$ \ui{OIDC}: the identity the console is currently
+running under.}
+
+This screen answers "why can this account not see that screen?". It shows the signed-in username,
+the roles that reached the console, where those roles came from, and the identity provider's
+tokens themselves (masked unless the deployment is in development). These are sign-in tokens,
+nothing to do with a respondent's access code.
+
+\subsection{The seeded-account warning}
+
+\screenshot{28-default-account-warning}{The warning every screen carries until the seeded
+accounts are renamed.}
+
+The warning stays on every screen until the two seeded accounts are renamed
+(Chapter~\ref{sec:users}); \ui{Open Users} takes you there.
+
+%% ------------------------------------------------------------------ 14
+\section{Reading the console in your language}
+\label{sec:language}
+
+The console starts in the language your browser prefers, when the deployment offers it, and
+in English otherwise. When a deployment has more than one language available, a selector
+appears at the right of the header. The choice lasts for your browser session only; nobody
+else's console changes.
+
+\begin{enumerate}
+  \item Choose the selector in the header.
+  \item Choose a language.
+\end{enumerate}
+
+\screenshot{29-language-selector}{The language selector, open. The tick marks the language
+in use; the list holds every language this deployment has available.}
+
+The console reloads in the chosen language, laid out right to left for a language such as
+Arabic. A text the chosen language does not translate is shown in English rather than left
+blank, so a partly translated console is still usable.
+
+\begin{elicitnote}[Only English?]
+The selector is hidden when English is the only language available, because there would be
+nothing to choose. Which languages a deployment offers is set when it is installed, not from the
+console: the console's image carries English, and every other language is a translation file the
+installer mounts beside it, as the installation manual describes. Ask whoever runs your
+deployment.
+\end{elicitnote}
+
+The survey's own questions are not translated by this selector. What a respondent reads is part
+of the survey definition and is the author's to write.
+
+%% ------------------------------------------------------------------ 15
+\section{Where to look next}
+\label{sec:next}
+
+\begin{itemize}
+  \item The \textbf{installation manual} covers everything this one does not: bringing up the
+        database, the identity provider and the two services, the configuration reference,
+        provisioning a brand, mounting the translations of the languages this deployment
+        offers, and building and installing report services.
+  \item The \textbf{author's manual}, \emph{Building a Survey}, covers the Author tool — writing
+        questions, rules and reports, and exporting the definition that Chapter~\ref{sec:install} applies.
+  \item \ui{System} $>$ \ui{Overview} is the first place to look when something is wrong here.
+        It names what is unhealthy and what setup is still outstanding, and links to the screen
+        that fixes it.
+\end{itemize}
+
+\end{document}

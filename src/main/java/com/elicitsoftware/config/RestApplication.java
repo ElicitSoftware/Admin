@@ -28,8 +28,6 @@ import jakarta.ws.rs.core.Application;
  * </ul>
  *
  * @author Elicit Software
- * @version 1.0
- * @since 1.0
  */
 @ApplicationPath("/api")
 public class RestApplication extends Application {

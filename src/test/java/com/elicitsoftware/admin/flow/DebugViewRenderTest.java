@@ -52,7 +52,7 @@ class DebugViewRenderTest extends QuarkusBrowserlessTest {
     void showsDebugInformationHeading() {
         DebugView view = attachView();
         H1 heading = find(H1.class, view).single();
-        assertEquals("Debug Information", heading.getText());
+        assertEquals(view.getTranslation("debugView.title"), heading.getText());
     }
 
     /** UC-009: the diagnostic block reports the authenticated principal and their roles. */
@@ -62,9 +62,9 @@ class DebugViewRenderTest extends QuarkusBrowserlessTest {
         Pre debugInfo = find(Pre.class, view).single();
         String text = debugInfo.getText();
 
-        assertTrue(text.contains("User: debug.tester"));
-        assertTrue(text.contains("Is Anonymous: false"));
-        assertTrue(text.contains("Has elicit_admin: true"));
+        assertTrue(text.contains(view.getTranslation("debugView.user", "debug.tester")));
+        assertTrue(text.contains(view.getTranslation("debugView.isAnonymous", false)));
+        assertTrue(text.contains(view.getTranslation("debugView.hasAdminRole", true)));
     }
 
     /**
@@ -77,8 +77,8 @@ class DebugViewRenderTest extends QuarkusBrowserlessTest {
         DebugView view = attachView();
         String text = find(Pre.class, view).single().getText();
 
-        assertTrue(text.contains("ID Token:"));
-        assertTrue(text.contains("Access Token:"));
+        assertTrue(text.contains(view.getTranslation("debugView.idToken", "").strip()));
+        assertTrue(text.contains(view.getTranslation("debugView.accessToken", "").strip()));
         assertTrue(text.contains("*"), "the access token's masked form should contain asterisks: " + text);
     }
 
@@ -86,6 +86,6 @@ class DebugViewRenderTest extends QuarkusBrowserlessTest {
     @Test
     void pageTitleIdentifiesDebugView() {
         DebugView view = attachView();
-        assertEquals("Debug - Elicit Admin", view.getPageTitle());
+        assertEquals(view.getTranslation("debugView.pageTitle"), view.getPageTitle());
     }
 }

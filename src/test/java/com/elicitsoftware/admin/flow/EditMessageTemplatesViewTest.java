@@ -21,6 +21,7 @@ import com.vaadin.flow.component.UI;
 import com.vaadin.flow.component.button.Button;
 import com.vaadin.flow.component.combobox.ComboBox;
 import com.vaadin.flow.component.html.Div;
+import com.vaadin.flow.component.html.IFrame;
 import com.vaadin.flow.component.textfield.TextArea;
 import com.vaadin.flow.component.textfield.TextField;
 import com.vaadin.flow.router.BeforeEnterEvent;
@@ -64,7 +65,14 @@ class EditMessageTemplatesViewTest extends QuarkusBrowserlessTest {
     private EditMessageTemplatesView view;
 
     private void setUpWithDepartment() {
-        department = Department.findById(1L);
+        // No department is seeded (UC-028 C-016); every test here runs in a test transaction,
+        // so the one created here is rolled back with everything else.
+        department = new Department();
+        department.name = "UC-007 Edit Dept";
+        department.code = "UC007E";
+        department.defaultMessageId = "1";
+        department.fromEmail = "uc007e@example.org";
+        department.persist();
 
         // UiSessionLogin's own @PostConstruct (triggered by its first method call anywhere in
         // this test run) overwrites the "user" session attribute with its own DB lookup. Force
@@ -105,7 +113,7 @@ class EditMessageTemplatesViewTest extends QuarkusBrowserlessTest {
     @SuppressWarnings("unchecked")
     private ComboBox<String> mimeTypeField() {
         return (ComboBox<String>) find(ComboBox.class, view).all().stream()
-                .filter(box -> "MIME Type".equals(box.getLabel()))
+                .filter(box -> UI.getCurrent().getTranslation("editMessageTemplatesView.mimeType").equals(box.getLabel()))
                 .findFirst()
                 .orElseThrow(() -> new AssertionError("No MIME Type ComboBox"));
     }
@@ -113,7 +121,7 @@ class EditMessageTemplatesViewTest extends QuarkusBrowserlessTest {
     @SuppressWarnings("unchecked")
     private ComboBox<Department> departmentField() {
         return (ComboBox<Department>) find(ComboBox.class, view).all().stream()
-                .filter(box -> "Department".equals(box.getLabel()))
+                .filter(box -> UI.getCurrent().getTranslation("editMessageTemplatesView.department").equals(box.getLabel()))
                 .findFirst()
                 .orElseThrow(() -> new AssertionError("No Department ComboBox"));
     }
@@ -123,11 +131,12 @@ class EditMessageTemplatesViewTest extends QuarkusBrowserlessTest {
      * semantics; {@code saveBtn}/{@code updateBtn} toggle visibility rather than existing/not
      * existing, so a hidden button is simply not findable by label.
      */
-    private Button buttonLabeled(String text) {
+    private Button buttonLabeled(String textKey) {
+        String text = UI.getCurrent().getTranslation(textKey);
         return find(Button.class, view).all().stream()
                 .filter(b -> text.equals(b.getText()))
                 .findFirst()
-                .orElseThrow(() -> new AssertionError("No visible button labelled '" + text + "'"));
+                .orElseThrow(() -> new AssertionError("No visible button labeled '" + text + "'"));
     }
 
     private Div previewContent() {
@@ -144,7 +153,7 @@ class EditMessageTemplatesViewTest extends QuarkusBrowserlessTest {
         setUpWithDepartment();
         enterMode("0");
 
-        assertTrue(buttonLabeled("Save").isVisible());
+        assertTrue(buttonLabeled("common.save").isVisible());
         assertEquals(1, find(Button.class, view).all().size(), "Update must be hidden in create mode");
         assertEquals("text/html", mimeTypeField().getValue());
     }
@@ -167,7 +176,7 @@ class EditMessageTemplatesViewTest extends QuarkusBrowserlessTest {
         assertEquals("Existing Subject", subjectField().getValue());
         assertEquals("Existing body", bodyField().getValue());
         assertEquals("text/plain", mimeTypeField().getValue());
-        assertTrue(buttonLabeled("Update").isVisible());
+        assertTrue(buttonLabeled("editMessageTemplatesView.btnUpdate").isVisible());
         assertEquals(1, find(Button.class, view).all().size(), "Save must be hidden in edit mode");
     }
 
@@ -182,10 +191,10 @@ class EditMessageTemplatesViewTest extends QuarkusBrowserlessTest {
         bodyField().setValue("<b>hello</b>");
 
         assertEquals("<b>hello</b>", previewContent().getElement().getText());
-        assertEquals("", previewContent().getElement().getProperty("innerHTML"));
+        assertFalse(find(IFrame.class, view).all().stream().anyMatch(IFrame::isVisible), "the frame is for HTML bodies");
     }
 
-    /** UC-007: the preview renders HTML mime-type content via innerHTML, not as literal text. */
+    /** UC-007 BR-141: the preview renders HTML content in the isolated frame, not in the page. */
     @Test
     @TestTransaction
     void htmlMimeTypeRendersBodyAsMarkup() {
@@ -195,7 +204,10 @@ class EditMessageTemplatesViewTest extends QuarkusBrowserlessTest {
         mimeTypeField().setValue("text/html");
         bodyField().setValue("<b>hello</b>");
 
-        assertEquals("<b>hello</b>", previewContent().getElement().getProperty("innerHTML"));
+        IFrame frame = find(IFrame.class, view).single();
+        assertEquals("", frame.getElement().getAttribute("sandbox"));
+        assertEquals(EditMessageTemplatesView.PREVIEW_DOCUMENT_HEAD + "<b>hello</b>" + EditMessageTemplatesView.PREVIEW_DOCUMENT_TAIL,
+                frame.getSrcdoc().orElseThrow());
     }
 
     /** UC-007: Save is disabled while the subject is blank, and enables once the form is valid. */
@@ -207,11 +219,11 @@ class EditMessageTemplatesViewTest extends QuarkusBrowserlessTest {
 
         departmentField().setValue(department);
         subjectField().setValue("");
-        assertFalse(buttonLabeled("Save").isEnabled());
+        assertFalse(buttonLabeled("common.save").isEnabled());
 
         subjectField().setValue("A Subject");
         bodyField().setValue("A body");
-        assertTrue(buttonLabeled("Save").isEnabled());
+        assertTrue(buttonLabeled("common.save").isEnabled());
     }
 
     /** UC-007: saving a new template in create mode persists it and returns to the list route. */
@@ -225,7 +237,7 @@ class EditMessageTemplatesViewTest extends QuarkusBrowserlessTest {
         subjectField().setValue("New UC-007 Subject");
         bodyField().setValue("New UC-007 body");
 
-        buttonLabeled("Save").click();
+        buttonLabeled("common.save").click();
 
         MessageTemplate saved = MessageTemplate.find("subject", "New UC-007 Subject").firstResult();
         assertTrue(saved != null && "New UC-007 body".equals(saved.message));
@@ -247,7 +259,7 @@ class EditMessageTemplatesViewTest extends QuarkusBrowserlessTest {
         enterMode(String.valueOf(template.id));
         subjectField().setValue("After Update");
 
-        buttonLabeled("Update").click();
+        buttonLabeled("editMessageTemplatesView.btnUpdate").click();
 
         MessageTemplate updated = MessageTemplate.findById(template.id);
         assertEquals("After Update", updated.subject);

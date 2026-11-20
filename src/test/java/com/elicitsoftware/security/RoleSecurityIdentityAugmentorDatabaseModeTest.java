@@ -24,6 +24,7 @@ import io.smallrye.mutiny.Uni;
 import jakarta.inject.Inject;
 import org.junit.jupiter.api.Test;
 
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
@@ -37,10 +38,9 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  *
  * <p><strong>2026-09 audit finding #6:</strong> this test previously exercised the augmentor
  * indirectly through the (formerly public) {@code GET /api/secured/roles} diagnostic endpoint.
- * That endpoint is now restricted to {@code elicit_admin}; a plain {@code elicit_user} grant
- * (as in {@link #userGrantExpandsToUserAndImporterOnly()}) correctly gets 403 at the HTTP layer
- * before the augmented-roles check the original assertions relied on. The augmentor is invoked
- * directly here instead - a cleaner test that doesn't couple identity augmentation to an
+ * That endpoint was first restricted to {@code elicit_admin} and has since been removed; the
+ * OIDC diagnostics view (UC-009) shows the same identity to an administrator. The augmentor is
+ * invoked directly here instead - a cleaner test that doesn't couple identity augmentation to an
  * unrelated REST resource's authorization policy.</p>
  */
 @QuarkusTest
@@ -68,12 +68,12 @@ class RoleSecurityIdentityAugmentorDatabaseModeTest {
 
         assertTrue(augmented.getRoles().contains("elicit_admin"));
         assertTrue(augmented.getRoles().contains("elicit_user"));
-        assertTrue(augmented.getRoles().contains("elicit_importer"));
+        assertFalse(augmented.getRoles().contains("elicit_importer"), "BR-006: no user role implies elicit_importer");
     }
 
-    /** UC-001/A3/BR-006: a raw elicit_user database grant expands to user + importer only. */
+    /** UC-001/A3/BR-006: a raw elicit_user database grant stays elicit_user only. */
     @Test
-    void userGrantExpandsToUserAndImporterOnly() {
+    void userGrantExpandsToUserOnly() {
         SecurityIdentity noRoleIdentity = QuarkusSecurityIdentity.builder()
                 .setPrincipal(new QuarkusPrincipal("user"))
                 .build();
@@ -82,6 +82,7 @@ class RoleSecurityIdentityAugmentorDatabaseModeTest {
                 .await().indefinitely();
 
         assertTrue(augmented.getRoles().contains("elicit_user"));
-        assertTrue(augmented.getRoles().contains("elicit_importer"));
+        assertFalse(augmented.getRoles().contains("elicit_admin"));
+        assertFalse(augmented.getRoles().contains("elicit_importer"));
     }
 }

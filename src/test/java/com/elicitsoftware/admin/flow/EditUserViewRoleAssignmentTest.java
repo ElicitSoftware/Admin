@@ -19,6 +19,7 @@ import com.vaadin.browserless.quarkus.QuarkusBrowserlessTest;
 import com.vaadin.flow.component.UI;
 import com.vaadin.flow.component.button.Button;
 import com.vaadin.flow.component.combobox.ComboBox;
+import com.vaadin.flow.component.html.Paragraph;
 import com.vaadin.flow.component.textfield.TextField;
 import com.vaadin.flow.router.BeforeEnterEvent;
 import com.vaadin.flow.router.Location;
@@ -77,39 +78,42 @@ class EditUserViewRoleAssignmentTest extends QuarkusBrowserlessTest {
     @SuppressWarnings("unchecked")
     private ComboBox<String> roleBox() {
         return (ComboBox<String>) find(ComboBox.class, view).all().stream()
-                .filter(box -> "Role".equals(box.getLabel()))
+                .filter(box -> UI.getCurrent().getTranslation("editUserView.role").equals(box.getLabel()))
                 .findFirst()
                 .orElseThrow(() -> new AssertionError("No Role ComboBox"));
     }
 
-    private TextField field(String label) {
+    private TextField field(String labelKey) {
+        String label = UI.getCurrent().getTranslation(labelKey);
         return find(TextField.class, view).all().stream()
                 .filter(f -> label.equals(f.getLabel()))
                 .findFirst()
-                .orElseThrow(() -> new AssertionError("No TextField labelled '" + label + "'"));
+                .orElseThrow(() -> new AssertionError("No TextField labeled '" + label + "'"));
     }
 
     private Button saveButton() {
         return find(Button.class, view).all().stream()
-                .filter(b -> "Save".equals(b.getText()))
+                .filter(b -> UI.getCurrent().getTranslation("common.save").equals(b.getText()))
                 .findFirst()
                 .orElseThrow(() -> new AssertionError("No Save button"));
     }
 
-    /** UC-016: the role dropdown is visible and offers exactly the three recognized roles. */
+    /** UC-016 BR-054: the role dropdown is visible and offers the two roles a user can hold, not elicit_importer. */
     @Test
-    void roleDropdownVisibleAndOffersRecognizedRoles() {
+    void roleDropdownVisibleAndOffersTheRolesAUserCanHold() {
         ComboBox<String> roleBox = roleBox();
         assertTrue(roleBox.isVisible(), "Role dropdown must be visible when elicit.authorization.mode=DATABASE");
+        assertEquals(java.util.Set.of("elicit_admin", "elicit_user"),
+                roleBox.getListDataView().getItems().collect(java.util.stream.Collectors.toSet()));
     }
 
     /** UC-016: saving a new user with a role selected persists exactly one row in survey.user_roles. */
     @Test
     @TestTransaction
     void savingPersistsSelectedRole() {
-        field("Username").setValue("uc016.grant@example.org");
-        field("First Name").setValue("Grant");
-        field("Last Name").setValue("Test");
+        field("editUserView.username").setValue("uc016.grant@example.org");
+        field("editUserView.firstName").setValue("Grant");
+        field("editUserView.lastName").setValue("Test");
         roleBox().setValue("elicit_admin");
 
         saveButton().click();
@@ -130,28 +134,28 @@ class EditUserViewRoleAssignmentTest extends QuarkusBrowserlessTest {
     @Test
     @TestTransaction
     void changingSelectionReplacesGrant() {
-        field("Username").setValue("uc016.replace@example.org");
-        field("First Name").setValue("Replace");
-        field("Last Name").setValue("Test");
+        field("editUserView.username").setValue("uc016.replace@example.org");
+        field("editUserView.firstName").setValue("Replace");
+        field("editUserView.lastName").setValue("Test");
         roleBox().setValue("elicit_admin");
         saveButton().click();
 
-        roleBox().setValue("elicit_importer");
+        roleBox().setValue("elicit_user");
         saveButton().click();
 
         User saved = User.find("username", "uc016.replace@example.org").firstResult();
         assertEquals(1, UserRole.count("id.userId", saved.getId()));
         UserRole role = UserRole.<UserRole>list("id.userId", saved.getId()).get(0);
-        assertEquals("elicit_importer", role.getId().getRoleName());
+        assertEquals("elicit_user", role.getId().getRoleName());
     }
 
     /** UC-016: clearing the selection on a second save removes the grant entirely. */
     @Test
     @TestTransaction
     void clearingSelectionRemovesGrant() {
-        field("Username").setValue("uc016.clear@example.org");
-        field("First Name").setValue("Clear");
-        field("Last Name").setValue("Test");
+        field("editUserView.username").setValue("uc016.clear@example.org");
+        field("editUserView.firstName").setValue("Clear");
+        field("editUserView.lastName").setValue("Test");
         roleBox().setValue("elicit_user");
         saveButton().click();
 
@@ -160,5 +164,21 @@ class EditUserViewRoleAssignmentTest extends QuarkusBrowserlessTest {
 
         User saved = User.find("username", "uc016.clear@example.org").firstResult();
         assertEquals(0, UserRole.count("id.userId", saved.getId()));
+    }
+
+    /**
+     * UC-016 (#85): the role section's explanation is styled as a flush intro line by
+     * {@code components/view-text.css}. It used to ask for {@code LumoUtility.Margin.NONE} and
+     * {@code TextColor.SECONDARY}, which are inert in Admin, so the paragraph kept its native
+     * margin inside a section that deliberately sets spacing off.
+     */
+    @Test
+    void roleSectionInfoCarriesTheFlushIntroClass() {
+        Paragraph info = find(Paragraph.class, view).all().stream()
+                .filter(paragraph -> paragraph.getText().contains("database role"))
+                .findFirst()
+                .orElseThrow(() -> new AssertionError("No role-section explanation"));
+        assertTrue(info.getClassNames().contains("view-intro-flush"),
+                "the role-section explanation should carry view-intro-flush but had: " + info.getClassNames());
     }
 }

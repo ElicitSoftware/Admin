@@ -14,6 +14,8 @@ package com.elicitsoftware.service;
 import com.elicitsoftware.model.Department;
 import com.elicitsoftware.model.Status;
 import com.elicitsoftware.response.AddResponse;
+import com.elicitsoftware.rest.AccessCodeService;
+import com.elicitsoftware.test.DepartmentFixtures;
 import com.elicitsoftware.test.PostgresTestResource;
 import io.quarkus.test.TestTransaction;
 import io.quarkus.test.common.QuarkusTestResource;
@@ -25,6 +27,7 @@ import org.junit.jupiter.api.Test;
 import java.io.ByteArrayInputStream;
 import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
+import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
@@ -39,10 +42,10 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * best-practices audit: {@code CsvImportService} had zero test coverage.</p>
  *
  * <p>{@code importSubjects} delegates each row to the real, CDI-intercepted
- * {@link com.elicitsoftware.rest.TokenService#putSubject}, which is {@code @RolesAllowed}
- * ({@code elicit_importer}, {@code elicit_admin}, {@code elicit_user}) — that check applies to
- * this direct bean-to-bean call just as it would to an HTTP request, so every test method needs
- * {@code @TestSecurity} with one of those roles.</p>
+ * {@link AccessCodeService#registerSubject}, which carries no role of its own: the API's
+ * {@code elicit_importer} check is made at the endpoint (UC-010 BR-034), and the Register page's
+ * upload reaches the same method under a user's role (UC-003 A6). The department rule is asked
+ * for each row either way, so every test runs as an import client assigned to its department.</p>
  */
 @QuarkusTest
 @QuarkusTestResource(PostgresTestResource.class)
@@ -60,6 +63,10 @@ class CsvImportServiceTest {
         department.defaultMessageId = "1";
         department.fromEmail = "csv-import@example.org";
         department.persist();
+        // UC-010 BR-137: an import client registers only where its record is assigned.
+        DepartmentFixtures.assignImportClient("importer", department);
+        // UC-006 BR-172: it registers onto the seeded survey, which every row below names.
+        DepartmentFixtures.offer(department, DepartmentFixtures.SEEDED_SURVEY);
         return department;
     }
 
@@ -74,8 +81,8 @@ class CsvImportServiceTest {
     void importSubjectsSucceedsForWellFormedCsv() throws Exception {
         Department dept = persistDepartment("WELLFORMED");
         String csv = String.join("\n",
-                dept.id + ",Alice,Anderson,,1990-01-01,alice@example.org,555-010-0100,CSV-XID-1",
-                dept.id + ",Bob,Baker,,02/15/1985,bob@example.org,555-010-0101,CSV-XID-2");
+                "1," + dept.id + ",CSV-XID-1,Alice,Anderson,,1990-01-01,alice@example.org,555-010-0100",
+                "1," + dept.id + ",CSV-XID-2,Bob,Baker,,02/15/1985,bob@example.org,555-010-0101");
 
         AddResponse response = csvImportService.importSubjects(toStream(csv));
 
@@ -91,12 +98,12 @@ class CsvImportServiceTest {
     void importSubjectsSkipsCommentsAndBlankLines() throws Exception {
         Department dept = persistDepartment("COMMENTS");
         String csv = String.join("\n",
-                "# departmentId,firstName,lastName,middleName,dob,email,phone,xid",
+                "# surveyId,departmentId,xid,firstName,lastName,middleName,dob,email,phone",
                 "",
-                dept.id + ",Carla,Cruz,,1992-03-04,carla@example.org,555-010-0102,CSV-XID-3",
+                "1," + dept.id + ",CSV-XID-3,Carla,Cruz,,1992-03-04,carla@example.org,555-010-0102",
                 "   ",
                 "# another comment",
-                dept.id + ",Dan,Diaz,,1988-07-22,dan@example.org,555-010-0103,CSV-XID-4");
+                "1," + dept.id + ",CSV-XID-4,Dan,Diaz,,1988-07-22,dan@example.org,555-010-0103");
 
         AddResponse response = csvImportService.importSubjects(toStream(csv));
 
@@ -117,12 +124,17 @@ class CsvImportServiceTest {
     void importSubjectsThrowsForLineErrorsButPersistsValidRows() {
         Department dept = persistDepartment("PARTIAL");
         String csv = String.join("\n",
-                dept.id + ",Erin,Evans,,1991-05-05,erin@example.org,555-010-0104,CSV-XID-5",
-                dept.id + ",NoLastName,,,1991-05-05,,555-010-0105,CSV-XID-6");
+                "1," + dept.id + ",CSV-XID-5,Erin,Evans,,1991-05-05,erin@example.org,555-010-0104",
+                "1," + dept.id + ",CSV-XID-6,NoLastName,,,1991-05-05,,555-010-0105");
 
-        Exception ex = assertThrows(Exception.class, () -> csvImportService.importSubjects(toStream(csv)));
+        CsvImportException ex = assertThrows(CsvImportException.class,
+                () -> csvImportService.importSubjects(toStream(csv)));
 
         assertTrue(ex.getMessage().contains("Line 2: Last name is required"), ex.getMessage());
+        // The failures are carried as a list as well, so RegisterView can lay each one out as its
+        // own element (#85), while the joined message the REST path answers with is unchanged.
+        assertEquals(List.of("Line 2: Last name is required"), ex.getLineErrors());
+        assertEquals("Import completed with errors:\nLine 2: Last name is required", ex.getMessage());
         assertNotNull(Status.findByXidAndDepartmentId("CSV-XID-5", (int) dept.id),
                 "the valid row before the bad line should still have been committed");
     }
@@ -137,7 +149,7 @@ class CsvImportServiceTest {
     @TestSecurity(user = "importer", roles = {"elicit_importer"})
     void importSubjectsHandlesQuotedFieldsWithEmbeddedCommas() throws Exception {
         Department dept = persistDepartment("QUOTED");
-        String csv = dept.id + ",Frank,Foster,\"Middle, Q\",1980-12-25,frank@example.org,555-010-0106,CSV-XID-7";
+        String csv = "1," + dept.id + ",CSV-XID-7,Frank,Foster,\"Middle, Q\",1980-12-25,frank@example.org,555-010-0106";
 
         AddResponse response = csvImportService.importSubjects(toStream(csv));
 

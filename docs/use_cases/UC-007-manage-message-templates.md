@@ -18,7 +18,7 @@
 1. The administrator opens the message templates view and sees existing templates with their department, subject line, and content type.
 2. The administrator chooses to create a new template or edit an existing one.
 3. The administrator selects the content type and department, and enters the subject line and body.
-4. The system shows a live preview of the rendered body as the administrator edits.
+4. The system shows a live preview of the rendered body as the administrator edits (BR-141).
 5. The administrator saves.
 6. The system validates the values and stores the template, then returns to the list.
 
@@ -54,6 +54,14 @@ A template's content type must be one of the supported values: HTML or plain tex
 ### BR-028: Department-scoped authoring
 
 The department chosen for a template is limited to the departments the authoring administrator is affiliated with.
+
+### BR-079: Access code placeholder
+
+A template body may contain the placeholder `<ACCESS_CODE>`, which is replaced with the subject's survey access code when the message is built or sent (UC-004, BR-015). Use it to build the subject's personal login link, e.g. `https://survey.example.org/login/<ACCESS_CODE>`.
+
+### BR-141: The preview is inert
+
+An HTML body is previewed in an isolated frame in which scripts, forms, navigation and plugins are disabled and from which nothing but images and inline styles is loaded, so the preview shows the message as a mail client would and nothing in a template body can act on the console. A plain-text body is shown literally. The frame is a Vaadin component (C-010).
 
 ---
 

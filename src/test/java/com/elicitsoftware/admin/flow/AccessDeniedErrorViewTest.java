@@ -52,7 +52,7 @@ class AccessDeniedErrorViewTest extends QuarkusBrowserlessTest {
         UI.getCurrent().add(view);
 
         H1 heading = find(H1.class, view).single();
-        assertEquals("Access Restricted", heading.getText());
+        assertEquals(view.getTranslation("unauthorizedView.title"), heading.getText());
     }
 
     /** The view remains reachable independent of any @RolesAllowed annotation. */

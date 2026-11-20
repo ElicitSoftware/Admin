@@ -49,7 +49,7 @@ class StatusTest {
         status.setPhone("555-123-4567");
         status.setDepartmentName("Cardiology");
         status.setDepartmentId(4L);
-        status.setToken("tok-1");
+        status.setAccessCode("tok-1");
         status.setStatus("In Progress");
         status.setCreatedDt(createdDt);
         status.setFinalizedDt(finalizedDt);
@@ -66,7 +66,7 @@ class StatusTest {
         assertEquals("555-123-4567", status.getPhone());
         assertEquals("Cardiology", status.getDepartmentName());
         assertEquals(4L, status.getDepartmentId());
-        assertEquals("tok-1", status.getToken());
+        assertEquals("tok-1", status.getAccessCode());
         assertEquals("In Progress", status.getStatus());
         assertEquals(createdDt, status.getCreatedDt());
         assertEquals(finalizedDt, status.getFinalizedDt());
@@ -82,11 +82,11 @@ class StatusTest {
     }
 
     @Test
-    void toStringIncludesStatusTokenAndFormattedDate() {
+    void toStringIncludesStatusAccessCodeAndFormattedDate() {
         Status status = new Status();
         Date createdDt = new Date(1_700_000_000_000L);
         status.setStatus("Finished");
-        status.setToken("tok-2");
+        status.setAccessCode("tok-2");
         status.setCreatedDt(createdDt);
 
         String result = status.toString();

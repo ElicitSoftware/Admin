@@ -47,17 +47,15 @@ class EntityIdentityTest {
         assertNotEquals(a, "not a department", "a Department is never equal to a different type");
     }
 
-    /** Department's code/fromEmail/notificationEmails accessors round-trip the field values. */
+    /** Department's code/fromEmail accessors round-trip the field values. */
     @Test
     void departmentSecondaryFieldAccessorsRoundTrip() {
         Department department = new Department();
         department.setCode("CARD");
         department.setFromEmail("noreply@example.org");
-        department.setNotificationEmails("a@example.org,b@example.org");
 
         assertEquals("CARD", department.getCode());
         assertEquals("noreply@example.org", department.getFromEmail());
-        assertEquals("a@example.org,b@example.org", department.getNotificationEmails());
     }
 
     /** #3: Departments with different ids are not equal. */

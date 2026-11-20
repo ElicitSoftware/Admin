@@ -6,9 +6,9 @@ This model is recovered from the Flyway migrations under
 
 Elicit Admin is one module of a multi-module platform. Some entities are
 **owned** by the Admin module (created by its migrations: departments, subjects,
-messages, message types, message templates, users, user roles, and the
-user/department and user/survey associations). Others — **SURVEY**,
-**RESPONDENT**, **REPORT_DEFINITION**, **POST_SURVEY_ACTION**, and
+messages, message types, message templates, users, user roles, import clients, and the
+user/department, user/survey and import client/department associations). Others — **SURVEY**,
+**RESPONDENT**, **REPORT_DEFINITION**, **REPORT_ITEM**, **POST_SURVEY_ACTION**, and
 **EXCLUDED_XID** — are owned by sibling modules (Authoring / Survey) but are
 mapped here as JPA entities because Admin reads and, in some flows, writes them.
 Owned-elsewhere entities are noted in their descriptions.
@@ -33,6 +33,7 @@ erDiagram
     MESSAGE_TYPE ||--o{ MESSAGE_TEMPLATE : classifies
 
     SURVEY ||--o{ REPORT_DEFINITION : defines
+    SURVEY ||--o{ REPORT_ITEM : marks
     SURVEY ||--o{ POST_SURVEY_ACTION : defines
 
     DEPARTMENT ||--o{ EXCLUDED_XID : excludes
@@ -40,6 +41,8 @@ erDiagram
     USER ||--o{ USER_ROLE : granted
     USER }o--o{ DEPARTMENT : affiliated_with
     USER }o--o{ SURVEY : assigned_to
+    IMPORT_CLIENT }o--o{ DEPARTMENT : registers_into
+    DEPARTMENT }o--o{ SURVEY : registers_onto
 ```
 
 ## Entities
@@ -54,8 +57,12 @@ An organizational unit that owns subjects, defines outbound-email identity, and 
 | name                 | Department name                                                      | String    | 255              | Not Null, Unique              |
 | code                 | Short department code                                                | String    | 100              | Optional, Unique              |
 | defaultMessageId     | Comma-separated template IDs to send when a subject is registered    | String    | 100              | Not Null                      |
-| notificationEmails   | Addresses notified when a respondent finishes                        | String    | 2000             | Optional                      |
 | fromEmail            | Sender address for the department's outbound email                   | String    | 50               | Not Null, Format: Email       |
+
+A department has no notification addresses. The `notification_emails` column (V0.0.1) was
+never read, sent to, or shown on the department form, and no requirement asks for a
+notification when a respondent finishes; V0.0.28 drops it (#221). Any addresses a site
+entered by hand are discarded with it.
 
 ### SUBJECT
 
@@ -78,31 +85,36 @@ A person registered to take a survey, associated with a department and linked to
 
 ### RESPONDENT
 
-*Owned by the Survey module.* The record that carries a subject's survey access token and tracks access/finalization timestamps used to derive progress.
+*Owned by the Survey module.* The record that carries a subject's survey access code and tracks access/finalization timestamps used to derive progress.
 
 | Attribute     | Description                                | Data Type | Length/Precision | Validation Rules                    |
 |---------------|--------------------------------------------|-----------|------------------|-------------------------------------|
 | id            | Unique identifier                          | Long      |                  | Primary Key, Sequence               |
 | surveyId      | Survey this respondent belongs to          | Long      |                  | Not Null, Foreign Key (surveys.id)  |
-| token         | Survey access token                        | String    |                  | Not Null; Unique per Survey         |
+| access_code   | Survey access code                         | String    |                  | Not Null; Unique per Survey         |
 | active        | Whether the respondent is active           | Boolean   |                  | Not Null                            |
 | createdDt     | Creation timestamp                         | DateTime  |                  | Optional                            |
 | firstAccessDt | When the survey was first accessed         | DateTime  |                  | Optional                            |
 | finalizedDt   | When the survey was finalized              | DateTime  |                  | Optional                            |
+| lastActivityDt | When the respondent last rendered a page or saved an answer (Survey UC-012 BR-004); carried by the respondent export and import (UC-011, UC-012) | DateTime | | Optional |
 
 ### SURVEY
 
-*Owned by the Authoring module.* A survey definition subjects are registered against; parent of its report definitions and post-survey actions.
+*Owned by the Authoring module.* A survey definition subjects are registered against; parent of its report definitions and post-survey actions. `publishedBy`/`publishedComment` are the survey's own Kimball Type 1 columns, updated in place (UC-017 BR-064); its structural children (select groups/items, steps, sections, questions, relationships) carry full Type 2 versioning instead. `surveyKey` gives the survey itself a stable identity across separate deployments (UC-017); every other survey-definition table (Type 2 or not — including reports, post-survey actions, dimensions, ontology, and metadata) carries its own analogous `element_key` for the same reason. Adding these required cross-module coordination with Authoring (C-008).
 
 | Attribute         | Description                                    | Data Type | Length/Precision | Validation Rules      |
 |-------------------|------------------------------------------------|-----------|------------------|-----------------------|
 | id                | Unique identifier                              | Long      |                  | Primary Key, Sequence |
+| surveyKey         | Stable identifier for this authored survey, portable and identical across every instance it is deployed to (e.g., separate institutions); assigned once and never reassigned | String (UUID) | 36               | Not Null, Unique, Immutable |
 | displayOrder      | Ordering position among surveys                | Integer   | 3                | Not Null              |
 | name              | Internal survey name                           | String    |                  | Optional              |
 | title             | Display title                                  | String    |                  | Optional              |
 | description       | Description                                    | String    |                  | Optional              |
 | initialDisplayKey | Key of the first item to display               | String    |                  | Optional              |
 | postSurveyURL     | URL to redirect to after completion            | String    |                  | Optional              |
+| publishedBy       | Who last published/updated the survey shell   | String    |                  | Optional              |
+| publishedComment  | Comment recorded with the last publish/update  | String    |                  | Optional              |
+| reportSchema      | Name of this survey's own reporting schema at this site (Survey UC-008 BR-006); assigned by Survey's first build, changed by UC-030, null until built. Read-only here: Survey's ETL is the only writer. Site-local, never carried in a definition file | String    | 63               | Optional, Unique |
 
 ### MESSAGE
 
@@ -160,9 +172,20 @@ A role granted to a user. Serves as the database fallback when the identity prov
 | Attribute | Description                     | Data Type | Length/Precision | Validation Rules                    |
 |-----------|---------------------------------|-----------|------------------|-------------------------------------|
 | userId    | User the role is granted to     | Long      |                  | Not Null, Foreign Key (users.id)    |
-| roleName  | Granted role name               | String    | 100              | Not Null, Check: one of `elicit_admin`, `elicit_user`, `elicit_importer` |
+| roleName  | Granted role name               | String    | 100              | Not Null, Check: one of `elicit_admin`, `elicit_user` |
 
 *Primary key is the composite of userId and roleName.*
+
+### IMPORT_CLIENT
+
+A machine client of the registration API (UC-010), matched to a bearer token by its principal name and assigned the departments it may register into (UC-032). It is not a user: it has no first or last name, holds no row in USER_ROLE and gives no access to the console.
+
+| Attribute   | Description                                              | Data Type | Length/Precision | Validation Rules      |
+|-------------|----------------------------------------------------------|-----------|------------------|-----------------------|
+| id          | Unique identifier                                        | Long      |                  | Primary Key, Sequence |
+| name        | Principal name the client's tokens carry                 | String    | 100              | Not Null, Unique; not the username of a USER (BR-166) |
+| description | What the client is, for the administrator                | String    | 255              | Optional              |
+| active      | Whether the client may register                          | Boolean   |                  | Not Null              |
 
 ### EXCLUDED_XID
 
@@ -190,6 +213,22 @@ A role granted to a user. Serves as the database fallback when the identity prov
 | url          | Report service endpoint        | String    |                  | Optional                           |
 | displayOrder | Ordering position              | Integer   |                  | Optional                           |
 
+### REPORT_ITEM
+
+*Owned by the Survey module (Survey V023, UC-013); authored in Author.* A mark of what one of a survey's default reports shows: one durable element — a question, a question placement or a section placement — for the `RESPONDENT` report or the `ADMINISTRATOR` report. The console installs, updates and removes marks with the survey definition (UC-014 BR-112, UC-017 BR-113) and reads the `ADMINISTRATOR` ones on the Participation page (UC-031 BR-123). Not mapped as an entity: both paths use native SQL.
+
+| Attribute          | Description                                                  | Data Type | Length/Precision | Validation Rules                                   |
+|--------------------|--------------------------------------------------------------|-----------|------------------|----------------------------------------------------|
+| id                 | Unique identifier                                            | Integer   |                  | Primary Key, Sequence (`report_items_seq`)         |
+| surveyId           | Survey the mark belongs to                                   | Integer   |                  | Not Null, Foreign Key (surveys.id)                 |
+| reportItemKey      | Cross-instance identity, matched by the update path          | UUID      |                  | Not Null, Unique                                   |
+| reportType         | Which report the mark is for                                 | String    | 13               | Not Null; `RESPONDENT` or `ADMINISTRATOR`          |
+| stepsSectionsId    | Durable id of a section placement                            | Integer   |                  | Exactly one of the three element ids is set        |
+| questionId         | Durable id of a question                                     | Integer   |                  | Exactly one of the three element ids is set        |
+| sectionsQuestionId | Durable id of a question placement                           | Integer   |                  | Exactly one of the three element ids is set        |
+| label              | Text shown on the report instead of the element's own        | String    | 255              | Optional                                           |
+| displayOrder       | Order of the mark within its report                          | Integer   |                  | Not Null, default 0                                |
+
 ### POST_SURVEY_ACTION
 
 *Owned by the Authoring module.* An action to run after a survey is completed, ordered within its survey.
@@ -209,6 +248,14 @@ A role granted to a user. Serves as the database fallback when the identity prov
 
 Join table linking users to the departments they are affiliated with. Composite key of `user_id` (FK → users.id) and `department_id` (FK → departments.id).
 
+### IMPORT_CLIENT_DEPARTMENTS
+
+Join table linking import clients to the departments they may register into. Composite key of `import_client_id` (FK → import_clients.id) and `department_id` (FK → departments.id). Its rows are removed with the import client.
+
+### DEPARTMENT_SURVEYS
+
+Join table linking departments to the surveys their subjects may be registered onto (UC-006 BR-172). Composite key of `department_id` (FK → departments.id) and `survey_id` (FK → surveys.id). Its rows are removed with the department or the survey. Edited on the department screen; read by every registration path (UC-003, UC-010).
+
 ### USER_SURVEYS
 
 Join table linking users to the surveys they are assigned to. Composite key of `user_id` (FK → users.id) and `survey_id` (FK → surveys.id). Present in the data model but not edited through the current admin screens.
@@ -217,4 +264,4 @@ Join table linking users to the surveys they are assigned to. Composite key of `
 
 ### STATUS (view)
 
-A database view joining `respondents`, `subjects`, and `departments` to expose each subject's demographics, token, department, and a derived progress status (`Not Started`, `In Progress`, `Finished`) based on the respondent's first-access and finalized timestamps. Backs the search/monitoring view (UC-002); read-only.
+A database view joining `respondents`, `subjects`, and `departments` to expose each subject's demographics, access code, department, and a derived progress status (`Not Started`, `In Progress`, `Finished`) based on the respondent's first-access and finalized timestamps. Backs the search/monitoring view (UC-002); read-only.

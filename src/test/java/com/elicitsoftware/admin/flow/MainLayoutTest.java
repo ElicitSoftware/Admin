@@ -24,6 +24,8 @@ import io.quarkus.test.security.TestSecurity;
 import jakarta.enterprise.inject.spi.CDI;
 import org.junit.jupiter.api.Test;
 
+import java.util.List;
+
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -66,11 +68,23 @@ class MainLayoutTest extends QuarkusBrowserlessTest {
 
         MainLayout layout = attachLayout();
 
-        assertTrue(hasNavItem(layout, "Search Subjects"));
-        assertTrue(hasNavItem(layout, "Register Subjects"));
-        assertTrue(hasNavItem(layout, "Admin"), "an admin should see the Admin section");
-        assertTrue(hasNavItem(layout, "Import Respondent"), "an admin should see Import Respondent");
-        assertTrue(hasNavItem(layout, "Logout"));
+        assertTrue(hasNavItem(layout, layout.getTranslation("mainLayout.nav.searchSubjects")));
+        assertTrue(hasNavItem(layout, layout.getTranslation("mainLayout.nav.registerSubjects")));
+        assertTrue(hasNavItem(layout, layout.getTranslation("mainLayout.nav.admin")), "an admin should see the Admin section");
+        assertTrue(hasNavItem(layout, layout.getTranslation("mainLayout.nav.importRespondent")), "an admin should see Import Respondent");
+        assertTrue(hasNavItem(layout, layout.getTranslation("mainLayout.nav.importClients")), "UC-032: an admin should see Import Clients");
+        assertTrue(hasNavItem(layout, layout.getTranslation("mainLayout.nav.applySurveyDefinition")), "an admin should see Apply Survey Definition");
+        assertTrue(hasNavItem(layout, layout.getTranslation("mainLayout.nav.exportSurveyDefinition")), "an admin should see Export Survey Definition");
+        // UC-020..UC-025 and FR-026: the System section and its six entries.
+        assertTrue(hasNavItem(layout, layout.getTranslation("mainLayout.nav.system")), "an admin should see the System section");
+        for (String entry : List.of("systemOverview", "systemDatabase", "systemBranding", "systemEmail", "systemConnections", "systemOidc")) {
+            assertTrue(hasNavItem(layout, layout.getTranslation("mainLayout.nav." + entry)), "an admin should see System > " + entry);
+        }
+        // UC-029 BR-006: the manual is offered to both console roles, so it sits outside the
+        // administrator-only sections asserted above.
+        assertTrue(hasNavItem(layout, layout.getTranslation("mainLayout.nav.manual")),
+                "an admin should be offered the manual (UC-029)");
+        assertTrue(hasNavItem(layout, layout.getTranslation("mainLayout.nav.logout")));
     }
 
     /** UC-001: an authenticated non-admin does not see the Admin section. */
@@ -85,9 +99,18 @@ class MainLayoutTest extends QuarkusBrowserlessTest {
 
         MainLayout layout = attachLayout();
 
-        assertTrue(hasNavItem(layout, "Search Subjects"));
-        assertFalse(hasNavItem(layout, "Admin"), "a non-admin must not see the Admin section");
-        assertFalse(hasNavItem(layout, "Import Respondent"), "a non-admin must not see Import Respondent");
+        assertTrue(hasNavItem(layout, layout.getTranslation("mainLayout.nav.searchSubjects")));
+        assertFalse(hasNavItem(layout, layout.getTranslation("mainLayout.nav.admin")), "a non-admin must not see the Admin section");
+        assertFalse(hasNavItem(layout, layout.getTranslation("mainLayout.nav.system")), "a non-admin must not see the System section");
+        assertFalse(hasNavItem(layout, layout.getTranslation("mainLayout.nav.systemOidc")), "a non-admin must not see System > OIDC");
+        assertFalse(hasNavItem(layout, layout.getTranslation("mainLayout.nav.importRespondent")), "a non-admin must not see Import Respondent");
+        assertFalse(hasNavItem(layout, layout.getTranslation("mainLayout.nav.importClients")), "UC-032 A5: a non-admin must not see Import Clients");
+        assertFalse(hasNavItem(layout, layout.getTranslation("mainLayout.nav.exportSurveyDefinition")),
+                "a non-admin must not see Export Survey Definition");
+        // UC-029 BR-006: one manual serves both roles -- this is the entry that must NOT follow
+        // the Admin section out of the drawer.
+        assertTrue(hasNavItem(layout, layout.getTranslation("mainLayout.nav.manual")),
+                "a non-admin should still be offered the manual (UC-029 BR-006)");
     }
 
     /** UC-001 A1: with no user in the session, the drawer falls back to a Logout-only nav. */
@@ -98,9 +121,9 @@ class MainLayoutTest extends QuarkusBrowserlessTest {
 
         MainLayout layout = attachLayout();
 
-        assertFalse(hasNavItem(layout, "Search Subjects"),
+        assertFalse(hasNavItem(layout, layout.getTranslation("mainLayout.nav.searchSubjects")),
                 "with no session user, the full nav must not be built");
-        assertTrue(hasNavItem(layout, "Logout"));
+        assertTrue(hasNavItem(layout, layout.getTranslation("mainLayout.nav.logout")));
         // Exactly one item (Logout) in the fallback nav.
         SideNav nav = find(SideNav.class, layout).single();
         assertTrue(find(SideNavItem.class, nav).all().size() == 1);

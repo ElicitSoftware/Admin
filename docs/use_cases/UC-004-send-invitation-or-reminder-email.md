@@ -19,8 +19,8 @@
 
 1. The user selects a subject and chooses to send an email.
 2. The system looks up the department's default message templates.
-3. The system builds each message, substituting the subject's access token into the message body.
-4. The system sends the message to the subject's email address from the department's configured sender address.
+3. The system builds each message, substituting the subject's access code into the message body.
+4. The system sends the message to the subject's email address from the department's sender address (BR-180).
 5. The system confirms the email was sent.
 
 ## Alternative Flows
@@ -39,7 +39,7 @@
 **Trigger:** The mail server rejects the message or is unreachable (step 4 or A1).
 **Flow:**
 
-1. The system reports the failure to the user (manual send) or logs it and leaves the message unsent for retry (scheduled send).
+1. The system reports the failure to the user (manual send) or logs it and leaves the message unsent for retry (scheduled send). An unexpected failure of a manual send is reported with a reference the log carries with its cause; the cause itself is not shown (NFR-023).
 
 ### A3: Subject has no email
 
@@ -60,9 +60,9 @@
 
 ## Business Rules
 
-### BR-015: Token embedded in message body
+### BR-015: Access code embedded in message body
 
-Each message body has the subject's survey access token substituted in before sending.
+Each message body has the subject's survey access code substituted for the `<ACCESS_CODE>` placeholder before sending. A missing access code is substituted as empty text. The former `<TOKEN>` placeholder is no longer recognized and is left in the body as literal text.
 
 ### BR-016: Scheduled send batch limit
 
@@ -76,8 +76,18 @@ A message is only sent if the subject has an email address; otherwise it is skip
 
 A message is sent as HTML or plain text according to its declared MIME type.
 
+### BR-180: The department is the sender
+
+Every invitation and reminder is sent from the From email of the subject's department, the
+address the department form asks for (UC-006 BR-025). The site's sender address
+(`quarkus.mailer.from`) is used only when the department cannot be found or its address is
+blank. The relay must accept each department's address as a sender, and its domain must allow
+the relay to send for it (SPF, DKIM, DMARC); otherwise the relay may refuse the message (A2) or
+the recipient's server may mark it as spam.
+
 ---
 
 ## Reference
 
-Derived from `EmailService`, `Message`, `MessageTemplate`, `Department`, and `Status`.
+Derived from `EmailService`, `Message`, `MessageTemplate`, `Department`, and `Status`. The sender
+of BR-180 is chosen by `EmailService.senderFor`; verified by `EmailServiceUnitTest`.

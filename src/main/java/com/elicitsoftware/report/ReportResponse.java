@@ -57,7 +57,6 @@ import com.elicitsoftware.report.pdf.PDFDocument;
  * @see ReportRequest
  * @see PDFDocument
  * @see com.elicitsoftware.report.PDFService
- * @since 1.0.0
  */
 public class ReportResponse {
     /**

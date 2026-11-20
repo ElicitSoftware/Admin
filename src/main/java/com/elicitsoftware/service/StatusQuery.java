@@ -28,14 +28,12 @@ import java.util.Map;
  * {@link StatusDataSource#fetch(StatusQuery, int, int)} and {@link StatusDataSource#count(StatusQuery)}.</p>
  *
  * @param whereClause a Panache short-form {@code WHERE} fragment (without the {@code WHERE}
- *                    keyword), e.g. {@code "departmentId in :departments and lower(token) like :token"};
+ *                    keyword), e.g. {@code "departmentId in :departments and lower(accessCode) like :accessCode"};
  *                    referenced values must all appear as named parameters
  * @param params      the named parameter values referenced by {@link #whereClause()}; never
  *                    {@code null} (use an empty map for parameter-free queries)
  * @param sort        the ordering to apply, or {@code null} for the persistence default
  * @author Elicit Software
- * @version 1.0
- * @since 1.0
  * @see StatusDataSource
  */
 public record StatusQuery(String whereClause, Map<String, Object> params, Sort sort) {

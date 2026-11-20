@@ -7,7 +7,7 @@
 
 Elicit Admin is the administrative module of the
 [Elicit Software](https://github.com/ElicitSoftware/) platform. It lets staff
-administer surveys end-to-end: upload subjects, generate tokenized invitations,
+administer surveys end-to-end: upload subjects, generate invitations carrying each subject's access code,
 monitor respondent progress, send reminder emails, and view results. It is the
 operational counterpart to the respondent-facing Survey module and the
 Authoring tool.
@@ -15,7 +15,7 @@ Authoring tool.
 ## Target Users
 
 - **Survey administrators** — staff who register subjects, generate invitation
-  tokens, dispatch and re-send invitation/reminder emails, and monitor
+  access codes, dispatch and re-send invitation/reminder emails, and monitor
   completion across a study.
 - **Researchers / clinicians** — consumers who review results and derived
   reports produced from respondent submissions.
@@ -24,10 +24,13 @@ Authoring tool.
 
 ## Goals
 
-- Bulk-register subjects and generate per-subject invitation tokens.
+- Bulk-register subjects and generate per-subject invitation access codes.
 - Track and display each subject's progress through their survey.
 - Send invitation and reminder emails to subjects.
 - Present results and reports to authorized staff.
+- Present the console itself in each staff member's language (browser or on-page
+  choice), including right-to-left layout, with translations a deployment can
+  mount without rebuilding.
 - Enforce role-based access via an OIDC provider (Keycloak in test; any
   OIDC-compliant server in production).
 - Operate as a Quarkus service deployable via Docker with health, metrics, and
@@ -36,7 +39,7 @@ Authoring tool.
 ## Scope
 
 **In scope**
-- Subject upload/registration and token generation.
+- Subject upload/registration and access code generation.
 - Progress monitoring dashboards over the shared survey database.
 - Reminder / invitation email workflows.
 - Results and report viewing for authorized roles.
@@ -53,9 +56,9 @@ Authoring tool.
 
 - **License:** PolyForm Noncommercial 1.0.0.
 - **Stack (do not deviate without explicit approval):**
-  - Java 21
-  - Quarkus 3.37.x
-  - Vaadin 25.2.x (Flow / server-side UI)
+  - Java 25
+  - Quarkus 3.40.x (LTS)
+  - Vaadin 25.3.x (Flow / server-side UI)
   - Hibernate ORM with Panache (JPA) — *not* jOOQ
   - PostgreSQL (Flyway migrations)
   - Maven build, Docker deploy

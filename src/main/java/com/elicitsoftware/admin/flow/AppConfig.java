@@ -21,7 +21,9 @@ import com.vaadin.flow.theme.aura.Aura;
 
 import org.eclipse.microprofile.config.inject.ConfigProperty;
 
+import com.elicitsoftware.admin.util.BrandUtil;
 import jakarta.annotation.PostConstruct;
+import jakarta.inject.Inject;
 import jakarta.enterprise.context.ApplicationScoped;
 import io.quarkus.runtime.Startup;
 import java.nio.file.Files;
@@ -76,6 +78,10 @@ public class AppConfig implements AppShellConfigurator {
     @ConfigProperty(name = "brand.local.path", defaultValue = "brand")
     String brandLocalPath;
 
+    /** Resolves the logo files the brand configuration names (umbrella UC-014 BR-008). */
+    @Inject
+    BrandUtil brandUtil;
+
     /**
      * The resolved brand path after initialization.
      */
@@ -121,26 +127,10 @@ public class AppConfig implements AppShellConfigurator {
         // Add brand information as HTML comment for debugging/identification
         addBrandInfoComment(settings);
 
-        // Favicon logic: Use Elicit favicon for default brand, allow external brands to override
-        boolean externalBrandMounted = Files.exists(Paths.get(getBrandPath()));
-
-        if (externalBrandMounted) {
-            // External brand is mounted - check favicon from brand config
-            String faviconPath = getFaviconPathFromBrand();
-
-            if (faviconPath != null) {
-                settings.addLink("shortcut icon", faviconPath);
-                settings.addFavIcon("icon", faviconPath, "32x32");
-            }
-        } else {
-            // No external brand mounted - check for embedded brand favicon
-            String faviconPath = getFaviconPathFromBrand();
-
-            if (faviconPath != null) {
-                settings.addLink("shortcut icon", faviconPath);
-                settings.addFavIcon("icon", faviconPath, "32x32");
-            }
-        }
+        // The favicon the brand configuration names, else the default brand's (umbrella UC-014 BR-008)
+        String faviconPath = brandUtil.getLogoUrl(BrandUtil.Logo.FAVICON);
+        settings.addLink("shortcut icon", faviconPath);
+        settings.addFavIcon("icon", faviconPath, "32x32");
 
         // Add brand CSS files in specific order - colors first, then typography, then theme
         // This ensures proper CSS cascade and avoids @import issues
@@ -148,7 +138,7 @@ public class AppConfig implements AppShellConfigurator {
         // 1. Load brand colors first (defines CSS variables)
         String brandColorsContent = loadBrandCssContent("colors/brand-colors.css");
         if (brandColorsContent != null) {
-            settings.addInlineWithContents(brandColorsContent, Inline.Wrapping.STYLESHEET);
+            settings.addInlineWithContents(withBrandUrls(brandColorsContent, "colors/brand-colors.css"), Inline.Wrapping.STYLESHEET);
         } else if (Files.exists(Paths.get(getLocalBrandPath(), "colors/brand-colors.css"))) {
             settings.addLink("stylesheet", "/api/brand/colors/brand-colors.css");
         }
@@ -156,7 +146,7 @@ public class AppConfig implements AppShellConfigurator {
         // 2. Load brand typography second (may depend on color variables)
         String brandTypographyContent = loadBrandCssContent("typography/brand-typography.css");
         if (brandTypographyContent != null) {
-            settings.addInlineWithContents(brandTypographyContent, Inline.Wrapping.STYLESHEET);
+            settings.addInlineWithContents(withBrandUrls(brandTypographyContent, "typography/brand-typography.css"), Inline.Wrapping.STYLESHEET);
         } else if (Files.exists(Paths.get(getLocalBrandPath(), "typography/brand-typography.css"))) {
             settings.addLink("stylesheet", "/api/brand/typography/brand-typography.css");
         }
@@ -165,7 +155,7 @@ public class AppConfig implements AppShellConfigurator {
         // Use inline loading for theme as well to avoid any @import issues
         String brandThemeContent = loadBrandCssContent("theme.css");
         if (brandThemeContent != null) {
-            settings.addInlineWithContents(brandThemeContent, Inline.Wrapping.STYLESHEET);
+            settings.addInlineWithContents(withBrandUrls(withoutInlinedImports(brandThemeContent), "theme.css"), Inline.Wrapping.STYLESHEET);
         } else {
             if (Files.exists(Paths.get(getBrandPath(), "theme.css")) ||
                    Files.exists(Paths.get(getLocalBrandPath(), "theme.css"))) {
@@ -175,13 +165,84 @@ public class AppConfig implements AppShellConfigurator {
     }
 
     /**
+     * Strips the {@code @import} rules for the color and typography sheets from an inlined theme.
+     * Both sheets are inlined ahead of the theme already; left in, the browser would fetch and
+     * apply each of them a second time.
+     */
+    static String withoutInlinedImports(String themeCss) {
+        return themeCss.replaceAll(
+                "(?m)^[ \\t]*@import\\s+(?:url\\(\\s*)?['\"]?\\.?/?(?:colors/brand-colors|typography/brand-typography)\\.css['\"]?\\s*\\)?\\s*;[ \\t]*\\r?\\n?",
+                "");
+    }
+
+    /** Where BrandResourceHandler serves the brand's files. */
+    static final String BRAND_URL = "/api/brand/";
+
+    /** A CSS {@code url(...)} value, with or without quotes around its target. */
+    private static final java.util.regex.Pattern CSS_URL =
+            java.util.regex.Pattern.compile("url\\(\\s*(['\"]?)([^'\")]+)\\1\\s*\\)");
+
+    /**
+     * Resolves the relative {@code url(...)} values of a brand stylesheet against the brand
+     * (NFR-025, umbrella UC-014 BR-007). The stylesheet is inlined into the page, where a
+     * relative URL would resolve against the page's address and reach nothing; here it becomes the
+     * address the file has when
+     * BrandResourceHandler serves it, so {@code url("fonts/Face.woff2")} in
+     * {@code typography/brand-typography.css} is fetched from
+     * {@code /api/brand/typography/fonts/Face.woff2}. That is what lets a brand carry its own fonts.
+     * A URL that is absolute, rooted, a fragment or a {@code data:} value is left as written, and
+     * so is one that would climb out of the brand.
+     *
+     * @param css     the stylesheet's content
+     * @param cssPath the stylesheet's path within the brand, such as {@code typography/brand-typography.css}
+     * @return the content with its relative URLs resolved
+     */
+    static String withBrandUrls(String css, String cssPath) {
+        int slash = cssPath.lastIndexOf('/');
+        String directory = slash < 0 ? "" : cssPath.substring(0, slash + 1);
+        java.util.regex.Matcher matcher = CSS_URL.matcher(css);
+        StringBuilder resolved = new StringBuilder();
+        while (matcher.find()) {
+            String path = pathInBrand(directory, matcher.group(2).trim());
+            String url = path == null ? matcher.group() : "url(\"" + BRAND_URL + path + "\")";
+            matcher.appendReplacement(resolved, java.util.regex.Matcher.quoteReplacement(url));
+        }
+        matcher.appendTail(resolved);
+        return resolved.toString();
+    }
+
+    /** The brand-relative path a stylesheet's URL names, or null when the URL is not relative to the brand. */
+    private static String pathInBrand(String directory, String target) {
+        if (target.isEmpty() || target.startsWith("/") || target.startsWith("#")
+                || target.matches("^[a-zA-Z][a-zA-Z0-9+.-]*:.*")) {
+            return null;
+        }
+        java.util.ArrayDeque<String> segments = new java.util.ArrayDeque<>();
+        for (String segment : (directory + target).split("/")) {
+            if (segment.isEmpty() || segment.equals(".")) {
+                continue;
+            }
+            if (segment.equals("..")) {
+                if (segments.isEmpty()) {
+                    return null;
+                }
+                segments.removeLast();
+            } else {
+                segments.addLast(segment);
+            }
+        }
+        return String.join("/", segments);
+    }
+
+    /**
      * Adds brand information as a meta tag for debugging and identification purposes.
      * Reads brand metadata from the external brand directory if available.
      *
      * @param settings The AppShellSettings to add the brand info to
      */
     private void addBrandInfoComment(AppShellSettings settings) {
-        String brandInfo = detectBrandInfo();
+        java.util.Locale requestLocale = settings.getRequest() != null ? settings.getRequest().getLocale() : java.util.Locale.ENGLISH;
+        String brandInfo = detectBrandInfo(requestLocale);
         if (brandInfo != null && !brandInfo.isEmpty()) {
             // Add brand info as a meta tag for easy identification in page source
             settings.addMetaTag("brand-info", brandInfo);
@@ -189,14 +250,68 @@ public class AppConfig implements AppShellConfigurator {
     }
 
     /**
-     * Detects and reads brand information from various sources for debugging and identification.
-     * Implements the brand directory precedence: external mount (/brand) → local directory (brand/).
-     * Attempts to read metadata from brand-info.json first, then brand-config.json as fallback.
-     *
-     * @return A formatted string containing brand information, or a fallback message if no brand is detected.
-     *         Format: "{External|Default} Brand: {name} (v{version}) - {organization} [from {filename}]"
+     * Reads the {@code localized} block of a brand JSON file (top level or under {@code brand})
+     * for the given locale: exact tag first, then language only. Returns an empty map when the
+     * brand has no variants or the JSON cannot be parsed.
      */
-    private String detectBrandInfo() {
+    static java.util.Map<String, String> localizedBrandText(String json, java.util.Locale locale) {
+        java.util.Map<String, String> result = new java.util.HashMap<>();
+        if (json == null || locale == null) {
+            return result;
+        }
+        try {
+            com.fasterxml.jackson.databind.ObjectMapper mapper = new com.fasterxml.jackson.databind.ObjectMapper()
+                    .enable(com.fasterxml.jackson.core.JsonParser.Feature.ALLOW_COMMENTS);
+            com.fasterxml.jackson.databind.JsonNode root = mapper.readTree(json);
+            com.fasterxml.jackson.databind.JsonNode brand = root.has("brand") ? root.get("brand") : root;
+            com.fasterxml.jackson.databind.JsonNode localized = brand.get("localized");
+            if (localized == null && root.has("localized")) {
+                localized = root.get("localized");
+            }
+            if (localized == null || !localized.isObject()) {
+                return result;
+            }
+            com.fasterxml.jackson.databind.JsonNode entry = null;
+            java.util.Iterator<java.util.Map.Entry<String, com.fasterxml.jackson.databind.JsonNode>> it = localized.fields();
+            String tag = locale.toLanguageTag().toLowerCase(java.util.Locale.ROOT);
+            String language = locale.getLanguage().toLowerCase(java.util.Locale.ROOT);
+            com.fasterxml.jackson.databind.JsonNode byLanguage = null;
+            while (it.hasNext()) {
+                var e = it.next();
+                String key = e.getKey().toLowerCase(java.util.Locale.ROOT);
+                if (key.equals(tag)) {
+                    entry = e.getValue();
+                } else if (key.equals(language)) {
+                    byLanguage = e.getValue();
+                }
+            }
+            if (entry == null) {
+                entry = byLanguage;
+            }
+            if (entry != null) {
+                for (String field : new String[] {"name", "organization", "description"}) {
+                    if (entry.hasNonNull(field)) {
+                        result.put(field, entry.get(field).asText());
+                    }
+                }
+            }
+        } catch (Exception e) {
+            io.quarkus.logging.Log.debug("No localized brand text available", e);
+        }
+        return result;
+    }
+
+    /**
+     * Describes the brand in use, for the {@code brand-info} meta tag: the mounted brand directory when it
+     * exists, else the local one, from its {@code brand-info.json} or else {@code brand-config.json}, with
+     * the name, organization and description in the locale's variant where the brand has one (UC-026 BR-087).
+     *
+     * @param locale the locale whose brand variant is wanted
+     * @return "{External|Default} Brand: {name} (v{version}) - {organization}[ - {description}] [from {file}]";
+     *         without a metadata file, the brand files found; without a brand directory,
+     *         "Default Theme (no brand directory found)"
+     */
+    private String detectBrandInfo(java.util.Locale locale) {
         // Check for external brand directory first, then local brand
         String brandPath = null;
         String brandSource = null;
@@ -228,14 +343,20 @@ public class AppConfig implements AppShellConfigurator {
                     String brandName = extractJsonValue(content, "name");
                     String version = extractJsonValue(content, "version");
                     String organization = extractJsonValue(content, "organization");
+                    // Per-language variants from the brand's "localized" block (UC-026 BR-087)
+                    java.util.Map<String, String> localized = localizedBrandText(content, locale);
+                    brandName = localized.getOrDefault("name", brandName);
+                    organization = localized.getOrDefault("organization", organization);
+                    String description = localized.getOrDefault("description", extractJsonValue(content, "description"));
 
                     if (brandName != null) {
                         String brandType = "external mount".equals(brandSource) ? "External" : "Default";
-                        return String.format("%s Brand: %s (v%s) - %s [from %s]",
+                        return String.format("%s Brand: %s (v%s) - %s%s [from %s]",
                             brandType,
                             brandName,
                             version != null ? version : "unknown",
                             organization != null ? organization : "",
+                            description != null && !description.isBlank() ? " - " + description : "",
                             metadataFile.getFileName());
                     }
                 }
@@ -286,76 +407,6 @@ public class AppConfig implements AppShellConfigurator {
     }
 
     /**
-     * Gets the favicon path from brand configuration.
-     * Reads the favicon filename from brand-config.json and constructs the appropriate URL.
-     *
-     * @return The favicon URL path, or null if no favicon is configured
-     */
-    private String getFaviconPathFromBrand() {
-        try {
-            // First try to read from external brand
-            if (Files.exists(Paths.get(getBrandPath(), "brand-config.json"))) {
-                String content = Files.readString(Paths.get(getBrandPath(), "brand-config.json"));
-                String faviconFile = extractJsonValue(content, "favicon");
-                if (faviconFile != null) {
-                    String path = "/api/brand/images/" + faviconFile;
-                    return path;
-                }
-            }
-
-            // Then try embedded brand
-            try (var inputStream = getClass().getResourceAsStream("/META-INF/brand/brand-config.json")) {
-                if (inputStream != null) {
-                    String content = new String(inputStream.readAllBytes());
-                    String faviconFile = extractJsonValue(content, "favicon");
-                    if (faviconFile != null) {
-                        String path = "/api/brand/images/" + faviconFile;
-                        return path;
-                    }
-                }
-            }
-
-            // Fallback to common favicon files
-            String fallback = getBrandResourcePath("images/favicon.ico",
-                                      getBrandResourcePath("images/favicon.svg",
-                                      getBrandResourcePath("images/favicon.png", null)));
-            return fallback;
-
-        } catch (Exception e) {
-            // Fallback to common favicon files
-            return getBrandResourcePath("images/favicon.ico",
-                                      getBrandResourcePath("images/favicon.svg",
-                                      getBrandResourcePath("images/favicon.png", null)));
-        }
-    }
-
-    /**
-     * Implements three-tier brand resource fallback logic for favicon and asset resolution.
-     * Checks for brand resources in order of precedence and returns the appropriate URL path.
-     *
-     * Precedence Order:
-     * 1. External brand mount (/brand/{brandPath}) - Docker volume mounts
-     * 2. Local brand directory (brand/{brandPath}) - Development or embedded brand
-     * 3. Default application path (fallbackPath) - Application defaults
-     *
-     * @param brandPath The relative path within the brand directory (e.g., "visual-assets/icons/favicon.svg")
-     * @param fallbackPath The default application path to use if no brand resource is found (can be null)
-     * @return The resolved URL path for the resource, or the fallbackPath if no brand resource exists
-     */
-    private String getBrandResourcePath(String brandPath, String fallbackPath) {
-        // Check if external brand directory exists (for Docker volume mounts)
-        if (Files.exists(Paths.get(getBrandPath(), brandPath))) {
-            return "/api/brand/" + brandPath;
-        }
-        // Check if local brand directory exists (for development or embedded brand)
-        if (Files.exists(Paths.get(getLocalBrandPath(), brandPath))) {
-            return "/api/brand/" + brandPath; // Use /api/brand/ URL path for Admin (served by BrandResourceHandler)
-        }
-        // Use default path
-        return fallbackPath;
-    }
-
-    /**
      * Loads brand CSS content from external mount or local directory.
      * This method reads CSS files directly without processing @import statements.
      *
@@ -383,7 +434,10 @@ public class AppConfig implements AppShellConfigurator {
             }
 
         } catch (Exception e) {
-            // Silently handle CSS loading errors
+            // The page still renders without the stylesheet; say so instead of hiding it, since a
+            // mounted brand file that cannot be read is otherwise invisible (UC-023 A2).
+            io.quarkus.logging.Log.warnf("Brand stylesheet %s could not be read from %s or %s: %s", cssPath,
+                    getBrandPath(), getLocalBrandPath(), e.getMessage());
         }
 
         return null;

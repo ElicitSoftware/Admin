@@ -72,8 +72,6 @@ import com.fasterxml.jackson.annotation.JsonInclude;
  * Copyright (C) 2025 The Regents of the University of Michigan - Rogel Cancer Center.</p>
  *
  * @author Elicit Software
- * @version 1.0
- * @since 1.0
  * @see PDFDocument
  * @see Table
  * @see Style
@@ -117,6 +115,14 @@ public class Content {
      * <p><strong>Format:</strong> Complete SVG markup including the root {@code <svg>} element</p>
      */
     public String svg;
+
+    /**
+     * Whether {@link #svg} is drawn inline, at the current position and at most the text width,
+     * like a paragraph, rather than on a landscape page of its own. A report service's diagram
+     * (FHHS's pedigree) leaves it {@code false}; the Participation export's charts (UC-031 BR-129)
+     * set it.
+     */
+    public boolean inline;
 
     /**
      * Table content for structured data presentation.

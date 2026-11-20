@@ -20,7 +20,6 @@ import com.vaadin.flow.component.icon.VaadinIcon;
 import com.vaadin.flow.component.orderedlayout.HorizontalLayout;
 import com.vaadin.flow.component.select.Select;
 import com.vaadin.flow.component.select.SelectVariant;
-import com.vaadin.flow.theme.lumo.LumoUtility;
 
 /**
  * A reusable pagination control component for navigating through large datasets.
@@ -48,8 +47,6 @@ import com.vaadin.flow.theme.lumo.LumoUtility;
  * }</pre>
  * 
  * @author Elicit Software
- * @version 1.0
- * @since 1.0
  * @see HorizontalLayout
  */
 public class PaginationControls extends HorizontalLayout {
@@ -122,7 +119,7 @@ public class PaginationControls extends HorizontalLayout {
     private Component createPageSizeField() {
         Select<Integer> select = new Select<>();
         select.addThemeVariants(SelectVariant.LUMO_SMALL);
-        select.getStyle().set("--vaadin-input-field-value-font-size", "var(--lumo-font-size-s)");
+        select.addClassName("pagination-page-size");
         select.setWidth("4.8rem");
         select.setItems(5, 10, 15, 25, 50, 100);
         select.setValue(pageSize);
@@ -130,9 +127,9 @@ public class PaginationControls extends HorizontalLayout {
             pageSize = e.getValue();
             updatePageCount();
         });
-        var label = new Span("Page size");
+        var label = new Span(getTranslation("paginationControls.pageSize"));
         label.setId("page-size-label");
-        label.addClassName(LumoUtility.FontSize.SMALL);
+        label.addClassName("pagination-label");
         select.setAriaLabelledBy("page-size-label");
         final HorizontalLayout layout = new HorizontalLayout(Alignment.CENTER, label, select);
         layout.setSpacing(false);
@@ -234,7 +231,7 @@ public class PaginationControls extends HorizontalLayout {
      * <p>This method is called automatically whenever pagination state changes.</p>
      */
     private void updateControls() {
-        currentPageLabel.setText(String.format("Page %d of %d", currentPage, pageCount));
+        currentPageLabel.setText(getTranslation("paginationControls.pageOf", currentPage, pageCount));
         firstPageButton.setEnabled(currentPage > 1);
         lastPageButton.setEnabled(currentPage < pageCount);
         goToPreviousPageButton.setEnabled(currentPage > 1);
@@ -247,7 +244,7 @@ public class PaginationControls extends HorizontalLayout {
      * @return a button that navigates to the first page when clicked
      */
     private Button firstPageButton() {
-        return createIconButton(VaadinIcon.ANGLE_DOUBLE_LEFT, "Go to first page", () -> currentPage = 1);
+        return createIconButton(VaadinIcon.ANGLE_DOUBLE_LEFT, getTranslation("paginationControls.firstPage"), () -> currentPage = 1);
     }
 
     /**
@@ -256,7 +253,7 @@ public class PaginationControls extends HorizontalLayout {
      * @return a button that navigates to the last page when clicked
      */
     private Button lastPageButton() {
-        return createIconButton(VaadinIcon.ANGLE_DOUBLE_RIGHT, "Go to last page", () -> currentPage = pageCount);
+        return createIconButton(VaadinIcon.ANGLE_DOUBLE_RIGHT, getTranslation("paginationControls.lastPage"), () -> currentPage = pageCount);
     }
 
     /**
@@ -265,7 +262,7 @@ public class PaginationControls extends HorizontalLayout {
      * @return a button that navigates to the next page when clicked
      */
     private Button goToNextPageButton() {
-        return createIconButton(VaadinIcon.ANGLE_RIGHT, "Go to next page", () -> currentPage++);
+        return createIconButton(VaadinIcon.ANGLE_RIGHT, getTranslation("paginationControls.nextPage"), () -> currentPage++);
     }
 
     /**
@@ -274,24 +271,21 @@ public class PaginationControls extends HorizontalLayout {
      * @return a button that navigates to the previous page when clicked
      */
     private Button goToPreviousPageButton() {
-        return createIconButton(VaadinIcon.ANGLE_LEFT, "Go to previous page", () -> currentPage--);
+        return createIconButton(VaadinIcon.ANGLE_LEFT, getTranslation("paginationControls.previousPage"), () -> currentPage--);
     }
 
     /**
      * Creates and configures the current page information label.
      * 
      * <p>This method creates a span element that displays the current page information
-     * in the format "Page X of Y". The label is styled with:</p>
-     * <ul>
-     *   <li>Small font size for compact display</li>
-     *   <li>Horizontal padding for proper spacing</li>
-     * </ul>
-     * 
+     * in the format "Page X of Y". Its small font size and the horizontal padding that keeps
+     * it off the arrows come from {@code components/pagination-controls.css}.</p>
+     *
      * @return a Span component for displaying current page information
      */
     private Span currentPageLabel() {
         var label = new Span();
-        label.addClassNames(LumoUtility.FontSize.SMALL, LumoUtility.Padding.Horizontal.SMALL);
+        label.addClassNames("pagination-label", "pagination-page-label");
         return label;
     }
 

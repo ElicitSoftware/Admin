@@ -14,10 +14,14 @@ package com.elicitsoftware.service;
 import io.quarkus.logging.Log;
 
 import java.net.URI;
+import java.net.URISyntaxException;
 import java.util.ArrayList;
+import java.util.Collection;
+import java.util.List;
 
 import org.eclipse.microprofile.rest.client.RestClientBuilder;
 
+import com.elicitsoftware.admin.i18n.Translations;
 import com.elicitsoftware.model.ReportDefinition;
 import com.elicitsoftware.model.Status;
 import com.elicitsoftware.model.Survey;
@@ -28,11 +32,14 @@ import com.elicitsoftware.report.ReportResponse;
 import com.elicitsoftware.report.ReportService;
 import com.elicitsoftware.report.pdf.Content;
 import com.elicitsoftware.report.pdf.PDFDocument;
+import com.elicitsoftware.security.ServiceToken;
 import com.vaadin.flow.component.UI;
 import com.vaadin.flow.component.notification.Notification;
 
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
+import jakarta.persistence.EntityManager;
+import org.eclipse.microprofile.config.inject.ConfigProperty;
 import jakarta.servlet.http.HttpServletRequest;
 
 /**
@@ -91,7 +98,6 @@ import jakarta.servlet.http.HttpServletRequest;
  * @see Survey
  * @see PDFService
  * @see ReportService
- * @since 1.0.0
  */
 @ApplicationScoped
 public class ReportingService {
@@ -108,63 +114,23 @@ public class ReportingService {
     @Inject
     HttpServletRequest httpRequest;
 
-    /**
-     * Collection of report responses aggregated from external report services.
-     * <p>
-     * This list accumulates responses from multiple report service calls and
-     * is used as input for PDF generation. The list is cleared before each
-     * new report generation cycle to ensure clean state.
-     */
-    ArrayList<ReportResponse> reportResponses = new ArrayList<>();
+    @Inject
+    EntityManager em;
 
     /**
-     * Generates and displays comprehensive reports for a completed survey participant.
-     * <p>
-     * This method orchestrates the complete report generation workflow, from calling
-     * external report services to delivering the final PDF to the user's browser.
-     * It handles multiple report definitions per survey and provides seamless
-     * integration with the Vaadin UI framework.
-     * <p>
-     * Process workflow:
-     * 1. **Survey retrieval**: Load survey data using status.getSurveyId()
-     * 2. **Response collection**: Clear previous responses and prepare for new data
-     * 3. **Service iteration**: Call external report service for each report definition
-     * 4. **Response aggregation**: Collect all report responses into unified list
-     * 5. **PDF generation**: Convert responses to downloadable PDF document
-     * 6. **Resource registration**: Register PDF with Vaadin resource system
-     * 7. **Browser delivery**: Open PDF in new browser tab for immediate access
-     * <p>
-     * External service integration:
-     * - Iterates through all report definitions associated with the survey
-     * - Calls each external report service with participant's respondent ID
-     * - Aggregates responses regardless of individual service success/failure
-     * - Continues processing even if some services fail
-     * <p>
-     * User experience features:
-     * - **Immediate access**: PDF opens automatically in new browser tab
-     * - **Error notifications**: User-friendly error messages via Vaadin notifications
-     * - **Non-blocking operation**: UI remains responsive during generation
-     * - **Resource cleanup**: Automatic resource management through Vaadin
-     * <p>
-     * Error handling:
-     * - **Survey not found**: Logged and reported to user
-     * - **Service call failures**: Individual errors captured in responses
-     * - **PDF generation failures**: User notification with error details
-     * - **Browser integration issues**: Fallback error notifications
-     * - **Resource registration failures**: Logged and reported
-     * <p>
-     * Security considerations:
-     * - Participant data is passed to external services via respondent ID
-     * - Report URLs are validated through ReportDefinition model
-     * - PDF resources are session-scoped for security
-     * - External service calls use configured authentication if available
-     *
-     * @param status The completion status containing survey and participant information
-     * @throws RuntimeException implicitly through PDF generation or service calls
-     * @see #callReport(ReportDefinition, int)
-     * @see PDFService#generatePDF(ArrayList, String)
-     * @see Survey#reports
+     * Survey's base address at this site, which a report whose URL is a relative path is resolved
+     * against (UC-005 BR-023): a built-in report lives in Survey, and its row is authored without
+     * knowing the site.
      */
+    @ConfigProperty(name = "elicit.survey.url")
+    String surveyUrl;
+
+    /**
+     * Decides, from the resolved address, whether a report request carries the service token
+     * (UC-018 BR-160).
+     */
+    @Inject
+    ServiceToken serviceToken;
 
     /**
      * Default constructor for ReportingService.
@@ -182,174 +148,202 @@ public class ReportingService {
      * @param status the Status object containing survey and respondent information
      */
     public void printReports(Status status) {
-        // Implement report generation logic here
-        // For example: generate PDF reports for finished surveys
         try {
             Survey survey = Survey.findById(status.getSurveyId());
             int respondent_id = (int) status.getRespondentId();
-            //Make sure this is empty
-            this.reportResponses.clear();
-            ReportResponse reportResponse;
-            for (ReportDefinition rpt : survey.reports) {
-                reportResponse = callReport(rpt, respondent_id);
-                reportResponses.add(reportResponse);
-            }
+            ArrayList<ReportResponse> reportResponses = collectReports(survey.reports, respondent_id);
             String baseUrl = httpRequest.getScheme() + "://" + httpRequest.getServerName() +
                     (httpRequest.getServerPort() != 80 && httpRequest.getServerPort() != 443 ?
                             ":" + httpRequest.getServerPort() : "") + httpRequest.getContextPath();
-            byte[] pdfContent = pdfService.generatePDF(this.reportResponses, baseUrl);
-            String pdfKey = PDFDownloadResource.cachePDF(pdfContent);
+            byte[] pdfContent = pdfService.generatePDF(reportResponses, baseUrl);
+            String pdfKey = PDFDownloadResource.cachePDF(pdfContent, survey.name);
             String pdfUrl = httpRequest.getContextPath() + "/api/pdf/download?key=" + pdfKey;
 
             UI ui = UI.getCurrent();
             ui.getPage().executeJs("window.open($0, '_blank')", pdfUrl);
         } catch (Exception e) {
             Log.error("Failed to generate PDF", e);
-            Notification.show("Failed to generate PDF: " + e.getMessage(), 3000, Notification.Position.MIDDLE);
+            Notification.show(Translations.get("reporting.error.pdf", e.getMessage()), 3000, Notification.Position.MIDDLE);
         }
     }
 
     /**
-     * Calls an external report service to generate a report for a specific participant.
-     * <p>
-     * This private method handles the communication with individual external report
-     * services, building REST clients dynamically based on report definition URLs
-     * and managing the request/response cycle with comprehensive error handling.
-     * <p>
-     * Service integration process:
-     * 1. **Request preparation**: Create ReportRequest with participant's respondent ID
-     * 2. **Client construction**: Build REST client using MicroProfile REST Client builder
-     * 3. **Service call**: Execute remote service call with request payload
-     * 4. **Response handling**: Return successful response or error response as fallback
-     * <p>
-     * REST client configuration:
-     * - **Dynamic base URI**: Uses report definition URL for service endpoint
-     * - **Automatic proxy generation**: MicroProfile generates implementation
-     * - **Type-safe communication**: Strongly-typed request/response objects
-     * - **JSON serialization**: Automatic JSON handling for payloads
-     * <p>
-     * Error handling strategy:
-     * - **Network failures**: Connection timeouts, DNS resolution issues
-     * - **Service errors**: HTTP error responses, invalid response formats
-     * - **URI parsing**: Malformed URLs in report definitions
-     * - **Serialization errors**: JSON parsing or generation failures
-     * - **Service unavailable**: External service downtime or overload
-     * <p>
-     * Fallback response creation:
-     * - Creates ReportResponse object for failed service calls
-     * - Sets innerHTML field to exception message for debugging
-     * - Allows report generation to continue with partial data
-     * - Error information is preserved in final PDF output
-     * <p>
-     * Performance considerations:
-     * - **Blocking calls**: Each service call blocks until completion
-     * - **No timeout configuration**: Relies on default client timeouts
-     * - **Sequential processing**: Services called one at a time
-     * - **Memory efficiency**: Minimal object creation and reuse
-     * <p>
-     * Security considerations:
-     * - **Participant data**: Only respondent ID is shared with external services
-     * - **URL validation**: Report definition URLs should be pre-validated
-     * - **Authentication**: External services may require additional authentication
-     * - **Error information**: Exception messages may contain sensitive details
-     *
-     * @param rpt The report definition containing the external service URL and configuration
-     * @param respondent_id The unique identifier for the participant whose report is being generated
-     * @return ReportResponse containing the generated report data, or error information if the call failed
-     * @see ReportDefinition#url
-     * @see ReportRequest
-     * @see ReportResponse
-     * @see RestClientBuilder
+     * The language the respondent answered in (UC-005 BR-022): the tag Survey stamped on their
+     * answer rows, or null when every row was rendered in the survey's base language.
      */
-    private ReportResponse callReport(ReportDefinition rpt, int respondent_id) {
-        try {
-            ReportRequest request = new ReportRequest(respondent_id);
-            ReportService reportService = RestClientBuilder.newBuilder()
-                    .baseUri(new URI(rpt.url))
-                    .build(ReportService.class);
-            ReportResponse reportResponse = reportService.callReport(request);
-            return reportResponse;
-        } catch (jakarta.ws.rs.WebApplicationException e) {
-            // Handle license validation errors and other HTTP errors specifically
-            String errorMessage = "Service error: " + e.getMessage();
+    String answeringLanguage(int respondentId) {
+        String sql = "SELECT display_language FROM survey.answers WHERE respondent_id = ?1 AND display_language IS NOT NULL " // i18n:ignore
+                + "ORDER BY saved_dt DESC NULLS LAST, id DESC LIMIT 1"; // i18n:ignore
+        List<?> rows = em.createNativeQuery(sql).setParameter(1, respondentId).getResultList();
+        return rows.isEmpty() ? null : (String) rows.get(0);
+    }
 
-            // Try to extract more detailed error information
-            if (e.getResponse() != null) {
-                int status = e.getResponse().getStatus();
-
-                // Try to read the response entity if it exists and hasn't been consumed
-                if (e.getResponse().hasEntity()) {
-                    try {
-                        String responseBody = e.getResponse().readEntity(String.class);
-                        if (responseBody != null && !responseBody.trim().isEmpty()) {
-                            errorMessage = responseBody;
-                        }
-                    } catch (Exception readException) {
-                        // Response may have already been consumed, fall back to status-based message
-                        if (status == 403) {
-                            errorMessage = "Access forbidden - License validation may have failed. Please check your license configuration.";
-                        } else {
-                            errorMessage = "Service error (HTTP " + status + "): " + e.getMessage();
-                        }
-                    }
-                } else {
-                    // No response entity, provide status-based error message
-                    if (status == 403) {
-                        errorMessage = "Access forbidden - License validation may have failed. Please check your license configuration.";
-                    } else {
-                        errorMessage = "Service error (HTTP " + status + "): " + e.getMessage();
-                    }
-                }
-            }
-
-            // Check if the exception message contains clues about license validation
-            if (e.getMessage() != null && e.getMessage().toLowerCase().contains("forbidden")) {
-                if (!errorMessage.toLowerCase().contains("license")) {
-                    errorMessage = "License validation failed - " + errorMessage;
-                }
-            }
-
-            ReportResponse reportResponse = new ReportResponse();
-            reportResponse.title = "Error - " + rpt.name;
-            reportResponse.innerHTML = "<div style='color: red; padding: 20px; border: 1px solid red; background-color: #ffe6e6;'>" +
-                    "<h3>Report Generation Error</h3>" +
-                    "<p><strong>Service:</strong> " + rpt.name + "</p>" +
-                    "<p><strong>Error:</strong> " + errorMessage + "</p>" +
-                    "<p><em>If this is a license error, please ensure your PREMM5 license is valid and properly configured.</em></p>" +
-                    "</div>";
-
-            PDFDocument pdf = new PDFDocument();
-            pdf.title = "Error - " + rpt.name;
-            Content[] content = new Content[1];
-            Content body = new Content();
-            // Remove newlines and other control characters that might cause PDF encoding issues
-            String cleanErrorMessage = errorMessage.replaceAll("[\\r\\n\\t]", " ").trim();
-            body.text = "Report Generation Error - Service: " + rpt.name + " - Error: " + cleanErrorMessage + " - If this is a license error, please ensure your PREMM5 license is valid and properly configured.";
-            content[0] = body;
-            pdf.content = content;
-            reportResponse.pdf = pdf;
-            return reportResponse;
-        } catch (Exception e) {
-            // Handle other exceptions (network issues, URI parsing, etc.)
-            ReportResponse reportResponse = new ReportResponse();
-            reportResponse.title = "Error - " + rpt.name;
-            reportResponse.innerHTML = "<div style='color: red; padding: 20px; border: 1px solid red; background-color: #ffe6e6;'>" +
-                    "<h3>Report Generation Error</h3>" +
-                    "<p><strong>Service:</strong> " + rpt.name + "</p>" +
-                    "<p><strong>Error:</strong> " + e.getMessage() + "</p>" +
-                    "</div>";
-
-            PDFDocument pdf = new PDFDocument();
-            pdf.title = "Error - " + rpt.name;
-            Content[] content = new Content[1];
-            Content body = new Content();
-            // Remove newlines and other control characters that might cause PDF encoding issues
-            String cleanErrorMessage = (e.getMessage() != null ? e.getMessage() : "Unknown error").replaceAll("[\\r\\n\\t]", " ").trim();
-            body.text = "Report Generation Error - Service: " + rpt.name + " - Error: " + cleanErrorMessage;
-            content[0] = body;
-            pdf.content = content;
-            reportResponse.pdf = pdf;
-            return reportResponse;
+    /**
+     * Resolves a report's address (UC-005 BR-023). An absolute URL is used as written. A relative
+     * path is resolved under Survey's base address, keeping any path prefix the site runs Survey
+     * under, so {@code /api/reports/respondent} on a Survey at {@code https://host/survey} becomes
+     * {@code https://host/survey/api/reports/respondent}.
+     *
+     * @param surveyBaseUrl Survey's base address, with or without a trailing slash
+     * @param reportUrl     the report's address as the definition writes it, absolute or relative
+     * @return the address the report is requested from
+     * @throws URISyntaxException when either address is not a valid URI
+     */
+    public static URI resolveReportUri(String surveyBaseUrl, String reportUrl) throws URISyntaxException {
+        URI url = new URI(reportUrl);
+        if (url.isAbsolute()) {
+            return url;
         }
+        String base = surveyBaseUrl.endsWith("/") ? surveyBaseUrl : surveyBaseUrl + "/";
+        String path = reportUrl.startsWith("/") ? reportUrl.substring(1) : reportUrl;
+        return new URI(base).resolve(path);
+    }
+
+    /**
+     * Asks every report service of a survey for one respondent's report (UC-005 BR-136). The list
+     * is built for this print alone and handed back to it: this bean is shared by every session,
+     * so nothing a print gathers is kept on it.
+     *
+     * @param reports the survey's report definitions, in the order they are printed
+     * @param respondentId the respondent whose reports are printed
+     * @return one response per definition, in the same order
+     */
+    ArrayList<ReportResponse> collectReports(Collection<ReportDefinition> reports, int respondentId) {
+        ArrayList<ReportResponse> reportResponses = new ArrayList<>();
+        for (ReportDefinition rpt : reports) {
+            reportResponses.add(callReport(rpt, respondentId));
+        }
+        return reportResponses;
+    }
+
+    /**
+     * Asks one report service for a respondent's report, with the language they answered in. The
+     * service token goes with the request only when the report's address is at a trusted origin
+     * (UC-018 BR-160), and a redirect is never followed. The call has no timeout of its own; the REST
+     * client's defaults apply.
+     *
+     * @param rpt           the report definition naming the service's address
+     * @param respondent_id the respondent whose report is wanted
+     * @return the service's report; otherwise a report carrying a fixed error text (UC-005 BR-140) when
+     *         the token is missing (UC-018 BR-161), the service refuses or fails, or its answer cannot
+     *         be read. The cause is logged, never shown.
+     */
+    ReportResponse callReport(ReportDefinition rpt, int respondent_id) {
+        boolean tokenSent = false;
+        try {
+            ReportRequest request = new ReportRequest(respondent_id, answeringLanguage(respondent_id));
+            // UC-018 BR-160: the address is the definition's, so the token goes with the request
+            // only when the resolved address's origin is one this site's configuration trusts.
+            URI address = resolveReportUri(surveyUrl, rpt.url);
+            tokenSent = serviceToken.authorizationFor(address).isPresent();
+            RestClientBuilder builder = RestClientBuilder.newBuilder()
+                    .baseUri(address)
+                    // Never followed, least of all with the token on the request.
+                    .followRedirects(false);
+            if (tokenSent) {
+                builder.register(new ServiceTokenHeader(serviceToken));
+            }
+            ReportResponse reportResponse = builder.build(ReportService.class).callReport(request);
+            if (reportResponse == null) {
+                // An answer with no report in it, such as a redirect, which is not followed.
+                Log.warnf("Report '%s' answered without a report", rpt.name);
+                return errorResponse(rpt, Translations.get("reporting.error.unavailable"), false);
+            }
+            return reportResponse;
+        } catch (ServiceToken.NotConfiguredException e) {
+            // UC-018 BR-161: a trusted service is not called without the token.
+            Log.warnf("Report '%s' was not requested: %s (%s is not set)", rpt.name, ServiceToken.NOT_CONFIGURED,
+                    ServiceToken.VARIABLE);
+            return errorResponse(rpt, Translations.get("serviceToken.notConfigured"), false);
+        } catch (jakarta.ws.rs.WebApplicationException e) {
+            // UC-005 BR-140: the service answered with an error. The page and the PDF get the
+            // status; what the service said goes to the log.
+            if (e.getResponse() == null) {
+                Log.errorf(e, "Report '%s' failed without a response", rpt.name);
+                return errorResponse(rpt, Translations.get("reporting.error.unavailable"), false);
+            }
+            int status = e.getResponse().getStatus();
+            Log.warnf("Report '%s' answered HTTP %d", rpt.name, status);
+            Log.debugf("Report '%s' error body: %s", rpt.name, bodyForLog(e.getResponse()));
+            if (status == 401 && tokenSent) {
+                // UC-005 A2: a trusted service whose token is not this console's.
+                return errorResponse(rpt, Translations.get("serviceToken.refused"), false);
+            }
+            String errorMessage = status == 403
+                    ? Translations.get("reporting.error.forbidden")
+                    : Translations.get("reporting.error.serviceHttp", status);
+            return errorResponse(rpt, errorMessage, true);
+        } catch (Exception e) {
+            // UC-005 BR-140: the service could not be called or its answer could not be read
+            // (network, address, serialization). The cause names hosts and ports; it is logged.
+            Log.errorf(e, "Report '%s' could not be retrieved", rpt.name);
+            return errorResponse(rpt, Translations.get("reporting.error.unavailable"), false);
+        }
+    }
+
+    /**
+     * Puts the service token on a report request (UC-018 BR-160). The address is judged once more
+     * here, on the request as it is about to leave, so the header is only ever written beside a
+     * trusted origin.
+     */
+    static final class ServiceTokenHeader implements jakarta.ws.rs.client.ClientRequestFilter {
+
+        private final ServiceToken serviceToken;
+
+        ServiceTokenHeader(ServiceToken serviceToken) {
+            this.serviceToken = serviceToken;
+        }
+
+        @Override
+        public void filter(jakarta.ws.rs.client.ClientRequestContext context) {
+            serviceToken.authorizationFor(context.getUri()).ifPresent(value ->
+                    context.getHeaders().putSingle(jakarta.ws.rs.core.HttpHeaders.AUTHORIZATION, value));
+        }
+    }
+
+    /** At most this much of a failed report service's answer is written to the log. */
+    private static final int LOGGED_BODY_LIMIT = 500;
+
+    /** The start of an error response's body, for the log only; empty when it cannot be read. */
+    private static String bodyForLog(jakarta.ws.rs.core.Response response) {
+        try {
+            if (!response.hasEntity()) {
+                return "";
+            }
+            String body = response.readEntity(String.class);
+            if (body == null) {
+                return "";
+            }
+            String oneLine = body.replaceAll("[\\r\\n\\t]", " ").trim();
+            return oneLine.length() > LOGGED_BODY_LIMIT ? oneLine.substring(0, LOGGED_BODY_LIMIT) : oneLine;
+        } catch (Exception unreadable) {
+            return "";
+        }
+    }
+
+    /**
+     * The page that stands in for a report that failed (UC-005 A2, BR-140): its title, an error
+     * block for the screen and one line of text for the PDF.
+     *
+     * @param rpt the report that failed
+     * @param errorMessage the fixed, translated sentence that says what kind of failure it was
+     * @param licenseHint whether to add the hint about the report service's license
+     */
+    private static ReportResponse errorResponse(ReportDefinition rpt, String errorMessage, boolean licenseHint) {
+        ReportResponse reportResponse = new ReportResponse();
+        reportResponse.title = Translations.get("reporting.error.title", rpt.name);
+        reportResponse.innerHTML = Translations.get("reporting.error.html", rpt.name, errorMessage,
+                licenseHint ? Translations.get("reporting.error.licenseHint") : "");
+
+        PDFDocument pdf = new PDFDocument();
+        pdf.title = Translations.get("reporting.error.title", rpt.name);
+        Content[] content = new Content[1];
+        Content body = new Content();
+        body.text = Translations.get("reporting.error.pdfText", rpt.name, errorMessage,
+                licenseHint ? Translations.get("reporting.error.pdfLicenseHint") : "");
+        content[0] = body;
+        pdf.content = content;
+        reportResponse.pdf = pdf;
+        return reportResponse;
     }
 }

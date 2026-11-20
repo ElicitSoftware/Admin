@@ -11,7 +11,9 @@ package com.elicitsoftware.service;
  * ***LICENSE_END***
  */
 
+import com.elicitsoftware.admin.i18n.Translations;
 import com.elicitsoftware.model.Department;
+import com.elicitsoftware.diagnostics.CheckResult;
 import com.elicitsoftware.model.Message;
 import com.elicitsoftware.model.MessageTemplate;
 import com.elicitsoftware.model.Status;
@@ -38,7 +40,6 @@ import java.util.concurrent.TimeoutException;
  * and actual email delivery through the configured email provider.</p>
  *
  * @author Elicit Software
- * @version 1.0
  * @see Message
  */
 @ApplicationScoped
@@ -54,10 +55,10 @@ public class EmailService {
     ReactiveMailer mailer;
 
     /**
-     * Configured sender email address for outgoing messages.
+     * The site's sender address, from the quarkus.mailer.from property.
      * <p>
-     * This address is used as the "From" field in all outgoing emails.
-     * It should be configured via the quarkus.mailer.from property.
+     * Invitations and reminders go out from their department's From email (UC-004 BR-180); this
+     * address is their fallback and the sender of the relay test (UC-024).
      */
     @ConfigProperty(name = "quarkus.mailer.from")
     String fromEmail;
@@ -82,39 +83,6 @@ public class EmailService {
     int mailerPort;
 
     /**
-     * Sends an immediate email notification for a participant status update.
-     * <p>
-     * This method provides immediate email delivery for status notifications,
-     * typically used for urgent participant communications or system alerts.
-     * The method uses a simple text format with hardcoded content suitable
-     * for basic status notifications.
-     * <p>
-     * Email content:
-     * - Subject: "Ahoy from Quarkus"
-     * - Body: Simple notification message
-     * - Format: Plain text
-     * - Recipient: Extracted from status email field
-     * <p>
-     * Delivery process:
-     * 1. Extract recipient email from status object
-     * 2. Create plain text email with standard content
-     * 3. Set configured sender address
-     * 4. Send via reactive mailer with indefinite await
-     * 5. Return success/failure status
-     * <p>
-     * Error handling:
-     * - Catches all exceptions during email sending
-     * - Logs success and failure messages to console
-     * - Returns boolean indicating delivery success
-     * - Does not throw exceptions (fail-safe behavior)
-     *
-     * @param status The participant status containing recipient email and notification context
-     * @return true if email was sent successfully, false if sending failed
-     * @see Status#getEmail()
-     * @see Status#getToken()
-     */
-
-    /**
      * Default constructor for EmailService.
      * <p>
      * Creates a new EmailService instance with default values.
@@ -131,22 +99,24 @@ public class EmailService {
      * @return true if email was sent successfully, false otherwise
      */
     public boolean sendEmail(Status status) {
-        Log.debugf("sendEmail: starting for token=%s, email=%s, departmentId=%s",
-                LogMasking.maskToken(status.getToken()), LogMasking.maskEmail(status.getEmail()), status.getDepartmentId());
+        Log.debugf("sendEmail: starting for accessCode=%s, email=%s, departmentId=%s",
+                LogMasking.maskAccessCode(status.getAccessCode()), LogMasking.maskEmail(status.getEmail()), status.getDepartmentId());
 
         try {
-            Department department = Department.findById(status.getDepartmentId());
+            // An auto-registered respondent has no department and no address (UC-002 BR-181).
+            Department department = status.getDepartmentId() == null ? null : departmentOf(status.getDepartmentId());
             if (department == null) {
-                Log.warnf("sendEmail: no department found for departmentId=%s, token=%s",
-                        status.getDepartmentId(), LogMasking.maskToken(status.getToken()));
+                Log.warnf("sendEmail: no department found for departmentId=%s, accessCode=%s",
+                        status.getDepartmentId(), LogMasking.maskAccessCode(status.getAccessCode()));
                 return false;
             }
             Log.debugf("sendEmail: resolved department id=%d, defaultMessageId=%s",
                     department.id, department.defaultMessageId);
 
+            String sender = senderFor(department);
             String[] defaultMessagesIds = department.defaultMessageId.split(",");
-            Log.debugf("sendEmail: %d message template(s) to send for token=%s",
-                    defaultMessagesIds.length, LogMasking.maskToken(status.getToken()));
+            Log.debugf("sendEmail: %d message template(s) to send for accessCode=%s",
+                    defaultMessagesIds.length, LogMasking.maskAccessCode(status.getAccessCode()));
 
             boolean allSent = true;
             for (String defaultMessageID : defaultMessagesIds) {
@@ -154,47 +124,48 @@ public class EmailService {
                     Log.debugf("sendEmail: loading message template id=%s", defaultMessageID);
                     MessageTemplate messageTemplate = MessageTemplate.findById(Long.parseLong(defaultMessageID));
                     if (messageTemplate == null) {
-                        Log.warnf("sendEmail: no message template found for id=%s, token=%s",
-                                defaultMessageID, LogMasking.maskToken(status.getToken()));
+                        Log.warnf("sendEmail: no message template found for id=%s, accessCode=%s",
+                                defaultMessageID, LogMasking.maskAccessCode(status.getAccessCode()));
                         continue;
                     }
                     String subject = messageTemplate.subject;
-                    String body = messageTemplate.message.replace("<TOKEN>", status.getToken());
+                    String accessCode = status.getAccessCode() != null ? status.getAccessCode() : "";
+                    String body = messageTemplate.message.replace("<ACCESS_CODE>", accessCode);
                     Log.debugf("sendEmail: template id=%s mimeType=%s subject='%s' bodyLength=%d",
                             messageTemplate.id, messageTemplate.mimeType, subject, body.length());
 
                     Log.debugf("sendEmail: dispatching to mailer, from=%s, to=%s, host=%s, port=%d, timeoutSeconds=%d",
-                            fromEmail, LogMasking.maskEmail(status.getEmail()), mailerHost, mailerPort, mailSendTimeoutSeconds);
+                            sender, LogMasking.maskEmail(status.getEmail()), mailerHost, mailerPort, mailSendTimeoutSeconds);
                     long startMs = System.currentTimeMillis();
                     if (messageTemplate.mimeType.equals("text/html")) {
-                        mailer.send(Mail.withHtml(status.getEmail(), subject, body).setFrom(fromEmail))
+                        mailer.send(Mail.withHtml(status.getEmail(), subject, body).setFrom(sender))
                                 .await().atMost(Duration.ofSeconds(mailSendTimeoutSeconds));
                     } else {
-                        mailer.send(Mail.withText(status.getEmail(), subject, body).setFrom(fromEmail))
+                        mailer.send(Mail.withText(status.getEmail(), subject, body).setFrom(sender))
                                 .await().atMost(Duration.ofSeconds(mailSendTimeoutSeconds));
                     }
-                    Log.debugf("sendEmail: mailer.send() returned for template id=%s, token=%s, elapsedMs=%d",
-                            messageTemplate.id, LogMasking.maskToken(status.getToken()), (Object) (System.currentTimeMillis() - startMs));
+                    Log.debugf("sendEmail: mailer.send() returned for template id=%s, accessCode=%s, elapsedMs=%d",
+                            messageTemplate.id, LogMasking.maskAccessCode(status.getAccessCode()), (Object) (System.currentTimeMillis() - startMs));
                 } catch (Exception e) {
                     allSent = false;
                     Throwable cause = e.getCause() != null ? e.getCause() : e;
                     if (cause instanceof TimeoutException) {
-                        Log.errorf("sendEmail: mailer.send() timed out after %ds for template id=%s, token=%s, to=%s, host=%s, port=%d",
-                                mailSendTimeoutSeconds, defaultMessageID, LogMasking.maskToken(status.getToken()), LogMasking.maskEmail(status.getEmail()), mailerHost, mailerPort);
+                        Log.errorf("sendEmail: mailer.send() timed out after %ds for template id=%s, accessCode=%s, to=%s, host=%s, port=%d",
+                                mailSendTimeoutSeconds, defaultMessageID, LogMasking.maskAccessCode(status.getAccessCode()), LogMasking.maskEmail(status.getEmail()), mailerHost, mailerPort);
                     } else if (cause instanceof io.vertx.ext.mail.SMTPException) {
-                        Log.errorf("sendEmail: SMTP rejected template id=%s for token=%s, host=%s, port=%d: %s",
-                                defaultMessageID, LogMasking.maskToken(status.getToken()), mailerHost, mailerPort, cause.getMessage());
+                        Log.errorf("sendEmail: SMTP rejected template id=%s for accessCode=%s, host=%s, port=%d: %s",
+                                defaultMessageID, LogMasking.maskAccessCode(status.getAccessCode()), mailerHost, mailerPort, cause.getMessage());
                     } else {
-                        Log.errorf(e, "sendEmail: failed to send template id=%s for token=%s, host=%s, port=%d",
-                                defaultMessageID, LogMasking.maskToken(status.getToken()), mailerHost, mailerPort);
+                        Log.errorf(e, "sendEmail: failed to send template id=%s for accessCode=%s, host=%s, port=%d",
+                                defaultMessageID, LogMasking.maskAccessCode(status.getAccessCode()), mailerHost, mailerPort);
                     }
                 }
                 Log.debug("sendEmail: template send attempt completed");
             }
-            Log.debugf("sendEmail: finished for token=%s, allSent=%b", LogMasking.maskToken(status.getToken()), allSent);
+            Log.debugf("sendEmail: finished for accessCode=%s, allSent=%b", LogMasking.maskAccessCode(status.getAccessCode()), allSent);
             return allSent;
         } catch (Exception ex) {
-            Log.errorf(ex, "sendEmail: failed to send email for token=%s", LogMasking.maskToken(status.getToken()));
+            Log.errorf(ex, "sendEmail: failed to send email for accessCode=%s", LogMasking.maskAccessCode(status.getAccessCode()));
             return false;
         }
     }
@@ -282,57 +253,77 @@ public class EmailService {
     }
 
     /**
-     * Sends an individual message with dynamic content type support and comprehensive validation.
+     * Sends a short plain-text message to prove the relay works (UC-024).
      * <p>
-     * This private method handles the actual email delivery for queued messages,
-     * supporting both plain text and HTML content types. It performs thorough
-     * validation before attempting delivery and provides detailed error handling
-     * for troubleshooting failed sends.
-     * <p>
-     * Content type handling:
-     * - **HTML emails**: When mimeType is "text/html", uses Mail.withHtml()
-     * - **Plain text emails**: Default format for all other mime types
-     * - **Dynamic selection**: Content type determined at runtime per message
-     * - **Consistent formatting**: Same sender and recipient handling for both types
-     * <p>
-     * Validation process:
-     * 1. **Message validation**: Ensures message object is not null
-     * 2. **Subject validation**: Verifies message.subject is populated
-     * 3. **Recipient validation**: Confirms subject.getEmail() returns valid email
-     * 4. **Content validation**: Implicit validation of subject line and body
-     * <p>
-     * Email construction:
-     * - **Recipient**: Extracted from message.subject.getEmail()
-     * - **Subject line**: Uses message.subjectLine for email subject
-     * - **Body content**: Uses message.body for email content
-     * - **Sender**: Uses configured fromEmail address
-     * - **Content type**: Determined by message.mimeType field
-     * <p>
-     * Delivery process:
-     * 1. Validate message and recipient information
-     * 2. Create appropriate Mail object based on content type
-     * 3. Set sender address from configuration
-     * 4. Send via reactive mailer with indefinite await
-     * 5. Return success status for database update
-     * <p>
-     * Error handling:
-     * - **Validation failures**: Log specific validation errors and return false
-     * - **Delivery failures**: Catch exceptions, log details, return false
-     * - **Null pointer protection**: Defensive coding for missing data
-     * - **Exception isolation**: Failures don't propagate to calling methods
-     * <p>
-     * Performance considerations:
-     * - **Blocking operation**: Uses await().indefinitely() for delivery confirmation
-     * - **Individual processing**: Each message processed separately for isolation
-     * - **Error recovery**: Failed messages can be retried in subsequent runs
-     * - **Resource management**: Relies on mailer's connection pooling
+     * Uses the same mailer, sender and timeout as invitations (BR-093), so a passing test means
+     * invitations will send. Attributed in the log to the administrator who asked (BR-095).
      *
-     * @param message The message object containing recipient, content, and formatting information
-     * @return true if message was sent successfully, false if validation or sending failed
-     * @see Message#subject
-     * @see Message#subjectLine
-     * @see Message#body
-     * @see Message#mimeType
+     * @param to          the recipient
+     * @param requestedBy the administrator's username, for the log
+     * @return the outcome; on failure the detail names the relay host and port and the reason
+     */
+    public CheckResult sendTestEmail(String to, String requestedBy) {
+        String name = "test email to " + LogMasking.maskEmail(to);
+        if (fromEmail == null || fromEmail.isBlank()) {
+            return CheckResult.unknown(name, Translations.get("systemEmailView.result.noSender"));
+        }
+        String body = "This is a test message from Elicit Admin, sent by " + requestedBy
+                + " to confirm that the mail relay at " + mailerHost + ":" + mailerPort + " accepts mail from "
+                + fromEmail + ". No action is needed.";
+        long start = System.currentTimeMillis();
+        try {
+            Log.infof("sendTestEmail: %s requested a test email to %s via %s:%d", requestedBy,
+                    LogMasking.maskEmail(to), mailerHost, mailerPort);
+            mailer.send(Mail.withText(to, "Elicit Admin test email", body).setFrom(fromEmail))
+                    .await().atMost(Duration.ofSeconds(mailSendTimeoutSeconds));
+            return CheckResult.up(name, Translations.get("systemEmailView.result.accepted", mailerHost, String.valueOf(mailerPort)),
+                    System.currentTimeMillis() - start);
+        } catch (Exception ex) {
+            Throwable cause = ex.getCause() != null ? ex.getCause() : ex;
+            String reason;
+            if (cause instanceof TimeoutException) {
+                reason = Translations.get("systemEmailView.result.noAnswer", mailerHost, String.valueOf(mailerPort), String.valueOf(mailSendTimeoutSeconds));
+            } else {
+                reason = mailerHost + ":" + mailerPort + " " + (cause.getMessage() != null ? cause.getMessage()
+                        : cause.getClass().getSimpleName());
+            }
+            Log.errorf("sendTestEmail: failed for %s: %s", LogMasking.maskEmail(to), reason);
+            return CheckResult.down(name, reason, System.currentTimeMillis() - start);
+        }
+    }
+
+    /**
+     * The sender of a department's invitations and reminders (UC-004 BR-180): its From email, or
+     * the site's address when the department is missing or has none.
+     *
+     * @param department the subject's department, or {@code null} when it cannot be found
+     * @return the address to send from
+     */
+    String senderFor(Department department) {
+        if (department != null && department.fromEmail != null && !department.fromEmail.isBlank()) {
+            return department.fromEmail.trim();
+        }
+        return fromEmail;
+    }
+
+    /**
+     * Looks a department up by id; a seam so the send paths can be tested without a database.
+     *
+     * @param departmentId the department's id
+     * @return the department, or {@code null} when there is none
+     */
+    Department departmentOf(long departmentId) {
+        return Department.findById(departmentId);
+    }
+
+    /**
+     * Sends one queued message to its subject's email address, as HTML when its MIME type is
+     * {@code text/html} and as plain text otherwise, from the subject's department's sender address
+     * (UC-004 BR-180). The send waits at most {@code mailSendTimeoutSeconds}.
+     *
+     * @param message the message to send
+     * @return true when the mailer accepted it; false when the subject has no email address, or the
+     *         send timed out, was refused or failed (the cause is logged)
      */
     private boolean sendMessage(Message message) {
         Log.debugf("sendMessage: validating message id=%d", message.id);
@@ -347,23 +338,24 @@ public class EmailService {
                     message.id, LogMasking.maskEmail(message.subject.getEmail()), message.subjectLine, message.mimeType,
                     message.body == null ? 0 : message.body.length());
 
+            String sender = senderFor(departmentOf(message.subject.getDepartmentId()));
             Mail mail;
             if ("text/html".equals(message.mimeType)) {
                 mail = Mail.withHtml(
                         message.subject.getEmail(),
                         message.subjectLine,
                         message.body
-                ).setFrom(fromEmail);
+                ).setFrom(sender);
             } else {
                 mail = Mail.withText(
                         message.subject.getEmail(),
                         message.subjectLine,
                         message.body
-                ).setFrom(fromEmail);
+                ).setFrom(sender);
             }
 
             Log.debugf("sendMessage: dispatching message id=%d to mailer, from=%s, host=%s, port=%d, timeoutSeconds=%d",
-                    message.id, fromEmail, mailerHost, mailerPort, mailSendTimeoutSeconds);
+                    message.id, sender, mailerHost, mailerPort, mailSendTimeoutSeconds);
             long startMs = System.currentTimeMillis();
             mailer.send(mail).await().atMost(Duration.ofSeconds(mailSendTimeoutSeconds));
             Log.debugf("sendMessage: mailer.send() returned for message id=%d, elapsedMs=%d",

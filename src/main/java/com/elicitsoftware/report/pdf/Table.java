@@ -44,7 +44,6 @@ package com.elicitsoftware.report.pdf;
  *
  * @see Content
  * @see com.elicitsoftware.report.pdfbox.Table
- * @since 1.0.0
  */
 public class Table {
 

@@ -12,14 +12,15 @@ package com.elicitsoftware.admin.flow;
  */
 
 import com.elicitsoftware.model.Department;
+import com.elicitsoftware.model.Survey;
 import com.elicitsoftware.service.DepartmentService;
 import com.vaadin.flow.component.button.Button;
 import com.vaadin.flow.component.button.ButtonVariant;
+import com.vaadin.flow.component.combobox.MultiSelectComboBox;
 import com.vaadin.flow.component.notification.Notification;
 import com.vaadin.flow.component.orderedlayout.HorizontalLayout;
 import com.vaadin.flow.component.orderedlayout.VerticalLayout;
 import com.vaadin.flow.component.textfield.EmailField;
-import com.vaadin.flow.component.textfield.TextArea;
 import com.vaadin.flow.component.textfield.TextField;
 import com.vaadin.flow.component.textfield.TextFieldVariant;
 import com.vaadin.flow.data.binder.Binder;
@@ -30,7 +31,13 @@ import com.vaadin.flow.router.BeforeEnterEvent;
 import com.vaadin.flow.router.BeforeEnterObserver;
 import com.vaadin.flow.router.Route;
 import jakarta.annotation.security.RolesAllowed;
+import io.quarkus.security.identity.SecurityIdentity;
 import jakarta.inject.Inject;
+
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 /**
  * A Vaadin Flow view for editing department information.
@@ -47,8 +54,6 @@ import jakarta.inject.Inject;
  * </ul>
  *
  * @author Elicit Software
- * @version 1.0
- * @since 1.0
  */
 @Route(value = "edit-department/:id?", layout = MainLayout.class)
 @RolesAllowed("elicit_admin")
@@ -58,32 +63,43 @@ public class EditDepartmentView extends VerticalLayout implements BeforeEnterObs
     @Inject
     DepartmentService departmentService;
 
+    /** Names the administrator a new department is assigned to (UC-028 BR-113). */
+    @Inject
+    SecurityIdentity identity;
+
+    /** Re-read after a department is created so the console notices the assignment (UC-028 BR-114). */
+    @Inject
+    UiSessionLogin uiSessionLogin;
+
     /** The department entity being edited or created. */
     private Department department;
     
     /** Text field for the department name. */
-    private TextField nameField = new TextField("Department Name");
+    private TextField nameField = new TextField();
     
     /** Text field for the department code. */
-    private TextField codeField = new TextField("Department Code");
+    private TextField codeField = new TextField();
     
     /** Text field for the default message ID. */
-    private TextField defaultMessageIdField = new TextField("Default Message ID");
+    private TextField defaultMessageIdField = new TextField();
     
     /** Email field for the from email address. */
-    private EmailField fromEmailField = new EmailField("From Email");
-    
-    /** Text area for notification emails. */
-//    private TextArea notificationEmailsField = new TextArea("Notification Emails");
+    private EmailField fromEmailField = new EmailField();
+
+    /**
+     * The surveys this department's subjects may be registered onto (UC-006 BR-172). Not bound:
+     * the selection is stored in its own join table, by the service, beside the department.
+     */
+    final MultiSelectComboBox<Survey> surveysField = new MultiSelectComboBox<>();
     
     /** Data binder for form validation and data binding. */
     private final Binder<Department> binder = new Binder<>(Department.class);
     
     /** Save button for creating or updating the department. */
-    private Button saveBtn = new Button("Save");
+    private Button saveBtn = new Button();
     
     /** Cancel button to return to departments list. */
-    private Button cancelBtn = new Button("Cancel");
+    private Button cancelBtn = new Button();
 
     /**
      * Constructs a new EditDepartmentView.
@@ -94,13 +110,27 @@ public class EditDepartmentView extends VerticalLayout implements BeforeEnterObs
      *   <li>Department code text field (optional, max 100 characters)</li>
      *   <li>Default message ID text field (required, max 100 characters)</li>
      *   <li>From email field (required, max 50 characters)</li>
-     *   <li>Notification emails text area (optional, max 2000 characters)</li>
      *   <li>Save and Cancel buttons with appropriate event handlers</li>
      * </ul>
      */
     public EditDepartmentView() {
         setSpacing(true);
         setPadding(true);
+
+        nameField.setLabel(getTranslation("editDepartmentView.name"));
+        codeField.setLabel(getTranslation("editDepartmentView.code"));
+        defaultMessageIdField.setLabel(getTranslation("editDepartmentView.defaultMessageId"));
+        fromEmailField.setLabel(getTranslation("editDepartmentView.fromEmail"));
+        surveysField.setLabel(getTranslation("editDepartmentView.surveys"));
+        surveysField.setId("edit-department-surveys");
+        surveysField.setHelperText(getTranslation("editDepartmentView.surveys.helper"));
+        // The ID beside the name: a CSV upload names its survey by it (UC-003 BR-175).
+        surveysField.setItemLabelGenerator(survey -> getTranslation("editDepartmentView.surveys.item", survey.name, survey.id));
+        // Wider than the text fields: each survey reads "name (ID n)", and chips that do not fit
+        // fold into an overflow chip.
+        surveysField.setWidth("480px");
+        saveBtn.setText(getTranslation("common.save"));
+        cancelBtn.setText(getTranslation("common.cancel"));
         
         // Configure form fields
         nameField.setRequired(true);
@@ -108,29 +138,24 @@ public class EditDepartmentView extends VerticalLayout implements BeforeEnterObs
         nameField.setWidth("300px");
         nameField.addThemeVariants(TextFieldVariant.LUMO_SMALL);
         
-        codeField.setHelperText("Short abbreviation for the department (e.g., 'CARD', 'HR')");
+        codeField.setHelperText(getTranslation("editDepartmentView.code.helper"));
         codeField.setWidth("300px");
         codeField.addThemeVariants(TextFieldVariant.LUMO_SMALL);
         
         defaultMessageIdField.setRequired(true);
         defaultMessageIdField.setRequiredIndicatorVisible(true);
         defaultMessageIdField.setValue("1"); // Default value
-        defaultMessageIdField.setHelperText("Default message template ID");
+        defaultMessageIdField.setHelperText(getTranslation("editDepartmentView.defaultMessageId.helper"));
         defaultMessageIdField.setWidth("300px");
         defaultMessageIdField.addThemeVariants(TextFieldVariant.LUMO_SMALL);
         
         fromEmailField.setRequired(true);
         fromEmailField.setRequiredIndicatorVisible(true);
-        fromEmailField.setHelperText("Email address that appears as sender for department communications");
+        fromEmailField.setHelperText(getTranslation("editDepartmentView.fromEmail.helper"));
         fromEmailField.setWidth("300px");
         
-//        notificationEmailsField.setHelperText("Comma-separated list of emails to notify when respondents finish surveys");
-//        notificationEmailsField.setHeight("100px");
-//        notificationEmailsField.setWidth("300px");
-        
         // Add form fields to layout
-//        add(nameField, codeField, defaultMessageIdField, fromEmailField, notificationEmailsField);
-        add(nameField, codeField, defaultMessageIdField, fromEmailField);
+        add(nameField, codeField, defaultMessageIdField, fromEmailField, surveysField);
 
         // Configure buttons
         saveBtn.addClickListener(e -> saveDepartment());
@@ -157,43 +182,36 @@ public class EditDepartmentView extends VerticalLayout implements BeforeEnterObs
      *   <li>Code: Optional, max 100 characters</li>
      *   <li>Default Message ID: Required, 1-100 characters</li>
      *   <li>From Email: Required, valid email, max 50 characters</li>
-     *   <li>Notification Emails: Optional, max 2000 characters</li>
      * </ul>
      */
     private void setupValidation() {
         // Name field validation (required, unique in DB, max 255 chars)
         binder.forField(nameField)
-                .asRequired("Department name is required")
+                .asRequired(getTranslation("editDepartmentView.error.nameRequired"))
                 .withValidator(new StringLengthValidator(
-                        "Department name must be 1-255 characters", 1, 255))
+                        getTranslation("editDepartmentView.error.nameLength"), 1, 255))
                 .bind("name");
         
         // Code field validation (optional, unique in DB, max 100 chars)
         binder.forField(codeField)
                 .withValidator(new StringLengthValidator(
-                        "Department code must be 100 characters or less", 0, 100))
+                        getTranslation("editDepartmentView.error.codeLength"), 0, 100))
                 .bind("code");
         
         // Default Message ID validation (required, max 100 chars)
         binder.forField(defaultMessageIdField)
-                .asRequired("Default message ID is required")
+                .asRequired(getTranslation("editDepartmentView.error.defaultMessageIdRequired"))
                 .withValidator(new StringLengthValidator(
-                        "Default message ID must be 1-100 characters", 1, 100))
+                        getTranslation("editDepartmentView.error.defaultMessageIdLength"), 1, 100))
                 .bind("defaultMessageId");
         
         // From Email validation (required, valid email, max 50 chars)
         binder.forField(fromEmailField)
-                .asRequired("From email is required")
-                .withValidator(new EmailValidator("Please enter a valid email address"))
+                .asRequired(getTranslation("editDepartmentView.error.fromEmailRequired"))
+                .withValidator(new EmailValidator(getTranslation("editDepartmentView.error.fromEmailInvalid")))
                 .withValidator(new StringLengthValidator(
-                        "From email must be 50 characters or less", 1, 50))
+                        getTranslation("editDepartmentView.error.fromEmailLength"), 1, 50))
                 .bind("fromEmail");
-        
-        // Notification Emails validation (optional, max 2000 chars)
-//        binder.forField(notificationEmailsField)
-//                .withValidator(new StringLengthValidator(
-//                        "Notification emails must be 2000 characters or less", 0, 2000))
-//                .bind("notificationEmails");
         
         // Enable/disable save button based on validation
         binder.addStatusChangeListener(event -> 
@@ -223,32 +241,40 @@ public class EditDepartmentView extends VerticalLayout implements BeforeEnterObs
         try {
             long id = Long.parseLong(idStr);
             
+            // Every installed survey is offered; the selection is the department's (UC-006 BR-172).
+            List<Survey> installed = departmentService.installedSurveys();
+            surveysField.setItems(installed);
             if (id == 0) {
                 // Create new department
                 department = new Department();
                 department.defaultMessageId = "1"; // Set default value
                 binder.setBean(department);
+                // UC-006 BR-173: a new department starts with every survey installed now.
+                surveysField.setValue(new HashSet<>(installed));
                 
                 // Update page title and button text
-                getUI().ifPresent(ui -> ui.getPage().setTitle("Create New Department"));
-                saveBtn.setText("Create Department");
+                getUI().ifPresent(ui -> ui.getPage().setTitle(getTranslation("editDepartmentView.title.create")));
+                saveBtn.setText(getTranslation("editDepartmentView.btnCreate"));
             } else {
                 // Edit existing department
                 department = Department.findById(id);
                 if (department == null) {
-                    Notification.show("Department not found", 3000, Notification.Position.MIDDLE);
+                    Notification.show(getTranslation("editDepartmentView.error.notFound"), 3000, Notification.Position.MIDDLE);
                     event.forwardTo(DepartmentsView.class);
                     return;
                 }
                 
                 binder.setBean(department);
+                Set<Integer> offered = departmentService.surveyIdsOf(id);
+                surveysField.setValue(installed.stream().filter(survey -> offered.contains(survey.id))
+                        .collect(Collectors.toSet()));
                 
                 // Update page title and button text
-                getUI().ifPresent(ui -> ui.getPage().setTitle("Edit Department: " + department.name));
-                saveBtn.setText("Update Department");
+                getUI().ifPresent(ui -> ui.getPage().setTitle(getTranslation("editDepartmentView.title.edit", department.name)));
+                saveBtn.setText(getTranslation("editDepartmentView.btnUpdate"));
             }
         } catch (NumberFormatException e) {
-            Notification.show("Invalid department ID", 3000, Notification.Position.MIDDLE);
+            Notification.show(getTranslation("editDepartmentView.error.invalidId"), 3000, Notification.Position.MIDDLE);
             event.forwardTo(DepartmentsView.class);
         }
     }
@@ -274,33 +300,42 @@ public class EditDepartmentView extends VerticalLayout implements BeforeEnterObs
             binder.writeBean(department);
 
             boolean isNew = department.id == 0;
+            Set<Integer> surveyIds = surveysField.getValue().stream().map(survey -> survey.id)
+                    .collect(Collectors.toSet());
             // Persistence (transaction + insert/merge) lives in the service layer.
-            departmentService.save(department);
-            Notification.show(isNew ? "Department created successfully" : "Department updated successfully",
+            if (isNew) {
+                // A new department is assigned to its creator in the same transaction
+                // (UC-028 BR-113); the session copy is refreshed only once that has committed.
+                departmentService.create(department, identity.getPrincipal().getName(), surveyIds);
+                uiSessionLogin.refresh();
+            } else {
+                departmentService.save(department, surveyIds);
+            }
+            Notification.show(isNew ? getTranslation("editDepartmentView.created") : getTranslation("editDepartmentView.updated"),
                     3000, Notification.Position.MIDDLE);
 
             // Navigate back to departments list
             getUI().ifPresent(ui -> ui.navigate(DepartmentsView.class));
 
         } catch (ValidationException e) {
-            Notification.show("Please fix the validation errors before saving", 
+            Notification.show(getTranslation("editDepartmentView.error.fixValidation"),
                     3000, Notification.Position.MIDDLE);
         } catch (Exception e) {
             // Handle potential unique constraint violations or other database errors
             String errorMessage = e.getMessage();
             if (errorMessage != null && errorMessage.contains("unique")) {
                 if (errorMessage.contains("department_name_un")) {
-                    Notification.show("Department name already exists. Please choose a different name.", 
+                    Notification.show(getTranslation("editDepartmentView.error.nameExists"),
                             5000, Notification.Position.MIDDLE);
                 } else if (errorMessage.contains("department_code_un")) {
-                    Notification.show("Department code already exists. Please choose a different code.", 
+                    Notification.show(getTranslation("editDepartmentView.error.codeExists"),
                             5000, Notification.Position.MIDDLE);
                 } else {
-                    Notification.show("A department with this name or code already exists.", 
+                    Notification.show(getTranslation("editDepartmentView.error.nameOrCodeExists"),
                             5000, Notification.Position.MIDDLE);
                 }
             } else {
-                Notification.show("Error saving department: " + errorMessage, 
+                Notification.show(getTranslation("editDepartmentView.error.save", errorMessage),
                         5000, Notification.Position.MIDDLE);
             }
         }

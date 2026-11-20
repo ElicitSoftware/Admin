@@ -10,3 +10,24 @@ migration from `V0.0.4` onward.
 Flyway validates applied migrations against a checksum of their filename and
 contents, so renaming one that has already run in any environment breaks
 `validate-on-migrate` there.
+
+# Migrations edited after they were applied
+
+A few already-applied migrations have been edited in place. Each edit is only safe
+because `quarkus.flyway.owner.repair-at-start=true` rewrites the recorded checksum
+on existing databases instead of failing validation:
+
+- `V0.0.3` - its `user_surveys` insert is conditional, so a fresh database with no
+  survey can start.
+- `V0.0.1` and `V0.0.7` - the `survey.status` view selects `r.access_code`
+  instead of `r.token`. Survey's V014 renames that column before Admin migrates, so
+  a fresh database could not create the view otherwise. Existing databases get the
+  view's output column renamed by `V0.0.17` instead.
+
+- `V0.0.2` - its grant on `surveyreport.fact_respondents` is conditional on the table.
+  Survey's V021 stops creating that table (every survey's star now lives in a schema of
+  its own, with `fact_respondents` as a view), so a fresh database could not get past the
+  grant otherwise. `V0.0.20` revokes it where the table still exists.
+
+Prefer a new migration whenever one will do. Edit an applied migration only when a
+fresh database cannot get past it.

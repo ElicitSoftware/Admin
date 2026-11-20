@@ -1,0 +1,35 @@
+/*-
+ * ***LICENSE_START***
+ * Elicit Survey
+ * %%
+ * Copyright (C) 2025 - 2026 The Regents of the University of Michigan - Rogel Cancer Center
+ * %%
+ * PolyForm Noncommercial License 1.0.0
+ * <https://polyformproject.org/licenses/noncommercial/1.0.0>
+ * ***LICENSE_END***
+ */
+
+/* Spacing, radius and surface colors come from Aura's own --vaadin-* tokens, which is the theme
+   Admin renders with (AppConfig declares Aura; there is no @Theme and no Lumo import). The
+   --lumo-space-*, --lumo-contrast-*pct and --lumo-border-radius-* tokens do NOT resolve here, so
+   a declaration written against them is as inert as the LumoUtility classes #85 removed. Text
+   colors stay on the --lumo-*-text-color properties, which styles.css does define and maps onto
+   the brand. Every var() carries a literal fallback so a missing token can never silently drop
+   the whole declaration again.
+
+   UnauthorizedView -- the card an authenticated account without an Elicit role is shown
+   (UC-001 A1). The card, its heading color and the button's gap were asked for with Lumo utility
+   classes, which are inert here (#85). */
+.unauthorized-card {
+    background-color: var(--vaadin-background-container, #f5f5f5);
+    border-radius: var(--vaadin-radius-m, 6px);
+    padding: var(--vaadin-padding-l, 16px);
+}
+
+.unauthorized-card h1 {
+    color: var(--lumo-error-text-color, hsl(3, 85%, 48%));
+}
+
+.unauthorized-card vaadin-button {
+    margin-top: var(--vaadin-gap-m, 12px);
+}

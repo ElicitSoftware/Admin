@@ -69,8 +69,6 @@ import jakarta.persistence.*;
  * </ul>
  *
  * @author Elicit Software
- * @version 1.0
- * @since 1.0
  * @see User
  * @see Subject
  * @see Survey
@@ -187,24 +185,6 @@ public class Department extends PanacheEntityBase {
     public String fromEmail;
 
     /**
-     * Email addresses of people to notify when a respondent finishes.
-     *
-     * <p>A comma-separated list of email addresses that should receive
-     * notifications when survey respondents complete their surveys for
-     * this department.</p>
-     *
-     * <p><strong>Usage Guidelines:</strong></p>
-     * <ul>
-     *   <li>Multiple emails should be comma-separated</li>
-     *   <li>Used for completion notifications</li>
-     *   <li>Can be null if no notifications are needed</li>
-     *   <li>Should contain valid email addresses</li>
-     * </ul>
-     */
-    @Column(name = "notification_emails", length = 2000)
-    public String notificationEmails;
-
-    /**
      * Default constructor for JPA entity instantiation.
      * <p>
      * Creates a new Department instance with default values. This constructor
@@ -296,24 +276,6 @@ public class Department extends PanacheEntityBase {
      */
     public void setFromEmail(String fromEmail) {
         this.fromEmail = fromEmail;
-    }
-
-    /**
-     * Returns the notification emails.
-     *
-     * @return the notification emails as a comma-separated string, may be null if not set
-     */
-    public String getNotificationEmails() {
-        return notificationEmails;
-    }
-
-    /**
-     * Sets the notification emails.
-     *
-     * @param notificationEmails the notification emails as a comma-separated string to set
-     */
-    public void setNotificationEmails(String notificationEmails) {
-        this.notificationEmails = notificationEmails;
     }
 
     /**

@@ -28,6 +28,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
@@ -71,19 +72,35 @@ class UsersViewTest extends QuarkusBrowserlessTest {
         assertTrue(grid().getColumns().size() >= 6);
     }
 
-    /** UC-008: in the default OIDC mode, the info text explains OIDC-managed roles. */
+    /** UC-008 BR-183: in the default OIDC mode, the info text explains OIDC-managed roles and names every role. */
     @Test
     void infoTextExplainsOidcMode() {
         Paragraph info = find(Paragraph.class, view).single();
         assertTrue(info.getText().contains("OpenID Connect"),
                 "OIDC mode should explain that roles are configured in the OIDC provider");
+        for (String role : List.of("elicit_admin", "elicit_user", "elicit_importer")) {
+            assertTrue(info.getText().contains(role), "the OIDC text should name " + role + ": " + info.getText());
+        }
+    }
+
+    /**
+     * UC-008 (#85): the info text is styled as an intro line by
+     * {@code components/view-text.css}. It used to ask for {@code LumoUtility.TextColor.SECONDARY}
+     * and {@code Margin.Bottom.MEDIUM}, which are inert in Admin, so it read as body text sitting
+     * flush against the grid.
+     */
+    @Test
+    void infoTextCarriesTheIntroClass() {
+        Paragraph info = find(Paragraph.class, view).single();
+        assertTrue(info.getClassNames().contains("view-intro"),
+                "the intro line should carry view-intro but had: " + info.getClassNames());
     }
 
     /** UC-008: clicking "Add User" triggers navigation to the create-mode EditUserView route. */
     @Test
     void addUserButtonTriggersNavigation() {
         Button addUserBtn = find(Button.class, view).all().stream()
-                .filter(b -> "Add User".equals(b.getText()))
+                .filter(b -> view.getTranslation("usersView.addUser").equals(b.getText()))
                 .findFirst()
                 .orElseThrow(() -> new AssertionError("No Add User button"));
 

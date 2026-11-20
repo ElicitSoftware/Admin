@@ -8,8 +8,8 @@ around them.
 
 ## Stack
 
-- Java 21, Quarkus 3.37.x, Maven build
-- Vaadin 25.2.x (Flow, server-side UI)
+- Java 25, Quarkus 3.40.1.2 LTS, Maven build
+- Vaadin 25.3.5 (Flow, server-side UI)
 - Hibernate ORM with Panache (JPA) — **not jOOQ**
 - PostgreSQL (Flyway migrations under `src/main/resources/db/migration`)
 - Docker for deployment
@@ -36,6 +36,12 @@ the codebase predates AIUP adoption.
 
 ## Git Commits
 
+- `main` is the integration branch (umbrella #188); `V3`, which was until the 3.0.0 release,
+  is frozen and deleted after 3.0.0 ships. Both change only through a pull request whose CI
+  check passed; a ruleset enforces it on GitHub and `.claude/hooks/branch-guard.py` (a
+  `PreToolUse` hook in `.claude/settings.json`) refuses `git commit` and `git push` on
+  `main`, `master`, `V2` or `V3` locally. Branch from `main` as `<type>/<issue>-<slug>`;
+  never set the hook's `ELICIT_ALLOW_PROTECTED` override yourself.
 - Never append a `Co-Authored-By: Claude` (or similar AI co-author) trailer to
   commit messages.
 

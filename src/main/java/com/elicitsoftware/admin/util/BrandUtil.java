@@ -17,13 +17,20 @@ import java.nio.file.Paths;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.enterprise.context.ApplicationScoped;
+import java.io.InputStream;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.EnumMap;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Locale;
+import java.util.Map;
 import org.eclipse.microprofile.config.inject.ConfigProperty;
 
 /**
  * Utility class for managing brand information across the application.
  * Detects brand based on what's mounted at the configured brand directory.
  *
- * @since 1.0
  * @author Elicit Software
  */
 @ApplicationScoped
@@ -43,6 +50,61 @@ public class BrandUtil {
     /** Cached brand information */
     private BrandInfo cachedBrandInfo = null;
 
+    /** Cached logo resolution, cleared with the brand (umbrella UC-014 BR-006). */
+    private Map<Logo, LogoFile> cachedLogos = null;
+
+    /** Names the mounted configuration gives for files the mount does not hold, cached with the logos. */
+    private List<String> cachedMissingLogoFiles = List.of();
+
+    /**
+     * The three logo files a brand names in {@code brand-config.json} (umbrella UC-014 BR-008):
+     * {@code logos.horizontal}, {@code logos.icon} and the top-level {@code favicon}. The default
+     * file is the last resort when even the embedded configuration names nothing.
+     */
+    public enum Logo {
+        /** The lockup, the mark with its wording, shown on the Branding page. */
+        HORIZONTAL("horizontal", "HorizontalLogo.png"),
+        /** The mark alone, shown in the header on the primary color. */
+        ICON("icon", "icon-white.png"),
+        /** The browser tab's icon. */
+        FAVICON(null, "favicon.ico");
+
+        private final String logosField;
+        private final String defaultFile;
+
+        Logo(String logosField, String defaultFile) {
+            this.logosField = logosField;
+            this.defaultFile = defaultFile;
+        }
+
+        /**
+         * The configuration key, as the documentation writes it.
+         *
+         * @return {@code logos.horizontal}, {@code logos.icon} or {@code favicon}
+         */
+        public String configKey() {
+            return logosField == null ? "favicon" : "logos." + logosField;
+        }
+
+        String nameIn(JsonNode config) {
+            if (config == null) {
+                return null;
+            }
+            JsonNode node = logosField == null ? config.get("favicon")
+                    : config.has("logos") ? config.get("logos").get(logosField) : null;
+            return node != null && node.isTextual() && !node.asText().isBlank() ? node.asText().trim() : null;
+        }
+    }
+
+    /**
+     * A resolved logo file.
+     *
+     * @param file    the file name under the brand's {@code images/}
+     * @param mounted whether the mounted brand supplies it; otherwise it is the default brand's
+     */
+    public record LogoFile(String file, boolean mounted) {
+    }
+
     @ConfigProperty(name = "brand.file.system.path", defaultValue = "/brand")
     String brandFileSystemPath;
 
@@ -50,10 +112,14 @@ public class BrandUtil {
      * Data class representing brand information.
      */
     public static class BrandInfo {
+        public static final String DEFAULT_BRAND_KEY = "default-brand";
+
         private final String brandKey;
         private final String displayName;
         private final String logoPath;
         private final String cssClass;
+        /** Display name per language tag (lower-case), from the brand's {@code localized} block. */
+        private final Map<String, String> localizedNames;
 
         /**
          * Constructs a BrandInfo with the specified brand details.
@@ -64,10 +130,25 @@ public class BrandUtil {
          * @param cssClass the CSS class for brand styling
          */
         public BrandInfo(String brandKey, String displayName, String logoPath, String cssClass) {
+            this(brandKey, displayName, logoPath, cssClass, Collections.emptyMap());
+        }
+
+        /**
+         * Constructs a BrandInfo with per-language display names (UC-026 BR-087).
+         *
+         * @param brandKey the unique key identifying the brand
+         * @param displayName the display name of the brand
+         * @param logoPath the path to the brand logo
+         * @param cssClass the CSS class for brand styling
+         * @param localizedNames display name per lower-case language tag; may be null
+         */
+        public BrandInfo(String brandKey, String displayName, String logoPath, String cssClass,
+                         Map<String, String> localizedNames) {
             this.brandKey = brandKey;
             this.displayName = displayName;
             this.logoPath = logoPath;
             this.cssClass = cssClass;
+            this.localizedNames = localizedNames == null ? Collections.emptyMap() : Map.copyOf(localizedNames);
         }
 
         /**
@@ -97,6 +178,40 @@ public class BrandUtil {
          * @return the CSS class
          */
         public String getCssClass() { return cssClass; }
+
+        /**
+         * True for the embedded default brand.
+         *
+         * @return whether the brand key is {@link #DEFAULT_BRAND_KEY}
+         */
+        public boolean isDefaultBrand() { return DEFAULT_BRAND_KEY.equals(brandKey); }
+
+        /**
+         * The display name for a locale: the brand's variant for the exact language tag, then
+         * for the language alone (any regional variant), then the base name.
+         *
+         * @param locale the locale to look up; null returns the base name
+         * @return the localized or base display name
+         */
+        public String getDisplayName(Locale locale) {
+            if (locale == null || localizedNames.isEmpty()) {
+                return displayName;
+            }
+            String byTag = localizedNames.get(locale.toLanguageTag().toLowerCase(Locale.ROOT));
+            if (byTag != null) {
+                return byTag;
+            }
+            String language = locale.getLanguage().toLowerCase(Locale.ROOT);
+            String byLanguage = localizedNames.get(language);
+            if (byLanguage != null) {
+                return byLanguage;
+            }
+            return localizedNames.entrySet().stream()
+                    .filter(e -> e.getKey().startsWith(language + "-"))
+                    .map(Map.Entry::getValue)
+                    .findFirst()
+                    .orElse(displayName);
+        }
     }
 
     /**
@@ -159,7 +274,8 @@ public class BrandUtil {
             brandKey,
             organization != null ? organization : brandName,
             logoPath,
-            brandKey
+            brandKey,
+            extractLocalizedNames(config)
         );
     }
 
@@ -209,7 +325,8 @@ public class BrandUtil {
             brandKey,
             organization != null ? organization : brandName,
             logoPath,
-            brandKey
+            brandKey,
+            extractLocalizedNames(config)
         );
     }
 
@@ -235,6 +352,31 @@ public class BrandUtil {
             return config.get("organization").asText();
         }
         return null;
+    }
+
+    /**
+     * Reads the optional {@code localized} block: {@code {"localized": {"es-419": {"name": ..,
+     * "organization": ..}, "ar": {..}}}}. The organization wins over the name, mirroring the
+     * base display name.
+     *
+     * @param config the parsed brand configuration
+     * @return display name per lower-case language tag; empty when the brand has no variants
+     */
+    static Map<String, String> extractLocalizedNames(JsonNode config) {
+        Map<String, String> names = new HashMap<>();
+        JsonNode localized = config.get("localized");
+        if (localized == null || !localized.isObject()) {
+            return names;
+        }
+        localized.fields().forEachRemaining(entry -> {
+            JsonNode value = entry.getValue();
+            String name = value.hasNonNull("organization") ? value.get("organization").asText()
+                    : value.hasNonNull("name") ? value.get("name").asText() : null;
+            if (name != null && !name.isBlank()) {
+                names.put(entry.getKey().toLowerCase(Locale.ROOT), name);
+            }
+        });
+        return names;
     }
 
     /**
@@ -329,35 +471,116 @@ public class BrandUtil {
     }
 
     /**
-     * Gets the appropriate logo resource path for Vaadin Flow applications.
+     * The URL of the brand's lockup ({@code logos.horizontal}, umbrella UC-014 BR-008).
      *
-     * @param brandInfo the brand information
+     * @param brandInfo the brand information (unused; the lockup comes from the configuration)
      * @return resource path suitable for Vaadin Image component
      */
     public String getLogoResourcePath(BrandInfo brandInfo) {
-        // For external brands, serve via the brand resource handler
-        if (brandInfo.getLogoPath().startsWith(brandFileSystemPath + "/")) {
-            return "/api/brand/images/HorizontalLogo.png";
-        }
-        // For embedded brand, use /api/brand/ path (served by BrandResourceHandler)
-        return "/api/" + brandInfo.getLogoPath();
+        return getLogoUrl(Logo.HORIZONTAL);
     }
 
     /**
-     * Gets the icon-only mark for use in the nav header, where the full
-     * horizontal lockup's wordmark is illegible and its dark artwork
+     * The URL of the brand's mark for the nav header ({@code logos.icon}, umbrella UC-014
+     * BR-008), where the full horizontal lockup's wordmark is illegible and its dark artwork
      * disappears against the dark header background.
      *
-     * @param brandInfo the brand information
+     * @param brandInfo the brand information (unused; the icon comes from the configuration)
      * @return resource path suitable for Vaadin Image component
      */
     public String getIconResourcePath(BrandInfo brandInfo) {
-        // For external brands, serve via the brand resource handler
-        if (brandInfo.getLogoPath().startsWith(brandFileSystemPath + "/")) {
-            return "/api/brand/images/icon-white.png";
+        return getLogoUrl(Logo.ICON);
+    }
+
+    /**
+     * The URL a logo is served at by {@code BrandResourceHandler}.
+     *
+     * @param logo which logo
+     * @return the {@code /api/brand/images/} URL of the resolved file
+     */
+    public String getLogoUrl(Logo logo) {
+        return "/api/brand/images/" + getLogoFile(logo).file();
+    }
+
+    /**
+     * Resolves one logo file (umbrella UC-014 BR-008): the file the mounted configuration names
+     * when the mount holds it; otherwise the file the embedded configuration names, which counts
+     * as mounted when the mount holds a file of that name (per-file fallback, BR-002).
+     *
+     * @param logo which logo
+     * @return the file name under {@code images/} and whether the mount supplies it
+     */
+    public LogoFile getLogoFile(Logo logo) {
+        return logos().get(logo);
+    }
+
+    /**
+     * Whether the mounted brand brings its own favicon but no header icon of its own (umbrella
+     * UC-014 BR-009), so the header shows the default brand's mark beside the site's favicon.
+     *
+     * @return true when the favicon is mounted and the icon is not
+     */
+    public boolean isIconMissingBesideFavicon() {
+        return getLogoFile(Logo.FAVICON).mounted() && !getLogoFile(Logo.ICON).mounted();
+    }
+
+    /**
+     * The logo files the mounted configuration names but the mount does not hold (umbrella
+     * UC-014 BR-008); each is served from the default brand instead.
+     *
+     * @return {@code images/<file>} for each, in configuration order
+     */
+    public List<String> getMissingLogoFiles() {
+        logos();
+        return cachedMissingLogoFiles;
+    }
+
+    private synchronized Map<Logo, LogoFile> logos() {
+        if (cachedLogos != null) {
+            return cachedLogos;
         }
-        // For embedded brand, use /api/brand/ path (served by BrandResourceHandler)
-        return "/api/brand/images/icon-white.png";
+        Path mount = Paths.get(brandFileSystemPath);
+        JsonNode mounted = readConfig(mount.resolve("brand-config.json"));
+        JsonNode embedded = readEmbeddedConfig();
+        Map<Logo, LogoFile> logos = new EnumMap<>(Logo.class);
+        List<String> missing = new ArrayList<>();
+        for (Logo logo : Logo.values()) {
+            String embeddedName = logo.nameIn(embedded) != null ? logo.nameIn(embedded) : logo.defaultFile;
+            String named = logo.nameIn(mounted);
+            if (named != null && isImage(mount, named)) {
+                logos.put(logo, new LogoFile(named, true));
+                continue;
+            }
+            if (named != null) {
+                missing.add("images/" + named);
+            }
+            logos.put(logo, new LogoFile(embeddedName, isImage(mount, embeddedName)));
+        }
+        cachedMissingLogoFiles = List.copyOf(missing);
+        cachedLogos = logos;
+        return logos;
+    }
+
+    private static boolean isImage(Path mount, String file) {
+        Path images = mount.resolve("images").normalize();
+        Path candidate = images.resolve(file).normalize();
+        return candidate.startsWith(images) && Files.isRegularFile(candidate);
+    }
+
+    private static JsonNode readConfig(Path file) {
+        try {
+            return Files.isRegularFile(file) ? new ObjectMapper().readTree(Files.readString(file)) : null;
+        } catch (Exception e) {
+            return null;
+        }
+    }
+
+    private JsonNode readEmbeddedConfig() {
+        try (InputStream in = getClass().getResourceAsStream("/META-INF/brand/brand-config.json")) {
+            return in != null ? new ObjectMapper().readTree(in) : null;
+        } catch (Exception e) {
+            return null;
+        }
     }
 
     /**
@@ -385,5 +608,6 @@ public class BrandUtil {
      */
     public void clearCache() {
         cachedBrandInfo = null;
+        cachedLogos = null;
     }
 }

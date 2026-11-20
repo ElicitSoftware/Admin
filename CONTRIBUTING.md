@@ -63,7 +63,7 @@ and the test suite honest about what's actually verified. Existing tests and rec
 
 ### Backend Technologies
 - **Java**: 21 (LTS)
-- **Framework**: Quarkus 3.39.x
+- **Framework**: Quarkus 3.40.x (LTS)
 - **ORM**: Hibernate ORM with Panache — **active-record pattern only** (entities extend
   `PanacheEntity`/`PanacheEntityBase` directly; there are no `PanacheRepository` classes in
   this codebase and new code should not introduce one without discussion — active record is
@@ -76,7 +76,7 @@ and the test suite honest about what's actually verified. Existing tests and rec
   `com.elicitsoftware.security.ElicitRoles`.
 
 ### Frontend Technologies
-- **Framework**: Vaadin Flow 25.2.x
+- **Framework**: Vaadin Flow 25.3.x
 - **Language**: Java (server-side rendering, no client-side JS/TS views in this project)
 - **Theme**: Aura
 
@@ -90,6 +90,14 @@ and the test suite honest about what's actually verified. Existing tests and rec
 - **UI Testing**: Vaadin Browserless Testing (`browserless-test-quarkus`) — not TestBench
 - **API Testing**: REST Assured
 - **Coverage**: JaCoCo (`jacoco-maven-plugin`, bound to `verify`)
+- **Mutation testing**: Pitest (`pitest-maven`, on demand only, plain unit tests only; a new
+  plain unit test is added to its `targetTests` in `pom.xml` by hand)
+  - Plain tests share `src/test` with the booted ones, and a booted test's build indexes every
+    test class. So a test-only `UI` subclass needs a no-argument constructor (the Vaadin extension
+    makes each `UI` subclass a CDI bean), and a placeholder view must not carry `@Route`: register
+    it by path with `RouteConfiguration` instead, or it claims the real view's route.
+    `admin/flow/PlainAdminViewTestSupport` and `PlainSmallViewTestSupport` (plain `BrowserlessTest`
+    bases with stub services) and `admin/i18n/PlainVaadin` show both.
 
 ### Build & Tools
 - **Build**: Maven (`./mvnw`)
@@ -102,7 +110,7 @@ and the test suite honest about what's actually verified. Existing tests and rec
 ## Getting Started
 
 ### Prerequisites
-- Java 21 JDK
+- Java 25 JDK
 - Maven (or use `./mvnw`, the included wrapper)
 - Docker (for Testcontainers-backed tests, and for the full reference deployment)
 - IDE with Vaadin support
@@ -155,7 +163,7 @@ cd admin
   new code.)
 
 ### Java Features
-- Java 21 features are fine: records, switch expressions, pattern matching, text blocks
+- Java 25 features are fine: records, switch expressions, pattern matching, text blocks
 - Use `@Transactional` on service/boundary methods (REST resource methods that mutate data,
   or service methods called from views) — **not** on entity or repository methods
 - Prefer `io.quarkus.logging.Log` over any other logging API for consistency with the rest of
@@ -338,6 +346,9 @@ Descriptive method names that state the scenario and expectation, e.g.:
 
 # Run the opt-in integration smoke test
 ./mvnw test -Dit.integration=true -Dquarkus.container-image.build=false
+
+# Run Pitest mutation testing over the plain unit tests (target/pit-reports/index.html)
+./mvnw test-compile pitest:mutationCoverage -Dquarkus.container-image.build=false
 ```
 
 > `-Dquarkus.container-image.build=false -Dquarkus.container-image.push=false` bypasses this

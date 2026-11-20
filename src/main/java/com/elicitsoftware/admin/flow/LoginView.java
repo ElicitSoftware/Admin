@@ -48,8 +48,6 @@ import jakarta.annotation.security.PermitAll;
  * </ol>
  * 
  * @author Elicit Software
- * @version 1.0
- * @since 1.0
  * @see NavigationAccessControl
  */
 @Route("login")
@@ -69,7 +67,7 @@ public class LoginView extends VerticalLayout implements BeforeEnterObserver  {
      */
     public LoginView() {
         Log.debug("LoginView constructor");
-        add("FHHS Admin :-)");
+        add(getTranslation("loginView.redirecting"));
     }
 
     /**
@@ -104,7 +102,7 @@ public class LoginView extends VerticalLayout implements BeforeEnterObserver  {
         Log.debug("LoginView beforeEnter");
         var session = VaadinRequest.getCurrent().getWrappedSession();
         // ViewAccessChecker saves the original route to session
-        // restore that when we are returned form OIDC server
+        // restore that when we are returned from the OIDC server
         String origView = (String) session.getAttribute(NavigationAccessControl.SESSION_STORED_REDIRECT);
         if (origView != null && !origView.isBlank()) {
             Log.debug("Redirecting to " + origView);

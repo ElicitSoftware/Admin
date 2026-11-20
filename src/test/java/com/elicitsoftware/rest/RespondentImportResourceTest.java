@@ -21,6 +21,7 @@ import java.nio.charset.StandardCharsets;
 
 import static io.restassured.RestAssured.given;
 import static org.hamcrest.Matchers.anyOf;
+import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.is;
 
 /**
@@ -114,7 +115,8 @@ class RespondentImportResourceTest {
     @Test
     @TestSecurity(user = "admin", roles = {"elicit_admin"})
     void wellFormedRespondentOnlyFileImportsSuccessfully() {
-        String content = "# ELICIT_EXPORT_V1\n\nrespondents: 1|REST-IMPORT-TOK|0|2026-01-01T00:00:00-05:00|\n";
+        String content = "# ELICIT_EXPORT_V2\n\n"
+                + "respondents: 00000000-0000-0000-0000-000000000001|REST-IMPORT-TOK|true|0|2026-01-01T00:00:00-05:00||\n";
 
         given()
                 .multiPart("file", "export.elicit", bytes(content), "application/octet-stream")
@@ -124,5 +126,39 @@ class RespondentImportResourceTest {
                 .body("success", is(true))
                 .body("recordsImported", is(1))
                 .body("counts.respondents", is(1));
+    }
+
+    /**
+     * UC-012 A4: a file whose survey key is unknown here is a validation failure - 400 with the
+     * administrator-facing message, not the generic 500 with a correlation id.
+     */
+    @Test
+    @TestSecurity(user = "admin", roles = {"elicit_admin"})
+    void unresolvableReferenceReturnsBadRequestWithMessage() {
+        String content = "# ELICIT_EXPORT_V2\n\n"
+                + "respondents: 00000000-0000-0000-0000-0000000000ee|REST-NOSURVEY|true|0|2026-01-01T00:00:00-05:00||\n";
+
+        given()
+                .multiPart("file", "export.elicit", bytes(content), "application/octet-stream")
+                .when().post(IMPORT_PATH)
+                .then()
+                .statusCode(400)
+                .body("success", is(false))
+                .body("message", containsString("No survey with survey_key 00000000-0000-0000-0000-0000000000ee"));
+    }
+
+    /** UC-012 A8: a legacy V1 file is refused as a structured 400 carrying the re-export instruction. */
+    @Test
+    @TestSecurity(user = "admin", roles = {"elicit_admin"})
+    void legacyV1FileReturnsBadRequestWithReExportInstruction() {
+        String content = "# ELICIT_EXPORT_V1\n\nrespondents: 1|REST-V1|0|2026-01-01T00:00:00-05:00|\n";
+
+        given()
+                .multiPart("file", "export.elicit", bytes(content), "application/octet-stream")
+                .when().post(IMPORT_PATH)
+                .then()
+                .statusCode(400)
+                .body("success", is(false))
+                .body("message", containsString("Re-export the respondent from the source instance"));
     }
 }
