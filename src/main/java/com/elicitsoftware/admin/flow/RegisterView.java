@@ -692,26 +692,6 @@ public class RegisterView extends HorizontalLayout implements HasDynamicTitle, B
     }
 
     /**
-     * Registers a new user account in the system.
-     *
-     * <p>This method performs comprehensive user registration including:</p>
-     * <ol>
-     *   <li>Form validation using the configured binder</li>
-     *   <li>Password encryption using BCrypt</li>
-     *   <li>User entity creation and persistence</li>
-     *   <li>Success notification display</li>
-     *   <li>Navigation to login page</li>
-     * </ol>
-     *
-     * <p>If validation fails, appropriate error messages are displayed
-     * and the registration process is halted.</p>
-     */
-    @Transactional
-    public void register() {
-        // ...existing code...
-    }
-
-    /**
      * Creates and configures the department selection combo box.
      *
      * <p>This method builds a department selector that is filtered based on the
