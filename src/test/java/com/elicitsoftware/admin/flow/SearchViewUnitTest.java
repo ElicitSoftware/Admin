@@ -659,7 +659,8 @@ class SearchViewUnitTest extends PlainAdminViewTestSupport {
     }
 
     @Test
-    void given_sendingThrows_when_submitting_then_theErrorIsReportedWithItsMessage() {
+    /** UC-004 A2, NFR-023: the user is given a reference, never the failure's own text. */
+    void given_sendingThrows_when_submitting_then_aReferenceIsReportedInsteadOfTheMessage() {
         emailFailure = new IllegalStateException("smtp down");
         buildWithRows("elicit_user");
         HorizontalLayout cell = actionCell(0);
@@ -667,7 +668,7 @@ class SearchViewUnitTest extends PlainAdminViewTestSupport {
 
         test(submit(cell)).click();
 
-        assertEquals(List.of(t("searchView.action.emailError", "smtp down")), notifications());
+        assertReferenced("searchView.action.emailError", "smtp down");
     }
 
     @Test
@@ -684,7 +685,8 @@ class SearchViewUnitTest extends PlainAdminViewTestSupport {
     }
 
     @Test
-    void given_reportGenerationThrows_when_submitting_then_theErrorIsReported() {
+    /** UC-005 A3, NFR-023: the user is given a reference, never the failure's own text. */
+    void given_reportGenerationThrows_when_submitting_then_aReferenceIsReported() {
         reportFailure = new IllegalStateException("no report");
         buildWithRows("elicit_user");
         HorizontalLayout cell = actionCell(0);
@@ -692,7 +694,7 @@ class SearchViewUnitTest extends PlainAdminViewTestSupport {
 
         test(submit(cell)).click();
 
-        assertEquals(List.of(t("searchView.action.reportsError", "no report")), notifications());
+        assertReferenced("searchView.action.reportsError", "no report");
     }
 
     @Test
@@ -949,5 +951,13 @@ class SearchViewUnitTest extends PlainAdminViewTestSupport {
 
         assertEquals(before, view.getComponentCount());
         assertSame(H5.class, view.getComponentAt(0).getClass());
+    }
+
+    /** One notification: the key's text with a {@code ref <8 hex>} reference, and nothing of the cause. */
+    private void assertReferenced(String key, String cause) {
+        List<String> shown = notifications();
+        assertEquals(1, shown.size(), shown.toString());
+        assertFalse(shown.get(0).contains(cause), shown.get(0));
+        assertEquals(t(key, "ref 00000000"), shown.get(0).replaceAll("ref [0-9a-f]{8}", "ref 00000000"));
     }
 }

@@ -690,7 +690,7 @@ class RegisterViewUnitTest extends PlainAdminViewTestSupport {
 
     /**
      * UC-003 A6 steps 2 and 3, BR-176: the confirmation counts what will be registered on each
-     * survey and department and lists what will be refused; cancelling registers no one.
+     * survey and department and lists what will be refused; canceling registers no one.
      */
     @Test
     void given_aMixedFile_when_uploading_then_theConfirmationSaysWhatWillHappenAndCancelImportsNothing() {
