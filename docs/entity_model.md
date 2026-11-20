@@ -57,8 +57,12 @@ An organizational unit that owns subjects, defines outbound-email identity, and 
 | name                 | Department name                                                      | String    | 255              | Not Null, Unique              |
 | code                 | Short department code                                                | String    | 100              | Optional, Unique              |
 | defaultMessageId     | Comma-separated template IDs to send when a subject is registered    | String    | 100              | Not Null                      |
-| notificationEmails   | Addresses notified when a respondent finishes                        | String    | 2000             | Optional                      |
 | fromEmail            | Sender address for the department's outbound email                   | String    | 50               | Not Null, Format: Email       |
+
+A department has no notification addresses. The `notification_emails` column (V0.0.1) was
+never read, sent to, or shown on the department form, and no requirement asks for a
+notification when a respondent finishes; V0.0.28 drops it (#221). Any addresses a site
+entered by hand are discarded with it.
 
 ### SUBJECT
 
