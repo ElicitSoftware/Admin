@@ -29,5 +29,8 @@ on existing databases instead of failing validation:
   its own, with `fact_respondents` as a view), so a fresh database could not get past the
   grant otherwise. `V0.0.20` revokes it where the table still exists.
 
+- every migration - its copyright header was rewritten for 3.0.0 (Elicit Software LLC), and a
+  header is part of the checksum.
+
 Prefer a new migration whenever one will do. Edit an applied migration only when a
 fresh database cannot get past it.

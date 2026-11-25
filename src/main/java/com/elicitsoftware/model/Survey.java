@@ -2,9 +2,9 @@ package com.elicitsoftware.model;
 
 /*-
  * ***LICENSE_START***
- * Elicit Survey
+ * Elicit Admin
  * %%
- * Copyright (C) 2025 The Regents of the University of Michigan - Rogel Cancer Center
+ * Copyright (C) 2025 - 2026 Elicit Software LLC
  * %%
  * PolyForm Noncommercial License 1.0.0
  * <https://polyformproject.org/licenses/noncommercial/1.0.0>
@@ -65,10 +65,6 @@ import java.util.UUID;
  * // Get all surveys ordered by display order
  * List<Survey> allSurveys = Survey.find("ORDER BY displayOrder ASC").list();
  * }</pre>
- *
- * <p><strong>License Information:</strong></p>
- * <p>This software is licensed under the PolyForm Noncommercial License 1.0.0.
- * Copyright (C) 2025 The Regents of the University of Michigan - Rogel Cancer Center.</p>
  *
  * @author Elicit Software
  * @see ReportDefinition

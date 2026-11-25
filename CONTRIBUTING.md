@@ -455,7 +455,8 @@ for running and monitoring them:
 
 By contributing, you agree that your contributions will be licensed under the
 [PolyForm Noncommercial License 1.0.0](https://polyformproject.org/licenses/noncommercial/1.0.0),
-matching the rest of this project (see `LICENSE.txt` and each file's license header).
+matching the rest of this project (see `LICENSE.MD`). Every file's header names Elicit Software LLC;
+let the build write the header of a new file and never paste one from another file.
 
 ---
 

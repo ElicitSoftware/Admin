@@ -2,9 +2,9 @@ package com.elicitsoftware.report.pdf;
 
 /*-
  * ***LICENSE_START***
- * Elicit Survey
+ * Elicit Admin
  * %%
- * Copyright (C) 2025 The Regents of the University of Michigan - Rogel Cancer Center
+ * Copyright (C) 2025 - 2026 Elicit Software LLC
  * %%
  * PolyForm Noncommercial License 1.0.0
  * <https://polyformproject.org/licenses/noncommercial/1.0.0>
@@ -66,10 +66,6 @@ import com.fasterxml.jackson.annotation.JsonInclude;
  * <p>The style field references style definitions that control formatting aspects such as
  * fonts, colors, spacing, and layout. Styles are typically defined in accompanying
  * {@link Style} objects and referenced by name.</p>
- *
- * <p><strong>License Information:</strong></p>
- * <p>This software is licensed under the PolyForm Noncommercial License 1.0.0.
- * Copyright (C) 2025 The Regents of the University of Michigan - Rogel Cancer Center.</p>
  *
  * @author Elicit Software
  * @see PDFDocument
